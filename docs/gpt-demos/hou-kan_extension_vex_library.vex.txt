@@ -1,0 +1,432 @@
+// ============================================================================
+// CATEGORICAL HOUDINI: VEX Mathematical Library
+// A comprehensive VEX implementation for category theory in 3D space
+// ============================================================================
+
+#pragma once
+
+// ============================================================================
+// CORE CATEGORICAL STRUCTURES
+// ============================================================================
+
+// Category object representation
+struct CategoryObject {
+    int id;                    // Unique identifier
+    vector position;           // Spatial embedding
+    string type;              // Object type (for typed categories)
+    float@properties[];       // Extensible property array
+}
+
+// Morphism representation  
+struct Morphism {
+    int source_id;            // Domain object
+    int target_id;            // Codomain object
+    vector direction;         // Spatial direction vector
+    string composition_rule;   // How this morphism composes
+    float strength;           // Morphism "intensity"
+}
+
+// Functor implementation
+struct Functor {
+    string name;              // Functor identifier
+    string source_category;   // Domain category
+    string target_category;   // Codomain category
+    float preservation_law;   // How well it preserves structure
+}
+
+// ============================================================================
+// KAN EXTENSIONS: The Heart of Categorical Computation
+// ============================================================================
+
+/**
+ * Right Kan Extension Implementation
+ * Lan_K F: Extends functor F along K via colimit construction
+ * 
+ * Mathematical Definition:
+ * (Lan_K F)(e) = colim_{K(c)→e} F(c)
+ */
+function float right_kan_extension(
+    int point_id;           // Current point e in target category
+    string functor_name;    // Functor F to extend
+    float extension_radius; // Spatial radius for colimit computation
+    int preserve_laws       // Whether to enforce categorical laws
+) {
+    vector current_pos = point(0, "P", point_id);
+    float colimit_value = 0.0;
+    float total_weight = 0.0;
+    int violation_count = 0;
+    
+    // Step 1: Collect all morphisms K(c) → e within radius
+    for(int pt = 0; pt < npoints(0); pt++) {
+        vector source_pos = point(0, "P", pt);
+        float distance_to_source = distance(current_pos, source_pos);
+        
+        if(distance_to_source <= extension_radius) {
+            // Get original functor value F(c)
+            float original_value = point(0, "functor_value", pt);
+            
+            // Compute weight based on categorical proximity
+            float categorical_weight = 1.0 / max(distance_to_source, 0.001);
+            
+            // Check if this preserves composition laws
+            if(preserve_laws) {
+                float composition_error = check_composition_preservation(pt, point_id);
+                if(composition_error > 0.1) {
+                    violation_count++;
+                    categorical_weight *= 0.1; // Penalize law violations
+                }
+            }
+            
+            colimit_value += original_value * categorical_weight;
+            total_weight += categorical_weight;
+        }
+    }
+    
+    // Store violation information for visualization
+    if(preserve_laws) {
+        setpointattrib(0, "law_violations", point_id, violation_count);
+    }
+    
+    return (total_weight > 0) ? colimit_value / total_weight : 0.0;
+}
+
+/**
+ * Left Kan Extension Implementation  
+ * Ran_K F: Extends functor F along K via limit construction
+ */
+function float left_kan_extension(
+    int point_id;
+    string functor_name;
+    float extension_radius;
+    int preserve_laws
+) {
+    vector current_pos = point(0, "P", point_id);
+    float limit_value = 1e6; // Start with "infinity" for limit
+    int found_sources = 0;
+    
+    // Step 1: Find all sources that map to current point via K
+    for(int pt = 0; pt < npoints(0); pt++) {
+        vector source_pos = point(0, "P", pt);
+        float distance_to_source = distance(current_pos, source_pos);
+        
+        if(distance_to_source <= extension_radius) {
+            float original_value = point(0, "functor_value", pt);
+            
+            // For limit, take minimum (categorical limit)
+            limit_value = min(limit_value, original_value);
+            found_sources = 1;
+            
+            // Composition law checking
+            if(preserve_laws) {
+                float composition_error = check_composition_preservation(pt, point_id);
+                if(composition_error > 0.1) {
+                    // Mark as problematic
+                    setpointattrib(0, "limit_violation", point_id, 1);
+                }
+            }
+        }
+    }
+    
+    return found_sources ? limit_value : 0.0;
+}
+
+// ============================================================================
+// TOPOLOGICAL INVARIANT COMPUTATION
+// ============================================================================
+
+/**
+ * Fundamental Group π₁ Tracker
+ * Computes homotopy classes of animation loops
+ */
+function int compute_fundamental_group_element(
+    vector start_position;
+    vector end_position;
+    float time_parameter;
+    string space_type
+) {
+    // For now, implement for common spaces
+    if(space_type == "sphere_S2") {
+        // S² has trivial fundamental group: π₁(S²) = 0
+        return 0;
+    }
+    else if(space_type == "torus_T2") {
+        // T² has π₁(T²) = Z × Z
+        vector displacement = end_position - start_position;
+        int winding_x = int(displacement.x / (2 * PI));
+        int winding_y = int(displacement.y / (2 * PI));
+        
+        // Encode (m,n) ∈ Z×Z as single integer
+        return winding_x * 1000 + winding_y;
+    }
+    else if(space_type == "klein_bottle") {
+        // Klein bottle: π₁(K) = ⟨a,b | aba⁻¹b⟩
+        // Simplified encoding for visualization
+        vector normalized = normalize(end_position - start_position);
+        return int(atan2(normalized.y, normalized.x) * 180 / PI);
+    }
+    
+    return -1; // Unknown space type
+}
+
+/**
+ * Homotopy Class Visualizer
+ * Colors geometry based on homotopy equivalence
+ */
+function vector get_homotopy_color(int homotopy_class) {
+    // Generate distinct colors for different homotopy classes
+    float hue = (homotopy_class * 137.5) % 360; // Golden angle for distribution
+    float saturation = 0.8;
+    float value = 0.9;
+    
+    return hsv_to_rgb(set(hue, saturation, value));
+}
+
+// ============================================================================
+// DEPENDENT TYPE SYSTEM FOR LOGICAL VOXELS
+// ============================================================================
+
+/**
+ * Type Universe for Logical Propositions
+ */
+function string infer_logical_type(float truth_value; string proof_term) {
+    if(proof_term == "") {
+        return "proposition";  // Unproven proposition
+    }
+    else if(truth_value == 1.0) {
+        return "theorem";      // Proven true statement
+    }
+    else if(truth_value == 0.0) {
+        return "contradiction"; // Proven false
+    }
+    else {
+        return "partial_proof"; // Incomplete proof
+    }
+}
+
+/**
+ * Type Checker for Logical Consistency
+ */
+function int type_check_logical_voxel(
+    string logical_type;
+    float truth_value;
+    string proof_term;
+    vector inference_direction
+) {
+    // Type consistency rules
+    if(logical_type == "theorem" && truth_value != 1.0) {
+        return 0; // Type error: theorems must be true
+    }
+    
+    if(logical_type == "contradiction" && truth_value != 0.0) {
+        return 0; // Type error: contradictions must be false
+    }
+    
+    if(logical_type == "proposition" && proof_term != "") {
+        return 0; // Type error: propositions shouldn't have proofs
+    }
+    
+    // Check proof term validity (simplified)
+    if(proof_term == "modus_ponens" || proof_term == "universal_instantiation" ||
+       proof_term == "existential_generalization" || proof_term == "") {
+        return 1; // Valid proof term
+    }
+    
+    return 0; // Invalid proof term
+}
+
+/**
+ * Inference Rule Application
+ * Propagates logical truth through space
+ */
+function float apply_inference_rule(
+    string rule_name;
+    float premise1;
+    float premise2;
+    vector spatial_context
+) {
+    if(rule_name == "modus_ponens") {
+        // If P and (P → Q), then Q
+        return min(premise1, premise2);
+    }
+    else if(rule_name == "conjunction") {
+        // P ∧ Q
+        return min(premise1, premise2);
+    }
+    else if(rule_name == "disjunction") {
+        // P ∨ Q  
+        return max(premise1, premise2);
+    }
+    else if(rule_name == "spatial_propagation") {
+        // Truth decays with spatial distance
+        float decay_rate = 0.1;
+        float distance_factor = length(spatial_context);
+        return premise1 * exp(-decay_rate * distance_factor);
+    }
+    
+    return 0.0; // Unknown rule
+}
+
+// ============================================================================
+// COMPOSITION AND CATEGORICAL LAWS
+// ============================================================================
+
+/**
+ * Check Composition Preservation
+ * Verifies that Kan extensions preserve categorical structure
+ */
+function float check_composition_preservation(int source_id; int target_id) {
+    // Get morphism chain from source to target
+    vector source_pos = point(0, "P", source_id);
+    vector target_pos = point(0, "P", target_id);
+    
+    // Check if there's an intermediate point for composition
+    float min_composition_error = 1e6;
+    
+    for(int intermediate = 0; intermediate < npoints(0); intermediate++) {
+        if(intermediate == source_id || intermediate == target_id) continue;
+        
+        vector intermediate_pos = point(0, "P", intermediate);
+        
+        // Check if intermediate lies on path from source to target
+        float total_distance = distance(source_pos, target_pos);
+        float path_distance = distance(source_pos, intermediate_pos) + 
+                             distance(intermediate_pos, target_pos);
+        
+        if(abs(path_distance - total_distance) < 0.1) {
+            // This could be a composition path
+            float functor_source = point(0, "functor_value", source_id);
+            float functor_intermediate = point(0, "functor_value", intermediate);
+            float functor_target = point(0, "functor_value", target_id);
+            
+            // Check if F(g ∘ f) = F(g) ∘ F(f)
+            float composition_direct = functor_target;
+            float composition_chain = functor_intermediate * functor_source;
+            
+            float error = abs(composition_direct - composition_chain);
+            min_composition_error = min(min_composition_error, error);
+        }
+    }
+    
+    return min_composition_error;
+}
+
+/**
+ * Identity Morphism Checker
+ * Ensures every object has an identity morphism
+ */
+function int has_identity_morphism(int object_id) {
+    float self_functor = point(0, "functor_value", object_id);
+    
+    // Identity should preserve the object
+    return (abs(self_functor - 1.0) < 0.001) ? 1 : 0;
+}
+
+// ============================================================================
+// VISUALIZATION AND PROOF RENDERING
+// ============================================================================
+
+/**
+ * Proof Surface Generator
+ * Creates visual representations of logical proofs
+ */
+function vector generate_proof_surface_color(
+    string logical_type;
+    float truth_value;
+    int type_correct;
+    float proof_strength
+) {
+    vector base_color = {0.5, 0.5, 0.5}; // Default gray
+    
+    if(!type_correct) {
+        return {1, 0, 0}; // Red for type errors
+    }
+    
+    if(logical_type == "theorem") {
+        base_color = {0, 1, 0}; // Green for proven theorems
+    }
+    else if(logical_type == "proposition") {
+        base_color = {0, 0, 1}; // Blue for unproven propositions
+    }
+    else if(logical_type == "contradiction") {
+        base_color = {1, 0, 1}; // Magenta for contradictions
+    }
+    else if(logical_type == "partial_proof") {
+        base_color = {1, 1, 0}; // Yellow for partial proofs
+    }
+    
+    // Modulate intensity by proof strength
+    return base_color * proof_strength;
+}
+
+/**
+ * Categorical Invariant Display
+ * Shows mathematical properties as visual attributes
+ */
+function void display_categorical_invariants(int point_id) {
+    // Store key invariants as point attributes for visualization
+    float extension_quality = point(0, "extension_value", point_id) - 
+                             point(0, "functor_value", point_id);
+    
+    setpointattrib(0, "extension_quality", point_id, extension_quality);
+    setpointattrib(0, "categorical_rank", point_id, abs(extension_quality));
+    
+    // Homotopy information
+    int homotopy_class = point(0, "homotopy_class", point_id);
+    vector homotopy_color = get_homotopy_color(homotopy_class);
+    setpointattrib(0, "homotopy_color", point_id, homotopy_color);
+    
+    // Type checking results
+    string logical_type = point(0, "logical_type", point_id);
+    float truth_value = point(0, "truth_value", point_id);
+    string proof_term = point(0, "proof_term", point_id);
+    
+    int type_valid = type_check_logical_voxel(logical_type, truth_value, 
+                                            proof_term, {0,0,0});
+    setpointattrib(0, "type_valid", point_id, type_valid);
+}
+
+// ============================================================================
+// MAIN EXECUTION FRAMEWORK
+// ============================================================================
+
+/**
+ * Master Categorical Processor
+ * Orchestrates all mathematical computations
+ */
+function void process_categorical_geometry() {
+    // Get user parameters
+    float kan_radius = chf("kan_extension_radius");
+    int preserve_laws = chi("preserve_categorical_laws");
+    string computation_mode = chs("computation_mode");
+    
+    // For each point, compute categorical extensions
+    if(computation_mode == "right_kan_extension") {
+        f@extension_value = right_kan_extension(@ptnum, "default_functor", 
+                                              kan_radius, preserve_laws);
+    }
+    else if(computation_mode == "left_kan_extension") {
+        f@extension_value = left_kan_extension(@ptnum, "default_functor", 
+                                             kan_radius, preserve_laws);
+    }
+    
+    // Compute topological invariants
+    string space_type = chs("space_type");
+    vector start_pos = point(0, "P", 0);
+    i@homotopy_class = compute_fundamental_group_element(start_pos, @P, 
+                                                        @Time, space_type);
+    
+    // Apply type checking for logical voxels
+    s@logical_type = infer_logical_type(@truth_value, s@proof_term);
+    i@type_valid = type_check_logical_voxel(s@logical_type, @truth_value, 
+                                          s@proof_term, v@inference_direction);
+    
+    // Generate visualization
+    display_categorical_invariants(@ptnum);
+    
+    // Set final color based on all computations
+    v@Cd = generate_proof_surface_color(s@logical_type, @truth_value, 
+                                       i@type_valid, @extension_value);
+}
+
+// Execute the main framework
+process_categorical_geometry();

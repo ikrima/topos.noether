@@ -7,6 +7,10 @@
 
 ## GPT Math Edu Demos
 - [Functorial Symmetry Explorer](gpt-demos/categorical-symmetry-lab.html)
+- [Categorical Geometry Engine in Houdini](gpt-demos/categorical-houdini-guide.html)
+- [Categorical Houdini: Mathematical Visualization Framework](gpt-demos/hou-categorical_houdini_framework.md)
+- [Categorical Houdini: VEX Mathematical Library](gpt-demos/hou-kan_extension_vex_library.vex.txt)
+- [Categorical Houdini Tutorial: Your First Categorical Houdini Project](gpt-demos/hou-first_categorical_project.md)
 
 ## The Gnomon Symposium
 
