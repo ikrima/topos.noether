@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categorical Symmetry Laboratory</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: -apple-system, sans-serif; }
+        #canvas-container { position: relative; }
+        .control-panel { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            background: rgba(15, 23, 42, 0.95); 
+            padding: 20px; 
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+        }
+        .insight-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            max-width: 350px;
+        }
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #374151;
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #60a5fa;
+            cursor: pointer;
+        }
+        .button {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .button:hover { background: #2563eb; }
+        .button:active { transform: scale(0.98); }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <div id="canvas-container"></div>
+    
+    <div class="control-panel text-gray-100">
+        <h2 class="text-2xl font-bold mb-4 text-blue-400">Functorial Symmetry Explorer</h2>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-medium mb-2">Symmetry Type</label>
+            <select id="symmetryType" class="w-full p-2 bg-gray-800 rounded border border-gray-700">
+                <option value="rotation">SO(3) - Rotation</option>
+                <option value="translation">Translation Group</option>
+                <option value="scaling">Scaling Group</option>
+                <option value="mobius">Möbius Transformation</option>
+            </select>
+        </div>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-medium mb-2">
+                Morphism Parameter: <span id="morphismValue" class="text-blue-400">0.00</span>
+            </label>
+            <input type="range" id="morphismSlider" class="slider" min="-1" max="1" step="0.01" value="0">
+        </div>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-medium mb-2">Visualization Mode</label>
+            <div class="space-y-2">
+                <label class="flex items-center">
+                    <input type="checkbox" id="showOrbits" checked class="mr-2">
+                    <span>Show Orbit Traces</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" id="showInvariants" checked class="mr-2">
+                    <span>Show Invariant Surfaces</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" id="showLieFlow" class="mr-2">
+                    <span>Show Lie Algebra Flow</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="flex space-x-2">
+            <button id="playButton" class="button flex-1">Pause</button>
+            <button id="resetButton" class="button flex-1">Reset</button>
+        </div>
+    </div>
+    
+    <div class="insight-panel text-gray-100">
+        <h3 class="text-xl font-bold mb-3 text-purple-400">Mathematical Insights</h3>
+        <div id="insightText" class="text-sm space-y-3"></div>
+        
+        <div class="mt-4 p-3 bg-gray-800 rounded">
+            <h4 class="font-semibold mb-2 text-yellow-400">Conserved Quantities</h4>
+            <div id="conservedQuantities" class="text-xs font-mono"></div>
+        </div>
+    </div>
+
+    <script>
+        // Type annotations for clarity (treated as comments by browser)
+        // type Vec3 = { x: number, y: number, z: number }
+        // type Symmetry = { apply: (v: Vec3, t: number) => Vec3, generator: string, invariant: (v: Vec3) => number }
+        
+        // Pure functional approach to symmetry transformations
+        const symmetries = {
+            rotation: {
+                name: "SO(3) Rotation Group",
+                apply: (vec, param) => {
+                    const angle = param * Math.PI;
+                    const c = Math.cos(angle);
+                    const s = Math.sin(angle);
+                    return {
+                        x: vec.x * c - vec.z * s,
+                        y: vec.y,
+                        z: vec.x * s + vec.z * c
+                    };
+                },
+                generator: "Lz = -i(x∂/∂y - y∂/∂x)",
+                invariant: (vec) => vec.x * vec.x + vec.y * vec.y + vec.z * vec.z,
+                invariantName: "Radius (Angular Momentum)",
+                description: "Rotations preserve distances from origin. Emmy Noether showed this symmetry yields conservation of angular momentum."
+            },
+            
+            translation: {
+                name: "Translation Group",
+                apply: (vec, param) => ({
+                    x: vec.x + param * 2,
+                    y: vec.y,
+                    z: vec.z
+                }),
+                generator: "Px = -i∂/∂x",
+                invariant: (vec) => vec.y * vec.y + vec.z * vec.z,
+                invariantName: "Transverse Distance (Linear Momentum)",
+                description: "Translations along x preserve the y-z distance. This symmetry yields conservation of linear momentum."
+            },
+            
+            scaling: {
+                name: "Scaling Group",
+                apply: (vec, param) => {
+                    const scale = Math.exp(param);
+                    return {
+                        x: vec.x * scale,
+                        y: vec.y * scale,
+                        z: vec.z * scale
+                    };
+                },
+                generator: "D = x∂/∂x + y∂/∂y + z∂/∂z",
+                invariant: (vec) => {
+                    const r = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+                    return r > 0 ? Math.atan2(vec.z, r) : 0;
+                },
+                invariantName: "Angle from xy-plane",
+                description: "Scale transformations preserve angular relationships. This is the generator of dilatations in conformal field theory."
+            },
+            
+            mobius: {
+                name: "Möbius Transformation",
+                apply: (vec, param) => {
+                    // Stereographic projection to complex plane
+                    const denom = 1 - vec.z;
+                    if (Math.abs(denom) < 0.001) return vec;
+                    
+                    const u = vec.x / denom;
+                    const v = vec.y / denom;
+                    
+                    // Apply Möbius transformation: z -> (z + a)/(1 + āz)
+                    const a = param;
+                    const denomMob = 1 + a * u;
+                    const uNew = (u + a) / denomMob;
+                    const vNew = v / denomMob;
+                    
+                    // Project back to sphere
+                    const r2 = uNew * uNew + vNew * vNew;
+                    const factor = 2 / (1 + r2);
+                    
+                    return {
+                        x: factor * uNew,
+                        y: factor * vNew,
+                        z: 1 - factor
+                    };
+                },
+                generator: "K = (1-z²)∂/∂z + 2xz∂/∂x + 2yz∂/∂y",
+                invariant: (vec) => {
+                    // Cross-ratio is THE invariant of Möbius transformations
+                    return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z; // Simplified for visualization
+                },
+                invariantName: "Conformal Structure",
+                description: "Möbius transformations preserve angles and circles. They form the conformal group of the Riemann sphere."
+            }
+        };
+        
+        // Initialize Three.js scene with functional style
+        const createScene = () => {
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+            scene.fog = new THREE.Fog(0x0a0a0a, 5, 15);
+            return scene;
+        };
+        
+        const createCamera = (width, height) => {
+            const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+            camera.position.set(5, 3, 5);
+            camera.lookAt(0, 0, 0);
+            return camera;
+        };
+        
+        const createRenderer = (container) => {
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+            return renderer;
+        };
+        
+        // Create scene objects
+        const container = document.getElementById('canvas-container');
+        const scene = createScene();
+        const camera = createCamera(window.innerWidth, window.innerHeight);
+        const renderer = createRenderer(container);
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 5);
+        scene.add(ambientLight, directionalLight);
+        
+        // Create test particles for visualization
+        const createParticleGrid = (n = 5, spacing = 0.8) => {
+            const particles = [];
+            const geometry = new THREE.SphereGeometry(0.05, 16, 16);
+            const material = new THREE.MeshPhongMaterial({ color: 0x60a5fa });
+            
+            for (let i = -n; i <= n; i++) {
+                for (let j = -n; j <= n; j++) {
+                    for (let k = -n; k <= n; k++) {
+                        const mesh = new THREE.Mesh(geometry, material);
+                        mesh.position.set(i * spacing, j * spacing, k * spacing);
+                        mesh.userData.initialPosition = mesh.position.clone();
+                        particles.push(mesh);
+                        scene.add(mesh);
+                    }
+                }
+            }
+            return particles;
+        };
+        
+        // Create orbit traces
+        const createOrbitTrace = (particle) => {
+            const points = [];
+            const geometry = new THREE.BufferGeometry();
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0xfbbf24, 
+                transparent: true, 
+                opacity: 0.6 
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            return { line, points, maxPoints: 200 };
+        };
+        
+        // Create invariant surfaces
+        const createInvariantSurface = (symmetryType) => {
+            const group = new THREE.Group();
+            
+            if (symmetryType === 'rotation') {
+                // Create spherical shells
+                for (let r = 1; r <= 3; r++) {
+                    const geometry = new THREE.SphereGeometry(r, 32, 32);
+                    const material = new THREE.MeshBasicMaterial({
+                        color: 0x6366f1,
+                        transparent: true,
+                        opacity: 0.1,
+                        wireframe: true
+                    });
+                    const sphere = new THREE.Mesh(geometry, material);
+                    group.add(sphere);
+                }
+            } else if (symmetryType === 'translation') {
+                // Create planes perpendicular to translation
+                for (let x = -3; x <= 3; x++) {
+                    const geometry = new THREE.PlaneGeometry(6, 6);
+                    const material = new THREE.MeshBasicMaterial({
+                        color: 0x6366f1,
+                        transparent: true,
+                        opacity: 0.1,
+                        side: THREE.DoubleSide
+                    });
+                    const plane = new THREE.Mesh(geometry, material);
+                    plane.rotation.y = Math.PI / 2;
+                    plane.position.x = x;
+                    group.add(plane);
+                }
+            }
+            
+            scene.add(group);
+            return group;
+        };
+        
+        // State management with minimal mutation
+        let state = {
+            isPlaying: true,
+            time: 0,
+            morphismParam: 0,
+            currentSymmetry: 'rotation',
+            particles: createParticleGrid(),
+            orbits: new Map(),
+            invariantSurfaces: null
+        };
+        
+        // Create special test particle for detailed tracking
+        const testParticle = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 32, 32),
+            new THREE.MeshPhongMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 0.3 })
+        );
+        testParticle.position.set(2, 0, 0);
+        testParticle.userData.initialPosition = testParticle.position.clone();
+        scene.add(testParticle);
+        
+        // Update functions (pure where possible)
+        const updateParticles = (particles, symmetry, param, includeTest = true) => {
+            particles.forEach(particle => {
+                const initial = particle.userData.initialPosition;
+                const transformed = symmetry.apply(initial, param);
+                particle.position.set(transformed.x, transformed.y, transformed.z);
+            });
+            
+            if (includeTest) {
+                const testInitial = testParticle.userData.initialPosition;
+                const testTransformed = symmetry.apply(testInitial, param);
+                testParticle.position.set(testTransformed.x, testTransformed.y, testTransformed.z);
+            }
+        };
+        
+        const updateOrbits = (particle, orbit) => {
+            orbit.points.push(particle.position.clone());
+            if (orbit.points.length > orbit.maxPoints) {
+                orbit.points.shift();
+            }
+            
+            const positions = new Float32Array(orbit.points.length * 3);
+            orbit.points.forEach((point, i) => {
+                positions[i * 3] = point.x;
+                positions[i * 3 + 1] = point.y;
+                positions[i * 3 + 2] = point.z;
+            });
+            
+            orbit.line.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        };
+        
+        const updateInsights = (symmetry, param) => {
+            const insightText = document.getElementById('insightText');
+            const conservedDiv = document.getElementById('conservedQuantities');
+            
+            insightText.innerHTML = `
+                <p><strong>Current Transformation:</strong> ${symmetry.name}</p>
+                <p><strong>Generator:</strong> <code>${symmetry.generator}</code></p>
+                <p class="text-gray-300">${symmetry.description}</p>
+            `;
+            
+            const testPos = testParticle.position;
+            const invariantValue = symmetry.invariant(testPos);
+            
+            conservedDiv.innerHTML = `
+                <div>${symmetry.invariantName}: ${invariantValue.toFixed(4)}</div>
+                <div>Parameter λ: ${param.toFixed(3)}</div>
+                <div>Position: (${testPos.x.toFixed(2)}, ${testPos.y.toFixed(2)}, ${testPos.z.toFixed(2)})</div>
+            `;
+        };
+        
+        // Animation loop
+        const animate = () => {
+            requestAnimationFrame(animate);
+            
+            if (state.isPlaying) {
+                state.time += 0.016;
+                const symmetry = symmetries[state.currentSymmetry];
+                
+                // Smooth parameter animation
+                const animParam = state.morphismParam + Math.sin(state.time) * 0.3;
+                
+                updateParticles(state.particles, symmetry, animParam);
+                
+                // Update orbits for selected particles
+                if (document.getElementById('showOrbits').checked) {
+                    if (!state.orbits.has(testParticle)) {
+                        state.orbits.set(testParticle, createOrbitTrace(testParticle));
+                    }
+                    updateOrbits(testParticle, state.orbits.get(testParticle));
+                }
+                
+                updateInsights(symmetry, animParam);
+            }
+            
+            // Camera rotation
+            const cameraAngle = state.time * 0.1;
+            camera.position.x = Math.cos(cameraAngle) * 7;
+            camera.position.z = Math.sin(cameraAngle) * 7;
+            camera.lookAt(0, 0, 0);
+            
+            renderer.render(scene, camera);
+        };
+        
+        // Event handlers
+        document.getElementById('symmetryType').addEventListener('change', (e) => {
+            state.currentSymmetry = e.target.value;
+            
+            // Clear old invariant surfaces
+            if (state.invariantSurfaces) {
+                scene.remove(state.invariantSurfaces);
+            }
+            
+            // Create new ones
+            if (document.getElementById('showInvariants').checked) {
+                state.invariantSurfaces = createInvariantSurface(state.currentSymmetry);
+            }
+            
+            // Clear orbits
+            state.orbits.forEach(orbit => scene.remove(orbit.line));
+            state.orbits.clear();
+        });
+        
+        document.getElementById('morphismSlider').addEventListener('input', (e) => {
+            state.morphismParam = parseFloat(e.target.value);
+            document.getElementById('morphismValue').textContent = state.morphismParam.toFixed(2);
+        });
+        
+        document.getElementById('playButton').addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            document.getElementById('playButton').textContent = state.isPlaying ? 'Pause' : 'Play';
+        });
+        
+        document.getElementById('resetButton').addEventListener('click', () => {
+            state.time = 0;
+            state.morphismParam = 0;
+            document.getElementById('morphismSlider').value = 0;
+            document.getElementById('morphismValue').textContent = '0.00';
+            
+            // Clear orbits
+            state.orbits.forEach(orbit => scene.remove(orbit.line));
+            state.orbits.clear();
+            
+            // Reset particles
+            updateParticles(state.particles, symmetries[state.currentSymmetry], 0);
+        });
+        
+        document.getElementById('showInvariants').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                state.invariantSurfaces = createInvariantSurface(state.currentSymmetry);
+            } else if (state.invariantSurfaces) {
+                scene.remove(state.invariantSurfaces);
+                state.invariantSurfaces = null;
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>

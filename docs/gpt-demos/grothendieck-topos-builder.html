@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grothendieck Topos Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body { margin: 0; font-family: -apple-system, sans-serif; }
+        .node { cursor: pointer; }
+        .link { fill: none; stroke-width: 2px; }
+        .arrow { fill: #60a5fa; }
+        .control-card {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        .math-notation { font-family: 'Georgia', serif; font-style: italic; }
+        .button-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        .button-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="flex h-screen">
+        <!-- Control Panel -->
+        <div class="w-96 p-6 overflow-y-auto bg-gray-800 border-r border-gray-700">
+            <h1 class="text-3xl font-bold mb-6 text-blue-400">Topos Builder</h1>
+            
+            <div class="control-card rounded-lg p-4 mb-4">
+                <h2 class="text-xl font-semibold mb-3 text-purple-400">What is a Topos?</h2>
+                <p class="text-sm text-gray-300 leading-relaxed">
+                    A topos is Grothendieck's vision of a "generalized space" - not just points with topology, 
+                    but a category with enough structure to do geometry and logic. Think of it as a universe 
+                    where both shapes and proofs live together.
+                </p>
+            </div>
+            
+            <div class="control-card rounded-lg p-4 mb-4">
+                <h3 class="text-lg font-semibold mb-3">Build Your Topos</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Add Object:</label>
+                    <input type="text" id="objectName" placeholder="Enter object name" 
+                           class="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-400 focus:outline-none">
+                </div>
+                
+                <button id="addObject" class="button-primary w-full py-2 rounded-lg text-white font-medium mb-4">
+                    Add Object to Topos
+                </button>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Morphism Mode:</label>
+                    <select id="morphismMode" class="w-full p-2 bg-gray-700 rounded border border-gray-600">
+                        <option value="function">Function (Set-like)</option>
+                        <option value="continuous">Continuous Map</option>
+                        <option value="sheaf">Sheaf Morphism</option>
+                        <option value="natural">Natural Transformation</option>
+                    </select>
+                </div>
+                
+                <p class="text-xs text-gray-400 mb-4">
+                    Click and drag between objects to create morphisms
+                </p>
+            </div>
+            
+            <div class="control-card rounded-lg p-4 mb-4">
+                <h3 class="text-lg font-semibold mb-3">Topos Properties</h3>
+                <div id="toposProperties" class="space-y-2 text-sm">
+                    <!-- Properties will be updated dynamically -->
+                </div>
+            </div>
+            
+            <div class="control-card rounded-lg p-4">
+                <h3 class="text-lg font-semibold mb-3">Subobject Classifier</h3>
+                <p class="text-sm text-gray-300 mb-3">
+                    Every topos has a special object Ω that classifies "truth values" - 
+                    the foundation of internal logic.
+                </p>
+                <button id="addOmega" class="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium">
+                    Add Ω (Truth Object)
+                </button>
+            </div>
+        </div>
+        
+        <!-- Visualization Area -->
+        <div class="flex-1 relative">
+            <svg id="toposViz" class="w-full h-full"></svg>
+            
+            <!-- Insight Panel -->
+            <div class="absolute top-4 right-4 w-80 control-card rounded-lg p-4">
+                <h3 class="text-lg font-semibold mb-3 text-yellow-400">Mathematical Insight</h3>
+                <div id="insightContent" class="text-sm space-y-2">
+                    <p>Start building your topos to see how abstract mathematical structures emerge from simple relationships.</p>
+                </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="absolute bottom-4 left-4 control-card rounded-lg p-3">
+                <h4 class="text-sm font-semibold mb-2">Legend</h4>
+                <div class="flex items-center space-x-4 text-xs">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-blue-500 mr-2"></div>
+                        <span>Object</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-purple-500 mr-2"></div>
+                        <span>Terminal Object</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-green-500 mr-2"></div>
+                        <span>Ω (Classifier)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Type definitions (as comments for clarity)
+        // type ToposObject = { id: string, name: string, type: 'object' | 'terminal' | 'omega' }
+        // type Morphism = { source: string, target: string, type: string, id: string }
+        // type Topos = { objects: ToposObject[], morphisms: Morphism[] }
+        
+        // Initialize topos state
+        const topos = {
+            objects: [],
+            morphisms: [],
+            nextId: 1
+        };
+        
+        // D3 setup
+        const svg = d3.select('#toposViz');
+        const width = svg.node().getBoundingClientRect().width;
+        const height = svg.node().getBoundingClientRect().height;
+        
+        // Create arrow marker
+        svg.append('defs').append('marker')
+            .attr('id', 'arrowhead')
+            .attr('markerWidth', 10)
+            .attr('markerHeight', 7)
+            .attr('refX', 25)
+            .attr('refY', 3.5)
+            .attr('orient', 'auto')
+            .append('polygon')
+            .attr('points', '0 0, 10 3.5, 0 7')
+            .attr('class', 'arrow');
+        
+        const g = svg.append('g');
+        
+        // Force simulation
+        const simulation = d3.forceSimulation()
+            .force('link', d3.forceLink().id(d => d.id).distance(150))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius(40));
+        
+        // Drag behavior
+        const drag = d3.drag()
+            .on('start', dragStarted)
+            .on('drag', dragged)
+            .on('end', dragEnded);
+        
+        // Pure functions for topos operations
+        const createObject = (name, type = 'object') => ({
+            id: `obj_${topos.nextId++}`,
+            name: name,
+            type: type,
+            x: Math.random() * width,
+            y: Math.random() * height
+        });
+        
+        const createMorphism = (sourceId, targetId, type) => ({
+            id: `mor_${topos.nextId++}`,
+            source: sourceId,
+            target: targetId,
+            type: type
+        });
+        
+        const hasTerminalObject = (objects) => 
+            objects.some(obj => obj.type === 'terminal');
+        
+        const hasInitialObject = (objects) => 
+            objects.some(obj => obj.type === 'initial');
+        
+        const hasProductsAndCoproducts = (morphisms) => {
+            // Simplified check - in real implementation would verify universal properties
+            const objectPairs = new Set();
+            morphisms.forEach(m => {
+                objectPairs.add(`${m.source}-${m.target}`);
+            });
+            return objectPairs.size > 3;
+        };
+        
+        const isCartesianClosed = (objects, morphisms) => {
+            // Check if we have exponential objects (simplified)
+            return objects.length > 3 && morphisms.length > 5;
+        };
+        
+        // Update visualization
+        const updateVisualization = () => {
+            // Links
+            const links = g.selectAll('.link')
+                .data(topos.morphisms, d => d.id);
+            
+            links.enter()
+                .append('line')
+                .attr('class', 'link')
+                .attr('marker-end', 'url(#arrowhead)')
+                .style('stroke', d => {
+                    switch(d.type) {
+                        case 'continuous': return '#60a5fa';
+                        case 'sheaf': return '#a78bfa';
+                        case 'natural': return '#34d399';
+                        default: return '#6b7280';
+                    }
+                });
+            
+            links.exit().remove();
+            
+            // Nodes
+            const nodes = g.selectAll('.node')
+                .data(topos.objects, d => d.id);
+            
+            const nodeEnter = nodes.enter()
+                .append('g')
+                .attr('class', 'node')
+                .call(drag);
+            
+            nodeEnter.append('circle')
+                .attr('r', 25)
+                .style('fill', d => {
+                    switch(d.type) {
+                        case 'terminal': return '#a855f7';
+                        case 'omega': return '#10b981';
+                        default: return '#3b82f6';
+                    }
+                })
+                .style('stroke', '#1f2937')
+                .style('stroke-width', 2);
+            
+            nodeEnter.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('dy', '.35em')
+                .style('fill', 'white')
+                .style('font-size', '14px')
+                .style('font-weight', 'bold')
+                .text(d => d.name);
+            
+            nodes.exit().remove();
+            
+            // Update simulation
+            simulation.nodes(topos.objects);
+            simulation.force('link').links(topos.morphisms.map(m => ({
+                source: topos.objects.find(o => o.id === m.source),
+                target: topos.objects.find(o => o.id === m.target)
+            })));
+            simulation.alpha(0.3).restart();
+        };
+        
+        // Update properties display
+        const updateProperties = () => {
+            const props = document.getElementById('toposProperties');
+            const insights = document.getElementById('insightContent');
+            
+            const properties = [];
+            
+            // Check topos properties
+            if (hasTerminalObject(topos.objects)) {
+                properties.push('<div class="text-green-400">✓ Has terminal object (1)</div>');
+            }
+            
+            if (topos.objects.some(o => o.type === 'omega')) {
+                properties.push('<div class="text-green-400">✓ Has subobject classifier (Ω)</div>');
+            }
+            
+            if (hasProductsAndCoproducts(topos.morphisms)) {
+                properties.push('<div class="text-green-400">✓ Has products & coproducts</div>');
+            }
+            
+            if (isCartesianClosed(topos.objects, topos.morphisms)) {
+                properties.push('<div class="text-green-400">✓ Cartesian closed</div>');
+            }
+            
+            props.innerHTML = properties.join('') || '<div class="text-gray-400">Add objects to see properties</div>';
+            
+            // Update insights based on structure
+            if (topos.objects.length === 0) {
+                insights.innerHTML = '<p>Begin by adding objects. In category theory, objects are the "things" and morphisms are the "relationships" between them.</p>';
+            } else if (topos.objects.length < 3) {
+                insights.innerHTML = '<p>Your topos is taking shape! Try adding more objects and creating morphisms between them. Notice how the structure begins to emerge.</p>';
+            } else if (topos.objects.some(o => o.type === 'omega')) {
+                insights.innerHTML = `
+                    <p class="mb-2">With Ω in your topos, you now have an internal logic! Every morphism to Ω represents a "predicate" or "property".</p>
+                    <p>This is Grothendieck's insight: geometry and logic are unified in the topos structure.</p>
+                `;
+            } else {
+                insights.innerHTML = `
+                    <p class="mb-2">Your topos has ${topos.objects.length} objects and ${topos.morphisms.length} morphisms.</p>
+                    <p>Consider adding Ω to enable internal logic, or explore how different morphism types create different geometric structures.</p>
+                `;
+            }
+        };
+        
+        // Simulation tick
+        simulation.on('tick', () => {
+            g.selectAll('.link')
+                .attr('x1', d => {
+                    const source = topos.objects.find(o => o.id === d.source);
+                    return source ? source.x : 0;
+                })
+                .attr('y1', d => {
+                    const source = topos.objects.find(o => o.id === d.source);
+                    return source ? source.y : 0;
+                })
+                .attr('x2', d => {
+                    const target = topos.objects.find(o => o.id === d.target);
+                    return target ? target.x : 0;
+                })
+                .attr('y2', d => {
+                    const target = topos.objects.find(o => o.id === d.target);
+                    return target ? target.y : 0;
+                });
+            
+            g.selectAll('.node')
+                .attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+        
+        // Drag functions
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        // Event handlers
+        document.getElementById('addObject').addEventListener('click', () => {
+            const name = document.getElementById('objectName').value.trim();
+            if (name) {
+                const newObject = createObject(name);
+                topos.objects.push(newObject);
+                
+                // If first object, make it terminal
+                if (topos.objects.length === 1) {
+                    newObject.type = 'terminal';
+                    newObject.name = '1';
+                }
+                
+                updateVisualization();
+                updateProperties();
+                document.getElementById('objectName').value = '';
+            }
+        });
+        
+        document.getElementById('addOmega').addEventListener('click', () => {
+            if (!topos.objects.some(o => o.type === 'omega')) {
+                const omega = createObject('Ω', 'omega');
+                topos.objects.push(omega);
+                updateVisualization();
+                updateProperties();
+            }
+        });
+        
+        // Allow Enter key to add object
+        document.getElementById('objectName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('addObject').click();
+            }
+        });
+        
+        // Morphism creation via click and drag
+        let sourceNode = null;
+        
+        g.on('click', function(event) {
+            const node = d3.select(event.target).datum();
+            if (node && node.id) {
+                if (!sourceNode) {
+                    sourceNode = node;
+                    d3.select(event.target).style('stroke', '#fbbf24').style('stroke-width', 4);
+                } else if (sourceNode.id !== node.id) {
+                    // Create morphism
+                    const morphismType = document.getElementById('morphismMode').value;
+                    const newMorphism = createMorphism(sourceNode.id, node.id, morphismType);
+                    topos.morphisms.push(newMorphism);
+                    
+                    // Reset selection
+                    g.selectAll('circle').style('stroke', '#1f2937').style('stroke-width', 2);
+                    sourceNode = null;
+                    
+                    updateVisualization();
+                    updateProperties();
+                }
+            }
+        });
+        
+        // Initial state
+        updateProperties();
+    </script>
+</body>
+</html>
