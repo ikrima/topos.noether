@@ -5,6 +5,9 @@
 - [A Functorial and Grothendieck-Inspired Formalization and Operationalization](cat-compiler/cat-compiler-paper.md)
 - [Slides and Interactive Explorer](cat-compiler/cat-compiler-slides.html)
 
+## GPT Math Edu Demos
+- [Functorial Symmetry Explorer](gpt-demos/categorical-symmetry-lab.html)
+
 ## The Gnomon Symposium
 
 A fictional conversation between math luminaries (Emmy Noether, Alexander Grothendieck, Terence Tao, and Colin McLarty) discussing Tao's *Gnomon Functor* concept,
