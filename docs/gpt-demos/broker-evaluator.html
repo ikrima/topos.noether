@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broker Evaluation Matrix - Brazos Built Right</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000 0%, #0a0a1a 50%, #000 100%);
+            z-index: -2;
+        }
+
+        .matrix-bg::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 122, 255, 0.03) 2px, rgba(0, 122, 255, 0.03) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(175, 82, 222, 0.03) 2px, rgba(175, 82, 222, 0.03) 4px);
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(40px, 40px); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-top: 40px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -2px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff, #8e8e93);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 18px;
+            color: #8e8e93;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(20px);
+        }
+
+        .control-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .weight-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .weight-label {
+            font-size: 14px;
+            color: #8e8e93;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .weight-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #2c2c2e;
+            -webkit-appearance: none;
+            outline: none;
+        }
+
+        .weight-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #0051D5);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 122, 255, 0.5);
+        }
+
+        /* Broker Cards */
+        .brokers-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .broker-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .broker-card.winner {
+            border-color: #34C759;
+            box-shadow: 0 0 30px rgba(52, 199, 89, 0.3);
+            transform: scale(1.02);
+        }
+
+        .broker-card.winner::before {
+            content: '👑';
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            font-size: 30px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .broker-name {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .broker-carrier {
+            font-size: 14px;
+            color: #8e8e93;
+            margin-bottom: 20px;
+        }
+
+        .broker-score {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #007AFF, #AF52DE);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .score-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-label {
+            font-size: 14px;
+            color: #8e8e93;
+        }
+
+        .score-bar {
+            flex: 1;
+            height: 8px;
+            background: #2c2c2e;
+            border-radius: 4px;
+            margin: 0 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .score-value {
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Input Section */
+        .input-section {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-label {
+            font-size: 14px;
+            color: #8e8e93;
+        }
+
+        .input-field {
+            background: #1c1c1e;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #007AFF;
+            box-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+        }
+
+        .add-broker-btn {
+            background: linear-gradient(135deg, #007AFF, #0051D5);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .add-broker-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 122, 255, 0.3);
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            overflow-x: auto;
+            margin-bottom: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            font-weight: 600;
+            color: #8e8e93;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        td {
+            font-size: 16px;
+        }
+
+        .table-highlight {
+            background: rgba(52, 199, 89, 0.1);
+        }
+
+        /* Insights Panel */
+        .insights-panel {
+            background: linear-gradient(135deg, rgba(0,122,255,0.1), rgba(175,82,222,0.1));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+
+        .insight-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .insight-icon {
+            font-size: 24px;
+            min-width: 30px;
+        }
+
+        .insight-text {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .insight-highlight {
+            color: #007AFF;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .brokers-container {
+                grid-template-columns: 1fr;
+            }
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Broker Evaluation Matrix</h1>
+            <p>Direct manipulation decision making - adjust weights and see results instantly</p>
+        </header>
+
+        <!-- Weight Controls -->
+        <div class="control-panel">
+            <h2 class="control-title">
+                <span>⚖️</span>
+                <span>Adjust What Matters Most to You</span>
+            </h2>
+            <div class="control-grid">
+                <div class="weight-control">
+                    <div class="weight-label">
+                        <span>Premium Cost</span>
+                        <span id="cost-weight">35%</span>
+                    </div>
+                    <input type="range" class="weight-slider" id="cost-slider" min="0" max="50" value="35">
+                </div>
+                
+                <div class="weight-control">
+                    <div class="weight-label">
+                        <span>Coverage Quality</span>
+                        <span id="coverage-weight">25%</span>
+                    </div>
+                    <input type="range" class="weight-slider" id="coverage-slider" min="0" max="50" value="25">
+                </div>
+                
+                <div class="weight-control">
+                    <div class="weight-label">
+                        <span>Carrier Strength</span>
+                        <span id="carrier-weight">15%</span>
+                    </div>
+                    <input type="range" class="weight-slider" id="carrier-slider" min="0" max="50" value="15">
+                </div>
+                
+                <div class="weight-control">
+                    <div class="weight-label">
+                        <span>Service Level</span>
+                        <span id="service-weight">15%</span>
+                    </div>
+                    <input type="range" class="weight-slider" id="service-slider" min="0" max="50" value="15">
+                </div>
+                
+                <div class="weight-control">
+                    <div class="weight-label">
+                        <span>Claims Handling</span>
+                        <span id="claims-weight">10%</span>
+                    </div>
+                    <input type="range" class="weight-slider" id="claims-slider" min="0" max="50" value="10">
+                </div>
+            </div>
+        </div>
+
+        <!-- Broker Cards -->
+        <div class="brokers-container" id="brokers-container">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Add New Broker -->
+        <div class="input-section">
+            <h2 class="control-title">
+                <span>➕</span>
+                <span>Add Broker Quote</span>
+            </h2>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label class="input-label">Broker Name</label>
+                    <input type="text" class="input-field" id="broker-name" placeholder="e.g., Texas Shield Insurance">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Carrier</label>
+                    <input type="text" class="input-field" id="broker-carrier" placeholder="e.g., Hartford">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Annual Premium</label>
+                    <input type="number" class="input-field" id="broker-premium" placeholder="8500">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">GL Limit (millions)</label>
+                    <input type="number" class="input-field" id="broker-gl" placeholder="2" step="0.5">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Carrier Rating</label>
+                    <select class="input-field" id="broker-rating">
+                        <option value="A++">A++ (Superior)</option>
+                        <option value="A+">A+ (Superior)</option>
+                        <option value="A">A (Excellent)</option>
+                        <option value="A-">A- (Excellent)</option>
+                        <option value="B++">B++ (Good)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Response Time (days)</label>
+                    <input type="number" class="input-field" id="broker-response" placeholder="2" min="1" max="10">
+                </div>
+            </div>
+            <button class="add-broker-btn" onclick="addBroker()">Add Broker to Comparison</button>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="comparison-table">
+            <h2 class="control-title">
+                <span>📊</span>
+                <span>Side-by-Side Comparison</span>
+            </h2>
+            <table id="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Broker</th>
+                        <th>Premium</th>
+                        <th>GL Limit</th>
+                        <th>Pollution</th>
+                        <th>Rating</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Dynamically populated -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Insights -->
+        <div class="insights-panel">
+            <h2 class="control-title">
+                <span>💡</span>
+                <span>Dynamic Insights</span>
+            </h2>
+            <div id="insights-content">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Broker data
+        let brokers = [
+            {
+                name: "Texas Construction Shield",
+                carrier: "Hartford",
+                premium: 8500,
+                gl: 2,
+                pollution: 10,
+                rating: "A+",
+                response: 1,
+                service: 90,
+                claims: 85
+            },
+            {
+                name: "Lone Star Risk Partners",
+                carrier: "Travelers",
+                premium: 9200,
+                gl: 2,
+                pollution: 10,
+                rating: "A++",
+                response: 2,
+                service: 95,
+                claims: 90
+            },
+            {
+                name: "BuildSafe Insurance Group",
+                carrier: "Liberty Mutual",
+                premium: 7800,
+                gl: 1,
+                pollution: 5,
+                rating: "A",
+                response: 3,
+                service: 80,
+                claims: 75
+            }
+        ];
+
+        // Weight values
+        let weights = {
+            cost: 35,
+            coverage: 25,
+            carrier: 15,
+            service: 15,
+            claims: 10
+        };
+
+        // Initialize
+        function init() {
+            updateBrokers();
+            setupSliders();
+            updateInsights();
+        }
+
+        // Setup weight sliders
+        function setupSliders() {
+            const sliders = [
+                { id: 'cost-slider', weight: 'cost', display: 'cost-weight' },
+                { id: 'coverage-slider', weight: 'coverage', display: 'coverage-weight' },
+                { id: 'carrier-slider', weight: 'carrier', display: 'carrier-weight' },
+                { id: 'service-slider', weight: 'service', display: 'service-weight' },
+                { id: 'claims-slider', weight: 'claims', display: 'claims-weight' }
+            ];
+
+            sliders.forEach(slider => {
+                document.getElementById(slider.id).addEventListener('input', function() {
+                    weights[slider.weight] = parseInt(this.value);
+                    document.getElementById(slider.display).textContent = this.value + '%';
+                    
+                    // Normalize weights to 100%
+                    const total = Object.values(weights).reduce((a, b) => a + b, 0);
+                    if (total !== 100) {
+                        const scale = 100 / total;
+                        Object.keys(weights).forEach(key => {
+                            weights[key] = Math.round(weights[key] * scale);
+                        });
+                        updateSliderDisplays();
+                    }
+                    
+                    updateBrokers();
+                    updateInsights();
+                });
+            });
+        }
+
+        // Update slider displays
+        function updateSliderDisplays() {
+            document.getElementById('cost-weight').textContent = weights.cost + '%';
+            document.getElementById('coverage-weight').textContent = weights.coverage + '%';
+            document.getElementById('carrier-weight').textContent = weights.carrier + '%';
+            document.getElementById('service-weight').textContent = weights.service + '%';
+            document.getElementById('claims-weight').textContent = weights.claims + '%';
+            
+            document.getElementById('cost-slider').value = weights.cost;
+            document.getElementById('coverage-slider').value = weights.coverage;
+            document.getElementById('carrier-slider').value = weights.carrier;
+            document.getElementById('service-slider').value = weights.service;
+            document.getElementById('claims-slider').value = weights.claims;
+        }
+
+        // Calculate broker score
+        function calculateScore(broker) {
+            let score = 0;
+            
+            // Cost score (lower is better)
+            const maxPremium = Math.max(...brokers.map(b => b.premium));
+            const minPremium = Math.min(...brokers.map(b => b.premium));
+            const costScore = 100 - ((broker.premium - minPremium) / (maxPremium - minPremium)) * 100;
+            score += (costScore * weights.cost) / 100;
+            
+            // Coverage score
+            const coverageScore = (broker.gl / 2) * 50 + (broker.pollution / 10) * 50;
+            score += (coverageScore * weights.coverage) / 100;
+            
+            // Carrier score
+            const ratingScores = { 'A++': 100, 'A+': 90, 'A': 80, 'A-': 70, 'B++': 60 };
+            score += ((ratingScores[broker.rating] || 50) * weights.carrier) / 100;
+            
+            // Service score
+            score += (broker.service * weights.service) / 100;
+            
+            // Claims score
+            score += (broker.claims * weights.claims) / 100;
+            
+            return Math.round(score);
+        }
+
+        // Update broker display
+        function updateBrokers() {
+            const container = document.getElementById('brokers-container');
+            container.innerHTML = '';
+            
+            // Calculate scores
+            brokers.forEach(broker => {
+                broker.score = calculateScore(broker);
+            });
+            
+            // Sort by score
+            brokers.sort((a, b) => b.score - a.score);
+            
+            // Create cards
+            brokers.forEach((broker, index) => {
+                const card = document.createElement('div');
+                card.className = 'broker-card' + (index === 0 ? ' winner' : '');
+                
+                // Calculate individual scores
+                const maxPremium = Math.max(...brokers.map(b => b.premium));
+                const minPremium = Math.min(...brokers.map(b => b.premium));
+                const costScore = 100 - ((broker.premium - minPremium) / (maxPremium - minPremium)) * 100;
+                const coverageScore = (broker.gl / 2) * 50 + (broker.pollution / 10) * 50;
+                const ratingScores = { 'A++': 100, 'A+': 90, 'A': 80, 'A-': 70, 'B++': 60 };
+                const carrierScore = ratingScores[broker.rating] || 50;
+                
+                card.innerHTML = `
+                    <div class="broker-name">${broker.name}</div>
+                    <div class="broker-carrier">${broker.carrier} · ${broker.rating} Rating</div>
+                    <div class="broker-score">${broker.score}</div>
+                    <div class="score-breakdown">
+                        <div class="score-item">
+                            <span class="score-label">Cost</span>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: ${costScore}%; background: linear-gradient(90deg, #34C759, #248A3D);"></div>
+                            </div>
+                            <span class="score-value">$${broker.premium.toLocaleString()}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Coverage</span>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: ${coverageScore}%; background: linear-gradient(90deg, #007AFF, #0051D5);"></div>
+                            </div>
+                            <span class="score-value">${Math.round(coverageScore)}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Carrier</span>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: ${carrierScore}%; background: linear-gradient(90deg, #AF52DE, #7C2FB3);"></div>
+                            </div>
+                            <span class="score-value">${broker.rating}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Service</span>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: ${broker.service}%; background: linear-gradient(90deg, #FF9500, #FF6200);"></div>
+                            </div>
+                            <span class="score-value">${broker.service}</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Claims</span>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: ${broker.claims}%; background: linear-gradient(90deg, #5AC8FA, #0E7AFF);"></div>
+                            </div>
+                            <span class="score-value">${broker.claims}</span>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+            
+            updateTable();
+        }
+
+        // Update comparison table
+        function updateTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            brokers.forEach((broker, index) => {
+                const row = document.createElement('tr');
+                if (index === 0) row.className = 'table-highlight';
+                
+                row.innerHTML = `
+                    <td>${broker.name}</td>
+                    <td>$${broker.premium.toLocaleString()}</td>
+                    <td>${broker.gl}M/${broker.gl * 2}M</td>
+                    <td>${broker.pollution}M</td>
+                    <td>${broker.rating}</td>
+                    <td><strong>${broker.score}</strong></td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Update insights
+        function updateInsights() {
+            const insights = document.getElementById('insights-content');
+            const winner = brokers[0];
+            const loser = brokers[brokers.length - 1];
+            const avgPremium = brokers.reduce((sum, b) => sum + b.premium, 0) / brokers.length;
+            
+            insights.innerHTML = `
+                <div class="insight-item">
+                    <span class="insight-icon">🏆</span>
+                    <span class="insight-text">
+                        <span class="insight-highlight">${winner.name}</span> leads with a score of 
+                        <span class="insight-highlight">${winner.score}</span>, offering the best balance
+                        based on your current priorities.
+                    </span>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">💰</span>
+                    <span class="insight-text">
+                        Premium range: <span class="insight-highlight">$${Math.min(...brokers.map(b => b.premium)).toLocaleString()}</span>
+                        to <span class="insight-highlight">$${Math.max(...brokers.map(b => b.premium)).toLocaleString()}</span>.
+                        Average: <span class="insight-highlight">$${Math.round(avgPremium).toLocaleString()}</span>.
+                    </span>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">⚖️</span>
+                    <span class="insight-text">
+                        You're prioritizing <span class="insight-highlight">${Object.keys(weights).reduce((a, b) => weights[a] > weights[b] ? a : b)}</span>
+                        at <span class="insight-highlight">${Math.max(...Object.values(weights))}%</span> weight.
+                        Adjust sliders to see how different priorities change the winner.
+                    </span>
+                </div>
+                <div class="insight-item">
+                    <span class="insight-icon">📈</span>
+                    <span class="insight-text">
+                        Moving from cheapest to best-scored option costs 
+                        <span class="insight-highlight">$${(winner.premium - Math.min(...brokers.map(b => b.premium))).toLocaleString()}</span>
+                        more but improves coverage and service significantly.
+                    </span>
+                </div>
+            `;
+        }
+
+        // Add new broker
+        function addBroker() {
+            const name = document.getElementById('broker-name').value;
+            const carrier = document.getElementById('broker-carrier').value;
+            const premium = parseInt(document.getElementById('broker-premium').value);
+            const gl = parseFloat(document.getElementById('broker-gl').value);
+            const rating = document.getElementById('broker-rating').value;
+            const response = parseInt(document.getElementById('broker-response').value);
+            
+            if (name && carrier && premium && gl) {
+                brokers.push({
+                    name,
+                    carrier,
+                    premium,
+                    gl,
+                    pollution: gl * 5, // Estimate
+                    rating,
+                    response,
+                    service: Math.max(60, 100 - response * 10), // Estimate
+                    claims: Math.max(70, 95 - response * 5) // Estimate
+                });
+                
+                // Clear inputs
+                document.getElementById('broker-name').value = '';
+                document.getElementById('broker-carrier').value = '';
+                document.getElementById('broker-premium').value = '';
+                document.getElementById('broker-gl').value = '';
+                document.getElementById('broker-response').value = '';
+                
+                updateBrokers();
+                updateInsights();
+            }
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

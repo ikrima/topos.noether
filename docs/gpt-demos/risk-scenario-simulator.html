@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Scenario Simulator - Brazos Built Right</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Danger-themed background */
+        .risk-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #1a0000 0%, #000 100%);
+            z-index: -2;
+        }
+
+        .risk-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,59,48,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,59,48,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            animation: gridPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-top: 40px;
+        }
+
+        .header h1 {
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: -3px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #FF3B30, #FF9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 20px;
+            color: #8e8e93;
+        }
+
+        /* Risk Score Display */
+        .risk-score-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,59,48,0.3);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .risk-score-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,59,48,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .total-risk-score {
+            font-size: 96px;
+            font-weight: 800;
+            letter-spacing: -4px;
+            margin-bottom: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .risk-low { color: #34C759; }
+        .risk-medium { color: #FF9500; }
+        .risk-high { color: #FF3B30; }
+        .risk-critical { 
+            color: #FF3B30; 
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+
+        .risk-label {
+            font-size: 24px;
+            color: #8e8e93;
+            margin-bottom: 24px;
+        }
+
+        .risk-breakdown {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .risk-stat {
+            text-align: center;
+        }
+
+        .risk-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #FF9500;
+        }
+
+        .risk-stat-label {
+            font-size: 14px;
+            color: #8e8e93;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Scenario Cards */
+        .scenarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .scenario-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scenario-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--scenario-color) 0%, transparent 100%);
+        }
+
+        .scenario-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--scenario-color);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .scenario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .scenario-icon {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .scenario-probability {
+            padding: 6px 12px;
+            background: rgba(255,59,48,0.2);
+            border: 1px solid rgba(255,59,48,0.4);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #FF9500;
+        }
+
+        .scenario-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .scenario-description {
+            font-size: 14px;
+            color: #8e8e93;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .scenario-impacts {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .impact-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+
+        .impact-label {
+            font-size: 14px;
+            color: #8e8e93;
+        }
+
+        .impact-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .scenario-prevention {
+            padding: 16px;
+            background: rgba(52,199,89,0.1);
+            border: 1px solid rgba(52,199,89,0.3);
+            border-radius: 12px;
+        }
+
+        .prevention-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #34C759;
+            margin-bottom: 8px;
+        }
+
+        .prevention-list {
+            font-size: 14px;
+            color: #8e8e93;
+            line-height: 1.6;
+        }
+
+        /* Interactive Simulator */
+        .simulator-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .simulator-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .factors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .factor-control {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .factor-label {
+            font-size: 14px;
+            color: #8e8e93;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .factor-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #007AFF;
+        }
+
+        .factor-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #2c2c2e;
+            -webkit-appearance: none;
+            outline: none;
+        }
+
+        .factor-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #0051D5);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,122,255,0.5);
+        }
+
+        /* Claim Cost Calculator */
+        .cost-breakdown {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 30px;
+        }
+
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .cost-item:last-child {
+            border-bottom: none;
+            padding-top: 20px;
+            margin-top: 8px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .cost-label {
+            font-size: 16px;
+            color: #8e8e93;
+        }
+
+        .cost-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #FF9500;
+        }
+
+        .cost-total {
+            font-size: 24px;
+            font-weight: 700;
+            color: #FF3B30;
+        }
+
+        /* Prevention Matrix */
+        .prevention-matrix {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 30px;
+        }
+
+        .prevention-item {
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .prevention-item.active {
+            background: rgba(52,199,89,0.1);
+            border-color: #34C759;
+        }
+
+        .prevention-item:hover {
+            transform: translateY(-4px);
+            background: rgba(52,199,89,0.05);
+        }
+
+        .prevention-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .prevention-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .prevention-impact {
+            font-size: 20px;
+            font-weight: 700;
+            color: #34C759;
+        }
+
+        /* Real Claims Data */
+        .claims-data {
+            background: linear-gradient(135deg, rgba(255,59,48,0.1), rgba(255,149,0,0.1));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+        }
+
+        .claim-example {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .claim-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .claim-type {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .claim-amount {
+            font-size: 16px;
+            font-weight: 700;
+            color: #FF3B30;
+        }
+
+        .claim-details {
+            font-size: 14px;
+            color: #8e8e93;
+            line-height: 1.6;
+        }
+
+        /* Action Button */
+        .action-button {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #34C759, #248A3D);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .action-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(52,199,89,0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .scenarios-grid {
+                grid-template-columns: 1fr;
+            }
+            .factors-grid {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 36px;
+            }
+            .total-risk-score {
+                font-size: 64px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="risk-bg"></div>
+    <div class="risk-grid"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Risk Scenario Simulator</h1>
+            <p>See how claims happen, calculate their cost, and prevent them before they occur</p>
+        </header>
+
+        <!-- Risk Score Panel -->
+        <div class="risk-score-panel">
+            <div class="total-risk-score risk-medium" id="risk-score">72</div>
+            <div class="risk-label">Current Risk Score</div>
+            <div class="risk-breakdown">
+                <div class="risk-stat">
+                    <div class="risk-stat-value" id="claim-probability">23%</div>
+                    <div class="risk-stat-label">Annual Claim Probability</div>
+                </div>
+                <div class="risk-stat">
+                    <div class="risk-stat-value" id="avg-claim">$45K</div>
+                    <div class="risk-stat-label">Average Claim Cost</div>
+                </div>
+                <div class="risk-stat">
+                    <div class="risk-stat-value" id="prevention-score">65%</div>
+                    <div class="risk-stat-label">Prevention Effectiveness</div>
+                </div>
+                <div class="risk-stat">
+                    <div class="risk-stat-value" id="coverage-gap">$3M</div>
+                    <div class="risk-stat-label">Coverage Gap</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario Cards -->
+        <div class="scenarios-grid">
+            <div class="scenario-card" style="--scenario-color: #FF3B30" onclick="simulateScenario('fence-collapse')">
+                <div class="scenario-header">
+                    <div class="scenario-icon">🏚️</div>
+                    <div class="scenario-probability">18% chance</div>
+                </div>
+                <div class="scenario-title">Fence Collapse Injury</div>
+                <div class="scenario-description">
+                    High winds cause improperly anchored fence section to fall on neighbor's child playing in adjacent yard.
+                </div>
+                <div class="scenario-impacts">
+                    <div class="impact-item">
+                        <span class="impact-label">Medical costs</span>
+                        <span class="impact-value">$85,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Legal fees</span>
+                        <span class="impact-value">$35,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Settlement</span>
+                        <span class="impact-value">$150,000</span>
+                    </div>
+                </div>
+                <div class="scenario-prevention">
+                    <div class="prevention-title">Prevention Strategy</div>
+                    <div class="prevention-list">
+                        • Double-check post depth (minimum 1/3 height)<br>
+                        • Use concrete for all posts<br>
+                        • Install temporary bracing for 48 hours<br>
+                        • Wind-load calculations for 6ft+ fences
+                    </div>
+                </div>
+            </div>
+
+            <div class="scenario-card" style="--scenario-color: #FF9500" onclick="simulateScenario('deck-failure')">
+                <div class="scenario-header">
+                    <div class="scenario-icon">🪜</div>
+                    <div class="scenario-probability">12% chance</div>
+                </div>
+                <div class="scenario-title">Deck Structural Failure</div>
+                <div class="scenario-description">
+                    Ledger board separation during family gathering causes deck to collapse with 8 people, multiple injuries.
+                </div>
+                <div class="scenario-impacts">
+                    <div class="impact-item">
+                        <span class="impact-label">Medical costs</span>
+                        <span class="impact-value">$220,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Legal fees</span>
+                        <span class="impact-value">$75,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Settlement</span>
+                        <span class="impact-value">$500,000</span>
+                    </div>
+                </div>
+                <div class="scenario-prevention">
+                    <div class="prevention-title">Prevention Strategy</div>
+                    <div class="prevention-list">
+                        • Use proper lag screws, not nails<br>
+                        • Install flashing behind ledger<br>
+                        • Document joist hanger installation<br>
+                        • Load test before completion
+                    </div>
+                </div>
+            </div>
+
+            <div class="scenario-card" style="--scenario-color: #AF52DE" onclick="simulateScenario('welding-fire')">
+                <div class="scenario-header">
+                    <div class="scenario-icon">🔥</div>
+                    <div class="scenario-probability">8% chance</div>
+                </div>
+                <div class="scenario-title">Welding Fire Damage</div>
+                <div class="scenario-description">
+                    Sparks from metal fence welding ignite dry grass, fire spreads to customer's home causing significant damage.
+                </div>
+                <div class="scenario-impacts">
+                    <div class="impact-item">
+                        <span class="impact-label">Property damage</span>
+                        <span class="impact-value">$450,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Temporary housing</span>
+                        <span class="impact-value">$25,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Legal/Investigation</span>
+                        <span class="impact-value">$40,000</span>
+                    </div>
+                </div>
+                <div class="scenario-prevention">
+                    <div class="prevention-title">Prevention Strategy</div>
+                    <div class="prevention-list">
+                        • Fire watch for 30 min post-welding<br>
+                        • Welding blankets mandatory<br>
+                        • 20ft vegetation clearance<br>
+                        • Fire extinguisher within 10ft
+                    </div>
+                </div>
+            </div>
+
+            <div class="scenario-card" style="--scenario-color: #007AFF" onclick="simulateScenario('pollution')">
+                <div class="scenario-header">
+                    <div class="scenario-icon">☣️</div>
+                    <div class="scenario-probability">15% chance</div>
+                </div>
+                <div class="scenario-title">Chemical Runoff Violation</div>
+                <div class="scenario-description">
+                    Pressure-treated lumber chemicals wash into storm drain during rain, causing fish kill in local creek.
+                </div>
+                <div class="scenario-impacts">
+                    <div class="impact-item">
+                        <span class="impact-label">EPA fines</span>
+                        <span class="impact-value">$125,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Cleanup costs</span>
+                        <span class="impact-value">$85,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Legal defense</span>
+                        <span class="impact-value">$45,000</span>
+                    </div>
+                </div>
+                <div class="scenario-prevention">
+                    <div class="prevention-title">Prevention Strategy</div>
+                    <div class="prevention-list">
+                        • Tarp all treated lumber<br>
+                        • Install silt fencing<br>
+                        • Never wash sawdust into drains<br>
+                        • Document disposal methods
+                    </div>
+                </div>
+            </div>
+
+            <div class="scenario-card" style="--scenario-color: #5AC8FA" onclick="simulateScenario('vehicle')">
+                <div class="scenario-header">
+                    <div class="scenario-icon">🚚</div>
+                    <div class="scenario-probability">22% chance</div>
+                </div>
+                <div class="scenario-title">Vehicle/Trailer Accident</div>
+                <div class="scenario-description">
+                    Improperly secured load shifts during transport, metal posts penetrate following vehicle windshield.
+                </div>
+                <div class="scenario-impacts">
+                    <div class="impact-item">
+                        <span class="impact-label">Medical costs</span>
+                        <span class="impact-value">$95,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Vehicle damage</span>
+                        <span class="impact-value">$35,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Legal settlement</span>
+                        <span class="impact-value">$180,000</span>
+                    </div>
+                </div>
+                <div class="scenario-prevention">
+                    <div class="prevention-title">Prevention Strategy</div>
+                    <div class="prevention-list">
+                        • Red flags on all overhangs<br>
+                        • Ratchet straps every 4ft<br>
+                        • Daily vehicle inspections<br>
+                        • Defensive driving training
+                    </div>
+                </div>
+            </div>
+
+            <div class="scenario-card" style="--scenario-color: #34C759" onclick="simulateScenario('worker')">
+                <div class="scenario-header">
+                    <div class="scenario-icon">👷</div>
+                    <div class="scenario-probability">31% chance</div>
+                </div>
+                <div class="scenario-title">Worker Fall Injury</div>
+                <div class="scenario-description">
+                    Employee falls from ladder while installing deck railing, herniated disc requires surgery and 6 months recovery.
+                </div>
+                <div class="scenario-impacts">
+                    <div class="impact-item">
+                        <span class="impact-label">Medical costs</span>
+                        <span class="impact-value">$125,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">Lost wages</span>
+                        <span class="impact-value">$35,000</span>
+                    </div>
+                    <div class="impact-item">
+                        <span class="impact-label">OSHA fines</span>
+                        <span class="impact-value">$15,000</span>
+                    </div>
+                </div>
+                <div class="scenario-prevention">
+                    <div class="prevention-title">Prevention Strategy</div>
+                    <div class="prevention-list">
+                        • Three-point contact rule<br>
+                        • Fall protection over 6ft<br>
+                        • Weekly safety meetings<br>
+                        • Ladder inspection checklist
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Simulator -->
+        <div class="simulator-panel">
+            <h2 class="simulator-title">
+                <span>🎮</span>
+                <span>Adjust Your Risk Factors</span>
+            </h2>
+            
+            <div class="factors-grid">
+                <div class="factor-control">
+                    <div class="factor-label">
+                        <span>Safety Training Hours/Month</span>
+                        <span class="factor-value" id="safety-value">2</span>
+                    </div>
+                    <input type="range" class="factor-slider" id="safety-slider" min="0" max="20" value="2">
+                </div>
+                
+                <div class="factor-control">
+                    <div class="factor-label">
+                        <span>Years of Experience</span>
+                        <span class="factor-value" id="experience-value">5</span>
+                    </div>
+                    <input type="range" class="factor-slider" id="experience-slider" min="1" max="20" value="5">
+                </div>
+                
+                <div class="factor-control">
+                    <div class="factor-label">
+                        <span>Quality Control Checks</span>
+                        <span class="factor-value" id="quality-value">3</span>
+                    </div>
+                    <input type="range" class="factor-slider" id="quality-slider" min="1" max="10" value="3">
+                </div>
+                
+                <div class="factor-control">
+                    <div class="factor-label">
+                        <span>Equipment Maintenance</span>
+                        <span class="factor-value" id="maintenance-value">Monthly</span>
+                    </div>
+                    <input type="range" class="factor-slider" id="maintenance-slider" min="1" max="4" value="2">
+                </div>
+                
+                <div class="factor-control">
+                    <div class="factor-label">
+                        <span>Documentation Level</span>
+                        <span class="factor-value" id="documentation-value">Basic</span>
+                    </div>
+                    <input type="range" class="factor-slider" id="documentation-slider" min="1" max="5" value="2">
+                </div>
+                
+                <div class="factor-control">
+                    <div class="factor-label">
+                        <span>Subcontractor Vetting</span>
+                        <span class="factor-value" id="vetting-value">Minimal</span>
+                    </div>
+                    <input type="range" class="factor-slider" id="vetting-slider" min="1" max="5" value="2">
+                </div>
+            </div>
+            
+            <div class="cost-breakdown">
+                <div class="cost-item">
+                    <span class="cost-label">Base Risk Score</span>
+                    <span class="cost-value" id="base-risk">100</span>
+                </div>
+                <div class="cost-item">
+                    <span class="cost-label">Safety Reduction</span>
+                    <span class="cost-value" id="safety-reduction">-8</span>
+                </div>
+                <div class="cost-item">
+                    <span class="cost-label">Experience Reduction</span>
+                    <span class="cost-value" id="experience-reduction">-10</span>
+                </div>
+                <div class="cost-item">
+                    <span class="cost-label">Process Reduction</span>
+                    <span class="cost-value" id="process-reduction">-10</span>
+                </div>
+                <div class="cost-item">
+                    <span class="cost-label cost-total">Final Risk Score</span>
+                    <span class="cost-value cost-total" id="final-risk">72</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prevention Matrix -->
+        <div class="prevention-matrix">
+            <h2 class="simulator-title">
+                <span>🛡️</span>
+                <span>Prevention ROI Calculator</span>
+            </h2>
+            
+            <div class="matrix-grid">
+                <div class="prevention-item" onclick="togglePrevention(this, 'safety-program')">
+                    <div class="prevention-icon">📋</div>
+                    <div class="prevention-name">Safety Program</div>
+                    <div class="prevention-impact">-25%</div>
+                </div>
+                
+                <div class="prevention-item" onclick="togglePrevention(this, 'drug-testing')">
+                    <div class="prevention-icon">🧪</div>
+                    <div class="prevention-name">Drug Testing</div>
+                    <div class="prevention-impact">-15%</div>
+                </div>
+                
+                <div class="prevention-item" onclick="togglePrevention(this, 'gps-tracking')">
+                    <div class="prevention-icon">📍</div>
+                    <div class="prevention-name">Vehicle GPS</div>
+                    <div class="prevention-impact">-10%</div>
+                </div>
+                
+                <div class="prevention-item" onclick="togglePrevention(this, 'weather-monitoring')">
+                    <div class="prevention-icon">⛈️</div>
+                    <div class="prevention-name">Weather Alerts</div>
+                    <div class="prevention-impact">-8%</div>
+                </div>
+                
+                <div class="prevention-item" onclick="togglePrevention(this, 'photo-documentation')">
+                    <div class="prevention-icon">📸</div>
+                    <div class="prevention-name">Photo Docs</div>
+                    <div class="prevention-impact">-12%</div>
+                </div>
+                
+                <div class="prevention-item" onclick="togglePrevention(this, 'client-signoffs')">
+                    <div class="prevention-icon">✍️</div>
+                    <div class="prevention-name">Digital Signoffs</div>
+                    <div class="prevention-impact">-18%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real Claims Data -->
+        <div class="claims-data">
+            <h2 class="simulator-title">
+                <span>📊</span>
+                <span>Real Claims from Texas Contractors</span>
+            </h2>
+            
+            <div class="claim-example">
+                <div class="claim-header">
+                    <span class="claim-type">Fence Post Through Pool</span>
+                    <span class="claim-amount">$127,000</span>
+                </div>
+                <div class="claim-details">
+                    Bryan, TX contractor hit pool plumbing while setting posts. Pool drained overnight, 
+                    liner damaged, foundation cracked. Insurance covered property damage but not the 
+                    3-month business shutdown from bad reviews.
+                </div>
+            </div>
+            
+            <div class="claim-example">
+                <div class="claim-header">
+                    <span class="claim-type">Deck Railing Toddler Fall</span>
+                    <span class="claim-amount">$385,000</span>
+                </div>
+                <div class="claim-details">
+                    Houston contractor's railing spacing exceeded code by 1". 3-year-old fell through,
+                    traumatic brain injury. Contractor had $1M GL but legal fees alone were $125K.
+                    Family also sued homeowner.
+                </div>
+            </div>
+            
+            <div class="claim-example">
+                <div class="claim-header">
+                    <span class="claim-type">Treated Lumber Creek Kill</span>
+                    <span class="claim-amount">$240,000</span>
+                </div>
+                <div class="claim-details">
+                    College Station contractor washed sawdust into storm drain after cutting treated posts.
+                    Copper chromate arsenate killed protected species in Bee Creek. EPA fines plus 
+                    restoration costs. No pollution coverage = personal bankruptcy.
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <button class="action-button" onclick="generateReport()">
+            Generate My Custom Risk Prevention Plan
+        </button>
+    </div>
+
+    <script>
+        // Risk calculation engine
+        let riskFactors = {
+            safety: 2,
+            experience: 5,
+            quality: 3,
+            maintenance: 2,
+            documentation: 2,
+            vetting: 2
+        };
+
+        let preventionMeasures = new Set();
+
+        // Initialize sliders
+        function initializeSliders() {
+            // Safety slider
+            document.getElementById('safety-slider').addEventListener('input', function(e) {
+                riskFactors.safety = parseInt(e.target.value);
+                document.getElementById('safety-value').textContent = e.target.value;
+                updateRiskScore();
+            });
+
+            // Experience slider
+            document.getElementById('experience-slider').addEventListener('input', function(e) {
+                riskFactors.experience = parseInt(e.target.value);
+                document.getElementById('experience-value').textContent = e.target.value;
+                updateRiskScore();
+            });
+
+            // Quality slider
+            document.getElementById('quality-slider').addEventListener('input', function(e) {
+                riskFactors.quality = parseInt(e.target.value);
+                document.getElementById('quality-value').textContent = e.target.value;
+                updateRiskScore();
+            });
+
+            // Maintenance slider
+            document.getElementById('maintenance-slider').addEventListener('input', function(e) {
+                const value = parseInt(e.target.value);
+                riskFactors.maintenance = value;
+                const labels = ['Never', 'Monthly', 'Bi-weekly', 'Weekly'];
+                document.getElementById('maintenance-value').textContent = labels[value - 1];
+                updateRiskScore();
+            });
+
+            // Documentation slider
+            document.getElementById('documentation-slider').addEventListener('input', function(e) {
+                const value = parseInt(e.target.value);
+                riskFactors.documentation = value;
+                const labels = ['None', 'Basic', 'Standard', 'Detailed', 'Complete'];
+                document.getElementById('documentation-value').textContent = labels[value - 1];
+                updateRiskScore();
+            });
+
+            // Vetting slider
+            document.getElementById('vetting-slider').addEventListener('input', function(e) {
+                const value = parseInt(e.target.value);
+                riskFactors.vetting = value;
+                const labels = ['None', 'Minimal', 'Basic', 'Thorough', 'Complete'];
+                document.getElementById('vetting-value').textContent = labels[value - 1];
+                updateRiskScore();
+            });
+        }
+
+        // Update risk score based on factors
+        function updateRiskScore() {
+            const baseRisk = 100;
+            
+            // Calculate reductions
+            const safetyReduction = riskFactors.safety * 2;
+            const experienceReduction = Math.min(riskFactors.experience * 2, 20);
+            const qualityReduction = riskFactors.quality * 2;
+            const maintenanceReduction = riskFactors.maintenance * 3;
+            const documentationReduction = riskFactors.documentation * 2;
+            const vettingReduction = riskFactors.vetting * 2;
+            
+            // Apply prevention measures
+            let preventionReduction = 0;
+            if (preventionMeasures.has('safety-program')) preventionReduction += 25;
+            if (preventionMeasures.has('drug-testing')) preventionReduction += 15;
+            if (preventionMeasures.has('gps-tracking')) preventionReduction += 10;
+            if (preventionMeasures.has('weather-monitoring')) preventionReduction += 8;
+            if (preventionMeasures.has('photo-documentation')) preventionReduction += 12;
+            if (preventionMeasures.has('client-signoffs')) preventionReduction += 18;
+            
+            const processReduction = qualityReduction + maintenanceReduction + documentationReduction + vettingReduction;
+            
+            const finalRisk = Math.max(10, baseRisk - safetyReduction - experienceReduction - processReduction - preventionReduction);
+            
+            // Update display
+            document.getElementById('base-risk').textContent = baseRisk;
+            document.getElementById('safety-reduction').textContent = '-' + safetyReduction;
+            document.getElementById('experience-reduction').textContent = '-' + experienceReduction;
+            document.getElementById('process-reduction').textContent = '-' + processReduction;
+            document.getElementById('final-risk').textContent = finalRisk;
+            
+            // Update main risk score
+            const scoreElement = document.getElementById('risk-score');
+            scoreElement.textContent = finalRisk;
+            
+            // Update risk class
+            scoreElement.className = 'total-risk-score';
+            if (finalRisk < 30) {
+                scoreElement.classList.add('risk-low');
+            } else if (finalRisk < 60) {
+                scoreElement.classList.add('risk-medium');
+            } else if (finalRisk < 80) {
+                scoreElement.classList.add('risk-high');
+            } else {
+                scoreElement.classList.add('risk-critical');
+            }
+            
+            // Update other metrics
+            const claimProbability = Math.round(finalRisk * 0.4);
+            document.getElementById('claim-probability').textContent = claimProbability + '%';
+            
+            const avgClaim = Math.round(45000 * (finalRisk / 72));
+            document.getElementById('avg-claim').textContent = '$' + (avgClaim / 1000).toFixed(0) + 'K';
+            
+            const preventionScore = Math.round(100 - finalRisk);
+            document.getElementById('prevention-score').textContent = preventionScore + '%';
+        }
+
+        // Toggle prevention measure
+        function togglePrevention(element, measure) {
+            element.classList.toggle('active');
+            if (preventionMeasures.has(measure)) {
+                preventionMeasures.delete(measure);
+            } else {
+                preventionMeasures.add(measure);
+            }
+            updateRiskScore();
+        }
+
+        // Simulate scenario
+        function simulateScenario(scenario) {
+            const scenarios = {
+                'fence-collapse': {
+                    title: 'Fence Collapse Simulation',
+                    message: 'Based on your current risk factors, you have a 12% annual chance of this claim. Implementing our prevention strategy reduces this to 3%.'
+                },
+                'deck-failure': {
+                    title: 'Deck Failure Simulation',
+                    message: 'Your current practices give you an 8% annual risk. With proper ledger board procedures and documentation, this drops to 1%.'
+                },
+                'welding-fire': {
+                    title: 'Fire Risk Analysis',
+                    message: 'Current fire risk: 6% annually. With fire watch protocols and proper equipment, risk reduces to 0.5%.'
+                },
+                'pollution': {
+                    title: 'Environmental Violation Risk',
+                    message: 'Without proper controls: 15% violation chance. With runoff prevention: 2%. Remember, College Station requires $5M coverage!'
+                },
+                'vehicle': {
+                    title: 'Vehicle Accident Probability',
+                    message: 'Current driving risk: 22% annually. With GPS tracking and defensive driving: 8%. This is your highest probability claim!'
+                },
+                'worker': {
+                    title: 'Worker Injury Statistics',
+                    message: 'Industry average: 31% annual injury rate. With your safety program: 18%. Best-in-class: 5%. You can get there!'
+                }
+            };
+            
+            const sim = scenarios[scenario];
+            alert(`${sim.title}\n\n${sim.message}`);
+        }
+
+        // Generate report
+        function generateReport() {
+            const risk = parseInt(document.getElementById('risk-score').textContent);
+            let message = `YOUR CUSTOM RISK PREVENTION PLAN\n\n`;
+            message += `Current Risk Score: ${risk}\n`;
+            message += `Annual Claim Probability: ${document.getElementById('claim-probability').textContent}\n`;
+            message += `Average Claim Cost: ${document.getElementById('avg-claim').textContent}\n\n`;
+            
+            if (risk > 60) {
+                message += `⚠️ HIGH PRIORITY ACTIONS:\n`;
+                message += `1. Implement formal safety program immediately\n`;
+                message += `2. Increase documentation to "Detailed" level\n`;
+                message += `3. Add photo documentation for all projects\n`;
+                message += `4. Schedule monthly equipment maintenance\n\n`;
+            } else if (risk > 30) {
+                message += `✅ RECOMMENDED IMPROVEMENTS:\n`;
+                message += `1. Enhance safety training to 8+ hours/month\n`;
+                message += `2. Add drug testing program\n`;
+                message += `3. Implement digital client signoffs\n`;
+                message += `4. Consider GPS vehicle tracking\n\n`;
+            } else {
+                message += `🏆 EXCELLENT RISK PROFILE!\n`;
+                message += `1. Maintain current prevention measures\n`;
+                message += `2. Consider applying for safety awards\n`;
+                message += `3. Negotiate premium discounts with carriers\n`;
+                message += `4. Market your safety record to win contracts\n\n`;
+            }
+            
+            message += `INSURANCE SAVINGS POTENTIAL:\n`;
+            const savings = Math.round((100 - risk) * 85);
+            message += `Estimated annual premium reduction: $${savings.toLocaleString()}\n`;
+            message += `5-year savings: $${(savings * 5).toLocaleString()}\n\n`;
+            
+            message += `Next step: Share this with your insurance broker for premium credits!`;
+            
+            alert(message);
+        }
+
+        // Initialize
+        initializeSliders();
+        updateRiskScore();
+    </script>
+</body>
+</html>
