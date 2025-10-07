@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Ninjutsu Dojo v2.0 - WebGPU Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fira+Code:wght@400;700&family=Press+Start+2P&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --chakra-blue: #4ecdc4;
+            --chakra-orange: #ff6b35;
+            --chakra-purple: #a855f7;
+            --void-dark: #0a0a0a;
+            --panel-bg: rgba(15, 12, 41, 0.95);
+        }
+        
+        body {
+            font-family: 'Fira Code', monospace;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* Top Toolbar */
+        #toolbar {
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 2px solid var(--chakra-orange);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        #toolbar h1 {
+            font-family: 'Bangers', cursive;
+            font-size: 24px;
+            color: var(--chakra-orange);
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.8);
+            letter-spacing: 2px;
+        }
+        
+        .toolbar-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 0 15px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .mode-button {
+            padding: 8px 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .mode-button:hover {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: var(--chakra-blue);
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        .mode-button.active {
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-purple));
+            border-color: var(--chakra-blue);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.6);
+        }
+        
+        /* Main Content Area */
+        #content-area {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+        
+        /* Canvas Container */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        /* HUD Overlay */
+        #hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--chakra-orange);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 280px;
+            box-shadow: 0 0 30px rgba(255, 107, 53, 0.3);
+            font-size: 13px;
+        }
+        
+        .hud-title {
+            font-family: 'Bangers', cursive;
+            font-size: 20px;
+            color: var(--chakra-orange);
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.8);
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        
+        .metric {
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--chakra-blue);
+            border-radius: 4px;
+        }
+        
+        .metric-label {
+            font-size: 10px;
+            color: var(--chakra-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 4px;
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .energy-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        
+        .energy-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--chakra-blue), var(--chakra-orange));
+            transition: width 0.1s;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.6);
+        }
+        
+        /* EDN Console */
+        #edn-console {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--chakra-purple);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 -4px 20px rgba(168, 85, 247, 0.3);
+        }
+        
+        #edn-console-title {
+            color: var(--chakra-purple);
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .edn-line {
+            color: #a8dadc;
+            margin: 2px 0;
+            line-height: 1.6;
+        }
+        
+        .edn-key {
+            color: var(--chakra-blue);
+        }
+        
+        .edn-value {
+            color: var(--chakra-orange);
+        }
+        
+        .edn-comment {
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* Side Panel */
+        #side-panel {
+            width: 320px;
+            background: var(--panel-bg);
+            border-left: 2px solid var(--chakra-orange);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .panel-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .panel-section h3 {
+            font-family: 'Bangers', cursive;
+            font-size: 18px;
+            color: var(--chakra-blue);
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(78, 205, 196, 0.8);
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-label {
+            font-size: 11px;
+            color: var(--chakra-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: block;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-orange));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.6);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-orange));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.6);
+            border: none;
+        }
+        
+        .value-display {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            font-family: 'Bangers', cursive;
+            font-size: 16px;
+            background: linear-gradient(135deg, var(--chakra-orange), #f7931e);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-purple));
+        }
+        
+        /* Node Graph View */
+        #node-graph-container {
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(78, 205, 196, 0.05) 1px, transparent 1px),
+                linear-gradient(rgba(78, 205, 196, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            position: relative;
+            display: none;
+        }
+        
+        #node-graph-container.active {
+            display: block;
+        }
+        
+        .node {
+            position: absolute;
+            background: var(--panel-bg);
+            border: 2px solid var(--chakra-blue);
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 180px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            cursor: move;
+        }
+        
+        .node-header {
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--chakra-blue);
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(78, 205, 196, 0.3);
+        }
+        
+        .node-port {
+            width: 12px;
+            height: 12px;
+            background: var(--chakra-orange);
+            border-radius: 50%;
+            position: absolute;
+            cursor: crosshair;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.8);
+        }
+        
+        .node-port.input {
+            left: -6px;
+        }
+        
+        .node-port.output {
+            right: -6px;
+        }
+        
+        .node-content {
+            font-size: 11px;
+            color: #ccc;
+        }
+        
+        /* Comic Panel View */
+        #comic-panel-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            background: #1a1a1a;
+        }
+        
+        #comic-panel-container.active {
+            display: block;
+        }
+        
+        .comic-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .comic-panel {
+            flex: 1;
+            aspect-ratio: 16/9;
+            background: #000;
+            border: 4px solid #fff;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+        }
+        
+        .comic-panel canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .panel-caption {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            padding: 8px 12px;
+            font-family: 'Bangers', cursive;
+            font-size: 14px;
+            border-radius: 6px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        
+        /* Equation Overlay */
+        .equation-overlay {
+            position: absolute;
+            font-family: 'Fira Code', monospace;
+            font-size: 16px;
+            color: var(--chakra-blue);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--chakra-blue);
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(78, 205, 196, 0.8);
+        }
+        
+        /* Audio Visualizer */
+        #audio-visualizer {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--chakra-purple);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        #waveform-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Bounce Log */
+        #bounce-log {
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 10px;
+        }
+        
+        .bounce-entry {
+            font-size: 10px;
+            padding: 3px 6px;
+            border-left: 2px solid var(--chakra-blue);
+            margin-bottom: 4px;
+            opacity: 0.7;
+            font-family: 'Fira Code', monospace;
+        }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--chakra-blue);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--chakra-orange);
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Toolbar -->
+        <div id="toolbar">
+            <h1>⚡ SOUND NINJUTSU v2.0</h1>
+            <div class="toolbar-section">
+                <button class="mode-button active" data-mode="3d">3D View</button>
+                <button class="mode-button" data-mode="nodes">Node Graph</button>
+                <button class="mode-button" data-mode="comic">Comic Panels</button>
+            </div>
+            <div class="toolbar-section">
+                <button class="mode-button" id="toggle-audio">🔊 Audio</button>
+                <button class="mode-button" id="toggle-edn">📝 EDN</button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div id="content-area">
+            <!-- 3D Canvas View -->
+            <div id="canvas-container">
+                <!-- HUD Overlay -->
+                <div id="hud-overlay">
+                    <div class="hud-title">⚡ JUTSU METRICS</div>
+                    <div class="metric">
+                        <div class="metric-label">Height (h)</div>
+                        <div class="metric-value" id="height-display">0.00 m</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Total Energy</div>
+                        <div class="metric-value" id="energy-display">0.00 J</div>
+                        <div class="energy-bar-container">
+                            <div class="energy-bar" id="energy-bar" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Coefficient e</div>
+                        <div class="metric-value" id="e-display">--</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Bounces</div>
+                        <div class="metric-value" id="bounce-count">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Interval Δt</div>
+                        <div class="metric-value" id="interval-display">-- s</div>
+                    </div>
+                </div>
+                
+                <!-- Audio Visualizer -->
+                <div id="audio-visualizer" style="display: none;">
+                    <canvas id="waveform-canvas"></canvas>
+                </div>
+                
+                <!-- EDN Console -->
+                <div id="edn-console" style="display: none;">
+                    <div id="edn-console-title">📝 EDN State Stream</div>
+                    <div id="edn-content"></div>
+                </div>
+                
+                <!-- Node Graph Container -->
+                <div id="node-graph-container"></div>
+                
+                <!-- Comic Panel Container -->
+                <div id="comic-panel-container"></div>
+            </div>
+            
+            <!-- Side Panel -->
+            <div id="side-panel">
+                <div class="panel-section">
+                    <h3>🎯 Physics Parameters</h3>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Initial Height h₀</label>
+                        <input type="range" id="height-slider" min="0.5" max="5" step="0.1" value="3">
+                        <div class="value-display"><span id="height-value">3.0</span> m</div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Restitution e</label>
+                        <input type="range" id="restitution-slider" min="0.5" max="0.98" step="0.01" value="0.8">
+                        <div class="value-display"><span id="restitution-value">0.80</span></div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Gravity g</label>
+                        <input type="range" id="gravity-slider" min="5" max="15" step="0.1" value="9.81">
+                        <div class="value-display"><span id="gravity-value">9.81</span> m/s²</div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Mass m</label>
+                        <input type="range" id="mass-slider" min="0.1" max="1" step="0.05" value="0.45">
+                        <div class="value-display"><span id="mass-value">0.45</span> kg</div>
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>⚡ Actions</h3>
+                    <button id="drop-button">DROP BALL 🎾</button>
+                    <button id="reset-button" class="secondary">RESET 🔄</button>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>📊 Bounce Log</h3>
+                    <div id="bounce-log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================================================
+        // EDN-INSPIRED DATA STRUCTURE (Symbolic IR)
+        // =============================================================================
+        
+        const dojoState = {
+            scene: {
+                type: 'physics-dojo',
+                background: 0x0a0a0a,
+                nodes: []
+            },
+            physics: {
+                g: 9.81,
+                e: 0.8,
+                mass: 0.45,
+                h0: 3.0,
+                ballRadius: 0.2
+            },
+            ball: {
+                position: [0, 3.2, 0],
+                velocity: [0, 0, 0],
+                isDropped: false,
+                bounceCount: 0,
+                lastBounceTime: 0,
+                intervals: [],
+                initialEnergy: 0
+            },
+            visual: {
+                particleCount: 50,
+                particleSpeed: 2.5,
+                particleLifetime: 1200,
+                glowIntensity: 0.4
+            },
+            audio: {
+                enabled: false,
+                context: null,
+                oscillator: null,
+                gainNode: null,
+                analyser: null
+            },
+            ui: {
+                currentMode: '3d',
+                ednVisible: false,
+                audioVisualizerVisible: false
+            }
+        };
+        
+        // =============================================================================
+        // AUDIO SYSTEM - Web Audio API
+        // =============================================================================
+        
+        class AudioSynthesizer {
+            constructor() {
+                this.context = null;
+                this.masterGain = null;
+                this.analyser = null;
+            }
+            
+            init() {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.context.createGain();
+                this.masterGain.gain.value = 0.3;
+                this.masterGain.connect(this.context.destination);
+                
+                this.analyser = this.context.createAnalyser();
+                this.analyser.fftSize = 256;
+                this.analyser.connect(this.masterGain);
+                
+                dojoState.audio.context = this.context;
+                dojoState.audio.analyser = this.analyser;
+            }
+            
+            playImpact(velocity, height) {
+                if (!this.context) return;
+                
+                const now = this.context.currentTime;
+                const duration = 0.15;
+                
+                // Impact sound: pitched noise burst + sine
+                const oscillator = this.context.createOscillator();
+                const gain = this.context.createGain();
+                const filter = this.context.createBiquadFilter();
+                
+                // Frequency based on impact energy
+                const baseFreq = 80 + (velocity * 20);
+                oscillator.frequency.setValueAtTime(baseFreq, now);
+                oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + duration);
+                
+                // Envelope
+                gain.gain.setValueAtTime(velocity * 0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                
+                // Low-pass filter
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2000 + velocity * 500, now);
+                
+                oscillator.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.analyser);
+                
+                oscillator.start(now);
+                oscillator.stop(now + duration);
+            }
+            
+            visualize(canvas) {
+                if (!this.analyser) return;
+                
+                const ctx = canvas.getContext('2d');
+                const bufferLength = this.analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                const draw = () => {
+                    if (!dojoState.audio.enabled) return;
+                    
+                    requestAnimationFrame(draw);
+                    
+                    this.analyser.getByteTimeDomainData(dataArray);
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#4ecdc4';
+                    ctx.beginPath();
+                    
+                    const sliceWidth = canvas.width / bufferLength;
+                    let x = 0;
+                    
+                    for (let i = 0; i < bufferLength; i++) {
+                        const v = dataArray[i] / 128.0;
+                        const y = v * canvas.height / 2;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                        
+                        x += sliceWidth;
+                    }
+                    
+                    ctx.stroke();
+                };
+                
+                draw();
+            }
+        }
+        
+        const audioSystem = new AudioSynthesizer();
+        
+        // =============================================================================
+        // THREE.JS SCENE SETUP
+        // =============================================================================
+        
+        let scene, camera, renderer, ball, ground;
+        let particles = [];
+        let equations = [];
+        
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(dojoState.scene.background);
+            scene.fog = new THREE.Fog(0x0a0a0a, 10, 50);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                60,
+                (window.innerWidth - 320) / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(5, 3, 8);
+            camera.lookAt(0, 1.5, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth - 320, window.innerHeight - 60);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambientLight);
+            
+            const keyLight = new THREE.DirectionalLight(0x4ecdc4, 0.8);
+            keyLight.position.set(5, 10, 5);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 2048;
+            keyLight.shadow.mapSize.height = 2048;
+            scene.add(keyLight);
+            
+            const fillLight = new THREE.DirectionalLight(0xff6b35, 0.4);
+            fillLight.position.set(-5, 5, -5);
+            scene.add(fillLight);
+            
+            const rimLight = new THREE.PointLight(0xa855f7, 0.6, 20);
+            rimLight.position.set(0, 2, -5);
+            scene.add(rimLight);
+            
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(10, 10);
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a1a2e,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(10, 20, 0x4ecdc4, 0x2a2a3e);
+            gridHelper.material.opacity = 0.3;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+            
+            // Height markers
+            for (let h = 1; h <= 5; h++) {
+                const markerGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.1, 8);
+                const markerMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x4ecdc4,
+                    emissive: 0x4ecdc4,
+                    emissiveIntensity: 0.5
+                });
+                const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                marker.position.set(-5, h, 0);
+                scene.add(marker);
+                
+                // Height labels
+                createTextSprite(`${h}m`, -4.5, h, 0, 0.4);
+            }
+            
+            // Ball
+            const ballGeometry = new THREE.SphereGeometry(
+                dojoState.physics.ballRadius,
+                32,
+                32
+            );
+            const ballMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff6b35,
+                emissive: 0xff6b35,
+                emissiveIntensity: dojoState.visual.glowIntensity,
+                roughness: 0.4,
+                metalness: 0.6
+            });
+            ball = new THREE.Mesh(ballGeometry, ballMaterial);
+            ball.castShadow = true;
+            ball.receiveShadow = true;
+            scene.add(ball);
+            
+            // Ball glow
+            const glowGeometry = new THREE.SphereGeometry(
+                dojoState.physics.ballRadius * 1.4,
+                16,
+                16
+            );
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff6b35,
+                transparent: true,
+                opacity: 0.2
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            ball.add(glow);
+            
+            // Floating equations
+            createEquation('E = ½mv² + mgh', 2, 4, 0);
+            createEquation('h = gt²/8', -2, 3.5, 0);
+            createEquation('e ≈ t₊₁/tₙ', 2, 2.5, 0);
+            
+            resetBall();
+        }
+        
+        function createTextSprite(text, x, y, z, scale = 0.5) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 128;
+            context.fillStyle = '#4ecdc4';
+            context.font = 'bold 48px Fira Code';
+            context.fillText(text, 10, 70);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(x, y, z);
+            sprite.scale.set(scale, scale * 0.5, 1);
+            scene.add(sprite);
+            return sprite;
+        }
+        
+        function createEquation(text, x, y, z) {
+            const sprite = createTextSprite(text, x, y, z, 0.6);
+            sprite.material.opacity = 0.7;
+            equations.push({
+                sprite: sprite,
+                baseY: y,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+        
+        function resetBall() {
+            const h0 = dojoState.physics.h0;
+            dojoState.ball.position = [0, h0 + dojoState.physics.ballRadius, 0];
+            dojoState.ball.velocity = [0, 0, 0];
+            dojoState.ball.isDropped = false;
+            dojoState.ball.bounceCount = 0;
+            dojoState.ball.lastBounceTime = 0;
+            dojoState.ball.intervals = [];
+            dojoState.ball.initialEnergy = calculateEnergy();
+            
+            ball.position.set(...dojoState.ball.position);
+            updateDisplay();
+            updateEDN();
+            document.getElementById('bounce-log').innerHTML = '';
+        }
+        
+        // =============================================================================
+        // PHYSICS ENGINE
+        // =============================================================================
+        
+        function calculateEnergy() {
+            const m = dojoState.physics.mass;
+            const g = dojoState.physics.g;
+            const h = Math.max(0, dojoState.ball.position[1] - dojoState.physics.ballRadius);
+            const [vx, vy, vz] = dojoState.ball.velocity;
+            const v = Math.sqrt(vx*vx + vy*vy + vz*vz);
+            
+            const KE = 0.5 * m * v * v;
+            const PE = m * g * h;
+            
+            return KE + PE;
+        }
+        
+        function createImpactParticles() {
+            const count = dojoState.visual.particleCount;
+            const particleGeometry = new THREE.SphereGeometry(0.03, 6, 6);
+            
+            for (let i = 0; i < count; i++) {
+                const hue = Math.random() > 0.5 ? 0.05 : 0.5; // Orange or cyan
+                const particleMaterial = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color().setHSL(hue, 0.8, 0.6),
+                    transparent: true,
+                    opacity: 1
+                });
+                
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.position.set(...dojoState.ball.position);
+                particle.position.y = dojoState.physics.ballRadius;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = dojoState.visual.particleSpeed;
+                particle.velocity = new THREE.Vector3(
+                    Math.cos(angle) * speed * (0.5 + Math.random() * 0.5),
+                    Math.random() * speed * 2.5,
+                    Math.sin(angle) * speed * (0.5 + Math.random() * 0.5)
+                );
+                
+                particle.userData.createdAt = Date.now();
+                particle.userData.lifetime = dojoState.visual.particleLifetime;
+                
+                scene.add(particle);
+                particles.push(particle);
+            }
+        }
+        
+        function updateParticles(deltaTime) {
+            const now = Date.now();
+            
+            particles = particles.filter(particle => {
+                const age = now - particle.userData.createdAt;
+                if (age > particle.userData.lifetime) {
+                    scene.remove(particle);
+                    return false;
+                }
+                
+                particle.position.add(particle.velocity.clone().multiplyScalar(deltaTime));
+                particle.velocity.y -= dojoState.physics.g * deltaTime;
+                
+                const progress = age / particle.userData.lifetime;
+                particle.material.opacity = 1 - progress;
+                particle.scale.set(1 - progress * 0.5, 1 - progress * 0.5, 1 - progress * 0.5);
+                
+                return true;
+            });
+        }
+        
+        function updatePhysics(deltaTime) {
+            if (!dojoState.ball.isDropped) return;
+            
+            // Apply gravity
+            dojoState.ball.velocity[1] -= dojoState.physics.g * deltaTime;
+            
+            // Update position
+            dojoState.ball.position[0] += dojoState.ball.velocity[0] * deltaTime;
+            dojoState.ball.position[1] += dojoState.ball.velocity[1] * deltaTime;
+            dojoState.ball.position[2] += dojoState.ball.velocity[2] * deltaTime;
+            
+            // Ground collision
+            if (dojoState.ball.position[1] <= dojoState.physics.ballRadius) {
+                dojoState.ball.position[1] = dojoState.physics.ballRadius;
+                
+                // Bounce
+                if (Math.abs(dojoState.ball.velocity[1]) > 0.1) {
+                    const currentTime = Date.now() / 1000;
+                    
+                    if (dojoState.ball.lastBounceTime > 0) {
+                        const interval = currentTime - dojoState.ball.lastBounceTime;
+                        dojoState.ball.intervals.push(interval);
+                        
+                        // Log
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'bounce-entry';
+                        logEntry.textContent = `#${dojoState.ball.bounceCount + 1}: Δt=${interval.toFixed(3)}s`;
+                        document.getElementById('bounce-log').prepend(logEntry);
+                    }
+                    
+                    dojoState.ball.lastBounceTime = currentTime;
+                    dojoState.ball.bounceCount++;
+                    
+                    const impactVelocity = Math.abs(dojoState.ball.velocity[1]);
+                    dojoState.ball.velocity[1] *= -dojoState.physics.e;
+                    
+                    // Effects
+                    createImpactParticles();
+                    
+                    // Audio
+                    if (dojoState.audio.enabled) {
+                        audioSystem.playImpact(impactVelocity, dojoState.ball.position[1]);
+                    }
+                    
+                    updateEDN();
+                }
+            }
+            
+            ball.position.set(...dojoState.ball.position);
+            
+            // Rotation
+            const speed = Math.sqrt(
+                dojoState.ball.velocity[0]**2 + 
+                dojoState.ball.velocity[1]**2 + 
+                dojoState.ball.velocity[2]**2
+            );
+            ball.rotation.x += speed * deltaTime * 2;
+            ball.rotation.z += speed * deltaTime;
+        }
+        
+        // =============================================================================
+        // UI & DISPLAY
+        // =============================================================================
+        
+        function updateDisplay() {
+            const h = Math.max(0, dojoState.ball.position[1] - dojoState.physics.ballRadius);
+            const energy = calculateEnergy();
+            const energyPercent = dojoState.ball.initialEnergy > 0 
+                ? (energy / dojoState.ball.initialEnergy) * 100 
+                : 100;
+            
+            document.getElementById('height-display').textContent = h.toFixed(3) + ' m';
+            document.getElementById('energy-display').textContent = energy.toFixed(3) + ' J';
+            document.getElementById('energy-bar').style.width = energyPercent + '%';
+            document.getElementById('bounce-count').textContent = dojoState.ball.bounceCount;
+            
+            if (dojoState.ball.intervals.length >= 2) {
+                const lastTwo = dojoState.ball.intervals.slice(-2);
+                const e_measured = lastTwo[1] / lastTwo[0];
+                document.getElementById('e-display').textContent = e_measured.toFixed(4);
+            }
+            
+            if (dojoState.ball.intervals.length > 0) {
+                const lastInterval = dojoState.ball.intervals[dojoState.ball.intervals.length - 1];
+                document.getElementById('interval-display').textContent = lastInterval.toFixed(3) + ' s';
+            }
+        }
+        
+        function updateEDN() {
+            if (!dojoState.ui.ednVisible) return;
+            
+            const ednContent = document.getElementById('edn-content');
+            
+            const h = Math.max(0, dojoState.ball.position[1] - dojoState.physics.ballRadius);
+            const energy = calculateEnergy();
+            const [vx, vy, vz] = dojoState.ball.velocity;
+            const v = Math.sqrt(vx*vx + vy*vy + vz*vz);
+            
+            const ednText = `
+{<span class="edn-key">:timestamp</span> <span class="edn-value">${Date.now()}</span>
+ <span class="edn-key">:ball</span> {<span class="edn-key">:position</span> <span class="edn-value">[${dojoState.ball.position.map(x => x.toFixed(2)).join(' ')}]</span>
+         <span class="edn-key">:velocity</span> <span class="edn-value">[${dojoState.ball.velocity.map(x => x.toFixed(2)).join(' ')}]</span>
+         <span class="edn-key">:speed</span> <span class="edn-value">${v.toFixed(2)}</span>}
+ <span class="edn-key">:physics</span> {<span class="edn-key">:height</span> <span class="edn-value">${h.toFixed(3)}</span>
+           <span class="edn-key">:energy</span> <span class="edn-value">${energy.toFixed(3)}</span>
+           <span class="edn-key">:bounces</span> <span class="edn-value">${dojoState.ball.bounceCount}</span>}
+ <span class="edn-comment">;; Time symmetry: dE/dt = 0 between bounces</span>}`;
+            
+            const line = document.createElement('div');
+            line.className = 'edn-line';
+            line.innerHTML = ednText;
+            ednContent.prepend(line);
+            
+            // Keep only last 5 entries
+            while (ednContent.children.length > 5) {
+                ednContent.removeChild(ednContent.lastChild);
+            }
+        }
+        
+        // =============================================================================
+        // NODE GRAPH SYSTEM
+        // =============================================================================
+        
+        function initNodeGraph() {
+            const container = document.getElementById('node-graph-container');
+            container.innerHTML = '';
+            
+            // Create nodes
+            const nodes = [
+                { id: 'physics', label: 'Physics Engine', x: 100, y: 100, 
+                  content: 'g, e, m → F=ma' },
+                { id: 'ball', label: 'Ball State', x: 400, y: 100,
+                  content: 'position, velocity' },
+                { id: 'collision', label: 'Collision Detect', x: 250, y: 250,
+                  content: 'y ≤ r → bounce' },
+                { id: 'energy', label: 'Energy Calc', x: 400, y: 250,
+                  content: 'E = KE + PE' },
+                { id: 'sound', label: 'Audio Synth', x: 550, y: 250,
+                  content: 'impact → freq(v)' },
+                { id: 'particles', label: 'Particle FX', x: 250, y: 400,
+                  content: 'burst on impact' },
+                { id: 'render', label: '3D Render', x: 550, y: 400,
+                  content: 'Three.js scene' }
+            ];
+            
+            nodes.forEach(node => {
+                const nodeEl = document.createElement('div');
+                nodeEl.className = 'node';
+                nodeEl.style.left = node.x + 'px';
+                nodeEl.style.top = node.y + 'px';
+                
+                nodeEl.innerHTML = `
+                    <div class="node-header">${node.label}</div>
+                    <div class="node-content">${node.content}</div>
+                    <div class="node-port input" style="top: 20px;"></div>
+                    <div class="node-port output" style="top: 20px;"></div>
+                `;
+                
+                container.appendChild(nodeEl);
+            });
+        }
+        
+        // =============================================================================
+        // COMIC PANEL SYSTEM
+        // =============================================================================
+        
+        function initComicPanels() {
+            const container = document.getElementById('comic-panel-container');
+            container.innerHTML = '';
+            
+            const panels = [
+                { title: 'Energy Cloak Active', description: 'E = KE + PE conserved' },
+                { title: 'Impact Detected!', description: 'Ground collision at t=' + (dojoState.ball.lastBounceTime || 0).toFixed(2) },
+                { title: 'Coefficient Measured', description: 'e ≈ ' + dojoState.physics.e },
+                { title: 'Sound Sensing', description: 'h = gt²/8 predicted' }
+            ];
+            
+            const row1 = document.createElement('div');
+            row1.className = 'comic-row';
+            
+            const row2 = document.createElement('div');
+            row2.className = 'comic-row';
+            
+            panels.forEach((panel, i) => {
+                const panelEl = document.createElement('div');
+                panelEl.className = 'comic-panel';
+                
+                const caption = document.createElement('div');
+                caption.className = 'panel-caption';
+                caption.textContent = panel.title;
+                
+                // Clone the renderer canvas
+                const panelCanvas = document.createElement('canvas');
+                panelCanvas.width = 400;
+                panelCanvas.height = 300;
+                
+                panelEl.appendChild(panelCanvas);
+                panelEl.appendChild(caption);
+                
+                if (i < 2) {
+                    row1.appendChild(panelEl);
+                } else {
+                    row2.appendChild(panelEl);
+                }
+            });
+            
+            container.appendChild(row1);
+            container.appendChild(row2);
+        }
+        
+        // =============================================================================
+        // ANIMATION LOOP
+        // =============================================================================
+        
+        let lastTime = performance.now();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const currentTime = performance.now();
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            // Update physics
+            updatePhysics(deltaTime);
+            updateParticles(deltaTime);
+            updateDisplay();
+            
+            // Floating equations
+            equations.forEach((eq, i) => {
+                eq.phase += deltaTime;
+                eq.sprite.position.y = eq.baseY + Math.sin(eq.phase) * 0.1;
+            });
+            
+            // Camera orbit
+            const time = currentTime * 0.0002;
+            camera.position.x = Math.cos(time) * 8;
+            camera.position.z = Math.sin(time) * 8;
+            camera.lookAt(0, 1.5, 0);
+            
+            // Render
+            if (dojoState.ui.currentMode === '3d') {
+                renderer.render(scene, camera);
+            }
+        }
+        
+        // =============================================================================
+        // EVENT HANDLERS
+        // =============================================================================
+        
+        // Mode switching
+        document.querySelectorAll('.mode-button[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                
+                // Update active state
+                document.querySelectorAll('.mode-button[data-mode]').forEach(b => 
+                    b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Hide all views
+                renderer.domElement.style.display = 'none';
+                document.getElementById('node-graph-container').classList.remove('active');
+                document.getElementById('comic-panel-container').classList.remove('active');
+                document.getElementById('hud-overlay').style.display = 'none';
+                document.getElementById('audio-visualizer').style.display = 'none';
+                
+                // Show selected view
+                if (mode === '3d') {
+                    renderer.domElement.style.display = 'block';
+                    document.getElementById('hud-overlay').style.display = 'block';
+                    if (dojoState.audio.enabled) {
+                        document.getElementById('audio-visualizer').style.display = 'block';
+                    }
+                } else if (mode === 'nodes') {
+                    document.getElementById('node-graph-container').classList.add('active');
+                    initNodeGraph();
+                } else if (mode === 'comic') {
+                    document.getElementById('comic-panel-container').classList.add('active');
+                    initComicPanels();
+                }
+                
+                dojoState.ui.currentMode = mode;
+            });
+        });
+        
+        // Audio toggle
+        document.getElementById('toggle-audio').addEventListener('click', (e) => {
+            dojoState.audio.enabled = !dojoState.audio.enabled;
+            
+            if (dojoState.audio.enabled) {
+                if (!audioSystem.context) {
+                    audioSystem.init();
+                }
+                e.target.textContent = '🔊 Audio ON';
+                e.target.classList.add('active');
+                
+                if (dojoState.ui.currentMode === '3d') {
+                    const visualizer = document.getElementById('audio-visualizer');
+                    visualizer.style.display = 'block';
+                    const canvas = document.getElementById('waveform-canvas');
+                    canvas.width = 180;
+                    canvas.height = 60;
+                    audioSystem.visualize(canvas);
+                }
+            } else {
+                e.target.textContent = '🔊 Audio';
+                e.target.classList.remove('active');
+                document.getElementById('audio-visualizer').style.display = 'none';
+            }
+        });
+        
+        // EDN toggle
+        document.getElementById('toggle-edn').addEventListener('click', (e) => {
+            dojoState.ui.ednVisible = !dojoState.ui.ednVisible;
+            
+            const console = document.getElementById('edn-console');
+            if (dojoState.ui.ednVisible) {
+                console.style.display = 'block';
+                e.target.classList.add('active');
+                updateEDN();
+            } else {
+                console.style.display = 'none';
+                e.target.classList.remove('active');
+            }
+        });
+        
+        // Physics controls
+        document.getElementById('height-slider').addEventListener('input', (e) => {
+            dojoState.physics.h0 = parseFloat(e.target.value);
+            document.getElementById('height-value').textContent = dojoState.physics.h0.toFixed(1);
+            if (!dojoState.ball.isDropped) resetBall();
+        });
+        
+        document.getElementById('restitution-slider').addEventListener('input', (e) => {
+            dojoState.physics.e = parseFloat(e.target.value);
+            document.getElementById('restitution-value').textContent = dojoState.physics.e.toFixed(2);
+        });
+        
+        document.getElementById('gravity-slider').addEventListener('input', (e) => {
+            dojoState.physics.g = parseFloat(e.target.value);
+            document.getElementById('gravity-value').textContent = dojoState.physics.g.toFixed(2);
+        });
+        
+        document.getElementById('mass-slider').addEventListener('input', (e) => {
+            dojoState.physics.mass = parseFloat(e.target.value);
+            document.getElementById('mass-value').textContent = dojoState.physics.mass.toFixed(2);
+            if (!dojoState.ball.isDropped) resetBall();
+        });
+        
+        // Action buttons
+        document.getElementById('drop-button').addEventListener('click', () => {
+            if (!dojoState.ball.isDropped) {
+                dojoState.ball.isDropped = true;
+                dojoState.ball.lastBounceTime = Date.now() / 1000;
+            }
+        });
+        
+        document.getElementById('reset-button').addEventListener('click', () => {
+            resetBall();
+            particles.forEach(p => scene.remove(p));
+            particles = [];
+        });
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = (window.innerWidth - 320) / (window.innerHeight - 60);
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth - 320, window.innerHeight - 60);
+        });
+        
+        // =============================================================================
+        // INITIALIZATION
+        // =============================================================================
+        
+        initScene();
+        animate();
+        
+        console.log('%c⚡ SOUND NINJUTSU DOJO v2.0 LOADED', 
+            'color: #4ecdc4; font-size: 16px; font-weight: bold;');
+        console.log('%cEDN State:', 'color: #ff6b35; font-weight: bold;', dojoState);
+    </script>
+</body>
+</html>

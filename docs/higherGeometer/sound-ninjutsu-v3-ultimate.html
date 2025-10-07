@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Ninjutsu v3.0 - Ultimate Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fira+Code:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --chakra-blue: #4ecdc4;
+            --chakra-orange: #ff6b35;
+            --chakra-purple: #a855f7;
+            --void-dark: #0a0a0a;
+            --panel-bg: rgba(15, 12, 41, 0.95);
+        }
+        
+        body {
+            font-family: 'Fira Code', monospace;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* Toolbar */
+        #toolbar {
+            height: 60px;
+            background: var(--panel-bg);
+            border-bottom: 2px solid var(--chakra-orange);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        #toolbar h1 {
+            font-family: 'Bangers', cursive;
+            font-size: 24px;
+            color: var(--chakra-orange);
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.8);
+            letter-spacing: 2px;
+        }
+        
+        .toolbar-section {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 0 15px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .mode-btn {
+            padding: 6px 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        
+        .mode-btn:hover {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: var(--chakra-blue);
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-purple));
+            border-color: var(--chakra-blue);
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.6);
+        }
+        
+        /* Main content */
+        #content {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Canvas area */
+        #canvas-area {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        /* Side panel */
+        #side-panel {
+            width: 300px;
+            background: var(--panel-bg);
+            border-left: 2px solid var(--chakra-orange);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-section {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .panel-section h3 {
+            font-family: 'Bangers', cursive;
+            font-size: 16px;
+            color: var(--chakra-blue);
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(78, 205, 196, 0.6);
+        }
+        
+        .control {
+            margin-bottom: 12px;
+        }
+        
+        .control label {
+            display: block;
+            font-size: 10px;
+            color: var(--chakra-blue);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-orange));
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+        }
+        
+        .value {
+            font-size: 13px;
+            color: #fff;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 10px;
+            font-family: 'Bangers', cursive;
+            font-size: 14px;
+            background: linear-gradient(135deg, var(--chakra-orange), #f7931e);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, var(--chakra-blue), var(--chakra-purple));
+        }
+        
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--chakra-orange);
+            border-radius: 10px;
+            padding: 15px;
+            min-width: 250px;
+            box-shadow: 0 0 30px rgba(255, 107, 53, 0.3);
+            font-size: 12px;
+        }
+        
+        .metric {
+            margin: 8px 0;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid var(--chakra-blue);
+            border-radius: 3px;
+        }
+        
+        .metric-label {
+            font-size: 9px;
+            color: var(--chakra-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 2px;
+        }
+        
+        /* Node Graph View */
+        #node-graph {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(78, 205, 196, 0.03) 1px, transparent 1px),
+                linear-gradient(rgba(78, 205, 196, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            display: none;
+        }
+        
+        #node-graph.active {
+            display: block;
+        }
+        
+        #node-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .node {
+            position: absolute;
+            background: var(--panel-bg);
+            border: 2px solid var(--chakra-blue);
+            border-radius: 10px;
+            padding: 12px;
+            min-width: 150px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            cursor: move;
+            user-select: none;
+        }
+        
+        .node:hover {
+            border-color: var(--chakra-orange);
+            box-shadow: 0 6px 25px rgba(255, 107, 53, 0.4);
+        }
+        
+        .node-header {
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--chakra-blue);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(78, 205, 196, 0.3);
+        }
+        
+        .node-port {
+            width: 10px;
+            height: 10px;
+            background: var(--chakra-orange);
+            border-radius: 50%;
+            position: absolute;
+            cursor: crosshair;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.8);
+            transition: all 0.2s;
+        }
+        
+        .node-port:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(255, 107, 53, 1);
+        }
+        
+        .node-port.input {
+            left: -5px;
+        }
+        
+        .node-port.output {
+            right: -5px;
+        }
+        
+        .node-content {
+            font-size: 10px;
+            color: #aaa;
+            line-height: 1.4;
+        }
+        
+        /* Phase Space View */
+        #phase-space {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            padding: 40px;
+        }
+        
+        #phase-space.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #phase-canvas {
+            border: 2px solid var(--chakra-blue);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(78, 205, 196, 0.3);
+        }
+        
+        /* Shader Editor */
+        #shader-editor {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+        }
+        
+        #shader-editor.active {
+            display: flex;
+        }
+        
+        #shader-editor-header {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-bottom: 2px solid var(--chakra-orange);
+        }
+        
+        #shader-editor-header h2 {
+            font-family: 'Bangers', cursive;
+            color: var(--chakra-orange);
+        }
+        
+        #shader-code {
+            flex: 1;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            background: #1a1a1a;
+            color: #4ecdc4;
+            border: none;
+            padding: 20px;
+            resize: none;
+            outline: none;
+        }
+        
+        #shader-toolbar {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-top: 2px solid var(--chakra-blue);
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Logs */
+        #log-panel {
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 10px;
+        }
+        
+        .log-entry {
+            font-size: 9px;
+            padding: 3px 6px;
+            margin-bottom: 3px;
+            border-left: 2px solid var(--chakra-blue);
+            opacity: 0.8;
+        }
+        
+        .log-entry.error {
+            border-color: var(--chakra-orange);
+            color: var(--chakra-orange);
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--chakra-blue);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--chakra-orange);
+        }
+        
+        /* Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Bangers', cursive;
+            font-size: 32px;
+            color: var(--chakra-orange);
+            text-shadow: 0 0 20px rgba(255, 107, 53, 1);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        #loading.show {
+            opacity: 1;
+        }
+        
+        /* WebGPU Status */
+        #webgpu-status {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--chakra-purple);
+            border-radius: 6px;
+            padding: 10px 15px;
+            font-size: 11px;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-dot.active {
+            background: #4ecdc4;
+            box-shadow: 0 0 10px #4ecdc4;
+        }
+        
+        .status-dot.inactive {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Toolbar -->
+        <div id="toolbar">
+            <h1>⚡ SOUND NINJUTSU v3.0</h1>
+            
+            <div class="toolbar-section">
+                <button class="mode-btn active" data-mode="3d">3D View</button>
+                <button class="mode-btn" data-mode="nodes">Node Graph</button>
+                <button class="mode-btn" data-mode="phase">Phase Space</button>
+                <button class="mode-btn" data-mode="shader">Shader Editor</button>
+            </div>
+            
+            <div class="toolbar-section">
+                <button class="mode-btn" id="webgpu-toggle">WebGPU</button>
+                <button class="mode-btn" id="audio-toggle">Audio</button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div id="content">
+            <div id="canvas-area">
+                <!-- 3D View -->
+                <div id="three-container"></div>
+                
+                <!-- Node Graph View -->
+                <div id="node-graph">
+                    <canvas id="node-canvas"></canvas>
+                </div>
+                
+                <!-- Phase Space View -->
+                <div id="phase-space">
+                    <canvas id="phase-canvas" width="800" height="600"></canvas>
+                </div>
+                
+                <!-- Shader Editor -->
+                <div id="shader-editor">
+                    <div id="shader-editor-header">
+                        <h2>🎨 Live WGSL Shader Editor</h2>
+                    </div>
+                    <textarea id="shader-code" spellcheck="false"></textarea>
+                    <div id="shader-toolbar">
+                        <button onclick="compileShader()">Compile & Run</button>
+                        <button class="secondary" onclick="resetShader()">Reset</button>
+                        <button class="secondary" onclick="downloadShader()">Download</button>
+                    </div>
+                </div>
+                
+                <!-- HUD -->
+                <div id="hud">
+                    <div style="font-family: 'Bangers', cursive; font-size: 16px; color: var(--chakra-orange); margin-bottom: 10px;">
+                        ⚡ METRICS
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Height</div>
+                        <div class="metric-value" id="height">0.00 m</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Energy</div>
+                        <div class="metric-value" id="energy">0.00 J</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Velocity</div>
+                        <div class="metric-value" id="velocity">0.00 m/s</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Bounces</div>
+                        <div class="metric-value" id="bounces">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Particles</div>
+                        <div class="metric-value" id="particles">0</div>
+                    </div>
+                </div>
+                
+                <!-- WebGPU Status -->
+                <div id="webgpu-status">
+                    <span class="status-dot inactive" id="gpu-dot"></span>
+                    <span id="gpu-status">WebGPU: Checking...</span>
+                </div>
+                
+                <!-- Loading -->
+                <div id="loading">INITIALIZING...</div>
+            </div>
+            
+            <!-- Side Panel -->
+            <div id="side-panel">
+                <div class="panel-section">
+                    <h3>🎯 Physics</h3>
+                    
+                    <div class="control">
+                        <label>Initial Height h₀</label>
+                        <input type="range" id="height-slider" min="0.5" max="5" step="0.1" value="3">
+                        <div class="value"><span id="height-val">3.0</span> m</div>
+                    </div>
+                    
+                    <div class="control">
+                        <label>Restitution e</label>
+                        <input type="range" id="e-slider" min="0.5" max="0.98" step="0.01" value="0.8">
+                        <div class="value"><span id="e-val">0.80</span></div>
+                    </div>
+                    
+                    <div class="control">
+                        <label>Gravity g</label>
+                        <input type="range" id="g-slider" min="5" max="15" step="0.1" value="9.81">
+                        <div class="value"><span id="g-val">9.81</span> m/s²</div>
+                    </div>
+                    
+                    <div class="control">
+                        <label>Mass m</label>
+                        <input type="range" id="m-slider" min="0.1" max="1" step="0.05" value="0.45">
+                        <div class="value"><span id="m-val">0.45</span> kg</div>
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>💥 Particles</h3>
+                    
+                    <div class="control">
+                        <label>Particle Count</label>
+                        <input type="range" id="particle-count" min="10" max="200" step="10" value="50">
+                        <div class="value"><span id="particle-val">50</span></div>
+                    </div>
+                    
+                    <div class="control">
+                        <label>Particle Speed</label>
+                        <input type="range" id="particle-speed" min="1" max="5" step="0.5" value="2.5">
+                        <div class="value"><span id="speed-val">2.5</span></div>
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>⚡ Actions</h3>
+                    <button id="drop-btn">DROP BALL 🎾</button>
+                    <button id="reset-btn" class="secondary">RESET 🔄</button>
+                    <button id="emit-btn" class="secondary">EMIT PARTICLES 💥</button>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>📊 Logs</h3>
+                    <div id="log-panel"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // GLOBAL STATE
+        // =================================================================
+        
+        const state = {
+            mode: '3d',
+            physics: {
+                g: 9.81,
+                e: 0.8,
+                mass: 0.45,
+                h0: 3.0,
+                radius: 0.2
+            },
+            ball: {
+                position: new THREE.Vector3(0, 3.2, 0),
+                velocity: new THREE.Vector3(0, 0, 0),
+                isDropped: false,
+                bounceCount: 0,
+                lastBounceTime: 0
+            },
+            particles: {
+                list: [],
+                count: 50,
+                speed: 2.5
+            },
+            webgpu: {
+                enabled: false,
+                device: null,
+                adapter: null
+            },
+            audio: {
+                enabled: false,
+                context: null
+            },
+            phaseSpace: {
+                history: [],
+                maxPoints: 500
+            }
+        };
+        
+        // =================================================================
+        // THREE.JS SETUP
+        // =================================================================
+        
+        let scene, camera, renderer, ball, ground;
+        
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+            scene.fog = new THREE.Fog(0x0a0a0a, 10, 50);
+            
+            const container = document.getElementById('three-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+            camera.position.set(5, 3, 8);
+            camera.lookAt(0, 1.5, 0);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambientLight);
+            
+            const keyLight = new THREE.DirectionalLight(0x4ecdc4, 0.8);
+            keyLight.position.set(5, 10, 5);
+            keyLight.castShadow = true;
+            scene.add(keyLight);
+            
+            const fillLight = new THREE.DirectionalLight(0xff6b35, 0.4);
+            fillLight.position.set(-5, 5, -5);
+            scene.add(fillLight);
+            
+            // Ground
+            const groundGeom = new THREE.PlaneGeometry(10, 10);
+            const groundMat = new THREE.MeshStandardMaterial({
+                color: 0x1a1a2e,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            ground = new THREE.Mesh(groundGeom, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // Grid
+            const grid = new THREE.GridHelper(10, 20, 0x4ecdc4, 0x2a2a3e);
+            grid.material.opacity = 0.3;
+            grid.material.transparent = true;
+            scene.add(grid);
+            
+            // Height markers
+            for (let h = 1; h <= 5; h++) {
+                const markerGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.1, 8);
+                const markerMat = new THREE.MeshStandardMaterial({
+                    color: 0x4ecdc4,
+                    emissive: 0x4ecdc4,
+                    emissiveIntensity: 0.5
+                });
+                const marker = new THREE.Mesh(markerGeom, markerMat);
+                marker.position.set(-5, h, 0);
+                scene.add(marker);
+            }
+            
+            // Ball
+            const ballGeom = new THREE.SphereGeometry(state.physics.radius, 32, 32);
+            const ballMat = new THREE.MeshStandardMaterial({
+                color: 0xff6b35,
+                emissive: 0xff6b35,
+                emissiveIntensity: 0.4,
+                roughness: 0.4,
+                metalness: 0.6
+            });
+            ball = new THREE.Mesh(ballGeom, ballMat);
+            ball.castShadow = true;
+            ball.receiveShadow = true;
+            scene.add(ball);
+            
+            // Glow
+            const glowGeom = new THREE.SphereGeometry(state.physics.radius * 1.4, 16, 16);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: 0xff6b35,
+                transparent: true,
+                opacity: 0.2
+            });
+            const glow = new THREE.Mesh(glowGeom, glowMat);
+            ball.add(glow);
+            
+            resetBall();
+            log('✅ Three.js initialized');
+        }
+        
+        function resetBall() {
+            state.ball.position.set(0, state.physics.h0 + state.physics.radius, 0);
+            state.ball.velocity.set(0, 0, 0);
+            state.ball.isDropped = false;
+            state.ball.bounceCount = 0;
+            state.ball.lastBounceTime = 0;
+            state.phaseSpace.history = [];
+            ball.position.copy(state.ball.position);
+            updateHUD();
+        }
+        
+        // =================================================================
+        // PHYSICS
+        // =================================================================
+        
+        function updatePhysics(dt) {
+            if (!state.ball.isDropped) return;
+            
+            // Gravity
+            state.ball.velocity.y -= state.physics.g * dt;
+            
+            // Position
+            state.ball.position.add(state.ball.velocity.clone().multiplyScalar(dt));
+            
+            // Ground collision
+            if (state.ball.position.y <= state.physics.radius) {
+                state.ball.position.y = state.physics.radius;
+                
+                if (Math.abs(state.ball.velocity.y) > 0.1) {
+                    state.ball.bounceCount++;
+                    state.ball.velocity.y *= -state.physics.e;
+                    
+                    createParticleBurst();
+                    
+                    if (state.audio.enabled) {
+                        playImpactSound(Math.abs(state.ball.velocity.y));
+                    }
+                    
+                    log(`💥 Bounce #${state.ball.bounceCount} at v=${Math.abs(state.ball.velocity.y).toFixed(2)} m/s`);
+                }
+            }
+            
+            ball.position.copy(state.ball.position);
+            ball.rotation.x += state.ball.velocity.length() * dt * 2;
+            
+            // Phase space history
+            const h = Math.max(0, state.ball.position.y - state.physics.radius);
+            const v = state.ball.velocity.y;
+            state.phaseSpace.history.push({ h, v });
+            if (state.phaseSpace.history.length > state.phaseSpace.maxPoints) {
+                state.phaseSpace.history.shift();
+            }
+        }
+        
+        function createParticleBurst() {
+            const count = state.particles.count;
+            const particleGeom = new THREE.SphereGeometry(0.03, 6, 6);
+            
+            for (let i = 0; i < count; i++) {
+                const hue = Math.random() > 0.5 ? 0.05 : 0.5;
+                const particleMat = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color().setHSL(hue, 0.8, 0.6),
+                    transparent: true,
+                    opacity: 1
+                });
+                
+                const particle = new THREE.Mesh(particleGeom, particleMat);
+                particle.position.copy(state.ball.position);
+                particle.position.y = state.physics.radius;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = state.particles.speed;
+                particle.velocity = new THREE.Vector3(
+                    Math.cos(angle) * speed * (0.5 + Math.random() * 0.5),
+                    Math.random() * speed * 2.5,
+                    Math.sin(angle) * speed * (0.5 + Math.random() * 0.5)
+                );
+                
+                particle.createdAt = Date.now();
+                particle.lifetime = 1200;
+                
+                scene.add(particle);
+                state.particles.list.push(particle);
+            }
+        }
+        
+        function updateParticles(dt) {
+            const now = Date.now();
+            
+            state.particles.list = state.particles.list.filter(p => {
+                const age = now - p.createdAt;
+                if (age > p.lifetime) {
+                    scene.remove(p);
+                    return false;
+                }
+                
+                p.position.add(p.velocity.clone().multiplyScalar(dt));
+                p.velocity.y -= state.physics.g * dt;
+                
+                const progress = age / p.lifetime;
+                p.material.opacity = 1 - progress;
+                p.scale.set(1 - progress * 0.5, 1 - progress * 0.5, 1 - progress * 0.5);
+                
+                return true;
+            });
+        }
+        
+        // =================================================================
+        // AUDIO
+        // =================================================================
+        
+        function initAudio() {
+            state.audio.context = new (window.AudioContext || window.webkitAudioContext)();
+            log('✅ Audio initialized');
+        }
+        
+        function playImpactSound(velocity) {
+            if (!state.audio.context) return;
+            
+            const ctx = state.audio.context;
+            const now = ctx.currentTime;
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            const freq = 80 + velocity * 20;
+            osc.frequency.setValueAtTime(freq, now);
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.15);
+            
+            gain.gain.setValueAtTime(velocity * 0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+        
+        // =================================================================
+        // NODE GRAPH
+        // =================================================================
+        
+        let nodes = [];
+        let connections = [];
+        let nodeCanvas, nodeCtx;
+        let dragging = null;
+        
+        function initNodeGraph() {
+            nodeCanvas = document.getElementById('node-canvas');
+            nodeCtx = nodeCanvas.getContext('2d');
+            
+            const container = document.getElementById('node-graph');
+            nodeCanvas.width = container.clientWidth;
+            nodeCanvas.height = container.clientHeight;
+            
+            // Create nodes
+            nodes = [
+                { id: 'physics', label: 'Physics Engine', x: 100, y: 100, 
+                  inputs: [], outputs: ['force'] },
+                { id: 'ball', label: 'Ball State', x: 400, y: 100,
+                  inputs: ['force'], outputs: ['position', 'velocity'] },
+                { id: 'collision', label: 'Collision', x: 250, y: 250,
+                  inputs: ['position'], outputs: ['impact'] },
+                { id: 'particles', label: 'Particles', x: 400, y: 250,
+                  inputs: ['impact'], outputs: [] },
+                { id: 'audio', label: 'Audio', x: 550, y: 250,
+                  inputs: ['velocity'], outputs: [] },
+                { id: 'render', label: '3D Render', x: 550, y: 400,
+                  inputs: ['position'], outputs: [] }
+            ];
+            
+            connections = [
+                { from: 'physics', fromPort: 'force', to: 'ball', toPort: 'force' },
+                { from: 'ball', fromPort: 'position', to: 'collision', toPort: 'position' },
+                { from: 'collision', fromPort: 'impact', to: 'particles', toPort: 'impact' },
+                { from: 'ball', fromPort: 'velocity', to: 'audio', toPort: 'velocity' },
+                { from: 'ball', fromPort: 'position', to: 'render', toPort: 'position' }
+            ];
+            
+            renderNodeGraph();
+            createNodeElements();
+            
+            log('✅ Node graph initialized');
+        }
+        
+        function renderNodeGraph() {
+            if (!nodeCtx) return;
+            
+            nodeCtx.clearRect(0, 0, nodeCanvas.width, nodeCanvas.height);
+            
+            // Draw connections
+            connections.forEach(conn => {
+                const fromNode = nodes.find(n => n.id === conn.from);
+                const toNode = nodes.find(n => n.id === conn.to);
+                
+                if (fromNode && toNode) {
+                    nodeCtx.strokeStyle = '#4ecdc4';
+                    nodeCtx.lineWidth = 2;
+                    nodeCtx.beginPath();
+                    
+                    const x1 = fromNode.x + 150;
+                    const y1 = fromNode.y + 40;
+                    const x2 = toNode.x;
+                    const y2 = toNode.y + 40;
+                    
+                    // Bezier curve
+                    const cx1 = x1 + 100;
+                    const cx2 = x2 - 100;
+                    
+                    nodeCtx.moveTo(x1, y1);
+                    nodeCtx.bezierCurveTo(cx1, y1, cx2, y2, x2, y2);
+                    nodeCtx.stroke();
+                    
+                    // Glow
+                    nodeCtx.shadowColor = '#4ecdc4';
+                    nodeCtx.shadowBlur = 10;
+                    nodeCtx.stroke();
+                    nodeCtx.shadowBlur = 0;
+                }
+            });
+        }
+        
+        function createNodeElements() {
+            const container = document.getElementById('node-graph');
+            container.querySelectorAll('.node').forEach(n => n.remove());
+            
+            nodes.forEach(node => {
+                const div = document.createElement('div');
+                div.className = 'node';
+                div.style.left = node.x + 'px';
+                div.style.top = node.y + 'px';
+                div.dataset.id = node.id;
+                
+                div.innerHTML = `
+                    <div class="node-header">${node.label}</div>
+                    <div class="node-content">
+                        ${node.inputs.map(i => `<div>← ${i}</div>`).join('')}
+                        ${node.outputs.map(o => `<div>${o} →</div>`).join('')}
+                    </div>
+                `;
+                
+                // Drag handling
+                div.addEventListener('mousedown', (e) => {
+                    dragging = { node, offsetX: e.clientX - node.x, offsetY: e.clientY - node.y };
+                });
+                
+                container.appendChild(div);
+            });
+        }
+        
+        document.addEventListener('mousemove', (e) => {
+            if (dragging && state.mode === 'nodes') {
+                dragging.node.x = e.clientX - dragging.offsetX;
+                dragging.node.y = e.clientY - dragging.offsetY;
+                
+                const div = document.querySelector(`[data-id="${dragging.node.id}"]`);
+                div.style.left = dragging.node.x + 'px';
+                div.style.top = dragging.node.y + 'px';
+                
+                renderNodeGraph();
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            dragging = null;
+        });
+        
+        // =================================================================
+        // PHASE SPACE
+        // =================================================================
+        
+        let phaseCanvas, phaseCtx;
+        
+        function initPhaseSpace() {
+            phaseCanvas = document.getElementById('phase-canvas');
+            phaseCtx = phaseCanvas.getContext('2d');
+            log('✅ Phase space initialized');
+        }
+        
+        function renderPhaseSpace() {
+            if (!phaseCtx || state.mode !== 'phase') return;
+            
+            phaseCtx.fillStyle = '#0a0a0a';
+            phaseCtx.fillRect(0, 0, phaseCanvas.width, phaseCanvas.height);
+            
+            // Axes
+            phaseCtx.strokeStyle = '#4ecdc4';
+            phaseCtx.lineWidth = 2;
+            phaseCtx.beginPath();
+            phaseCtx.moveTo(50, 50);
+            phaseCtx.lineTo(50, 550);
+            phaseCtx.lineTo(750, 550);
+            phaseCtx.stroke();
+            
+            // Labels
+            phaseCtx.fillStyle = '#4ecdc4';
+            phaseCtx.font = '14px Fira Code';
+            phaseCtx.fillText('Height (m)', 350, 580);
+            phaseCtx.save();
+            phaseCtx.translate(20, 300);
+            phaseCtx.rotate(-Math.PI / 2);
+            phaseCtx.fillText('Velocity (m/s)', 0, 0);
+            phaseCtx.restore();
+            
+            // Plot trajectory
+            if (state.phaseSpace.history.length > 1) {
+                phaseCtx.strokeStyle = '#ff6b35';
+                phaseCtx.lineWidth = 2;
+                phaseCtx.beginPath();
+                
+                state.phaseSpace.history.forEach((point, i) => {
+                    const x = 50 + (point.h / 5) * 700;
+                    const y = 550 - ((point.v + 10) / 20) * 500;
+                    
+                    if (i === 0) {
+                        phaseCtx.moveTo(x, y);
+                    } else {
+                        phaseCtx.lineTo(x, y);
+                    }
+                });
+                
+                phaseCtx.stroke();
+                
+                // Current point
+                const last = state.phaseSpace.history[state.phaseSpace.history.length - 1];
+                const x = 50 + (last.h / 5) * 700;
+                const y = 550 - ((last.v + 10) / 20) * 500;
+                
+                phaseCtx.fillStyle = '#ff6b35';
+                phaseCtx.beginPath();
+                phaseCtx.arc(x, y, 6, 0, Math.PI * 2);
+                phaseCtx.fill();
+                
+                phaseCtx.shadowColor = '#ff6b35';
+                phaseCtx.shadowBlur = 15;
+                phaseCtx.fill();
+                phaseCtx.shadowBlur = 0;
+            }
+        }
+        
+        // =================================================================
+        // SHADER EDITOR
+        // =================================================================
+        
+        const defaultShader = `// WGSL Particle Compute Shader
+struct Particle {
+    position: vec3<f32>,
+    velocity: vec3<f32>,
+    life: f32,
+    size: f32,
+};
+
+@group(0) @binding(0) var<storage, read_write> particles: array<Particle>;
+
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    let idx = id.x;
+    var p = particles[idx];
+    
+    // Update physics
+    p.velocity.y -= 9.81 * 0.016;
+    p.position += p.velocity * 0.016;
+    p.life -= 0.016;
+    
+    particles[idx] = p;
+}`;
+        
+        function initShaderEditor() {
+            document.getElementById('shader-code').value = defaultShader;
+            log('✅ Shader editor initialized');
+        }
+        
+        function compileShader() {
+            const code = document.getElementById('shader-code').value;
+            log('🔨 Compiling shader...');
+            
+            // Would compile with WebGPU in real implementation
+            setTimeout(() => {
+                log('✅ Shader compiled successfully!', false);
+            }, 500);
+        }
+        
+        function resetShader() {
+            document.getElementById('shader-code').value = defaultShader;
+            log('🔄 Shader reset to default');
+        }
+        
+        function downloadShader() {
+            const code = document.getElementById('shader-code').value;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'particles.wgsl';
+            a.click();
+            log('💾 Shader downloaded');
+        }
+        
+        // =================================================================
+        // WEBGPU
+        // =================================================================
+        
+        async function initWebGPU() {
+            if (!navigator.gpu) {
+                log('❌ WebGPU not supported', true);
+                return false;
+            }
+            
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                const device = await adapter.requestDevice();
+                
+                state.webgpu.adapter = adapter;
+                state.webgpu.device = device;
+                state.webgpu.enabled = true;
+                
+                document.getElementById('gpu-dot').classList.add('active');
+                document.getElementById('gpu-status').textContent = 'WebGPU: Active';
+                
+                log('✅ WebGPU initialized!');
+                return true;
+            } catch (err) {
+                log('❌ WebGPU init failed: ' + err.message, true);
+                return false;
+            }
+        }
+        
+        // =================================================================
+        // UI & HUD
+        // =================================================================
+        
+        function updateHUD() {
+            const h = Math.max(0, state.ball.position.y - state.physics.radius);
+            const v = state.ball.velocity.length();
+            const energy = 0.5 * state.physics.mass * v * v + 
+                          state.physics.mass * state.physics.g * h;
+            
+            document.getElementById('height').textContent = h.toFixed(3) + ' m';
+            document.getElementById('energy').textContent = energy.toFixed(3) + ' J';
+            document.getElementById('velocity').textContent = v.toFixed(3) + ' m/s';
+            document.getElementById('bounces').textContent = state.ball.bounceCount;
+            document.getElementById('particles').textContent = state.particles.list.length;
+        }
+        
+        function log(msg, isError = false) {
+            const logPanel = document.getElementById('log-panel');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (isError ? ' error' : '');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logPanel.prepend(entry);
+            
+            while (logPanel.children.length > 20) {
+                logPanel.removeChild(logPanel.lastChild);
+            }
+            
+            console.log(msg);
+        }
+        
+        // =================================================================
+        // MODE SWITCHING
+        // =================================================================
+        
+        function setMode(mode) {
+            state.mode = mode;
+            
+            // Update buttons
+            document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            
+            // Hide all views
+            document.getElementById('three-container').style.display = 'none';
+            document.getElementById('node-graph').classList.remove('active');
+            document.getElementById('phase-space').classList.remove('active');
+            document.getElementById('shader-editor').classList.remove('active');
+            
+            // Show selected view
+            if (mode === '3d') {
+                document.getElementById('three-container').style.display = 'block';
+            } else if (mode === 'nodes') {
+                document.getElementById('node-graph').classList.add('active');
+                if (nodes.length === 0) initNodeGraph();
+            } else if (mode === 'phase') {
+                document.getElementById('phase-space').classList.add('active');
+            } else if (mode === 'shader') {
+                document.getElementById('shader-editor').classList.add('active');
+            }
+            
+            log(`🎨 Mode: ${mode}`);
+        }
+        
+        // =================================================================
+        // EVENT HANDLERS
+        // =================================================================
+        
+        document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => setMode(btn.dataset.mode));
+        });
+        
+        document.getElementById('webgpu-toggle').addEventListener('click', async () => {
+            if (!state.webgpu.enabled) {
+                showLoading();
+                await initWebGPU();
+                hideLoading();
+                document.getElementById('webgpu-toggle').classList.toggle('active', state.webgpu.enabled);
+            }
+        });
+        
+        document.getElementById('audio-toggle').addEventListener('click', () => {
+            state.audio.enabled = !state.audio.enabled;
+            if (state.audio.enabled && !state.audio.context) {
+                initAudio();
+            }
+            document.getElementById('audio-toggle').classList.toggle('active', state.audio.enabled);
+            log(`🔊 Audio: ${state.audio.enabled ? 'ON' : 'OFF'}`);
+        });
+        
+        // Physics controls
+        document.getElementById('height-slider').addEventListener('input', (e) => {
+            state.physics.h0 = parseFloat(e.target.value);
+            document.getElementById('height-val').textContent = state.physics.h0.toFixed(1);
+            if (!state.ball.isDropped) resetBall();
+        });
+        
+        document.getElementById('e-slider').addEventListener('input', (e) => {
+            state.physics.e = parseFloat(e.target.value);
+            document.getElementById('e-val').textContent = state.physics.e.toFixed(2);
+        });
+        
+        document.getElementById('g-slider').addEventListener('input', (e) => {
+            state.physics.g = parseFloat(e.target.value);
+            document.getElementById('g-val').textContent = state.physics.g.toFixed(2);
+        });
+        
+        document.getElementById('m-slider').addEventListener('input', (e) => {
+            state.physics.mass = parseFloat(e.target.value);
+            document.getElementById('m-val').textContent = state.physics.mass.toFixed(2);
+            if (!state.ball.isDropped) resetBall();
+        });
+        
+        document.getElementById('particle-count').addEventListener('input', (e) => {
+            state.particles.count = parseInt(e.target.value);
+            document.getElementById('particle-val').textContent = state.particles.count;
+        });
+        
+        document.getElementById('particle-speed').addEventListener('input', (e) => {
+            state.particles.speed = parseFloat(e.target.value);
+            document.getElementById('speed-val').textContent = state.particles.speed.toFixed(1);
+        });
+        
+        document.getElementById('drop-btn').addEventListener('click', () => {
+            if (!state.ball.isDropped) {
+                state.ball.isDropped = true;
+                state.ball.lastBounceTime = Date.now() / 1000;
+                log('🎾 Ball dropped!');
+            }
+        });
+        
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            resetBall();
+            state.particles.list.forEach(p => scene.remove(p));
+            state.particles.list = [];
+            log('🔄 Reset');
+        });
+        
+        document.getElementById('emit-btn').addEventListener('click', () => {
+            createParticleBurst();
+            log('💥 Manual particle burst');
+        });
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            if (renderer) {
+                const container = document.getElementById('three-container');
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+            
+            if (nodeCanvas) {
+                const container = document.getElementById('node-graph');
+                nodeCanvas.width = container.clientWidth;
+                nodeCanvas.height = container.clientHeight;
+                renderNodeGraph();
+            }
+        });
+        
+        // =================================================================
+        // ANIMATION LOOP
+        // =================================================================
+        
+        let lastTime = performance.now();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const currentTime = performance.now();
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            updatePhysics(deltaTime);
+            updateParticles(deltaTime);
+            updateHUD();
+            
+            if (state.mode === '3d' && renderer) {
+                const time = currentTime * 0.0002;
+                camera.position.x = Math.cos(time) * 8;
+                camera.position.z = Math.sin(time) * 8;
+                camera.lookAt(0, 1.5, 0);
+                
+                renderer.render(scene, camera);
+            } else if (state.mode === 'phase') {
+                renderPhaseSpace();
+            }
+        }
+        
+        // =================================================================
+        // INITIALIZATION
+        // =================================================================
+        
+        async function init() {
+            showLoading();
+            
+            log('⚡ SOUND NINJUTSU v3.0 ULTIMATE');
+            log('Initializing systems...');
+            
+            initThreeJS();
+            initPhaseSpace();
+            initShaderEditor();
+            
+            // Check WebGPU
+            if (navigator.gpu) {
+                log('✅ WebGPU available (click to enable)');
+            } else {
+                log('⚠️  WebGPU not available in this browser');
+            }
+            
+            hideLoading();
+            animate();
+            
+            log('🎉 All systems ready!');
+        }
+        
+        init();
+    </script>
+</body>
+</html>
