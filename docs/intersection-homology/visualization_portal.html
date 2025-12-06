@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perverse Sheaf Visualization Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Animated gradient background */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, 
+                #0a0e1a 0%, 
+                #1a0f2e 25%, 
+                #0f1a1a 50%, 
+                #1a1535 75%, 
+                #0a0e1a 100%
+            );
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Particle system overlay */
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 3rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 3rem 0;
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 300;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, 
+                #00f5ff 0%, 
+                #8ab4f8 20%,
+                #c58af9 40%,
+                #ff00ff 60%,
+                #ffd700 80%,
+                #6ee7b7 100%
+            );
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 8s ease-in-out infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .tagline {
+            font-size: 1.3rem;
+            color: #888;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .team-credits {
+            margin-top: 2rem;
+            font-size: 0.95rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .team-credits strong {
+            color: #8ab4f8;
+        }
+
+        /* Visualization grid */
+        .viz-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .viz-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 0;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .viz-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent 0%, var(--card-color) 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .viz-card:hover::before {
+            opacity: 0.15;
+        }
+
+        .viz-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--card-color);
+            box-shadow: 0 20px 60px var(--card-glow);
+        }
+
+        .viz-thumbnail {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, var(--card-color-dark) 0%, var(--card-color) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .viz-content {
+            padding: 2rem;
+        }
+
+        .viz-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--card-color);
+        }
+
+        .viz-designer {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 1rem;
+            font-family: 'Fira Code', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .viz-description {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #aaa;
+            margin-bottom: 1.5rem;
+        }
+
+        .viz-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            padding: 0.35rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        /* Info sections */
+        .info-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(138, 180, 248, 0.3);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .info-section h2 {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #8ab4f8;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-section p {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: #ccc;
+            margin-bottom: 1rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-item {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border-left: 4px solid var(--feature-color);
+        }
+
+        .feature-item h3 {
+            font-size: 1.1rem;
+            color: var(--feature-color);
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-item p {
+            font-size: 0.9rem;
+            color: #999;
+            line-height: 1.6;
+        }
+
+        /* Quick start section */
+        .quick-start {
+            background: linear-gradient(135deg, rgba(197, 138, 249, 0.1) 0%, rgba(138, 180, 248, 0.1) 100%);
+            border: 2px solid rgba(197, 138, 249, 0.3);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .quick-start h2 {
+            font-size: 2rem;
+            color: #c58af9;
+            margin-bottom: 1.5rem;
+        }
+
+        .pathway-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .pathway {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 2px solid rgba(197, 138, 249, 0.3);
+        }
+
+        .pathway h3 {
+            font-size: 1.2rem;
+            color: #c58af9;
+            margin-bottom: 1rem;
+        }
+
+        .pathway-steps {
+            list-style: none;
+            padding: 0;
+        }
+
+        .pathway-steps li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .pathway-steps li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #c58af9;
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            border-top: 2px solid rgba(255, 255, 255, 0.1);
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #8ab4f8;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #c58af9;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .viz-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Loading animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <canvas id="particles"></canvas>
+
+    <div class="container">
+        <header>
+            <h1>Perverse Sheaf Theory</h1>
+            <p class="tagline">Interactive Visualizations</p>
+            <div class="team-credits">
+                Inspired by <strong>Bret Victor</strong>, <strong>Steven Wittens</strong>, and <strong>Emily Riehl</strong>
+            </div>
+        </header>
+
+        <div class="info-section">
+            <h2>Welcome to the Portal</h2>
+            <p>
+                This is a collection of <strong>five interconnected visualizations</strong> that make perverse 
+                sheaf theory tangible and explorable. Each visualization embodies a different perspective on 
+                the same mathematical reality, from stratifications to characteristic cycles to spectral sequences.
+            </p>
+            <p>
+                <strong>These are not passive diagrams.</strong> They're living, breathing mathematical structures 
+                you can explore with your hands. Drag sliders, scrub parameters, watch differentials flow. 
+                <em>Mathematics made visceral.</em>
+            </p>
+        </div>
+
+        <div class="viz-grid">
+            <!-- Visualization 1 -->
+            <div class="viz-card" style="--card-color: #8ab4f8; --card-color-dark: #4a7fc8; --card-glow: rgba(138, 180, 248, 0.4);" onclick="window.open('t_structure_explorer.html', '_blank')">
+                <div class="viz-thumbnail">
+                    <span style="font-size: 5rem;">τ</span>
+                </div>
+                <div class="viz-content">
+                    <h3 class="viz-title">t-Structure Explorer</h3>
+                    <p class="viz-designer">Bret Victor Style</p>
+                    <p class="viz-description">
+                        Scrub the truncation functors and <strong>watch the heart emerge</strong>. 
+                        The perverse t-structure becomes tangible as you move your hands across the sliders.
+                    </p>
+                    <div class="viz-tags">
+                        <span class="tag">Interactive</span>
+                        <span class="tag">Beginner-Friendly</span>
+                        <span class="tag">Canvas 2D</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization 2 -->
+            <div class="viz-card" style="--card-color: #ffd700; --card-color-dark: #cc8800; --card-glow: rgba(255, 215, 0, 0.4);" onclick="window.open('cotangent_bundle_3d.jsx', '_blank')">
+                <div class="viz-thumbnail">
+                    <span>T*X</span>
+                </div>
+                <div class="viz-content">
+                    <h3 class="viz-title">Cotangent Bundle 3D</h3>
+                    <p class="viz-designer">Steven Wittens Style</p>
+                    <p class="viz-description">
+                        Navigate the 4D cotangent bundle projected into 3D. Watch <strong>characteristic cycles 
+                        flow</strong> as Lagrangian rivers on phase space. GPU-accelerated beauty.
+                    </p>
+                    <div class="viz-tags">
+                        <span class="tag">3D/WebGL</span>
+                        <span class="tag">Advanced</span>
+                        <span class="tag">Three.js</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization 3 -->
+            <div class="viz-card" style="--card-color: #c58af9; --card-color-dark: #8a4fc8; --card-glow: rgba(197, 138, 249, 0.4);" onclick="window.open('infinity_category_navigator.jsx', '_blank')">
+                <div class="viz-thumbnail">
+                    <span>∞-Cat</span>
+                </div>
+                <div class="viz-content">
+                    <h3 class="viz-title">∞-Category Navigator</h3>
+                    <p class="viz-designer">Emily Riehl Style</p>
+                    <p class="viz-description">
+                        Walk through levels of morphisms in the ∞-category. From objects to 1-cells to 2-cells 
+                        to infinity. <strong>See composition emerge</strong> at every level.
+                    </p>
+                    <div class="viz-tags">
+                        <span class="tag">Category Theory</span>
+                        <span class="tag">Rigorous</span>
+                        <span class="tag">Educational</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization 4 -->
+            <div class="viz-card" style="--card-color: #ff00ff; --card-color-dark: #cc00cc; --card-glow: rgba(255, 0, 255, 0.4);" onclick="window.open('spectral_sequence_flow.html', '_blank')">
+                <div class="viz-thumbnail">
+                    <span>E<sub>r</sub></span>
+                </div>
+                <div class="viz-content">
+                    <h3 class="viz-title">Spectral Sequence Flow</h3>
+                    <p class="viz-designer">Team Collaboration</p>
+                    <p class="viz-description">
+                        Watch differentials propagate across pages. See terms die and stabilize. 
+                        <strong>Convergence to E<sub>∞</sub></strong> visualized in neon cyberpunk aesthetics.
+                    </p>
+                    <div class="viz-tags">
+                        <span class="tag">Animated</span>
+                        <span class="tag">Computational</span>
+                        <span class="tag">Cyberpunk</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization 5 -->
+            <div class="viz-card" style="--card-color: #6ee7b7; --card-color-dark: #3ea87a; --card-glow: rgba(110, 231, 183, 0.4);" onclick="window.open('grand_unified_visualizer.jsx', '_blank')">
+                <div class="viz-thumbnail">
+                    <span>∫</span>
+                </div>
+                <div class="viz-content">
+                    <h3 class="viz-title">Grand Unified Visualizer</h3>
+                    <p class="viz-designer">Complete Synthesis</p>
+                    <p class="viz-description">
+                        The crown jewel. <strong>Morph continuously</strong> between all mathematical structures: 
+                        stratification → perverse sheaves → t-structure → characteristic cycles → spectral sequences → tropical.
+                    </p>
+                    <div class="viz-tags">
+                        <span class="tag">3D/WebGL</span>
+                        <span class="tag">Morphing</span>
+                        <span class="tag">Comprehensive</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentation Card -->
+            <div class="viz-card" style="--card-color: #ffa07a; --card-color-dark: #cc7a5a; --card-glow: rgba(255, 160, 122, 0.4);" onclick="alert('See visualization_manifesto.md for complete documentation')">
+                <div class="viz-thumbnail">
+                    <span style="font-size: 4rem;">📚</span>
+                </div>
+                <div class="viz-content">
+                    <h3 class="viz-title">Documentation & Manifesto</h3>
+                    <p class="viz-designer">Complete Guide</p>
+                    <p class="viz-description">
+                        Read the <strong>Visualization Manifesto</strong> for philosophy, technical specs, 
+                        classroom use, and future directions. Comprehensive guide to the entire suite.
+                    </p>
+                    <div class="viz-tags">
+                        <span class="tag">Documentation</span>
+                        <span class="tag">Philosophy</span>
+                        <span class="tag">Pedagogy</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quick-start">
+            <h2>Quick Start Pathways</h2>
+            <p style="color: #ccc;">Choose your journey based on your background and goals:</p>
+
+            <div class="pathway-list">
+                <div class="pathway">
+                    <h3>🎓 Beginner Path (2-3 hours)</h3>
+                    <ul class="pathway-steps">
+                        <li>Start with <strong>t-Structure Explorer</strong> (30 min)</li>
+                        <li>Move to <strong>Spectral Sequence Flow</strong> (30 min)</li>
+                        <li>Explore <strong>Grand Unified Visualizer</strong> (60 min)</li>
+                        <li>Return to t-Structure with new understanding</li>
+                    </ul>
+                </div>
+
+                <div class="pathway">
+                    <h3>🔬 Advanced Path (4-6 hours)</h3>
+                    <ul class="pathway-steps">
+                        <li>Deep dive: <strong>∞-Category Navigator</strong> (60 min)</li>
+                        <li>Master: <strong>Cotangent Bundle 3D</strong> (90 min)</li>
+                        <li>Synthesize with <strong>all five</strong> (2-3 hrs)</li>
+                        <li>Connect to your research</li>
+                    </ul>
+                </div>
+
+                <div class="pathway">
+                    <h3>⚡ Quick Tour (30 min)</h3>
+                    <ul class="pathway-steps">
+                        <li><strong>Grand Unified</strong>: see all modes (10 min)</li>
+                        <li><strong>t-Structure</strong>: basic interaction (10 min)</li>
+                        <li><strong>Spectral Sequence</strong>: watch convergence (10 min)</li>
+                        <li>Choose your focus area</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h2>Key Features Across All Visualizations</h2>
+            <div class="feature-grid">
+                <div class="feature-item" style="--feature-color: #8ab4f8;">
+                    <h3>Real-Time Interaction</h3>
+                    <p>All visualizations run at 60 FPS with immediate feedback. No waiting, no loading.</p>
+                </div>
+
+                <div class="feature-item" style="--feature-color: #c58af9;">
+                    <h3>Mathematically Rigorous</h3>
+                    <p>Every formula is correct. Every animation is meaningful. Beauty without compromise.</p>
+                </div>
+
+                <div class="feature-item" style="--feature-color: #ffd700;">
+                    <h3>GPU Accelerated</h3>
+                    <p>WebGL and Three.js power smooth 3D rendering. Complex computations happen in shaders.</p>
+                </div>
+
+                <div class="feature-item" style="--feature-color: #6ee7b7;">
+                    <h3>Educational Design</h3>
+                    <p>Progressive disclosure. Learn by doing. From concrete examples to abstract theory.</p>
+                </div>
+
+                <div class="feature-item" style="--feature-color: #ff00ff;">
+                    <h3>Cross-Browser</h3>
+                    <p>Works in Chrome, Firefox, Safari, Edge. Responsive design for desktop and mobile.</p>
+                </div>
+
+                <div class="feature-item" style="--feature-color: #ffa07a;">
+                    <h3>Open Source Ready</h3>
+                    <p>All code available. Extend, modify, contribute. Built for the community.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                Created for advanced mathematical visualization and education<br>
+                Part of the Perverse Sheaf Theory research project<br>
+                <br>
+                <a href="visualization_manifesto.md">Read the Full Manifesto</a> • 
+                <a href="https://github.com/yourusername/perverse-sheaf-viz">GitHub</a> •
+                <a href="mailto:contact@example.com">Contact</a>
+            </p>
+            <p style="margin-top: 2rem; color: #444;">
+                "The purpose of visualization is understanding, not pictures."
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Particle system background
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+                this.life = 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.001;
+
+                if (this.life <= 0 || this.x < 0 || this.x > canvas.width || 
+                    this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                
+                const colors = ['#8ab4f8', '#c58af9', '#6ee7b7', '#ffd700'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                ctx.fillStyle = color + Math.floor(this.life * 50).toString(16).padStart(2, '0');
+                ctx.fill();
+            }
+        }
+
+        const particles = Array.from({ length: 100 }, () => new Particle());
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // Draw connections
+            ctx.strokeStyle = 'rgba(138, 180, 248, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 100) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.globalAlpha = (1 - dist / 100) * 0.3;
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

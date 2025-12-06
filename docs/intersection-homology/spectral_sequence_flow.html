@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spectral Sequence Flow - Watch Mathematics Converge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Iosevka', 'Fira Code', monospace;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .overlay {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .top-left {
+            top: 2rem;
+            left: 2rem;
+        }
+
+        .top-right {
+            top: 2rem;
+            right: 2rem;
+            text-align: right;
+        }
+
+        .bottom-left {
+            bottom: 2rem;
+            left: 2rem;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #00f5ff 0%, #ff00ff 50%, #ffff00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .page-indicator {
+            font-size: 4rem;
+            font-weight: 700;
+            color: #00f5ff;
+            text-shadow: 0 0 20px #00f5ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-info {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .convergence-box {
+            background: rgba(0, 245, 255, 0.1);
+            border: 2px solid #00f5ff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-width: 300px;
+            box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);
+        }
+
+        .convergence-title {
+            color: #00f5ff;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .convergence-status {
+            font-size: 0.9rem;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .button {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #00f5ff;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .button.primary {
+            background: rgba(0, 245, 255, 0.2);
+            border-color: #00f5ff;
+        }
+
+        .button.danger {
+            background: rgba(255, 0, 255, 0.2);
+            border-color: #ff00ff;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid #fff;
+        }
+
+        .quote-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ffff00;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 0 40px rgba(255, 255, 0, 0.5);
+            pointer-events: auto;
+        }
+
+        .quote-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .quote-author {
+            font-size: 0.95rem;
+            color: #ffff00;
+            font-weight: 600;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .pulsing {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <!-- Overlays -->
+    <div class="overlay top-left floating">
+        <h1>Spectral Sequence Flow</h1>
+        <p class="subtitle">E<sub>r</sub> pages converging to E<sub>∞</sub></p>
+    </div>
+
+    <div class="overlay top-right">
+        <div class="page-indicator pulsing">E<sub><span id="currentPage">1</span></sub></div>
+        <div class="page-info">
+            Differentials: d<sub><span id="diffDegree">1</span></sub>
+        </div>
+    </div>
+
+    <div class="overlay bottom-left">
+        <div class="convergence-box">
+            <div class="convergence-title">Convergence Status</div>
+            <div class="convergence-status">
+                Remaining nonzero differentials: <strong id="remainingDiffs">24</strong>
+            </div>
+            <div class="convergence-status">
+                Stable terms: <strong id="stableTerms">0</strong> / <strong>25</strong>
+            </div>
+            <div class="convergence-status">
+                Pages computed: <strong id="pagesComputed">1</strong>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+            <div class="convergence-title" style="margin-bottom: 0.75rem;">Legend</div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #00f5ff;"></div>
+                    <span>Nonzero term</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff00ff;"></div>
+                    <span>Active differential</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffff00;"></div>
+                    <span>Converged term (E<sub>∞</sub>)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="button primary" id="nextPage">Next Page →</button>
+        <button class="button" id="animate">Animate</button>
+        <button class="button danger" id="reset">Reset</button>
+    </div>
+
+    <script>
+        // ====================================================================
+        // SETUP
+        // ====================================================================
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        // ====================================================================
+        // SPECTRAL SEQUENCE STATE
+        // ====================================================================
+
+        const state = {
+            currentPage: 1,
+            maxPages: 10,
+            gridSize: { p: 5, q: 5 },
+            cellSize: 60,
+            terms: {},
+            differentials: [],
+            animating: false,
+            animationProgress: 0,
+        };
+
+        // Initialize E1 page with some nonzero terms
+        function initializeSpectralSequence() {
+            state.terms = {};
+            
+            // E1 page - initial data from a stratified space
+            for (let p = 0; p <= state.gridSize.p; p++) {
+                for (let q = 0; q <= state.gridSize.q; q++) {
+                    // Randomly initialize some terms
+                    const rank = (p + q <= 4 && Math.random() > 0.4) ? 
+                        Math.floor(Math.random() * 3) + 1 : 0;
+                    state.terms[`${p},${q}`] = {
+                        rank: rank,
+                        stable: false,
+                        convergedAt: null,
+                    };
+                }
+            }
+
+            state.currentPage = 1;
+            computeDifferentials();
+        }
+
+        // Compute differentials for current page
+        function computeDifferentials() {
+            state.differentials = [];
+            
+            for (let p = 0; p <= state.gridSize.p; p++) {
+                for (let q = 0; q <= state.gridSize.q; q++) {
+                    const term = state.terms[`${p},${q}`];
+                    if (!term || term.rank === 0) continue;
+
+                    // d_r: E^{p,q}_r → E^{p+r, q-r+1}_r
+                    const r = state.currentPage;
+                    const targetP = p + r;
+                    const targetQ = q - r + 1;
+
+                    if (targetP <= state.gridSize.p && targetQ >= 0 && targetQ <= state.gridSize.q) {
+                        const target = state.terms[`${targetP},${targetQ}`];
+                        if (target) {
+                            state.differentials.push({
+                                from: { p, q },
+                                to: { p: targetP, q: targetQ },
+                                active: true,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply differentials to get next page
+        function computeNextPage() {
+            if (state.currentPage >= state.maxPages) return;
+
+            // Apply differentials (simplified - just reduce ranks)
+            state.differentials.forEach(diff => {
+                const from = state.terms[`${diff.from.p},${diff.from.q}`];
+                const to = state.terms[`${diff.to.p},${diff.to.q}`];
+                
+                if (from && to && from.rank > 0) {
+                    // Homology: ker / im
+                    const reduction = Math.min(from.rank, 1);
+                    from.rank = Math.max(0, from.rank - reduction);
+                    to.rank = Math.max(0, to.rank - reduction);
+                }
+            });
+
+            // Mark stable terms
+            Object.entries(state.terms).forEach(([key, term]) => {
+                if (term.rank > 0 && !term.stable) {
+                    // Check if all differentials touching this term are zero
+                    const involvedInDiff = state.differentials.some(diff => 
+                        (diff.from.p === parseInt(key.split(',')[0]) && 
+                         diff.from.q === parseInt(key.split(',')[1])) ||
+                        (diff.to.p === parseInt(key.split(',')[0]) && 
+                         diff.to.q === parseInt(key.split(',')[1]))
+                    );
+                    
+                    if (!involvedInDiff) {
+                        term.stable = true;
+                        term.convergedAt = state.currentPage;
+                    }
+                }
+            });
+
+            state.currentPage++;
+            computeDifferentials();
+            updateUI();
+        }
+
+        // ====================================================================
+        // RENDERING
+        // ====================================================================
+
+        function drawGrid() {
+            const centerX = width / 2 - (state.gridSize.p * state.cellSize) / 2;
+            const centerY = height / 2 - (state.gridSize.q * state.cellSize) / 2;
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+
+            for (let p = 0; p <= state.gridSize.p + 1; p++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX + p * state.cellSize, centerY);
+                ctx.lineTo(centerX + p * state.cellSize, centerY + (state.gridSize.q + 1) * state.cellSize);
+                ctx.stroke();
+            }
+
+            for (let q = 0; q <= state.gridSize.q + 1; q++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY + q * state.cellSize);
+                ctx.lineTo(centerX + (state.gridSize.p + 1) * state.cellSize, centerY + q * state.cellSize);
+                ctx.stroke();
+            }
+
+            // Axis labels
+            ctx.fillStyle = '#888';
+            ctx.font = '14px Iosevka, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('p →', centerX + (state.gridSize.p + 1) * state.cellSize / 2, centerY - 20);
+            
+            ctx.save();
+            ctx.translate(centerX - 30, centerY + (state.gridSize.q + 1) * state.cellSize / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('q →', 0, 0);
+            ctx.restore();
+        }
+
+        function drawTerms() {
+            const centerX = width / 2 - (state.gridSize.p * state.cellSize) / 2;
+            const centerY = height / 2 - (state.gridSize.q * state.cellSize) / 2;
+
+            Object.entries(state.terms).forEach(([key, term]) => {
+                if (term.rank === 0) return;
+
+                const [p, q] = key.split(',').map(Number);
+                const x = centerX + p * state.cellSize + state.cellSize / 2;
+                const y = centerY + (state.gridSize.q - q) * state.cellSize + state.cellSize / 2;
+
+                // Glow effect
+                const glowSize = 15 + term.rank * 5;
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, glowSize);
+                
+                if (term.stable) {
+                    gradient.addColorStop(0, 'rgba(255, 255, 0, 0.6)');
+                    gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+                } else {
+                    gradient.addColorStop(0, 'rgba(0, 245, 255, 0.6)');
+                    gradient.addColorStop(1, 'rgba(0, 245, 255, 0)');
+                }
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(x, y, glowSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core circle
+                const radius = 8 + term.rank * 3;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                
+                if (term.stable) {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.strokeStyle = '#ffff00';
+                } else {
+                    ctx.fillStyle = '#00f5ff';
+                    ctx.strokeStyle = '#00f5ff';
+                }
+                
+                ctx.lineWidth = 2;
+                ctx.fill();
+                ctx.stroke();
+
+                // Rank label
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px Iosevka, monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(term.rank, x, y);
+
+                // Position label
+                ctx.fillStyle = '#666';
+                ctx.font = '10px Iosevka, monospace';
+                ctx.fillText(`(${p},${q})`, x, y + radius + 15);
+            });
+        }
+
+        function drawDifferentials() {
+            const centerX = width / 2 - (state.gridSize.p * state.cellSize) / 2;
+            const centerY = height / 2 - (state.gridSize.q * state.cellSize) / 2;
+
+            state.differentials.forEach((diff, idx) => {
+                const fromX = centerX + diff.from.p * state.cellSize + state.cellSize / 2;
+                const fromY = centerY + (state.gridSize.q - diff.from.q) * state.cellSize + state.cellSize / 2;
+                const toX = centerX + diff.to.p * state.cellSize + state.cellSize / 2;
+                const toY = centerY + (state.gridSize.q - diff.to.q) * state.cellSize + state.cellSize / 2;
+
+                // Animated flow
+                const phase = (Date.now() / 1000 + idx * 0.2) % 1;
+
+                // Arrow
+                ctx.save();
+                ctx.strokeStyle = '#ff00ff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.lineDashOffset = -phase * 10;
+                
+                ctx.beginPath();
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+                
+                ctx.setLineDash([]);
+
+                // Arrowhead
+                const angle = Math.atan2(toY - fromY, toX - fromX);
+                ctx.translate(toX, toY);
+                ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-12, -6);
+                ctx.lineTo(-12, 6);
+                ctx.closePath();
+                ctx.fillStyle = '#ff00ff';
+                ctx.fill();
+
+                ctx.restore();
+
+                // Flow particles
+                const particleX = fromX + (toX - fromX) * phase;
+                const particleY = fromY + (toY - fromY) * phase;
+                
+                ctx.beginPath();
+                ctx.arc(particleX, particleY, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ff00ff';
+                ctx.fill();
+            });
+        }
+
+        function render() {
+            // Clear with fade effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            drawGrid();
+            drawDifferentials();
+            drawTerms();
+
+            requestAnimationFrame(render);
+        }
+
+        // ====================================================================
+        // UI UPDATES
+        // ====================================================================
+
+        function updateUI() {
+            document.getElementById('currentPage').textContent = state.currentPage;
+            document.getElementById('diffDegree').textContent = state.currentPage;
+            
+            const remainingDiffs = state.differentials.filter(d => d.active).length;
+            document.getElementById('remainingDiffs').textContent = remainingDiffs;
+
+            const stableCount = Object.values(state.terms).filter(t => t.stable).length;
+            const totalCount = Object.values(state.terms).filter(t => t.rank > 0).length;
+            document.getElementById('stableTerms').textContent = stableCount;
+
+            document.getElementById('pagesComputed').textContent = state.currentPage;
+        }
+
+        // ====================================================================
+        // INTERACTION
+        // ====================================================================
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            computeNextPage();
+        });
+
+        document.getElementById('reset').addEventListener('click', () => {
+            initializeSpectralSequence();
+            updateUI();
+        });
+
+        document.getElementById('animate').addEventListener('click', () => {
+            let count = 0;
+            const interval = setInterval(() => {
+                if (count >= 5 || state.currentPage >= state.maxPages) {
+                    clearInterval(interval);
+                    return;
+                }
+                computeNextPage();
+                count++;
+            }, 1000);
+        });
+
+        // ====================================================================
+        // INITIALIZE
+        // ====================================================================
+
+        initializeSpectralSequence();
+        updateUI();
+        render();
+    </script>
+</body>
+</html>

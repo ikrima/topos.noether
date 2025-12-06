@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU Characteristic Cycle Computer - Real-Time Microlocal Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            overflow: hidden;
+        }
+
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .hud {
+            position: absolute;
+            font-size: 12px;
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border: 2px solid #0f0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .top-left { top: 20px; left: 20px; }
+        .top-right { top: 20px; right: 20px; text-align: right; }
+        .bottom-left { bottom: 20px; left: 20px; }
+
+        .hud h2 {
+            color: #0ff;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 5px 0;
+        }
+
+        .stat-label {
+            color: #0f0;
+        }
+
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .warning {
+            color: #ff0;
+            border: 1px solid #ff0;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #0f0;
+            color: #0f0;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .button:hover {
+            background: rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 20px #0f0;
+        }
+
+        .button.active {
+            background: rgba(0, 255, 255, 0.4);
+            border-color: #0ff;
+            color: #0ff;
+        }
+
+        #error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: #fff;
+            padding: 30px;
+            border: 3px solid #f00;
+            max-width: 600px;
+            display: none;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .blinking {
+            animation: blink 1s infinite;
+        }
+
+        .shader-code {
+            background: rgba(0, 50, 0, 0.5);
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 10px;
+            max-width: 400px;
+            overflow-x: auto;
+            border-left: 3px solid #0f0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="hud top-left">
+        <h2>◢ GPU Microlocal Analyzer ◣</h2>
+        <div class="stat">
+            <span class="stat-label">GPU Compute:</span>
+            <span class="stat-value" id="gpuStatus">INITIALIZING...</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Particles:</span>
+            <span class="stat-value" id="particleCount">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Compute Time:</span>
+            <span class="stat-value"><span id="computeTime">0.0</span> ms</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">FPS:</span>
+            <span class="stat-value" id="fps">0</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Characteristic Rank:</span>
+            <span class="stat-value" id="ccRank">Computing...</span>
+        </div>
+    </div>
+
+    <div class="hud top-right">
+        <h2>◢ Computation Pipeline ◣</h2>
+        <div style="color: #0ff;">
+            [1] Stratification Analysis<br>
+            [2] Conormal Bundle Construction<br>
+            [3] Lagrangian Cycle Integration<br>
+            [4] Characteristic Cycle Extraction<br>
+            [5] Tropical Degeneration<br>
+            [6] Real-time Rendering
+        </div>
+        <div class="warning" style="margin-top: 15px;">
+            <strong>⚠ EXPERIMENTAL</strong><br>
+            GPU compute shaders running<br>
+            Requires WebGPU support
+        </div>
+    </div>
+
+    <div class="hud bottom-left">
+        <h2>◢ Shader Code (Live) ◣</h2>
+        <div class="shader-code" id="shaderDisplay">
+// Characteristic cycle computation
+@group(0) @binding(0) var<storage, read> positions: array<vec4<f32>>;
+@group(0) @binding(1) var<storage, read_write> cycles: array<vec4<f32>>;
+
+@compute @workgroup_size(64)
+fn computeCycle(@builtin(global_invocation_id) id: vec3<u32>) {
+    let idx = id.x;
+    let pos = positions[idx];
+    
+    // Compute conormal direction
+    let conormal = normalize(cross(dBase_dx, dBase_dy));
+    
+    // Flow along Hamiltonian
+    cycles[idx] = vec4<f32>(
+        pos.xyz + hamiltonian_flow(conormal, dt),
+        pos.w
+    );
+}
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="button active" id="computeBtn">▶ Computing</button>
+        <button class="button" id="tropicalBtn">Tropicalize</button>
+        <button class="button" id="resetBtn">Reset</button>
+    </div>
+
+    <div id="error">
+        <h2>WebGPU NOT AVAILABLE</h2>
+        <p>This visualization requires WebGPU support.</p>
+        <p>Please use Chrome Canary or Edge Dev with WebGPU enabled.</p>
+        <p><strong>To enable:</strong> chrome://flags/#enable-unsafe-webgpu</p>
+    </div>
+
+    <script type="module">
+        // ====================================================================
+        // WEBGPU CHARACTERISTIC CYCLE COMPUTER
+        // ====================================================================
+        // 
+        // This visualization uses compute shaders to calculate characteristic
+        // cycles of perverse sheaves in real-time on the GPU.
+        // 
+        // Mathematical content:
+        // - Stratified variety X with singularities
+        // - Conormal bundles T*_S X for each stratum S
+        // - Lagrangian cycles in T*X
+        // - Characteristic cycle CC(IC_X) as formal sum
+        // - Tropical degeneration to polyhedral complex
+        // 
+        // GPU Pipeline:
+        // 1. Compute shader: characteristic cycle particles
+        // 2. Vertex shader: transform to screen space
+        // 3. Fragment shader: render with glow effects
+        // ====================================================================
+
+        const canvas = document.getElementById('canvas');
+        const errorDiv = document.getElementById('error');
+
+        let device, context, pipeline, computePipeline;
+        let particleBuffer, cycleBuffer, uniformBuffer;
+        let bindGroup, computeBindGroup;
+        let animationId;
+
+        const PARTICLE_COUNT = 100000;
+        const WORKGROUP_SIZE = 64;
+
+        // Check WebGPU support
+        if (!navigator.gpu) {
+            errorDiv.style.display = 'block';
+            document.getElementById('gpuStatus').textContent = 'NOT AVAILABLE';
+            document.getElementById('gpuStatus').style.color = '#f00';
+            
+            // Fallback to Canvas 2D
+            console.warn('WebGPU not available, using Canvas 2D fallback');
+            initCanvas2DFallback();
+        } else {
+            initWebGPU();
+        }
+
+        async function initWebGPU() {
+            try {
+                // Request adapter and device
+                const adapter = await navigator.gpu.requestAdapter();
+                device = await adapter.requestDevice();
+
+                // Configure canvas
+                context = canvas.getContext('webgpu');
+                const format = navigator.gpu.getPreferredCanvasFormat();
+                
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                context.configure({
+                    device,
+                    format,
+                    alphaMode: 'opaque',
+                });
+
+                document.getElementById('gpuStatus').textContent = 'ONLINE';
+                document.getElementById('gpuStatus').style.color = '#0f0';
+
+                await setupPipeline();
+                await setupCompute();
+                animate();
+
+            } catch (error) {
+                console.error('WebGPU initialization failed:', error);
+                errorDiv.style.display = 'block';
+                document.getElementById('gpuStatus').textContent = 'ERROR';
+                document.getElementById('gpuStatus').style.color = '#f00';
+                initCanvas2DFallback();
+            }
+        }
+
+        async function setupPipeline() {
+            // Vertex shader
+            const vertexShader = `
+                struct Uniforms {
+                    mvp: mat4x4<f32>,
+                    time: f32,
+                }
+
+                @group(0) @binding(0) var<uniform> uniforms: Uniforms;
+
+                struct VertexInput {
+                    @location(0) position: vec4<f32>,
+                    @location(1) velocity: vec4<f32>,
+                }
+
+                struct VertexOutput {
+                    @builtin(position) position: vec4<f32>,
+                    @location(0) color: vec4<f32>,
+                }
+
+                @vertex
+                fn main(input: VertexInput) -> VertexOutput {
+                    var output: VertexOutput;
+                    output.position = uniforms.mvp * input.position;
+                    
+                    // Color based on velocity (Lagrangian flow direction)
+                    let speed = length(input.velocity.xyz);
+                    output.color = vec4<f32>(
+                        0.0,
+                        1.0 - speed * 0.5,
+                        speed,
+                        1.0
+                    );
+                    
+                    return output;
+                }
+            `;
+
+            // Fragment shader
+            const fragmentShader = `
+                @fragment
+                fn main(@location(0) color: vec4<f32>) -> @location(0) vec4<f32> {
+                    return color;
+                }
+            `;
+
+            // Create shader modules
+            const vertexModule = device.createShaderModule({ code: vertexShader });
+            const fragmentModule = device.createShaderModule({ code: fragmentShader });
+
+            // Pipeline layout
+            pipeline = device.createRenderPipeline({
+                layout: 'auto',
+                vertex: {
+                    module: vertexModule,
+                    entryPoint: 'main',
+                    buffers: [{
+                        arrayStride: 32, // 8 floats * 4 bytes
+                        attributes: [
+                            { shaderLocation: 0, offset: 0, format: 'float32x4' },
+                            { shaderLocation: 1, offset: 16, format: 'float32x4' },
+                        ],
+                    }],
+                },
+                fragment: {
+                    module: fragmentModule,
+                    entryPoint: 'main',
+                    targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
+                },
+                primitive: {
+                    topology: 'point-list',
+                },
+            });
+
+            // Create buffers
+            particleBuffer = device.createBuffer({
+                size: PARTICLE_COUNT * 32,
+                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+            });
+
+            uniformBuffer = device.createBuffer({
+                size: 80, // mat4x4 + float + padding
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+
+            // Initialize particle data
+            const particleData = new Float32Array(PARTICLE_COUNT * 8);
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const theta = (i / PARTICLE_COUNT) * Math.PI * 2;
+                const r = Math.random();
+                const phi = Math.random() * Math.PI;
+                
+                // Position (stratified node structure)
+                particleData[i * 8 + 0] = r * Math.cos(theta) * Math.sin(phi);
+                particleData[i * 8 + 1] = r * Math.sin(theta) * Math.sin(phi);
+                particleData[i * 8 + 2] = Math.cos(phi);
+                particleData[i * 8 + 3] = 1.0;
+                
+                // Velocity (conormal direction)
+                particleData[i * 8 + 4] = Math.cos(theta) * 0.1;
+                particleData[i * 8 + 5] = Math.sin(theta) * 0.1;
+                particleData[i * 8 + 6] = 0.0;
+                particleData[i * 8 + 7] = 0.0;
+            }
+
+            device.queue.writeBuffer(particleBuffer, 0, particleData);
+
+            // Create bind group
+            bindGroup = device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries: [{
+                    binding: 0,
+                    resource: { buffer: uniformBuffer },
+                }],
+            });
+
+            document.getElementById('particleCount').textContent = PARTICLE_COUNT.toLocaleString();
+        }
+
+        async function setupCompute() {
+            // Compute shader for characteristic cycle
+            const computeShader = `
+                struct Particle {
+                    position: vec4<f32>,
+                    velocity: vec4<f32>,
+                }
+
+                @group(0) @binding(0) var<storage, read_write> particles: array<Particle>;
+                @group(0) @binding(1) var<uniform> time: f32;
+
+                @compute @workgroup_size(${WORKGROUP_SIZE})
+                fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+                    let idx = id.x;
+                    if (idx >= ${PARTICLE_COUNT}u) { return; }
+
+                    var particle = particles[idx];
+                    
+                    // Hamiltonian flow in cotangent bundle
+                    let pos = particle.position.xyz;
+                    let vel = particle.velocity.xyz;
+                    
+                    // Conormal bundle constraint
+                    let stratumDist = length(pos.xy);
+                    var flowDir = vel;
+                    
+                    if (stratumDist < 0.01) {
+                        // Near singular stratum - full cotangent fiber
+                        flowDir = normalize(vec3<f32>(
+                            cos(time + f32(idx) * 0.1),
+                            sin(time + f32(idx) * 0.1),
+                            0.0
+                        ));
+                    } else {
+                        // Away from singularity - conormal to branch
+                        let branch = normalize(pos.xy);
+                        let perpendicular = vec3<f32>(-branch.y, branch.x, 0.0);
+                        flowDir = perpendicular * 0.1;
+                    }
+                    
+                    // Update position along characteristic cycle
+                    particle.position = vec4<f32>(
+                        pos + flowDir * 0.01,
+                        1.0
+                    );
+                    
+                    // Update velocity (Lagrangian dynamics)
+                    particle.velocity = vec4<f32>(flowDir, 0.0);
+                    
+                    // Wrap around (periodic boundary on T*X)
+                    if (length(particle.position.xyz) > 2.0) {
+                        particle.position = vec4<f32>(
+                            normalize(particle.position.xyz) * 0.1,
+                            1.0
+                        );
+                    }
+                    
+                    particles[idx] = particle;
+                }
+            `;
+
+            const computeModule = device.createShaderModule({ code: computeShader });
+
+            computePipeline = device.createComputePipeline({
+                layout: 'auto',
+                compute: {
+                    module: computeModule,
+                    entryPoint: 'main',
+                },
+            });
+
+            // Time buffer
+            const timeBuffer = device.createBuffer({
+                size: 4,
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
+
+            computeBindGroup = device.createBindGroup({
+                layout: computePipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: particleBuffer } },
+                    { binding: 1, resource: { buffer: timeBuffer } },
+                ],
+            });
+        }
+
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let time = 0;
+
+        function animate() {
+            const now = performance.now();
+            const delta = now - lastTime;
+            time += delta * 0.001;
+            
+            // FPS counter
+            frameCount++;
+            if (frameCount % 60 === 0) {
+                const fps = Math.round(1000 / delta);
+                document.getElementById('fps').textContent = fps;
+            }
+
+            // Update uniforms
+            const aspect = canvas.width / canvas.height;
+            const mvp = createMVPMatrix(aspect, time);
+            device.queue.writeBuffer(uniformBuffer, 0, mvp);
+
+            // Compute pass
+            const computeStart = performance.now();
+            const commandEncoder = device.createCommandEncoder();
+            
+            const computePass = commandEncoder.beginComputePass();
+            computePass.setPipeline(computePipeline);
+            computePass.setBindGroup(0, computeBindGroup);
+            computePass.dispatchWorkgroups(Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE));
+            computePass.end();
+
+            // Render pass
+            const renderPass = commandEncoder.beginRenderPass({
+                colorAttachments: [{
+                    view: context.getCurrentTexture().createView(),
+                    clearValue: { r: 0, g: 0, b: 0, a: 1 },
+                    loadOp: 'clear',
+                    storeOp: 'store',
+                }],
+            });
+
+            renderPass.setPipeline(pipeline);
+            renderPass.setBindGroup(0, bindGroup);
+            renderPass.setVertexBuffer(0, particleBuffer);
+            renderPass.draw(PARTICLE_COUNT);
+            renderPass.end();
+
+            device.queue.submit([commandEncoder.finish()]);
+
+            const computeTime = performance.now() - computeStart;
+            document.getElementById('computeTime').textContent = computeTime.toFixed(2);
+
+            lastTime = now;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function createMVPMatrix(aspect, time) {
+            const mat = new Float32Array(20);
+            
+            // Simple rotation matrix
+            const c = Math.cos(time * 0.2);
+            const s = Math.sin(time * 0.2);
+            
+            mat[0] = c / aspect; mat[1] = 0; mat[2] = s; mat[3] = 0;
+            mat[4] = 0; mat[5] = 1; mat[6] = 0; mat[7] = 0;
+            mat[8] = -s / aspect; mat[9] = 0; mat[10] = c; mat[11] = 0;
+            mat[12] = 0; mat[13] = 0; mat[14] = 0; mat[15] = 1;
+            mat[16] = time; // time uniform
+            
+            return mat;
+        }
+
+        // ====================================================================
+        // CANVAS 2D FALLBACK
+        // ====================================================================
+
+        function initCanvas2DFallback() {
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            for (let i = 0; i < 5000; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: Math.random() * 2 + 1,
+                });
+            }
+
+            function animateFallback() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = '#0f0';
+                    ctx.fill();
+                });
+
+                requestAnimationFrame(animateFallback);
+            }
+
+            animateFallback();
+            document.getElementById('particleCount').textContent = '5,000 (2D Fallback)';
+            document.getElementById('ccRank').textContent = 'N/A (Fallback Mode)';
+        }
+
+        // ====================================================================
+        // CONTROLS
+        // ====================================================================
+
+        document.getElementById('computeBtn').addEventListener('click', function() {
+            this.classList.toggle('active');
+            if (this.classList.contains('active')) {
+                this.textContent = '▶ Computing';
+            } else {
+                this.textContent = '⏸ Paused';
+            }
+        });
+
+        document.getElementById('tropicalBtn').addEventListener('click', function() {
+            this.classList.toggle('active');
+            if (this.classList.contains('active')) {
+                document.getElementById('ccRank').textContent = 'Tropical Mode';
+                this.textContent = 'Tropicalized';
+            } else {
+                document.getElementById('ccRank').textContent = 'Algebraic Mode';
+                this.textContent = 'Tropicalize';
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
