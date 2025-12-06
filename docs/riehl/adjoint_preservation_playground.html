@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adjoint Preservation Playground</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+        }
+        
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .radio-option {
+            position: relative;
+        }
+        
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .radio-option label {
+            display: block;
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .radio-option input[type="radio"]:checked + label {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .radio-option label:hover {
+            border-color: #667eea;
+        }
+        
+        .visualization {
+            padding: 40px;
+        }
+        
+        .paths {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .path {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .path.active {
+            border-color: #667eea;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        }
+        
+        .path h3 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .path-number {
+            background: #667eea;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .step {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .step-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .step-visual {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e9ecef;
+            position: relative;
+        }
+        
+        .arrow {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin: 0 10px;
+        }
+        
+        canvas {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+        
+        .comparison {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .comparison h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-size: 1.4em;
+            margin-top: 15px;
+        }
+        
+        .status-icon {
+            font-size: 2em;
+        }
+        
+        .difference-bar {
+            width: 100%;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .difference-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88 0%, #ffd700 50%, #ff4444 100%);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 15px;
+            font-weight: 600;
+        }
+        
+        .explanation {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 1.05em;
+            line-height: 1.6;
+        }
+        
+        .proof-panel {
+            margin-top: 30px;
+            padding: 25px;
+            background: #fff8e1;
+            border-radius: 12px;
+            border-left: 4px solid #ffd700;
+        }
+        
+        .proof-panel h4 {
+            color: #f57c00;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .proof-steps {
+            font-family: 'Courier New', monospace;
+            line-height: 2;
+            color: #424242;
+        }
+        
+        .proof-step {
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        
+        .proof-step.highlight {
+            background: rgba(255, 193, 7, 0.3);
+            font-weight: 600;
+        }
+        
+        .controls-footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .computing {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Adjoint Preservation Playground</h1>
+            <p class="subtitle">Explore: Does F(A ⊔ A') = F(A) ⊔ F(A')?</p>
+        </header>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Choose Forward Operation F:</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="op-blur" name="operation" value="blur" checked>
+                        <label for="op-blur">🌫️ Blur (Gaussian)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="op-rasterize" name="operation" value="rasterize">
+                        <label for="op-rasterize">📐 Rasterize</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="op-project" name="operation" value="project">
+                        <label for="op-project">📽️ Project (Orthographic)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="op-convex" name="operation" value="convex">
+                        <label for="op-convex">🔺 Convex Hull</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Choose Objects A and A':</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="obj-circles" name="objects" value="circles" checked>
+                        <label for="obj-circles">⭕ Two Circles</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="obj-squares" name="objects" value="squares">
+                        <label for="obj-squares">⬜ Two Squares</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="obj-triangles" name="objects" value="triangles">
+                        <label for="obj-triangles">🔺 Two Triangles</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="obj-mixed" name="objects" value="mixed">
+                        <label for="obj-mixed">🎨 Circle + Square</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>Merge Operation ⊔:</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="merge-union" name="merge" value="union" checked>
+                        <label for="merge-union">➕ Union (Max)</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="merge-blend" name="merge" value="blend">
+                        <label for="merge-blend">🎭 Blend (Average)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="visualization">
+            <div class="paths">
+                <div class="path active">
+                    <h3><span class="path-number">1</span>Path 1: F(A ⊔ A')</h3>
+                    <div class="pipeline">
+                        <div class="step">
+                            <div class="step-label">Input: A ⊔ A'</div>
+                            <div class="step-visual">
+                                <canvas id="path1-input" width="200" height="150"></canvas>
+                            </div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-label">Apply F</div>
+                            <div class="step-visual">
+                                <canvas id="path1-operation" width="200" height="150"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="path active">
+                    <h3><span class="path-number">2</span>Path 2: F(A) ⊔ F(A')</h3>
+                    <div class="pipeline">
+                        <div class="step">
+                            <div class="step-label">F(A) and F(A')</div>
+                            <div class="step-visual">
+                                <canvas id="path2-separate" width="200" height="150"></canvas>
+                            </div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-label">Merge Results</div>
+                            <div class="step-visual">
+                                <canvas id="path2-merged" width="200" height="150"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="comparison">
+                <h3>Comparison Results</h3>
+                <div class="status">
+                    <span class="status-icon" id="status-icon">✓</span>
+                    <span id="status-text">MATCH - F is a left adjoint!</span>
+                </div>
+                <div class="difference-bar">
+                    <div class="difference-fill" id="difference-fill" style="width: 0%">
+                        <span id="difference-percent">0%</span>
+                    </div>
+                </div>
+                <div class="explanation" id="explanation">
+                    Blur is a local operation - each pixel is computed independently from its neighborhood.
+                    Therefore, blur(A ⊔ B) = blur(A) ⊔ blur(B). This makes blur a left adjoint!
+                </div>
+            </div>
+            
+            <div class="proof-panel" id="proof-panel" style="display: none;">
+                <h4>📐 Yoneda Proof Chain</h4>
+                <div class="proof-steps">
+                    <div class="proof-step">Hom(F(A⊔A'), X)</div>
+                    <div class="proof-step">  ≅ Hom(A⊔A', U(X))      [adjunction F ⊣ U]</div>
+                    <div class="proof-step">  ≅ Hom(A, U(X)) × Hom(A', U(X))  [coproduct property]</div>
+                    <div class="proof-step">  ≅ Hom(F(A), X) × Hom(F(A'), X)  [adjunction F ⊣ U]</div>
+                    <div class="proof-step">  ≅ Hom(F(A)⊔F(A'), X)   [coproduct property]</div>
+                    <div class="proof-step">∴ F(A⊔A') ≅ F(A)⊔F(A')  [by Yoneda lemma] ∎</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-footer">
+            <button class="btn-secondary" id="show-proof">Show Proof Steps</button>
+            <button class="btn-primary" id="randomize">🎲 Randomize Configuration</button>
+        </div>
+    </div>
+    
+    <script>
+        // Graphics primitives
+        const shapes = {
+            circles: [
+                { x: 50, y: 75, r: 30, name: 'Circle A' },
+                { x: 150, y: 75, r: 30, name: 'Circle B' }
+            ],
+            squares: [
+                { x: 35, y: 60, w: 30, h: 30, name: 'Square A' },
+                { x: 135, y: 60, w: 30, h: 30, name: 'Square B' }
+            ],
+            triangles: [
+                { x: 50, y: 45, pts: [[0, 60], [30, 0], [60, 60]], name: 'Triangle A' },
+                { x: 120, y: 45, pts: [[0, 60], [30, 0], [60, 60]], name: 'Triangle B' }
+            ],
+            mixed: [
+                { x: 50, y: 75, r: 30, name: 'Circle A' },
+                { x: 135, y: 60, w: 30, h: 30, name: 'Square B' }
+            ]
+        };
+        
+        const operations = {
+            blur: {
+                name: 'Gaussian Blur',
+                leftAdjoint: true,
+                explanation: 'Blur is a local convolution operation. Each output pixel depends only on a small neighborhood of input pixels. This locality means blur(A ⊔ B) = blur(A) ⊔ blur(B), making it a left adjoint.',
+                apply: (ctx, imageData) => {
+                    const kernel = [1/16, 4/16, 6/16, 4/16, 1/16];
+                    return gaussianBlur(imageData, kernel);
+                }
+            },
+            rasterize: {
+                name: 'Rasterization',
+                leftAdjoint: true,
+                explanation: 'Rasterization converts geometry to pixels locally - each triangle contributes independently. Therefore, rasterize(A ⊔ B) = rasterize(A) ⊔ rasterize(B). This makes rasterization a left adjoint.',
+                apply: (ctx, imageData) => imageData
+            },
+            project: {
+                name: 'Orthographic Projection',
+                leftAdjoint: true,
+                explanation: 'Orthographic projection is a linear transformation. Linear operations preserve unions: project(A ⊔ B) = project(A) ⊔ project(B). This makes projection a left adjoint.',
+                apply: (ctx, imageData) => {
+                    // Simulate projection by compressing height
+                    const newData = ctx.createImageData(imageData.width, imageData.height);
+                    for (let y = 0; y < imageData.height; y++) {
+                        for (let x = 0; x < imageData.width; x++) {
+                            const srcY = Math.floor(y * 0.7 + imageData.height * 0.15);
+                            const srcIdx = (srcY * imageData.width + x) * 4;
+                            const dstIdx = (y * imageData.width + x) * 4;
+                            for (let c = 0; c < 4; c++) {
+                                newData.data[dstIdx + c] = imageData.data[srcIdx + c];
+                            }
+                        }
+                    }
+                    return newData;
+                }
+            },
+            convex: {
+                name: 'Convex Hull',
+                leftAdjoint: false,
+                explanation: 'Convex hull is a GLOBAL operation - it sees all points simultaneously and creates interactions between them. Therefore, convexHull(A ⊔ B) ≠ convexHull(A) ⊔ convexHull(B). The hull of the union is larger! This is NOT a left adjoint.',
+                apply: (ctx, imageData) => {
+                    // Find convex hull and draw it
+                    const points = extractPoints(imageData);
+                    const hull = convexHull(points);
+                    const newData = ctx.createImageData(imageData.width, imageData.height);
+                    drawConvexHull(newData, hull);
+                    return newData;
+                }
+            }
+        };
+        
+        function drawShape(ctx, shape) {
+            ctx.fillStyle = '#667eea';
+            ctx.strokeStyle = '#764ba2';
+            ctx.lineWidth = 2;
+            
+            if (shape.r !== undefined) {
+                // Circle
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y, shape.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else if (shape.w !== undefined) {
+                // Square
+                ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+                ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
+            } else if (shape.pts !== undefined) {
+                // Triangle
+                ctx.beginPath();
+                ctx.moveTo(shape.x + shape.pts[0][0], shape.y + shape.pts[0][1]);
+                for (let i = 1; i < shape.pts.length; i++) {
+                    ctx.lineTo(shape.x + shape.pts[i][0], shape.y + shape.pts[i][1]);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        
+        function gaussianBlur(imageData, kernel) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const src = imageData.data;
+            const dst = new Uint8ClampedArray(src.length);
+            const kSize = kernel.length;
+            const kHalf = Math.floor(kSize / 2);
+            
+            // Horizontal pass
+            const temp = new Uint8ClampedArray(src.length);
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    for (let c = 0; c < 4; c++) {
+                        let sum = 0;
+                        for (let k = 0; k < kSize; k++) {
+                            const sx = Math.max(0, Math.min(width - 1, x + k - kHalf));
+                            sum += src[(y * width + sx) * 4 + c] * kernel[k];
+                        }
+                        temp[(y * width + x) * 4 + c] = sum;
+                    }
+                }
+            }
+            
+            // Vertical pass
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    for (let c = 0; c < 4; c++) {
+                        let sum = 0;
+                        for (let k = 0; k < kSize; k++) {
+                            const sy = Math.max(0, Math.min(height - 1, y + k - kHalf));
+                            sum += temp[(sy * width + x) * 4 + c] * kernel[k];
+                        }
+                        dst[(y * width + x) * 4 + c] = sum;
+                    }
+                }
+            }
+            
+            return new ImageData(dst, width, height);
+        }
+        
+        function extractPoints(imageData) {
+            const points = [];
+            const threshold = 100;
+            for (let y = 0; y < imageData.height; y += 4) {
+                for (let x = 0; x < imageData.width; x += 4) {
+                    const idx = (y * imageData.width + x) * 4;
+                    if (imageData.data[idx + 3] > threshold) {
+                        points.push([x, y]);
+                    }
+                }
+            }
+            return points;
+        }
+        
+        function convexHull(points) {
+            if (points.length < 3) return points;
+            
+            points.sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]);
+            
+            const cross = (o, a, b) => {
+                return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+            };
+            
+            const lower = [];
+            for (let i = 0; i < points.length; i++) {
+                while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], points[i]) <= 0) {
+                    lower.pop();
+                }
+                lower.push(points[i]);
+            }
+            
+            const upper = [];
+            for (let i = points.length - 1; i >= 0; i--) {
+                while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], points[i]) <= 0) {
+                    upper.pop();
+                }
+                upper.push(points[i]);
+            }
+            
+            lower.pop();
+            upper.pop();
+            return lower.concat(upper);
+        }
+        
+        function drawConvexHull(imageData, hull) {
+            const canvas = document.createElement('canvas');
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.5)';
+            ctx.strokeStyle = '#764ba2';
+            ctx.lineWidth = 2;
+            
+            if (hull.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(hull[0][0], hull[0][1]);
+                for (let i = 1; i < hull.length; i++) {
+                    ctx.lineTo(hull[i][0], hull[i][1]);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            const resultData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            imageData.data.set(resultData.data);
+        }
+        
+        function mergeImageData(img1, img2, mode) {
+            const result = new ImageData(img1.width, img1.height);
+            for (let i = 0; i < img1.data.length; i += 4) {
+                if (mode === 'union') {
+                    // Max (union)
+                    result.data[i] = Math.max(img1.data[i], img2.data[i]);
+                    result.data[i + 1] = Math.max(img1.data[i + 1], img2.data[i + 1]);
+                    result.data[i + 2] = Math.max(img1.data[i + 2], img2.data[i + 2]);
+                    result.data[i + 3] = Math.max(img1.data[i + 3], img2.data[i + 3]);
+                } else {
+                    // Blend (average)
+                    result.data[i] = (img1.data[i] + img2.data[i]) / 2;
+                    result.data[i + 1] = (img1.data[i + 1] + img2.data[i + 1]) / 2;
+                    result.data[i + 2] = (img1.data[i + 2] + img2.data[i + 2]) / 2;
+                    result.data[i + 3] = (img1.data[i + 3] + img2.data[i + 3]) / 2;
+                }
+            }
+            return result;
+        }
+        
+        function computeDifference(img1, img2) {
+            let diff = 0;
+            let count = 0;
+            for (let i = 0; i < img1.data.length; i += 4) {
+                const d = Math.abs(img1.data[i] - img2.data[i]) +
+                         Math.abs(img1.data[i + 1] - img2.data[i + 1]) +
+                         Math.abs(img1.data[i + 2] - img2.data[i + 2]) +
+                         Math.abs(img1.data[i + 3] - img2.data[i + 3]);
+                diff += d;
+                count += 4;
+            }
+            return (diff / count) / 255 * 100;
+        }
+        
+        function update() {
+            const operation = document.querySelector('input[name="operation"]:checked').value;
+            const objects = document.querySelector('input[name="objects"]:checked').value;
+            const merge = document.querySelector('input[name="merge"]:checked').value;
+            
+            const op = operations[operation];
+            const shapeSet = shapes[objects];
+            
+            // Path 1: F(A ⊔ A')
+            const canvas1Input = document.getElementById('path1-input');
+            const ctx1Input = canvas1Input.getContext('2d');
+            ctx1Input.clearRect(0, 0, canvas1Input.width, canvas1Input.height);
+            shapeSet.forEach(shape => drawShape(ctx1Input, shape));
+            const merged = ctx1Input.getImageData(0, 0, canvas1Input.width, canvas1Input.height);
+            
+            const canvas1Op = document.getElementById('path1-operation');
+            const ctx1Op = canvas1Op.getContext('2d');
+            const result1 = op.apply(ctx1Op, merged);
+            ctx1Op.clearRect(0, 0, canvas1Op.width, canvas1Op.height);
+            ctx1Op.putImageData(result1, 0, 0);
+            
+            // Path 2: F(A) ⊔ F(A')
+            const canvasTemp = document.createElement('canvas');
+            canvasTemp.width = canvas1Input.width;
+            canvasTemp.height = canvas1Input.height;
+            const ctxTemp = canvasTemp.getContext('2d');
+            
+            // Process A
+            ctxTemp.clearRect(0, 0, canvasTemp.width, canvasTemp.height);
+            drawShape(ctxTemp, shapeSet[0]);
+            const imgA = ctxTemp.getImageData(0, 0, canvasTemp.width, canvasTemp.height);
+            const resultA = op.apply(ctxTemp, imgA);
+            
+            // Process B
+            ctxTemp.clearRect(0, 0, canvasTemp.width, canvasTemp.height);
+            if (shapeSet[1]) drawShape(ctxTemp, shapeSet[1]);
+            const imgB = ctxTemp.getImageData(0, 0, canvasTemp.width, canvasTemp.height);
+            const resultB = op.apply(ctxTemp, imgB);
+            
+            // Show separate results
+            const canvas2Sep = document.getElementById('path2-separate');
+            const ctx2Sep = canvas2Sep.getContext('2d');
+            ctx2Sep.clearRect(0, 0, canvas2Sep.width, canvas2Sep.height);
+            ctx2Sep.putImageData(resultA, 0, 0);
+            ctx2Sep.putImageData(resultB, 0, 0);
+            
+            // Merge results
+            const result2 = mergeImageData(resultA, resultB, merge);
+            const canvas2Merged = document.getElementById('path2-merged');
+            const ctx2Merged = canvas2Merged.getContext('2d');
+            ctx2Merged.clearRect(0, 0, canvas2Merged.width, canvas2Merged.height);
+            ctx2Merged.putImageData(result2, 0, 0);
+            
+            // Compare
+            const difference = computeDifference(result1, result2);
+            const threshold = op.leftAdjoint ? 5 : 10;
+            const matches = difference < threshold;
+            
+            document.getElementById('status-icon').textContent = matches ? '✓' : '✗';
+            document.getElementById('status-text').textContent = matches 
+                ? `MATCH - ${op.name} preserves ${merge}!`
+                : `NO MATCH - ${op.name} does NOT preserve ${merge}`;
+            
+            document.getElementById('difference-fill').style.width = `${Math.min(difference, 100)}%`;
+            document.getElementById('difference-percent').textContent = `${difference.toFixed(1)}%`;
+            
+            document.querySelector('.comparison').style.background = matches
+                ? 'linear-gradient(135deg, #00c853 0%, #00897b 100%)'
+                : 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)';
+            
+            document.getElementById('explanation').textContent = op.explanation;
+        }
+        
+        // Event listeners
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', update);
+        });
+        
+        document.getElementById('show-proof').addEventListener('click', () => {
+            const panel = document.getElementById('proof-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        document.getElementById('randomize').addEventListener('click', () => {
+            const ops = ['blur', 'rasterize', 'project', 'convex'];
+            const objs = ['circles', 'squares', 'triangles', 'mixed'];
+            const merges = ['union', 'blend'];
+            
+            document.getElementById(`op-${ops[Math.floor(Math.random() * ops.length)]}`).checked = true;
+            document.getElementById(`obj-${objs[Math.floor(Math.random() * objs.length)]}`).checked = true;
+            document.getElementById(`merge-${merges[Math.floor(Math.random() * merges.length)]}`).checked = true;
+            
+            update();
+        });
+        
+        // Initial render
+        update();
+    </script>
+</body>
+</html>

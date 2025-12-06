@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Type Explorer - Paths in Type Space</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            grid-template-rows: 70px 1fr 120px;
+            height: 100vh;
+            gap: 0;
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 20px;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 1.8em;
+            font-weight: 300;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+        }
+        
+        .subtitle {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .left-panel, .right-panel {
+            background: rgba(15, 23, 42, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .left-panel {
+            border-right: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .right-panel {
+            border-left: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        .bottom-controls {
+            grid-column: 1 / -1;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 20px;
+            border-top: 2px solid rgba(59, 130, 246, 0.5);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .panel-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+        
+        h3 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        
+        .type-chip {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        
+        .type-chip:hover {
+            background: rgba(59, 130, 246, 0.4);
+            border-color: #60a5fa;
+        }
+        
+        .type-chip.selected {
+            background: rgba(59, 130, 246, 0.6);
+            border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+        }
+        
+        .term-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        
+        .term-item:hover {
+            background: rgba(16, 185, 129, 0.4);
+        }
+        
+        .term-item.selected {
+            background: rgba(16, 185, 129, 0.6);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .term-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+        }
+        
+        .path-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(251, 191, 36, 0.2);
+            border-radius: 6px;
+            border-left: 4px solid #fbbf24;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+        
+        .path-item strong {
+            color: #fbbf24;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: rgba(59, 130, 246, 0.3);
+            box-shadow: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        
+        .info-box {
+            background: rgba(59, 130, 246, 0.15);
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #60a5fa;
+            font-size: 0.85em;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+        
+        .info-box strong {
+            color: #60a5fa;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid rgba(59, 130, 246, 0.5);
+            max-width: 500px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .overlay.show {
+            display: block;
+        }
+        
+        .overlay h3 {
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+        
+        .overlay p {
+            line-height: 1.8;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        .operation-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            pointer-events: none;
+            display: none;
+        }
+        
+        .operation-display.show {
+            display: block;
+        }
+        
+        .operation-display .label {
+            color: #60a5fa;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        
+        .operation-display .expr {
+            color: #fbbf24;
+        }
+        
+        .mode-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: rgba(59, 130, 246, 0.9);
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9em;
+            pointer-events: none;
+        }
+        
+        .contractible-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        
+        .contractible-badge.yes {
+            background: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+        
+        .contractible-badge.no {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+        
+        .contractible-badge.unknown {
+            background: rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+            border: 1px solid #fbbf24;
+        }
+        
+        .graphics-hint {
+            background: rgba(16, 185, 129, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #10b981;
+            font-size: 0.85em;
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+        
+        .graphics-hint strong {
+            color: #10b981;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <header>
+            <h1>Identity Type Explorer</h1>
+            <p class="subtitle">Interactive laboratory for paths, composition, and contractibility in HoTT</p>
+        </header>
+        
+        <div class="left-panel">
+            <div class="panel-section">
+                <h3>1. Choose Type</h3>
+                <div id="type-list">
+                    <div class="type-chip selected" data-type="VolumeField">VolumeField</div>
+                    <div class="type-chip" data-type="Mesh">Mesh</div>
+                    <div class="type-chip" data-type="Shader">Shader</div>
+                    <div class="type-chip" data-type="Matrix4x4">Matrix4x4</div>
+                    <div class="type-chip" data-type="FrameState">FrameState</div>
+                    <div class="type-chip" data-type="BVH">BVH</div>
+                </div>
+                <input type="text" id="custom-type" placeholder="+ Add custom type...">
+                <div class="info-box">
+                    <strong>Current Type:</strong>
+                    <span id="current-type-info">VolumeField - 3D scalar field for volume rendering</span>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>2. Add Terms (Points)</h3>
+                <button id="add-term" style="width: 100%;">+ Add Term to Type</button>
+                <div id="term-list" style="margin-top: 15px;">
+                    <p style="opacity: 0.6; font-size: 0.9em;">No terms yet. Add some points!</p>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Type Theory Reference</h3>
+                <div style="font-family: 'Courier New', monospace; font-size: 0.85em; line-height: 1.8;">
+                    <div style="color: #60a5fa;">A : Type</div>
+                    <div style="color: #10b981;">x, y : A</div>
+                    <div style="color: #fbbf24;">p : x =<sub>A</sub> y</div>
+                    <div style="margin-top: 10px; opacity: 0.8;">
+                        refl<sub>x</sub> : x = x<br>
+                        p⁻¹ : y = x<br>
+                        p · q : x = z
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div class="mode-indicator" id="mode-indicator">
+                Mode: Add Terms
+            </div>
+            <div class="operation-display" id="operation-display">
+                <div class="label">Path Operation:</div>
+                <div class="expr" id="operation-expr">p · q : x = z</div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="panel-section">
+                <h3>Identity Types (Paths)</h3>
+                <div id="path-list">
+                    <p style="opacity: 0.6; font-size: 0.9em;">Click two terms to create a path</p>
+                </div>
+                <button id="clear-paths" class="btn-danger" style="width: 100%; margin-top: 10px;">
+                    Clear All Paths
+                </button>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Path Operations</h3>
+                <button id="compose-btn" style="width: 100%; margin-bottom: 8px;" disabled>
+                    Compose: p · q
+                </button>
+                <button id="inverse-btn" style="width: 100%; margin-bottom: 8px;" disabled>
+                    Inverse: p⁻¹
+                </button>
+                <button id="induction-btn" style="width: 100%;">
+                    🎓 Demonstrate Path Induction
+                </button>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Contractibility Analysis</h3>
+                <div id="contractibility-info">
+                    <p style="font-size: 0.9em; line-height: 1.6;">
+                        A type is contractible if there exists a center c and paths from c to every other point.
+                    </p>
+                    <div id="contractibility-result" style="margin-top: 10px;">
+                        <span class="contractible-badge unknown">No terms yet</span>
+                    </div>
+                </div>
+                <div class="graphics-hint" id="graphics-hint" style="display: none;">
+                    <strong>Graphics Insight:</strong>
+                    <span id="hint-text"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bottom-controls">
+            <button id="example-btn">✨ Load Graphics Example</button>
+            <button id="tutorial-btn">📚 Show Tutorial</button>
+            <button id="reset-btn" class="btn-secondary">🔄 Reset</button>
+            <button id="export-btn" class="btn-secondary">💾 Export</button>
+        </div>
+    </div>
+    
+    <div class="overlay" id="tutorial-overlay">
+        <h3>Identity Type Explorer Tutorial</h3>
+        <p><strong>Step 1:</strong> Choose a type (e.g., VolumeField) - this is your space.</p>
+        <p><strong>Step 2:</strong> Add terms by clicking "Add Term" - these are points in your space.</p>
+        <p><strong>Step 3:</strong> Click two terms to create a path p : x =<sub>A</sub> y - this is an identity type!</p>
+        <p><strong>Step 4:</strong> Select paths to compose them or invert them.</p>
+        <p><strong>Step 5:</strong> Watch the contractibility analysis update - is your type contractible?</p>
+        <p style="margin-top: 20px;"><strong>Graphics Connection:</strong> Terms are configurations (specific meshes, shaders, etc.). Paths are smooth transitions between them!</p>
+        <button onclick="document.getElementById('tutorial-overlay').classList.remove('show')" style="width: 100%;">
+            Got it!
+        </button>
+    </div>
+    
+    <script>
+        // Global state
+        const state = {
+            currentType: 'VolumeField',
+            terms: [],
+            paths: [],
+            selectedTerms: [],
+            selectedPaths: [],
+            mode: 'add-terms',
+            nextTermId: 0,
+            nextPathId: 0
+        };
+        
+        // Type definitions with graphics context
+        const typeDefinitions = {
+            VolumeField: {
+                description: 'VolumeField - 3D scalar field for volume rendering',
+                contractible: false,
+                hint: 'Non-contractible: Multiple distinct volume fields exist (different density distributions). No single "canonical" volume field.',
+                color: '#3b82f6'
+            },
+            Mesh: {
+                description: 'Mesh - Triangulated surface geometry',
+                contractible: false,
+                hint: 'Non-contractible: Many topologically distinct meshes. Each connected component is a separate configuration.',
+                color: '#10b981'
+            },
+            Shader: {
+                description: 'Shader - GPU program for rendering',
+                contractible: false,
+                hint: 'Non-contractible: Different shader implementations (Phong, PBR, etc.) are genuinely distinct.',
+                color: '#f59e0b'
+            },
+            Matrix4x4: {
+                description: 'Matrix4x4 - 4×4 transformation matrix',
+                contractible: false,
+                hint: 'Non-contractible: Full transformation space includes rotation, translation, scale, shear - high-dimensional manifold.',
+                color: '#8b5cf6'
+            },
+            FrameState: {
+                description: 'FrameState - Complete rendering state at one frame',
+                contractible: false,
+                hint: 'Non-contractible: Frames can differ in arbitrary ways (camera, lighting, geometry). Massive configuration space.',
+                color: '#ec4899'
+            },
+            BVH: {
+                description: 'BVH - Bounding Volume Hierarchy for acceleration',
+                contractible: false,
+                hint: 'Non-contractible: Many BVH structures for same mesh (different split strategies, balancing). Complex optimization landscape.',
+                color: '#06b6d4'
+            }
+        };
+        
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let animationFrame;
+        
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            render();
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Event listeners
+        document.querySelectorAll('.type-chip').forEach(chip => {
+            chip.addEventListener('click', () => selectType(chip.dataset.type));
+        });
+        
+        document.getElementById('custom-type').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                addCustomType(e.target.value.trim());
+                e.target.value = '';
+            }
+        });
+        
+        document.getElementById('add-term').addEventListener('click', addTerm);
+        document.getElementById('clear-paths').addEventListener('click', clearPaths);
+        document.getElementById('compose-btn').addEventListener('click', composePaths);
+        document.getElementById('inverse-btn').addEventListener('click', invertPath);
+        document.getElementById('induction-btn').addEventListener('click', demonstrateInduction);
+        document.getElementById('example-btn').addEventListener('click', loadExample);
+        document.getElementById('tutorial-btn').addEventListener('click', () => {
+            document.getElementById('tutorial-overlay').classList.add('show');
+        });
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        
+        canvas.addEventListener('click', handleCanvasClick);
+        
+        // Type selection
+        function selectType(typeName) {
+            state.currentType = typeName;
+            document.querySelectorAll('.type-chip').forEach(chip => {
+                chip.classList.toggle('selected', chip.dataset.type === typeName);
+            });
+            updateTypeInfo();
+            // Clear terms when switching types
+            state.terms = [];
+            state.paths = [];
+            state.selectedTerms = [];
+            state.selectedPaths = [];
+            updateTermList();
+            updatePathList();
+            render();
+        }
+        
+        function addCustomType(name) {
+            if (typeDefinitions[name]) return;
+            
+            typeDefinitions[name] = {
+                description: `${name} - Custom type`,
+                contractible: false,
+                hint: 'Custom type: Contractibility unknown.',
+                color: '#' + Math.floor(Math.random()*16777215).toString(16)
+            };
+            
+            const chip = document.createElement('div');
+            chip.className = 'type-chip';
+            chip.dataset.type = name;
+            chip.textContent = name;
+            chip.addEventListener('click', () => selectType(name));
+            document.getElementById('type-list').appendChild(chip);
+        }
+        
+        function updateTypeInfo() {
+            const def = typeDefinitions[state.currentType];
+            document.getElementById('current-type-info').textContent = def.description;
+        }
+        
+        // Term management
+        function addTerm() {
+            const term = {
+                id: state.nextTermId++,
+                type: state.currentType,
+                position: {
+                    x: canvas.width * 0.2 + Math.random() * canvas.width * 0.6,
+                    y: canvas.height * 0.2 + Math.random() * canvas.height * 0.6
+                },
+                name: `${state.currentType[0].toLowerCase()}${state.nextTermId}`
+            };
+            state.terms.push(term);
+            updateTermList();
+            updateContractibility();
+            render();
+        }
+        
+        function updateTermList() {
+            const listDiv = document.getElementById('term-list');
+            if (state.terms.length === 0) {
+                listDiv.innerHTML = '<p style="opacity: 0.6; font-size: 0.9em;">No terms yet. Add some points!</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = '';
+            state.terms.forEach(term => {
+                const item = document.createElement('div');
+                item.className = 'term-item';
+                if (state.selectedTerms.includes(term.id)) {
+                    item.classList.add('selected');
+                }
+                item.innerHTML = `
+                    <div class="term-color" style="background: ${typeDefinitions[term.type].color}"></div>
+                    <span>${term.name} : ${term.type}</span>
+                `;
+                item.addEventListener('click', () => toggleTermSelection(term.id));
+                listDiv.appendChild(item);
+            });
+        }
+        
+        function toggleTermSelection(termId) {
+            const idx = state.selectedTerms.indexOf(termId);
+            if (idx > -1) {
+                state.selectedTerms.splice(idx, 1);
+            } else {
+                state.selectedTerms.push(termId);
+                if (state.selectedTerms.length > 2) {
+                    state.selectedTerms.shift();
+                }
+            }
+            
+            // If two terms selected, create path
+            if (state.selectedTerms.length === 2) {
+                createPath(state.selectedTerms[0], state.selectedTerms[1]);
+                state.selectedTerms = [];
+            }
+            
+            updateTermList();
+            render();
+        }
+        
+        // Path management
+        function createPath(fromId, toId) {
+            const from = state.terms.find(t => t.id === fromId);
+            const to = state.terms.find(t => t.id === toId);
+            
+            if (!from || !to) return;
+            
+            const path = {
+                id: state.nextPathId++,
+                from: fromId,
+                to: toId,
+                name: `p${state.nextPathId}`,
+                isReflexive: fromId === toId
+            };
+            
+            state.paths.push(path);
+            updatePathList();
+            updateContractibility();
+            render();
+        }
+        
+        function updatePathList() {
+            const listDiv = document.getElementById('path-list');
+            if (state.paths.length === 0) {
+                listDiv.innerHTML = '<p style="opacity: 0.6; font-size: 0.9em;">Click two terms to create a path</p>';
+                document.getElementById('compose-btn').disabled = true;
+                document.getElementById('inverse-btn').disabled = true;
+                return;
+            }
+            
+            listDiv.innerHTML = '';
+            state.paths.forEach(path => {
+                const from = state.terms.find(t => t.id === path.from);
+                const to = state.terms.find(t => t.id === path.to);
+                
+                const item = document.createElement('div');
+                item.className = 'path-item';
+                item.innerHTML = `
+                    <strong>${path.name} : ${from.name} =<sub>${state.currentType}</sub> ${to.name}</strong>
+                    ${path.isReflexive ? '<em>(reflexive path - identity)</em>' : '<em>(non-trivial path)</em>'}
+                `;
+                item.addEventListener('click', () => togglePathSelection(path.id));
+                if (state.selectedPaths.includes(path.id)) {
+                    item.style.background = 'rgba(251, 191, 36, 0.5)';
+                }
+                listDiv.appendChild(item);
+            });
+            
+            // Enable buttons based on selection
+            document.getElementById('inverse-btn').disabled = state.selectedPaths.length !== 1;
+            document.getElementById('compose-btn').disabled = !canCompose();
+        }
+        
+        function togglePathSelection(pathId) {
+            const idx = state.selectedPaths.indexOf(pathId);
+            if (idx > -1) {
+                state.selectedPaths.splice(idx, 1);
+            } else {
+                state.selectedPaths.push(pathId);
+                if (state.selectedPaths.length > 2) {
+                    state.selectedPaths.shift();
+                }
+            }
+            updatePathList();
+            render();
+        }
+        
+        function canCompose() {
+            if (state.selectedPaths.length !== 2) return false;
+            const p1 = state.paths.find(p => p.id === state.selectedPaths[0]);
+            const p2 = state.paths.find(p => p.id === state.selectedPaths[1]);
+            return p1.to === p2.from || p2.to === p1.from;
+        }
+        
+        function composePaths() {
+            if (!canCompose()) return;
+            
+            const p1 = state.paths.find(p => p.id === state.selectedPaths[0]);
+            const p2 = state.paths.find(p => p.id === state.selectedPaths[1]);
+            
+            let from, to, name;
+            if (p1.to === p2.from) {
+                from = p1.from;
+                to = p2.to;
+                name = `${p1.name} · ${p2.name}`;
+            } else {
+                from = p2.from;
+                to = p1.to;
+                name = `${p2.name} · ${p1.name}`;
+            }
+            
+            const composed = {
+                id: state.nextPathId++,
+                from,
+                to,
+                name,
+                isReflexive: from === to,
+                isComposed: true
+            };
+            
+            state.paths.push(composed);
+            state.selectedPaths = [];
+            
+            // Show operation
+            showOperation(`Composition: ${name}`);
+            
+            updatePathList();
+            render();
+        }
+        
+        function invertPath() {
+            if (state.selectedPaths.length !== 1) return;
+            
+            const path = state.paths.find(p => p.id === state.selectedPaths[0]);
+            
+            const inverted = {
+                id: state.nextPathId++,
+                from: path.to,
+                to: path.from,
+                name: `${path.name}⁻¹`,
+                isReflexive: path.isReflexive,
+                isInverse: true
+            };
+            
+            state.paths.push(inverted);
+            state.selectedPaths = [];
+            
+            // Show operation
+            showOperation(`Inverse: ${inverted.name}`);
+            
+            updatePathList();
+            render();
+        }
+        
+        function demonstrateInduction() {
+            // Show explanation overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay show';
+            overlay.innerHTML = `
+                <h3>Path Induction Demonstration</h3>
+                <p><strong>Path Induction Principle:</strong></p>
+                <p>To prove P(x, y, p) for all x, y : A and p : x =<sub>A</sub> y, it suffices to prove P(x, x, refl<sub>x</sub>).</p>
+                <p><strong>Graphics Example:</strong></p>
+                <p>To prove a shader property holds for all transformations, verify it for the identity transform.</p>
+                <p><strong>Why it works:</strong> Properties continuous at the diagonal extend to the whole space.</p>
+                <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.8;">
+                    <em>In your type ${state.currentType}, reflexive paths (refl<sub>x</sub>) are the "identity" operations.
+                    Any property that holds for identity and respects composition holds everywhere!</em>
+                </p>
+                <button onclick="this.parentElement.remove()" style="width: 100%; margin-top: 15px;">
+                    Close
+                </button>
+            `;
+            document.body.appendChild(overlay);
+            
+            // Highlight reflexive paths
+            render();
+        }
+        
+        function clearPaths() {
+            state.paths = [];
+            state.selectedPaths = [];
+            updatePathList();
+            updateContractibility();
+            render();
+        }
+        
+        // Contractibility analysis
+        function updateContractibility() {
+            const resultDiv = document.getElementById('contractibility-result');
+            const hintDiv = document.getElementById('graphics-hint');
+            const hintText = document.getElementById('hint-text');
+            
+            if (state.terms.length === 0) {
+                resultDiv.innerHTML = '<span class="contractible-badge unknown">No terms yet</span>';
+                hintDiv.style.display = 'none';
+                return;
+            }
+            
+            if (state.terms.length === 1) {
+                resultDiv.innerHTML = '<span class="contractible-badge yes">Contractible</span><p style="font-size: 0.85em; margin-top: 8px; opacity: 0.9;">Single point is contractible (trivial center).</p>';
+                hintDiv.style.display = 'block';
+                hintText.textContent = 'A type with one term is always contractible - the single term is the center!';
+                return;
+            }
+            
+            // Check if all terms are connected to one center
+            const pathGraph = buildPathGraph();
+            const hasCenter = checkForCenter(pathGraph);
+            
+            if (hasCenter) {
+                resultDiv.innerHTML = `
+                    <span class="contractible-badge yes">Contractible</span>
+                    <p style="font-size: 0.85em; margin-top: 8px; opacity: 0.9;">
+                        Found center with paths to all terms!
+                    </p>
+                `;
+                hintDiv.style.display = 'block';
+                hintText.textContent = 'Your configuration has a center term with paths to all others - this is the witness of contractibility!';
+            } else {
+                const def = typeDefinitions[state.currentType];
+                resultDiv.innerHTML = `
+                    <span class="contractible-badge no">Not Contractible</span>
+                    <p style="font-size: 0.85em; margin-top: 8px; opacity: 0.9;">
+                        No center found. Multiple disconnected components or no universal center.
+                    </p>
+                `;
+                hintDiv.style.display = 'block';
+                hintText.textContent = def.hint;
+            }
+        }
+        
+        function buildPathGraph() {
+            const graph = {};
+            state.terms.forEach(term => {
+                graph[term.id] = new Set();
+            });
+            state.paths.forEach(path => {
+                graph[path.from].add(path.to);
+            });
+            return graph;
+        }
+        
+        function checkForCenter(graph) {
+            // A center exists if there's a term with paths to all other terms
+            for (const termId of Object.keys(graph)) {
+                const reachable = graph[termId];
+                if (reachable.size === state.terms.length - 1) {
+                    // Can reach all other terms
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Canvas interaction
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Check if clicking on a term
+            for (const term of state.terms) {
+                const dx = x - term.position.x;
+                const dy = y - term.position.y;
+                if (Math.sqrt(dx*dx + dy*dy) < 20) {
+                    toggleTermSelection(term.id);
+                    return;
+                }
+            }
+        }
+        
+        // Rendering
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw paths
+            state.paths.forEach(path => {
+                const from = state.terms.find(t => t.id === path.from);
+                const to = state.terms.find(t => t.id === path.to);
+                if (!from || !to) return;
+                
+                const isSelected = state.selectedPaths.includes(path.id);
+                
+                ctx.beginPath();
+                ctx.moveTo(from.position.x, from.position.y);
+                
+                if (path.isReflexive) {
+                    // Draw loop
+                    const cx = from.position.x + 30;
+                    const cy = from.position.y - 30;
+                    ctx.quadraticCurveTo(cx, cy, from.position.x, from.position.y);
+                } else {
+                    // Draw curved path
+                    const mx = (from.position.x + to.position.x) / 2;
+                    const my = (from.position.y + to.position.y) / 2;
+                    const dx = to.position.x - from.position.x;
+                    const dy = to.position.y - from.position.y;
+                    const nx = -dy * 0.2;
+                    const ny = dx * 0.2;
+                    ctx.quadraticCurveTo(mx + nx, my + ny, to.position.x, to.position.y);
+                }
+                
+                ctx.strokeStyle = isSelected ? '#fbbf24' : 'rgba(251, 191, 36, 0.5)';
+                ctx.lineWidth = isSelected ? 4 : 2;
+                ctx.stroke();
+                
+                // Draw arrow
+                drawArrow(ctx, from.position, to.position, path.isReflexive);
+                
+                // Draw label
+                if (!path.isReflexive) {
+                    const mx = (from.position.x + to.position.x) / 2;
+                    const my = (from.position.y + to.position.y) / 2;
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.font = '14px monospace';
+                    ctx.fillText(path.name, mx + 10, my - 10);
+                }
+            });
+            
+            // Draw terms
+            state.terms.forEach(term => {
+                const isSelected = state.selectedTerms.includes(term.id);
+                const def = typeDefinitions[term.type];
+                
+                ctx.beginPath();
+                ctx.arc(term.position.x, term.position.y, isSelected ? 22 : 18, 0, Math.PI * 2);
+                ctx.fillStyle = def.color;
+                ctx.fill();
+                ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = isSelected ? 3 : 2;
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(term.name, term.position.x, term.position.y + 40);
+            });
+        }
+        
+        function drawArrow(ctx, from, to, isLoop) {
+            if (isLoop) return;
+            
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            const dist = Math.sqrt((to.x - from.x)**2 + (to.y - from.y)**2);
+            const arrowDist = dist * 0.7;
+            
+            const arrowX = from.x + Math.cos(angle) * arrowDist;
+            const arrowY = from.y + Math.sin(angle) * arrowDist;
+            
+            ctx.save();
+            ctx.translate(arrowX, arrowY);
+            ctx.rotate(angle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-10, -5);
+            ctx.lineTo(-10, 5);
+            ctx.closePath();
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        function showOperation(text) {
+            const display = document.getElementById('operation-display');
+            document.getElementById('operation-expr').textContent = text;
+            display.classList.add('show');
+            setTimeout(() => {
+                display.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Examples
+        function loadExample() {
+            reset();
+            
+            // Create example for temporal filtering
+            selectType('FrameState');
+            
+            // Add terms
+            const t0 = { id: state.nextTermId++, type: 'FrameState', position: { x: canvas.width * 0.25, y: canvas.height * 0.5 }, name: 'frame₀' };
+            const t1 = { id: state.nextTermId++, type: 'FrameState', position: { x: canvas.width * 0.5, y: canvas.height * 0.3 }, name: 'frame₁' };
+            const t2 = { id: state.nextTermId++, type: 'FrameState', position: { x: canvas.width * 0.75, y: canvas.height * 0.5 }, name: 'frame₂' };
+            
+            state.terms = [t0, t1, t2];
+            
+            // Create paths (motion vectors)
+            state.paths = [
+                { id: state.nextPathId++, from: t0.id, to: t1.id, name: 'mv₀', isReflexive: false },
+                { id: state.nextPathId++, from: t1.id, to: t2.id, name: 'mv₁', isReflexive: false }
+            ];
+            
+            updateTermList();
+            updatePathList();
+            updateContractibility();
+            render();
+            
+            // Show explanation
+            setTimeout(() => {
+                const overlay = document.createElement('div');
+                overlay.className = 'overlay show';
+                overlay.innerHTML = `
+                    <h3>Temporal Antialiasing Example</h3>
+                    <p><strong>Type:</strong> FrameState</p>
+                    <p><strong>Terms:</strong> Individual frames (frame₀, frame₁, frame₂)</p>
+                    <p><strong>Paths:</strong> Motion vectors between frames (mv₀, mv₁)</p>
+                    <p style="margin-top: 15px;">
+                        <strong>Try this:</strong><br>
+                        1. Select mv₀ and mv₁<br>
+                        2. Click "Compose" to get the composed motion vector<br>
+                        3. This represents the accumulated motion from frame₀ to frame₂!
+                    </p>
+                    <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                        In HoTT terms: composing paths (mv₀ · mv₁) gives you the transitive motion.
+                        This is exactly what TAA does when accumulating temporal information!
+                    </p>
+                    <button onclick="this.parentElement.remove()" style="width: 100%; margin-top: 15px;">
+                        Got it!
+                    </button>
+                `;
+                document.body.appendChild(overlay);
+            }, 500);
+        }
+        
+        function reset() {
+            state.terms = [];
+            state.paths = [];
+            state.selectedTerms = [];
+            state.selectedPaths = [];
+            state.nextTermId = 0;
+            state.nextPathId = 0;
+            updateTermList();
+            updatePathList();
+            updateContractibility();
+            render();
+        }
+        
+        // Initialize
+        updateTypeInfo();
+        render();
+        
+        // Show initial hint
+        setTimeout(() => {
+            document.getElementById('tutorial-overlay').classList.add('show');
+        }, 1000);
+    </script>
+</body>
+</html>

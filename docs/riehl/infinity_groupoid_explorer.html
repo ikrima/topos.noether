@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>∞-Groupoid Explorer: From Paths to Homotopies</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 80px 1fr 100px;
+            height: 100vh;
+            gap: 0;
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            background: rgba(10, 14, 39, 0.95);
+            padding: 20px;
+            border-bottom: 2px solid rgba(126, 34, 206, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            font-size: 2em;
+            font-weight: 300;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(126, 34, 206, 0.8);
+        }
+        
+        .subtitle {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+        
+        .left-panel {
+            background: rgba(10, 14, 39, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(126, 34, 206, 0.3);
+        }
+        
+        .right-panel {
+            background: rgba(10, 14, 39, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(126, 34, 206, 0.3);
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        .bottom-controls {
+            grid-column: 1 / -1;
+            background: rgba(10, 14, 39, 0.95);
+            padding: 20px;
+            border-top: 2px solid rgba(126, 34, 206, 0.5);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        
+        .panel-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(126, 34, 206, 0.2);
+        }
+        
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+        
+        h3 {
+            color: #a78bfa;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+        
+        .space-option {
+            display: block;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(126, 34, 206, 0.2);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+        
+        .space-option:hover {
+            background: rgba(126, 34, 206, 0.4);
+            border-color: #a78bfa;
+        }
+        
+        .space-option.active {
+            background: rgba(126, 34, 206, 0.6);
+            border-color: #7e22ce;
+            box-shadow: 0 0 15px rgba(126, 34, 206, 0.6);
+        }
+        
+        .path-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .path-item:hover {
+            background: rgba(59, 130, 246, 0.4);
+        }
+        
+        .path-item.selected {
+            background: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        
+        .path-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+        }
+        
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        
+        .slider-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #a78bfa;
+        }
+        
+        .slider-value {
+            float: right;
+            color: white;
+            font-weight: 600;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(126, 34, 206, 0.3);
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.8);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            border: none;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #7e22ce 0%, #a78bfa 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(126, 34, 206, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(126, 34, 206, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: rgba(126, 34, 206, 0.3);
+            box-shadow: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        
+        .info-box {
+            background: rgba(126, 34, 206, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #a78bfa;
+            font-size: 0.9em;
+            line-height: 1.6;
+            margin-top: 15px;
+        }
+        
+        .info-box strong {
+            color: #a78bfa;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(126, 34, 206, 0.2);
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        .mode-btn.active {
+            background: rgba(126, 34, 206, 0.6);
+            border-color: #a78bfa;
+        }
+        
+        .homotopy-surface {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(10, 14, 39, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(126, 34, 206, 0.5);
+            max-width: 250px;
+        }
+        
+        .homotopy-surface h4 {
+            color: #a78bfa;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        
+        .comparison-view {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(10, 14, 39, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(126, 34, 206, 0.5);
+            display: none;
+        }
+        
+        .comparison-view.active {
+            display: block;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .comparison-item h5 {
+            color: #a78bfa;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .comparison-item p {
+            font-size: 0.85em;
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+        
+        .drawing-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(126, 34, 206, 0.9);
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .drawing-hint.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <header>
+            <h1>∞-Groupoid Explorer</h1>
+            <p class="subtitle">Experience the transition from paths to homotopies to higher homotopies</p>
+        </header>
+        
+        <div class="left-panel">
+            <div class="panel-section">
+                <h3>1. Choose Your Space</h3>
+                <div class="space-option active" data-space="circle">
+                    <strong>⭕ Circle (S¹)</strong><br>
+                    <small>π₁ = ℤ, non-trivial loops</small>
+                </div>
+                <div class="space-option" data-space="sphere">
+                    <strong>🌐 Sphere (S²)</strong><br>
+                    <small>π₁ = 0, but π₂ = ℤ</small>
+                </div>
+                <div class="space-option" data-space="torus">
+                    <strong>🍩 Torus (T²)</strong><br>
+                    <small>π₁ = ℤ × ℤ, two independent loops</small>
+                </div>
+                <div class="space-option" data-space="figure8">
+                    <strong>∞ Figure-8</strong><br>
+                    <small>π₁ = free group on 2 generators</small>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>2. Drawing Mode</h3>
+                <div class="mode-toggle">
+                    <div class="mode-btn active" data-mode="path">
+                        📍 Draw Paths
+                    </div>
+                    <div class="mode-btn" data-mode="homotopy">
+                        🌊 Show Homotopy
+                    </div>
+                </div>
+                <div class="info-box">
+                    <strong>How to use:</strong>
+                    Click on the surface to draw paths. Select two paths to see homotopies between them.
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>3. Your Paths</h3>
+                <div id="path-list">
+                    <p style="opacity: 0.6; font-size: 0.9em;">Draw paths on the surface...</p>
+                </div>
+                <button id="clear-paths" class="btn-danger" style="width: 100%; margin-top: 10px;">
+                    Clear All Paths
+                </button>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div class="drawing-hint" id="drawing-hint">
+                Click to start drawing a path...
+            </div>
+            <div class="homotopy-surface" id="homotopy-info" style="display: none;">
+                <h4>Homotopy Parameters</h4>
+                <div class="slider-group">
+                    <label>
+                        Time t: <span class="slider-value" id="homotopy-t-value">0.50</span>
+                    </label>
+                    <input type="range" id="homotopy-t" min="0" max="1" step="0.01" value="0.5">
+                </div>
+                <p style="font-size: 0.85em; opacity: 0.9; margin-top: 10px;">
+                    Drag to see continuous deformation between selected paths
+                </p>
+            </div>
+            <div class="comparison-view" id="comparison-view">
+                <h4 style="color: #a78bfa; margin-bottom: 10px;">Groupoid vs ∞-Groupoid</h4>
+                <div class="comparison-grid">
+                    <div class="comparison-item">
+                        <h5>π₁ (Fundamental Groupoid)</h5>
+                        <p id="groupoid-info">Quotients paths by homotopy. Loses information about how paths are equivalent.</p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>Π∞ (∞-Groupoid)</h5>
+                        <p id="infinity-groupoid-info">Keeps all paths and all homotopies. Full structure preserved.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="panel-section">
+                <h3>Homotopy Control</h3>
+                <div class="info-box" id="homotopy-status">
+                    <strong>Status:</strong>
+                    Select two paths to visualize homotopy
+                </div>
+                <div class="slider-group" style="margin-top: 15px;">
+                    <label>
+                        Animation Speed: <span class="slider-value" id="speed-value">1.0x</span>
+                    </label>
+                    <input type="range" id="animation-speed" min="0" max="3" step="0.1" value="1.0">
+                </div>
+                <div class="slider-group">
+                    <label>
+                        Quotient Level: <span class="slider-value" id="quotient-value">Full ∞-Groupoid</span>
+                    </label>
+                    <input type="range" id="quotient-level" min="0" max="2" step="1" value="0">
+                </div>
+                <button id="animate-homotopy" style="width: 100%; margin-top: 10px;" disabled>
+                    ▶️ Animate Homotopy
+                </button>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Higher Structure</h3>
+                <div class="info-box" id="higher-info">
+                    <strong>Current View:</strong> 1-cells (paths)<br><br>
+                    2-cells (homotopies) become visible when you select two paths and adjust the time parameter.
+                </div>
+                <button id="show-comparison" style="width: 100%; margin-top: 10px;">
+                    📊 Show Quotient Comparison
+                </button>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Mathematical Insight</h3>
+                <div id="math-insight" style="font-size: 0.9em; line-height: 1.6;">
+                    <p><strong style="color: #a78bfa;">∞-Groupoid Structure:</strong></p>
+                    <p>• 0-cells: Points on the surface</p>
+                    <p>• 1-cells: Paths between points</p>
+                    <p>• 2-cells: Homotopies (path deformations)</p>
+                    <p>• 3-cells: Homotopies between homotopies</p>
+                    <p style="margin-top: 10px; opacity: 0.8;">
+                        The fundamental groupoid π₁ only sees 0-cells and equivalence classes of 1-cells. 
+                        The ∞-groupoid Π∞ sees everything.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bottom-controls">
+            <button id="example-paths">
+                ✨ Load Example Paths
+            </button>
+            <button id="toggle-rotation">
+                🔄 Toggle Auto-Rotation
+            </button>
+            <button id="reset-camera">
+                📷 Reset Camera
+            </button>
+            <button id="export-state">
+                💾 Export State
+            </button>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global state
+        let scene, camera, renderer, controls;
+        let currentSpace = null;
+        let paths = [];
+        let currentPath = null;
+        let isDrawing = false;
+        let selectedPaths = [];
+        let homotopyT = 0.5;
+        let animationSpeed = 1.0;
+        let autoRotate = true;
+        let quotientLevel = 0;
+        let animationTime = 0;
+        let homotopyAnimating = false;
+        
+        // Space definitions
+        const spaces = {
+            circle: {
+                name: 'Circle (S¹)',
+                create: () => {
+                    const geometry = new THREE.TorusGeometry(2, 0.3, 32, 100);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x3b82f6,
+                        emissive: 0x1e40af,
+                        emissiveIntensity: 0.2,
+                        shininess: 100,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    return new THREE.Mesh(geometry, material);
+                },
+                pathToSurface: (t) => {
+                    const angle = t * Math.PI * 2;
+                    return new THREE.Vector3(
+                        2.3 * Math.cos(angle),
+                        2.3 * Math.sin(angle),
+                        0
+                    );
+                }
+            },
+            sphere: {
+                name: 'Sphere (S²)',
+                create: () => {
+                    const geometry = new THREE.SphereGeometry(2, 64, 64);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x10b981,
+                        emissive: 0x047857,
+                        emissiveIntensity: 0.2,
+                        shininess: 100,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    return new THREE.Mesh(geometry, material);
+                },
+                pathToSurface: (t, s = 0.5) => {
+                    const theta = t * Math.PI * 2;
+                    const phi = s * Math.PI;
+                    return new THREE.Vector3(
+                        2 * Math.sin(phi) * Math.cos(theta),
+                        2 * Math.sin(phi) * Math.sin(theta),
+                        2 * Math.cos(phi)
+                    );
+                }
+            },
+            torus: {
+                name: 'Torus (T²)',
+                create: () => {
+                    const geometry = new THREE.TorusGeometry(2, 0.8, 32, 100);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xa78bfa,
+                        emissive: 0x7e22ce,
+                        emissiveIntensity: 0.2,
+                        shininess: 100,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    return new THREE.Mesh(geometry, material);
+                },
+                pathToSurface: (t, s = 0.5) => {
+                    const u = t * Math.PI * 2;
+                    const v = s * Math.PI * 2;
+                    const R = 2, r = 0.8;
+                    return new THREE.Vector3(
+                        (R + r * Math.cos(v)) * Math.cos(u),
+                        (R + r * Math.cos(v)) * Math.sin(u),
+                        r * Math.sin(v)
+                    );
+                }
+            },
+            figure8: {
+                name: 'Figure-8',
+                create: () => {
+                    const shape = new THREE.Shape();
+                    for (let t = 0; t <= 1; t += 0.01) {
+                        const angle = t * Math.PI * 2;
+                        const x = 2 * Math.sin(angle);
+                        const y = Math.sin(2 * angle);
+                        if (t === 0) shape.moveTo(x, y);
+                        else shape.lineTo(x, y);
+                    }
+                    const geometry = new THREE.ExtrudeGeometry(shape, {
+                        depth: 0.3,
+                        bevelEnabled: true,
+                        bevelThickness: 0.1,
+                        bevelSize: 0.1,
+                        bevelSegments: 8
+                    });
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xf59e0b,
+                        emissive: 0xd97706,
+                        emissiveIntensity: 0.2,
+                        shininess: 100,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.rotation.x = Math.PI / 2;
+                    return mesh;
+                },
+                pathToSurface: (t) => {
+                    const angle = t * Math.PI * 2;
+                    return new THREE.Vector3(
+                        2.2 * Math.sin(angle),
+                        1.1 * Math.sin(2 * angle),
+                        0
+                    );
+                }
+            }
+        };
+        
+        // Initialize
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0e27);
+            scene.fog = new THREE.Fog(0x0a0e27, 5, 30);
+            
+            // Camera
+            const canvas = document.getElementById('canvas');
+            camera = new THREE.PerspectiveCamera(
+                60,
+                canvas.clientWidth / canvas.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 3, 8);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight1 = new THREE.DirectionalLight(0xa78bfa, 0.8);
+            directionalLight1.position.set(5, 5, 5);
+            scene.add(directionalLight1);
+            
+            const directionalLight2 = new THREE.DirectionalLight(0x3b82f6, 0.5);
+            directionalLight2.position.set(-5, -2, -5);
+            scene.add(directionalLight2);
+            
+            const pointLight = new THREE.PointLight(0x7e22ce, 1, 20);
+            pointLight.position.set(0, 0, 5);
+            scene.add(pointLight);
+            
+            // Load initial space
+            loadSpace('circle');
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Show hint
+            setTimeout(() => {
+                document.getElementById('drawing-hint').classList.add('show');
+                setTimeout(() => {
+                    document.getElementById('drawing-hint').classList.remove('show');
+                }, 3000);
+            }, 500);
+            
+            // Animation loop
+            animate();
+        }
+        
+        function loadSpace(spaceName) {
+            // Remove old space
+            if (currentSpace) {
+                scene.remove(currentSpace);
+            }
+            
+            // Create new space
+            currentSpace = spaces[spaceName].create();
+            scene.add(currentSpace);
+            
+            // Clear paths
+            clearPaths();
+            
+            // Update UI
+            document.querySelectorAll('.space-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.space === spaceName);
+            });
+        }
+        
+        function setupEventListeners() {
+            // Space selection
+            document.querySelectorAll('.space-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    loadSpace(option.dataset.space);
+                });
+            });
+            
+            // Canvas interaction
+            const canvas = document.getElementById('canvas');
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', continueDrawing);
+            canvas.addEventListener('mouseup', endDrawing);
+            canvas.addEventListener('mouseleave', endDrawing);
+            
+            // Sliders
+            document.getElementById('homotopy-t').addEventListener('input', (e) => {
+                homotopyT = parseFloat(e.target.value);
+                document.getElementById('homotopy-t-value').textContent = homotopyT.toFixed(2);
+                updateHomotopy();
+            });
+            
+            document.getElementById('animation-speed').addEventListener('input', (e) => {
+                animationSpeed = parseFloat(e.target.value);
+                document.getElementById('speed-value').textContent = animationSpeed.toFixed(1) + 'x';
+            });
+            
+            document.getElementById('quotient-level').addEventListener('input', (e) => {
+                quotientLevel = parseInt(e.target.value);
+                const labels = ['Full ∞-Groupoid', 'Show 2-cells', 'π₁ (Quotient)'];
+                document.getElementById('quotient-value').textContent = labels[quotientLevel];
+                updateVisualization();
+            });
+            
+            // Buttons
+            document.getElementById('clear-paths').addEventListener('click', clearPaths);
+            document.getElementById('animate-homotopy').addEventListener('click', toggleHomotopyAnimation);
+            document.getElementById('show-comparison').addEventListener('click', toggleComparison);
+            document.getElementById('example-paths').addEventListener('click', loadExamplePaths);
+            document.getElementById('toggle-rotation').addEventListener('click', () => {
+                autoRotate = !autoRotate;
+            });
+            document.getElementById('reset-camera').addEventListener('click', () => {
+                camera.position.set(0, 3, 8);
+                camera.lookAt(0, 0, 0);
+            });
+            
+            // Mode toggle
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
+            });
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function startDrawing(e) {
+            const mode = document.querySelector('.mode-btn.active').dataset.mode;
+            if (mode !== 'path') return;
+            
+            isDrawing = true;
+            currentPath = {
+                points: [],
+                color: getRandomColor(),
+                mesh: null
+            };
+            
+            const point = getIntersectionPoint(e);
+            if (point) {
+                currentPath.points.push(point);
+            }
+        }
+        
+        function continueDrawing(e) {
+            if (!isDrawing || !currentPath) return;
+            
+            const point = getIntersectionPoint(e);
+            if (point && currentPath.points.length > 0) {
+                const lastPoint = currentPath.points[currentPath.points.length - 1];
+                if (point.distanceTo(lastPoint) > 0.1) {
+                    currentPath.points.push(point);
+                    updateCurrentPath();
+                }
+            }
+        }
+        
+        function endDrawing() {
+            if (!isDrawing || !currentPath) return;
+            
+            isDrawing = false;
+            if (currentPath.points.length > 2) {
+                paths.push(currentPath);
+                updatePathList();
+            } else if (currentPath.mesh) {
+                scene.remove(currentPath.mesh);
+            }
+            currentPath = null;
+        }
+        
+        function getIntersectionPoint(e) {
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+            
+            const intersects = raycaster.intersectObject(currentSpace);
+            if (intersects.length > 0) {
+                return intersects[0].point;
+            }
+            return null;
+        }
+        
+        function updateCurrentPath() {
+            if (!currentPath) return;
+            
+            if (currentPath.mesh) {
+                scene.remove(currentPath.mesh);
+            }
+            
+            const geometry = new THREE.BufferGeometry().setFromPoints(currentPath.points);
+            const material = new THREE.LineBasicMaterial({
+                color: currentPath.color,
+                linewidth: 3
+            });
+            currentPath.mesh = new THREE.Line(geometry, material);
+            scene.add(currentPath.mesh);
+        }
+        
+        function updatePathList() {
+            const listDiv = document.getElementById('path-list');
+            listDiv.innerHTML = '';
+            
+            paths.forEach((path, index) => {
+                const item = document.createElement('div');
+                item.className = 'path-item';
+                item.innerHTML = `
+                    <div class="path-color" style="background: ${getCSSColor(path.color)}"></div>
+                    <span>Path ${index + 1} (${path.points.length} points)</span>
+                `;
+                item.addEventListener('click', () => togglePathSelection(index));
+                if (selectedPaths.includes(index)) {
+                    item.classList.add('selected');
+                }
+                listDiv.appendChild(item);
+            });
+            
+            if (paths.length === 0) {
+                listDiv.innerHTML = '<p style="opacity: 0.6; font-size: 0.9em;">Draw paths on the surface...</p>';
+            }
+        }
+        
+        function togglePathSelection(index) {
+            const idx = selectedPaths.indexOf(index);
+            if (idx > -1) {
+                selectedPaths.splice(idx, 1);
+            } else {
+                selectedPaths.push(index);
+                if (selectedPaths.length > 2) {
+                    selectedPaths.shift();
+                }
+            }
+            updatePathList();
+            updateHomotopyUI();
+        }
+        
+        function updateHomotopyUI() {
+            const homotopyInfo = document.getElementById('homotopy-info');
+            const animateBtn = document.getElementById('animate-homotopy');
+            const statusDiv = document.getElementById('homotopy-status');
+            
+            if (selectedPaths.length === 2) {
+                homotopyInfo.style.display = 'block';
+                animateBtn.disabled = false;
+                statusDiv.innerHTML = '<strong>Ready:</strong> Two paths selected. Adjust time parameter to see homotopy.';
+                updateHomotopy();
+            } else {
+                homotopyInfo.style.display = 'none';
+                animateBtn.disabled = true;
+                statusDiv.innerHTML = '<strong>Status:</strong> Select two paths to visualize homotopy';
+                // Remove homotopy visualization
+                scene.children.forEach(child => {
+                    if (child.userData.isHomotopy) {
+                        scene.remove(child);
+                    }
+                });
+            }
+        }
+        
+        function updateHomotopy() {
+            if (selectedPaths.length !== 2) return;
+            
+            // Remove old homotopy
+            scene.children.forEach(child => {
+                if (child.userData.isHomotopy) {
+                    scene.remove(child);
+                }
+            });
+            
+            const path1 = paths[selectedPaths[0]];
+            const path2 = paths[selectedPaths[1]];
+            
+            // Interpolate between paths
+            const numPoints = Math.max(path1.points.length, path2.points.length);
+            const interpolatedPoints = [];
+            
+            for (let i = 0; i < numPoints; i++) {
+                const t1 = i / (numPoints - 1);
+                const idx1 = Math.floor(t1 * (path1.points.length - 1));
+                const idx2 = Math.floor(t1 * (path2.points.length - 1));
+                
+                const p1 = path1.points[Math.min(idx1, path1.points.length - 1)];
+                const p2 = path2.points[Math.min(idx2, path2.points.length - 1)];
+                
+                const interpolated = new THREE.Vector3().lerpVectors(p1, p2, homotopyT);
+                interpolatedPoints.push(interpolated);
+            }
+            
+            // Create homotopy curve
+            const geometry = new THREE.BufferGeometry().setFromPoints(interpolatedPoints);
+            const material = new THREE.LineBasicMaterial({
+                color: 0xfbbf24,
+                linewidth: 4
+            });
+            const homotopyLine = new THREE.Line(geometry, material);
+            homotopyLine.userData.isHomotopy = true;
+            scene.add(homotopyLine);
+            
+            // Create homotopy surface if quotient level allows
+            if (quotientLevel <= 1) {
+                createHomotopySurface(path1, path2);
+            }
+        }
+        
+        function createHomotopySurface(path1, path2) {
+            const numU = 20; // Along paths
+            const numV = 10; // Between paths
+            
+            const vertices = [];
+            const indices = [];
+            
+            for (let v = 0; v <= numV; v++) {
+                const t = v / numV;
+                for (let u = 0; u <= numU; u++) {
+                    const s = u / numU;
+                    
+                    const idx1 = Math.floor(s * (path1.points.length - 1));
+                    const idx2 = Math.floor(s * (path2.points.length - 1));
+                    
+                    const p1 = path1.points[Math.min(idx1, path1.points.length - 1)];
+                    const p2 = path2.points[Math.min(idx2, path2.points.length - 1)];
+                    
+                    const interpolated = new THREE.Vector3().lerpVectors(p1, p2, t);
+                    vertices.push(interpolated.x, interpolated.y, interpolated.z);
+                }
+            }
+            
+            for (let v = 0; v < numV; v++) {
+                for (let u = 0; u < numU; u++) {
+                    const a = v * (numU + 1) + u;
+                    const b = a + numU + 1;
+                    indices.push(a, b, a + 1);
+                    indices.push(b, b + 1, a + 1);
+                }
+            }
+            
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xfbbf24,
+                emissive: 0xf59e0b,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide
+            });
+            
+            const surface = new THREE.Mesh(geometry, material);
+            surface.userData.isHomotopy = true;
+            scene.add(surface);
+        }
+        
+        function toggleHomotopyAnimation() {
+            homotopyAnimating = !homotopyAnimating;
+            const btn = document.getElementById('animate-homotopy');
+            btn.textContent = homotopyAnimating ? '⏸️ Pause Animation' : '▶️ Animate Homotopy';
+        }
+        
+        function toggleComparison() {
+            const view = document.getElementById('comparison-view');
+            view.classList.toggle('active');
+            updateComparisonText();
+        }
+        
+        function updateComparisonText() {
+            const space = document.querySelector('.space-option.active').dataset.space;
+            const groupoidInfo = {
+                circle: 'π₁(S¹) = ℤ. Loops are classified by winding number only.',
+                sphere: 'π₁(S²) = 0. All loops are equivalent (contractible).',
+                torus: 'π₁(T²) = ℤ × ℤ. Two independent loop classes.',
+                figure8: 'π₁(figure-8) = free group on 2 generators.'
+            };
+            
+            const infinityInfo = {
+                circle: 'Π∞(S¹) keeps all loops and all homotopies between them. Full circle structure visible.',
+                sphere: 'Π∞(S²) sees π₂(S²) = ℤ in the 2-cells, even though π₁ is trivial!',
+                torus: 'Π∞(T²) preserves all continuous deformations and their interactions.',
+                figure8: 'Π∞(figure-8) contains the full free group structure plus higher coherences.'
+            };
+            
+            document.getElementById('groupoid-info').textContent = groupoidInfo[space];
+            document.getElementById('infinity-groupoid-info').textContent = infinityInfo[space];
+        }
+        
+        function loadExamplePaths() {
+            clearPaths();
+            const space = document.querySelector('.space-option.active').dataset.space;
+            const spaceDef = spaces[space];
+            
+            // Create example paths
+            const path1Points = [];
+            const path2Points = [];
+            
+            for (let i = 0; i <= 50; i++) {
+                const t = i / 50;
+                path1Points.push(spaceDef.pathToSurface(t, 0.3));
+                path2Points.push(spaceDef.pathToSurface(t, 0.7));
+            }
+            
+            paths.push({
+                points: path1Points,
+                color: 0x3b82f6,
+                mesh: createPathMesh(path1Points, 0x3b82f6)
+            });
+            
+            paths.push({
+                points: path2Points,
+                color: 0x10b981,
+                mesh: createPathMesh(path2Points, 0x10b981)
+            });
+            
+            updatePathList();
+            selectedPaths = [0, 1];
+            updatePathList();
+            updateHomotopyUI();
+        }
+        
+        function createPathMesh(points, color) {
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color, linewidth: 3 });
+            const mesh = new THREE.Line(geometry, material);
+            scene.add(mesh);
+            return mesh;
+        }
+        
+        function clearPaths() {
+            paths.forEach(path => {
+                if (path.mesh) scene.remove(path.mesh);
+            });
+            paths = [];
+            selectedPaths = [];
+            updatePathList();
+            updateHomotopyUI();
+        }
+        
+        function updateVisualization() {
+            // Update based on quotient level
+            if (selectedPaths.length === 2) {
+                updateHomotopy();
+            }
+        }
+        
+        function getRandomColor() {
+            const colors = [0x3b82f6, 0x10b981, 0xf59e0b, 0xef4444, 0xa78bfa, 0xec4899];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        function getCSSColor(hex) {
+            return '#' + hex.toString(16).padStart(6, '0');
+        }
+        
+        function onWindowResize() {
+            const canvas = document.getElementById('canvas');
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            animationTime += 0.016 * animationSpeed;
+            
+            // Auto-rotate camera
+            if (autoRotate) {
+                camera.position.x = Math.cos(animationTime * 0.15) * 8;
+                camera.position.z = Math.sin(animationTime * 0.15) * 8;
+                camera.lookAt(0, 0, 0);
+            }
+            
+            // Rotate space slowly
+            if (currentSpace) {
+                currentSpace.rotation.y = animationTime * 0.1;
+            }
+            
+            // Animate homotopy
+            if (homotopyAnimating && selectedPaths.length === 2) {
+                homotopyT = (Math.sin(animationTime) + 1) / 2;
+                document.getElementById('homotopy-t').value = homotopyT;
+                document.getElementById('homotopy-t-value').textContent = homotopyT.toFixed(2);
+                updateHomotopy();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

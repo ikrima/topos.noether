@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Functor Flows Through Category Space</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: white;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #canvas {
+            display: block;
+        }
+        
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .title {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        .title h1 {
+            font-size: 2.5em;
+            font-weight: 300;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+        }
+        
+        .title p {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(10, 14, 39, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .legend h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+        
+        .legend-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border-radius: 50%;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(10, 14, 39, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+            min-width: 250px;
+        }
+        
+        .controls h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(102, 126, 234, 0.3);
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
+        }
+        
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+        }
+        
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(10, 14, 39, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 350px;
+        }
+        
+        .info-panel h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .info-panel p {
+            font-size: 0.9em;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+        
+        <div class="hud">
+            <div class="title">
+                <h1>⚡ Functor Flows Through Category Space</h1>
+                <p>Watch F : C → D preserve colimit structure</p>
+            </div>
+            
+            <div class="legend">
+                <h3>Visual Guide</h3>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #667eea;"></div>
+                    <span>Objects (Category C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #00c853;"></div>
+                    <span>Objects (Category D)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #ffd700; border-radius: 0;"></div>
+                    <span>Morphisms (arrows)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon" style="background: #ff6b6b; border-radius: 20%;"></div>
+                    <span>Colimit (merge point)</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label>Animation Speed: <span id="speed-value">1.0</span>x</label>
+                    <input type="range" class="slider" id="speed" min="0" max="3" step="0.1" value="1">
+                </div>
+                <div class="control-group">
+                    <label>Camera Distance: <span id="distance-value">10</span></label>
+                    <input type="range" class="slider" id="distance" min="5" max="20" step="0.5" value="10">
+                </div>
+                <div class="control-group">
+                    <label>Rotation: <span id="rotation-value">ON</span></label>
+                    <input type="range" class="slider" id="rotation" min="0" max="1" step="1" value="1">
+                </div>
+                <button id="reset-camera">Reset Camera</button>
+                <button id="show-proof">Show Functor Flow</button>
+            </div>
+            
+            <div class="info-panel">
+                <h4>🔬 What You're Seeing</h4>
+                <p id="info-text">
+                    Two categories visualized as graphs in 3D space. Objects A and A' (blue spheres) 
+                    flow through functor F to become F(A) and F(A') (green spheres). 
+                    The colimit A⊔A' (red) maps to F(A)⊔F(A'), preserving the universal property.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        let scene, camera, renderer;
+        let categoryC, categoryD;
+        let functorFlow;
+        let animationTime = 0;
+        let animationSpeed = 1.0;
+        let autoRotate = true;
+        
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0e27);
+            scene.fog = new THREE.Fog(0x0a0e27, 10, 50);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 5, 10);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            const canvas = document.getElementById('canvas');
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight1 = new THREE.DirectionalLight(0x667eea, 0.8);
+            directionalLight1.position.set(5, 5, 5);
+            scene.add(directionalLight1);
+            
+            const directionalLight2 = new THREE.DirectionalLight(0x00c853, 0.5);
+            directionalLight2.position.set(-5, -2, -5);
+            scene.add(directionalLight2);
+            
+            const pointLight = new THREE.PointLight(0xffd700, 1, 30);
+            pointLight.position.set(0, 3, 0);
+            scene.add(pointLight);
+            
+            // Create categories
+            createCategories();
+            
+            // Create functor visualization
+            createFunctorFlow();
+            
+            // Controls
+            setupControls();
+            
+            // Animation loop
+            animate();
+        }
+        
+        function createCategories() {
+            // Category C (left side, blue)
+            categoryC = new THREE.Group();
+            categoryC.position.x = -4;
+            
+            // Objects in C
+            const objectsC = [
+                { pos: new THREE.Vector3(-1, 1.5, 0), name: 'A' },
+                { pos: new THREE.Vector3(1, 1.5, 0), name: "A'" },
+                { pos: new THREE.Vector3(0, -1, 0), name: 'A⊔A\'' }
+            ];
+            
+            objectsC.forEach((obj, i) => {
+                const geometry = new THREE.SphereGeometry(0.3, 32, 32);
+                const material = new THREE.MeshPhongMaterial({
+                    color: i === 2 ? 0xff6b6b : 0x667eea,
+                    emissive: i === 2 ? 0xff0000 : 0x4455dd,
+                    emissiveIntensity: 0.3,
+                    shininess: 100
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.copy(obj.pos);
+                sphere.userData = { name: obj.name, category: 'C' };
+                categoryC.add(sphere);
+                
+                // Add glow
+                const glowGeometry = new THREE.SphereGeometry(0.35, 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: i === 2 ? 0xff6b6b : 0x667eea,
+                    transparent: true,
+                    opacity: 0.2
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                sphere.add(glow);
+            });
+            
+            // Morphisms in C (arrows)
+            createArrow(categoryC, objectsC[0].pos, objectsC[2].pos, 0x667eea);
+            createArrow(categoryC, objectsC[1].pos, objectsC[2].pos, 0x667eea);
+            
+            scene.add(categoryC);
+            
+            // Category D (right side, green)
+            categoryD = new THREE.Group();
+            categoryD.position.x = 4;
+            
+            const objectsD = [
+                { pos: new THREE.Vector3(-1, 1.5, 0), name: 'F(A)' },
+                { pos: new THREE.Vector3(1, 1.5, 0), name: "F(A')" },
+                { pos: new THREE.Vector3(0, -1, 0), name: 'F(A)⊔F(A\')' }
+            ];
+            
+            objectsD.forEach((obj, i) => {
+                const geometry = new THREE.SphereGeometry(0.3, 32, 32);
+                const material = new THREE.MeshPhongMaterial({
+                    color: i === 2 ? 0xff6b6b : 0x00c853,
+                    emissive: i === 2 ? 0xff0000 : 0x00aa44,
+                    emissiveIntensity: 0.3,
+                    shininess: 100
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.copy(obj.pos);
+                sphere.userData = { name: obj.name, category: 'D' };
+                categoryD.add(sphere);
+                
+                const glowGeometry = new THREE.SphereGeometry(0.35, 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: i === 2 ? 0xff6b6b : 0x00c853,
+                    transparent: true,
+                    opacity: 0.2
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                sphere.add(glow);
+            });
+            
+            createArrow(categoryD, objectsD[0].pos, objectsD[2].pos, 0x00c853);
+            createArrow(categoryD, objectsD[1].pos, objectsD[2].pos, 0x00c853);
+            
+            scene.add(categoryD);
+        }
+        
+        function createArrow(parent, start, end, color) {
+            const direction = new THREE.Vector3().subVectors(end, start);
+            const length = direction.length();
+            const arrowHelper = new THREE.ArrowHelper(
+                direction.normalize(),
+                start,
+                length - 0.3,
+                color,
+                0.2,
+                0.15
+            );
+            parent.add(arrowHelper);
+        }
+        
+        function createFunctorFlow() {
+            functorFlow = new THREE.Group();
+            
+            // Create flowing particles from C to D
+            const particleCount = 20;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const t = i / particleCount;
+                positions[i * 3] = -4 + 8 * t;
+                positions[i * 3 + 1] = Math.sin(t * Math.PI * 4) * 0.5;
+                positions[i * 3 + 2] = Math.cos(t * Math.PI * 4) * 0.5;
+                
+                // Gradient from blue to green
+                colors[i * 3] = 0.4 * (1 - t) + 0.0 * t;
+                colors[i * 3 + 1] = 0.48 * (1 - t) + 0.77 * t;
+                colors[i * 3 + 2] = 0.92 * (1 - t) + 0.33 * t;
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const particles = new THREE.Points(geometry, material);
+            functorFlow.add(particles);
+            
+            scene.add(functorFlow);
+        }
+        
+        function setupControls() {
+            document.getElementById('speed').addEventListener('input', (e) => {
+                animationSpeed = parseFloat(e.target.value);
+                document.getElementById('speed-value').textContent = animationSpeed.toFixed(1);
+            });
+            
+            document.getElementById('distance').addEventListener('input', (e) => {
+                const distance = parseFloat(e.target.value);
+                document.getElementById('distance-value').textContent = distance.toFixed(1);
+                camera.position.setLength(distance);
+            });
+            
+            document.getElementById('rotation').addEventListener('input', (e) => {
+                autoRotate = parseInt(e.target.value) === 1;
+                document.getElementById('rotation-value').textContent = autoRotate ? 'ON' : 'OFF';
+            });
+            
+            document.getElementById('reset-camera').addEventListener('click', () => {
+                camera.position.set(0, 5, 10);
+                camera.lookAt(0, 0, 0);
+            });
+            
+            document.getElementById('show-proof').addEventListener('click', () => {
+                showProofAnimation();
+            });
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function showProofAnimation() {
+            const infoText = document.getElementById('info-text');
+            const steps = [
+                "Objects A and A' in category C (blue spheres on left)",
+                "Their colimit A⊔A' (red sphere) is the universal merge",
+                "Functor F maps objects from C to D (flowing particles)",
+                "F(A) and F(A') appear in category D (green spheres on right)",
+                "The colimit is preserved: F(A⊔A') ≅ F(A)⊔F(A') (red sphere on right)",
+                "This is the preservation theorem: left adjoints preserve colimits!"
+            ];
+            
+            let step = 0;
+            const interval = setInterval(() => {
+                infoText.textContent = steps[step];
+                step++;
+                if (step >= steps.length) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        infoText.textContent = "Two categories visualized as graphs in 3D space. Objects A and A' (blue spheres) flow through functor F to become F(A) and F(A') (green spheres). The colimit A⊔A' (red) maps to F(A)⊔F(A'), preserving the universal property.";
+                    }, 3000);
+                }
+            }, 3000);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            animationTime += 0.016 * animationSpeed;
+            
+            // Rotate camera
+            if (autoRotate) {
+                camera.position.x = Math.cos(animationTime * 0.2) * 10;
+                camera.position.z = Math.sin(animationTime * 0.2) * 10;
+                camera.lookAt(0, 0, 0);
+            }
+            
+            // Animate objects
+            categoryC.children.forEach((child, i) => {
+                if (child instanceof THREE.Mesh) {
+                    child.rotation.y = animationTime + i * 0.5;
+                    child.position.y += Math.sin(animationTime * 2 + i) * 0.001;
+                }
+            });
+            
+            categoryD.children.forEach((child, i) => {
+                if (child instanceof THREE.Mesh) {
+                    child.rotation.y = animationTime + i * 0.5;
+                    child.position.y += Math.sin(animationTime * 2 + i) * 0.001;
+                }
+            });
+            
+            // Animate functor flow
+            if (functorFlow.children[0]) {
+                const positions = functorFlow.children[0].geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    const t = (i / 3) / (positions.length / 3);
+                    const phase = animationTime + t * Math.PI * 2;
+                    positions[i + 1] = Math.sin(phase * 2) * 0.5;
+                    positions[i + 2] = Math.cos(phase * 2) * 0.5;
+                }
+                functorFlow.children[0].geometry.attributes.position.needsUpdate = true;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

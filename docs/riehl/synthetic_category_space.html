@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synthetic ∞-Category Space - 3D Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #canvas3d {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: auto;
+            background: rgba(10, 10, 15, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            border: 2px solid #4a90e2;
+            box-shadow: 0 0 30px rgba(74, 144, 226, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            color: #4a90e2;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+        }
+        
+        .header .subtitle {
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+        
+        .controls-panel {
+            position: absolute;
+            top: 140px;
+            left: 20px;
+            background: rgba(10, 10, 15, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #4a90e2;
+            width: 320px;
+            pointer-events: auto;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 20px;
+        }
+        
+        .control-section h3 {
+            color: #4a90e2;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 5px;
+        }
+        
+        .control-btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn.primary {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            color: white;
+        }
+        
+        .control-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.5);
+        }
+        
+        .control-btn.success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .control-btn.success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.5);
+        }
+        
+        .select-box {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #4a90e2;
+            background: rgba(255, 255, 255, 0.1);
+            color: #e0e0e0;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+        
+        .info-box {
+            background: rgba(74, 144, 226, 0.1);
+            border-left: 4px solid #4a90e2;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.85em;
+        }
+        
+        .status-badge.contractible {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .status-badge.non-contractible {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10, 10, 15, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4a90e2;
+            pointer-events: auto;
+        }
+        
+        .legend h4 {
+            color: #4a90e2;
+            margin-bottom: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .legend-text {
+            font-size: 0.9em;
+        }
+        
+        .slider-control {
+            margin: 15px 0;
+        }
+        
+        .slider-control label {
+            display: block;
+            margin-bottom: 5px;
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+        
+        .slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5em;
+            color: #4a90e2;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas3d"></canvas>
+        
+        <div class="ui-overlay">
+            <div class="header">
+                <h1>🌌 Synthetic ∞-Category Space</h1>
+                <p class="subtitle">3D Visualization of Pre-∞-Categories and Contractible Fillers</p>
+            </div>
+            
+            <div class="controls-panel">
+                <div class="control-section">
+                    <h3>🎯 Type Space</h3>
+                    <select class="select-box" id="typeSelect">
+                        <option value="shader">ShaderIR (Contractible ✓)</option>
+                        <option value="renderpass">RenderPass (Non-Contractible ✗)</option>
+                        <option value="physics">PhysicalMesh (Contractible ✓)</option>
+                    </select>
+                    <div class="info-box" id="typeInfo"></div>
+                </div>
+                
+                <div class="control-section">
+                    <h3>⚡ Actions</h3>
+                    <button class="control-btn success" id="animateBtn">▶ Animate Composition</button>
+                    <button class="control-btn primary" id="resetBtn">🔄 Reset View</button>
+                    <button class="control-btn primary" id="toggleRotationBtn">🔁 Toggle Auto-Rotate</button>
+                </div>
+                
+                <div class="control-section">
+                    <h3>🎛️ Composition</h3>
+                    <div class="slider-control">
+                        <label>Composition Progress: <span id="progressValue">0%</span></label>
+                        <input type="range" min="0" max="100" value="0" class="slider" id="progressSlider">
+                    </div>
+                </div>
+                
+                <div class="control-section">
+                    <h3>📊 Analysis</h3>
+                    <div class="info-box">
+                        <strong>Contractibility:</strong> <span id="contractibilityBadge"></span>
+                        <p id="analysisText" style="margin-top: 10px;"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <h4>Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4a90e2;"></div>
+                    <span class="legend-text">Terms (Objects)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f5a623;"></div>
+                    <span class="legend-text">Arrows (Hom)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span class="legend-text">Filler Particles</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span class="legend-text">Identity Paths</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">Loading Three.js...</div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Wait for Three.js to load
+        function init() {
+            document.getElementById('loading').style.display = 'none';
+            
+            // ==================== TYPE SPACE DEFINITIONS ====================
+            
+            const TypeSpaces = {
+                shader: {
+                    name: 'ShaderIR',
+                    terms: [
+                        { name: 'HLSL', pos: [-3, 1.5, 0], color: 0x4a90e2 },
+                        { name: 'GLSL', pos: [3, 1.5, 0], color: 0x2ecc71 },
+                        { name: 'SPIRV', pos: [0, -1, 0], color: 0xf39c12 },
+                        { name: 'Bytecode', pos: [0, -3.5, 0], color: 0x9b59b6 }
+                    ],
+                    arrows: [
+                        { from: 'HLSL', to: 'SPIRV', label: 'compile' },
+                        { from: 'GLSL', to: 'SPIRV', label: 'compile' },
+                        { from: 'SPIRV', to: 'Bytecode', label: 'assemble' }
+                    ],
+                    contractible: true,
+                    description: 'Shader compilation is deterministic. All compilation paths (modulo inessential register naming) give the same result. This IS a pre-∞-category!',
+                    compositionTriangle: { vertices: ['HLSL', 'SPIRV', 'Bytecode'] }
+                },
+                
+                renderpass: {
+                    name: 'RenderPass',
+                    terms: [
+                        { name: 'Geometry', pos: [-3, 0, 0], color: 0x4a90e2 },
+                        { name: 'Lighting', pos: [0, 3, 0], color: 0x2ecc71 },
+                        { name: 'PostProcess', pos: [3, 0, 0], color: 0xf39c12 },
+                        { name: 'Output', pos: [0, -3, 0], color: 0x9b59b6 }
+                    ],
+                    arrows: [
+                        { from: 'Geometry', to: 'Lighting', label: 'forward' },
+                        { from: 'Lighting', to: 'PostProcess', label: 'bloom' },
+                        { from: 'Lighting', to: 'PostProcess', label: 'SSAO' },
+                        { from: 'PostProcess', to: 'Output', label: 'tonemap' }
+                    ],
+                    contractible: false,
+                    description: 'Multiple rendering strategies exist (forward/deferred, different post-processing). Composition is NOT unique. This is NOT a pre-∞-category.',
+                    compositionTriangle: { vertices: ['Geometry', 'Lighting', 'PostProcess'] }
+                },
+                
+                physics: {
+                    name: 'PhysicalMesh',
+                    terms: [
+                        { name: 'State(t₀)', pos: [-4, 0, 0], color: 0x4a90e2 },
+                        { name: 'State(t₁)', pos: [0, 0, 0], color: 0x2ecc71 },
+                        { name: 'State(t₂)', pos: [4, 0, 0], color: 0xf39c12 }
+                    ],
+                    arrows: [
+                        { from: 'State(t₀)', to: 'State(t₁)', label: 'physics' },
+                        { from: 'State(t₁)', to: 'State(t₂)', label: 'physics' }
+                    ],
+                    contractible: true,
+                    description: 'Deterministic physics uniquely determines evolution. Composition is unique. This IS a pre-∞-category!',
+                    compositionTriangle: { vertices: ['State(t₀)', 'State(t₁)', 'State(t₂)'] }
+                }
+            };
+            
+            // ==================== MAIN APPLICATION ====================
+            
+            class SyntheticCategorySpace {
+                constructor() {
+                    this.container = document.getElementById('container');
+                    this.canvas = document.getElementById('canvas3d');
+                    
+                    this.scene = new THREE.Scene();
+                    this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
+                    
+                    this.terms = {};
+                    this.arrows = [];
+                    this.fillerParticles = null;
+                    this.compositionTriangle = null;
+                    this.autoRotate = true;
+                    this.animating = false;
+                    this.compositionProgress = 0;
+                    
+                    this.currentTypeSpace = 'shader';
+                    
+                    this.init();
+                }
+                
+                init() {
+                    // Renderer setup
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                    this.renderer.setPixelRatio(window.devicePixelRatio);
+                    this.scene.background = new THREE.Color(0x0a0a0f);
+                    
+                    // Camera
+                    this.camera.position.set(8, 6, 8);
+                    this.camera.lookAt(0, 0, 0);
+                    
+                    // Lighting
+                    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+                    this.scene.add(ambient);
+                    
+                    const point1 = new THREE.PointLight(0x4a90e2, 1, 100);
+                    point1.position.set(10, 10, 10);
+                    this.scene.add(point1);
+                    
+                    const point2 = new THREE.PointLight(0xf39c12, 0.6, 100);
+                    point2.position.set(-10, -5, -10);
+                    this.scene.add(point2);
+                    
+                    const point3 = new THREE.PointLight(0x9b59b6, 0.5, 100);
+                    point3.position.set(0, -10, 10);
+                    this.scene.add(point3);
+                    
+                    // Simple orbit controls (manual)
+                    this.setupControls();
+                    
+                    // Load initial type space
+                    this.loadTypeSpace(this.currentTypeSpace);
+                    
+                    // Event listeners
+                    this.setupEventListeners();
+                    
+                    // Animation loop
+                    this.animate();
+                    
+                    // Window resize
+                    window.addEventListener('resize', () => this.onWindowResize());
+                }
+                
+                setupControls() {
+                    this.mouseDown = false;
+                    this.mouseX = 0;
+                    this.mouseY = 0;
+                    this.targetRotation = { x: 0, y: 0 };
+                    this.currentRotation = { x: 0, y: 0 };
+                    
+                    this.canvas.addEventListener('mousedown', (e) => {
+                        this.mouseDown = true;
+                        this.mouseX = e.clientX;
+                        this.mouseY = e.clientY;
+                    });
+                    
+                    this.canvas.addEventListener('mousemove', (e) => {
+                        if (this.mouseDown) {
+                            const deltaX = e.clientX - this.mouseX;
+                            const deltaY = e.clientY - this.mouseY;
+                            
+                            this.targetRotation.y += deltaX * 0.01;
+                            this.targetRotation.x += deltaY * 0.01;
+                            
+                            this.mouseX = e.clientX;
+                            this.mouseY = e.clientY;
+                        }
+                    });
+                    
+                    this.canvas.addEventListener('mouseup', () => {
+                        this.mouseDown = false;
+                    });
+                    
+                    this.canvas.addEventListener('wheel', (e) => {
+                        e.preventDefault();
+                        this.camera.position.multiplyScalar(1 + e.deltaY * 0.001);
+                    });
+                }
+                
+                setupEventListeners() {
+                    document.getElementById('typeSelect').addEventListener('change', (e) => {
+                        this.loadTypeSpace(e.target.value);
+                    });
+                    
+                    document.getElementById('animateBtn').addEventListener('click', () => {
+                        this.startCompositionAnimation();
+                    });
+                    
+                    document.getElementById('resetBtn').addEventListener('click', () => {
+                        this.resetCamera();
+                    });
+                    
+                    document.getElementById('toggleRotationBtn').addEventListener('click', () => {
+                        this.autoRotate = !this.autoRotate;
+                    });
+                    
+                    document.getElementById('progressSlider').addEventListener('input', (e) => {
+                        this.compositionProgress = e.target.value / 100;
+                        document.getElementById('progressValue').textContent = e.target.value + '%';
+                        this.updateCompositionVisualization();
+                    });
+                }
+                
+                loadTypeSpace(typeKey) {
+                    this.currentTypeSpace = typeKey;
+                    const space = TypeSpaces[typeKey];
+                    
+                    // Clear existing
+                    this.clearScene();
+                    
+                    // Add terms
+                    space.terms.forEach(termData => {
+                        this.addTerm(termData);
+                    });
+                    
+                    // Add arrows
+                    space.arrows.forEach(arrowData => {
+                        this.addArrow(arrowData);
+                    });
+                    
+                    // Add composition triangle
+                    if (space.compositionTriangle) {
+                        this.createCompositionTriangle(space);
+                    }
+                    
+                    // Create filler particles
+                    this.createFillerParticles(space.contractible);
+                    
+                    // Update UI
+                    this.updateUI(space);
+                }
+                
+                clearScene() {
+                    // Remove all meshes
+                    const objectsToRemove = [];
+                    this.scene.traverse(obj => {
+                        if (obj.userData.removable) {
+                            objectsToRemove.push(obj);
+                        }
+                    });
+                    objectsToRemove.forEach(obj => this.scene.remove(obj));
+                    
+                    this.terms = {};
+                    this.arrows = [];
+                    this.fillerParticles = null;
+                    this.compositionTriangle = null;
+                }
+                
+                addTerm(termData) {
+                    const geometry = new THREE.IcosahedronGeometry(0.5, 1);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: termData.color,
+                        emissive: termData.color,
+                        emissiveIntensity: 0.2,
+                        shininess: 100
+                    });
+                    
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(...termData.pos);
+                    mesh.userData = { name: termData.name, type: 'term', removable: true };
+                    
+                    this.scene.add(mesh);
+                    this.terms[termData.name] = mesh;
+                    
+                    // Add label (using sprite)
+                    this.addLabel(termData.name, new THREE.Vector3(...termData.pos).add(new THREE.Vector3(0, 0.8, 0)));
+                }
+                
+                addLabel(text, position) {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = 256;
+                    canvas.height = 64;
+                    
+                    context.fillStyle = '#ecf0f1';
+                    context.font = 'bold 32px Arial';
+                    context.textAlign = 'center';
+                    context.fillText(text, 128, 40);
+                    
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                    const sprite = new THREE.Sprite(spriteMaterial);
+                    sprite.position.copy(position);
+                    sprite.scale.set(2, 0.5, 1);
+                    sprite.userData = { removable: true };
+                    
+                    this.scene.add(sprite);
+                }
+                
+                addArrow(arrowData) {
+                    const start = this.terms[arrowData.from];
+                    const end = this.terms[arrowData.to];
+                    
+                    if (!start || !end) return;
+                    
+                    const startPos = start.position;
+                    const endPos = end.position;
+                    
+                    // Create curved path
+                    const midPos = new THREE.Vector3().lerpVectors(startPos, endPos, 0.5);
+                    midPos.y += 0.8;  // Arc upward
+                    
+                    const curve = new THREE.QuadraticBezierCurve3(
+                        startPos.clone(),
+                        midPos,
+                        endPos.clone()
+                    );
+                    
+                    const points = curve.getPoints(50);
+                    const geometry = new THREE.TubeGeometry(
+                        new THREE.CatmullRomCurve3(points),
+                        50,
+                        0.08,
+                        8,
+                        false
+                    );
+                    
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xf5a623,
+                        emissive: 0xf39c12,
+                        emissiveIntensity: 0.3,
+                        shininess: 50
+                    });
+                    
+                    const tube = new THREE.Mesh(geometry, material);
+                    tube.userData = { label: arrowData.label, type: 'arrow', removable: true };
+                    
+                    this.scene.add(tube);
+                    this.arrows.push(tube);
+                    
+                    // Arrow head
+                    this.addArrowHead(endPos, startPos);
+                }
+                
+                addArrowHead(endPos, startPos) {
+                    const direction = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+                    const coneGeometry = new THREE.ConeGeometry(0.15, 0.4, 8);
+                    const coneMaterial = new THREE.MeshPhongMaterial({
+                        color: 0xf5a623,
+                        emissive: 0xf39c12,
+                        emissiveIntensity: 0.3
+                    });
+                    
+                    const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+                    cone.position.copy(endPos).add(direction.multiplyScalar(-0.5));
+                    cone.lookAt(endPos);
+                    cone.rotateX(Math.PI / 2);
+                    cone.userData = { removable: true };
+                    
+                    this.scene.add(cone);
+                }
+                
+                createCompositionTriangle(space) {
+                    const tri = space.compositionTriangle;
+                    if (!tri || tri.vertices.length !== 3) return;
+                    
+                    const v1 = this.terms[tri.vertices[0]];
+                    const v2 = this.terms[tri.vertices[1]];
+                    const v3 = this.terms[tri.vertices[2]];
+                    
+                    if (!v1 || !v2 || !v3) return;
+                    
+                    // Create triangle face (translucent)
+                    const geometry = new THREE.BufferGeometry();
+                    const vertices = new Float32Array([
+                        v1.position.x, v1.position.y, v1.position.z,
+                        v2.position.x, v2.position.y, v2.position.z,
+                        v3.position.x, v3.position.y, v3.position.z
+                    ]);
+                    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    
+                    const material = new THREE.MeshBasicMaterial({
+                        color: 0x9b59b6,
+                        transparent: true,
+                        opacity: 0.15,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const triangle = new THREE.Mesh(geometry, material);
+                    triangle.userData = { type: 'composition-triangle', removable: true };
+                    
+                    this.scene.add(triangle);
+                    this.compositionTriangle = triangle;
+                }
+                
+                createFillerParticles(contractible) {
+                    const particleCount = contractible ? 50 : 150;
+                    const geometry = new THREE.BufferGeometry();
+                    const positions = new Float32Array(particleCount * 3);
+                    
+                    // Spread particles around center
+                    const spreadRadius = contractible ? 1.5 : 3.0;
+                    for (let i = 0; i < particleCount; i++) {
+                        positions[i * 3] = (Math.random() - 0.5) * spreadRadius;
+                        positions[i * 3 + 1] = (Math.random() - 0.5) * spreadRadius;
+                        positions[i * 3 + 2] = (Math.random() - 0.5) * spreadRadius;
+                    }
+                    
+                    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                    
+                    const material = new THREE.PointsMaterial({
+                        color: contractible ? 0x9b59b6 : 0xe74c3c,
+                        size: 0.15,
+                        transparent: true,
+                        opacity: 0.8,
+                        sizeAttenuation: true
+                    });
+                    
+                    this.fillerParticles = new THREE.Points(geometry, material);
+                    this.fillerParticles.userData = {
+                        contractible,
+                        originalPositions: positions.slice(),
+                        type: 'filler-particles',
+                        removable: true
+                    };
+                    
+                    this.scene.add(this.fillerParticles);
+                }
+                
+                startCompositionAnimation() {
+                    this.animating = true;
+                    this.compositionProgress = 0;
+                    document.getElementById('progressSlider').value = 0;
+                    document.getElementById('progressValue').textContent = '0%';
+                    
+                    const animate = () => {
+                        if (!this.animating || this.compositionProgress >= 1) {
+                            this.animating = false;
+                            return;
+                        }
+                        
+                        this.compositionProgress += 0.005;
+                        document.getElementById('progressSlider').value = this.compositionProgress * 100;
+                        document.getElementById('progressValue').textContent = Math.floor(this.compositionProgress * 100) + '%';
+                        
+                        this.updateCompositionVisualization();
+                        
+                        requestAnimationFrame(animate);
+                    };
+                    
+                    animate();
+                }
+                
+                updateCompositionVisualization() {
+                    if (!this.fillerParticles) return;
+                    
+                    const contractible = this.fillerParticles.userData.contractible;
+                    const positions = this.fillerParticles.geometry.attributes.position.array;
+                    const origPositions = this.fillerParticles.userData.originalPositions;
+                    
+                    if (contractible) {
+                        // Collapse particles to center
+                        const t = this.compositionProgress;
+                        for (let i = 0; i < positions.length; i += 3) {
+                            positions[i] = origPositions[i] * (1 - t);
+                            positions[i + 1] = origPositions[i + 1] * (1 - t);
+                            positions[i + 2] = origPositions[i + 2] * (1 - t);
+                        }
+                        
+                        // Change color to green as converging
+                        const color = new THREE.Color();
+                        color.lerpColors(new THREE.Color(0x9b59b6), new THREE.Color(0x2ecc71), t);
+                        this.fillerParticles.material.color = color;
+                    } else {
+                        // Particles stay spread, maybe wobble
+                        const t = this.compositionProgress;
+                        for (let i = 0; i < positions.length; i += 3) {
+                            const wobble = Math.sin(t * Math.PI * 2 + i) * 0.2;
+                            positions[i] = origPositions[i] + wobble;
+                            positions[i + 1] = origPositions[i + 1] + Math.cos(t * Math.PI * 2 + i) * 0.2;
+                            positions[i + 2] = origPositions[i + 2] + wobble;
+                        }
+                    }
+                    
+                    this.fillerParticles.geometry.attributes.position.needsUpdate = true;
+                }
+                
+                updateUI(space) {
+                    document.getElementById('typeInfo').innerHTML = `
+                        <strong>${space.name}</strong><br>
+                        ${space.description}
+                    `;
+                    
+                    const badge = space.contractible
+                        ? '<span class="status-badge contractible">✓ CONTRACTIBLE</span>'
+                        : '<span class="status-badge non-contractible">✗ NON-CONTRACTIBLE</span>';
+                    
+                    document.getElementById('contractibilityBadge').innerHTML = badge;
+                    
+                    const analysis = space.contractible
+                        ? 'Filler space collapses to a single point. Composition is unique up to homotopy. This IS a pre-∞-category!'
+                        : 'Filler space remains spread out. Multiple distinct compositions exist. This is NOT a pre-∞-category.';
+                    
+                    document.getElementById('analysisText').textContent = analysis;
+                }
+                
+                resetCamera() {
+                    this.camera.position.set(8, 6, 8);
+                    this.camera.lookAt(0, 0, 0);
+                    this.targetRotation = { x: 0, y: 0 };
+                    this.currentRotation = { x: 0, y: 0 };
+                }
+                
+                onWindowResize() {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+                
+                animate() {
+                    requestAnimationFrame(() => this.animate());
+                    
+                    // Smooth rotation
+                    this.currentRotation.x += (this.targetRotation.x - this.currentRotation.x) * 0.1;
+                    this.currentRotation.y += (this.targetRotation.y - this.currentRotation.y) * 0.1;
+                    
+                    if (this.autoRotate) {
+                        this.currentRotation.y += 0.001;
+                    }
+                    
+                    // Apply rotation to camera
+                    const radius = this.camera.position.length();
+                    this.camera.position.x = radius * Math.sin(this.currentRotation.y) * Math.cos(this.currentRotation.x);
+                    this.camera.position.y = radius * Math.sin(this.currentRotation.x);
+                    this.camera.position.z = radius * Math.cos(this.currentRotation.y) * Math.cos(this.currentRotation.x);
+                    this.camera.lookAt(0, 0, 0);
+                    
+                    // Rotate terms slightly
+                    Object.values(this.terms).forEach(term => {
+                        term.rotation.y += 0.01;
+                    });
+                    
+                    this.renderer.render(this.scene, this.camera);
+                }
+            }
+            
+            // Initialize
+            const space = new SyntheticCategorySpace();
+        }
+        
+        // Check if Three.js loaded
+        if (typeof THREE !== 'undefined') {
+            init();
+        } else {
+            console.error('Three.js failed to load');
+            document.getElementById('loading').textContent = 'Failed to load Three.js. Please refresh.';
+        }
+    </script>
+</body>
+</html>

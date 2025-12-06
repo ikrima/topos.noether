@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Univalence Visualizer - Types as Spaces</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: 70px 1fr 80px;
+            height: 100vh;
+            gap: 0;
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 20px;
+            border-bottom: 2px solid rgba(139, 92, 246, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+        
+        h1 {
+            font-size: 1.8em;
+            font-weight: 300;
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.8);
+        }
+        
+        .subtitle {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .left-panel, .right-panel {
+            background: rgba(15, 23, 42, 0.85);
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 5;
+        }
+        
+        .left-panel {
+            border-right: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        .right-panel {
+            border-left: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        .canvas-container {
+            position: relative;
+            background: #000000;
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .bottom-controls {
+            grid-column: 1 / -1;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 20px;
+            border-top: 2px solid rgba(139, 92, 246, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+        
+        .panel-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+        
+        h3 {
+            color: #a78bfa;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        
+        .type-card {
+            background: rgba(139, 92, 246, 0.15);
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .type-card:hover {
+            background: rgba(139, 92, 246, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .type-card.selected {
+            background: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+        
+        .type-card .type-name {
+            font-weight: 600;
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+        
+        .type-card .type-desc {
+            font-size: 0.85em;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+        
+        .equivalence-item {
+            background: rgba(251, 191, 36, 0.15);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #fbbf24;
+            font-size: 0.9em;
+        }
+        
+        .equivalence-item strong {
+            color: #fbbf24;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.6);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .slider-group {
+            margin-bottom: 20px;
+        }
+        
+        .slider-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            color: #a78bfa;
+        }
+        
+        .slider-value {
+            float: right;
+            color: white;
+            font-weight: 600;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(139, 92, 246, 0.3);
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.8);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .info-box {
+            background: rgba(59, 130, 246, 0.15);
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #60a5fa;
+            font-size: 0.85em;
+            line-height: 1.6;
+            margin-top: 12px;
+        }
+        
+        .info-box strong {
+            color: #60a5fa;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .axiom-box {
+            background: rgba(236, 72, 153, 0.15);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid rgba(236, 72, 153, 0.5);
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .axiom-box .axiom-title {
+            color: #ec4899;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        
+        .axiom-box .axiom-expr {
+            font-size: 1.1em;
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        .transport-demo {
+            background: rgba(16, 185, 129, 0.15);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #10b981;
+            margin-top: 15px;
+        }
+        
+        .transport-demo strong {
+            color: #10b981;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            font-size: 0.85em;
+            pointer-events: none;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .universe-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 2px solid rgba(139, 92, 246, 0.5);
+            font-size: 1.1em;
+            font-weight: 600;
+            pointer-events: none;
+            color: #a78bfa;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <header>
+            <h1>Univalence Visualizer</h1>
+            <p class="subtitle">Identity ≃ Equivalence: Types as geometric spaces in the universe</p>
+        </header>
+        
+        <div class="left-panel">
+            <div class="panel-section">
+                <h3>Universe of Types</h3>
+                <p style="font-size: 0.9em; line-height: 1.6; opacity: 0.9; margin-bottom: 15px;">
+                    Each type is a geometric space in the universe 𝓤. Click to select and explore.
+                </p>
+                <div id="type-list">
+                    <div class="type-card selected" data-type="GLSL" style="border-color: #3b82f6;">
+                        <div class="type-name" style="color: #3b82f6;">GLSL</div>
+                        <div class="type-desc">OpenGL shading language programs</div>
+                    </div>
+                    <div class="type-card" data-type="HLSL" style="border-color: #10b981;">
+                        <div class="type-name" style="color: #10b981;">HLSL</div>
+                        <div class="type-desc">DirectX shading language programs</div>
+                    </div>
+                    <div class="type-card" data-type="SPIRV" style="border-color: #f59e0b;">
+                        <div class="type-name" style="color: #f59e0b;">SPIRV</div>
+                        <div class="type-desc">Universal shader bytecode</div>
+                    </div>
+                    <div class="type-card" data-type="MSL" style="border-color: #8b5cf6;">
+                        <div class="type-name" style="color: #8b5cf6;">MSL</div>
+                        <div class="type-desc">Metal shading language</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Equivalences</h3>
+                <div class="equivalence-item">
+                    <strong>GLSL ≃ SPIRV</strong>
+                    Compile via glslang
+                </div>
+                <div class="equivalence-item">
+                    <strong>HLSL ≃ SPIRV</strong>
+                    Compile via DXC
+                </div>
+                <div class="equivalence-item">
+                    <strong>MSL ≃ SPIRV</strong>
+                    Compile via spirv-cross
+                </div>
+                <div class="info-box">
+                    <strong>Transitivity:</strong>
+                    Since GLSL ≃ SPIRV and SPIRV ≃ HLSL, we have GLSL ≃ HLSL by composition!
+                </div>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div class="universe-label">𝓤 (Universe of Shader Types)</div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Types (spaces)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fbbf24;"></div>
+                    <span>Equivalences</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ec4899;"></div>
+                    <span>Identity paths</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Properties being transported</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="panel-section">
+                <h3>The Univalence Axiom</h3>
+                <div class="axiom-box">
+                    <div class="axiom-title">Univalence:</div>
+                    <div class="axiom-expr">(A =<sub>𝓤</sub> B) ≃ (A ≃ B)</div>
+                </div>
+                <p style="font-size: 0.9em; line-height: 1.6; margin-top: 10px;">
+                    "Identity between types is equivalent to equivalence between types."
+                </p>
+                <p style="font-size: 0.9em; line-height: 1.6; margin-top: 10px; opacity: 0.8;">
+                    <strong>Translation:</strong> If two types are equivalent (can be converted back and forth coherently), they are IDENTICAL.
+                </p>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Transport Demo</h3>
+                <div class="slider-group">
+                    <label>
+                        Transport Parameter: <span class="slider-value" id="transport-value">0.00</span>
+                    </label>
+                    <input type="range" id="transport-slider" min="0" max="1" step="0.01" value="0">
+                </div>
+                <div class="transport-demo" id="transport-info">
+                    <strong>Transport:</strong>
+                    <p style="font-size: 0.9em; line-height: 1.5; margin-top: 5px;">
+                        Given A ≃ B, transport moves properties from A to B along the equivalence.
+                    </p>
+                </div>
+                <button id="animate-transport" style="width: 100%; margin-top: 10px;">
+                    ▶️ Animate Transport
+                </button>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Practical Consequence</h3>
+                <div class="info-box">
+                    <strong>Shader Compilation Example:</strong>
+                    If you prove a property holds for GLSL shaders, univalence guarantees it holds for equivalent SPIRV bytecode!
+                </div>
+                <div style="margin-top: 15px; font-size: 0.85em; line-height: 1.6; opacity: 0.9;">
+                    <strong>Examples:</strong><br>
+                    • Correctness proofs transfer<br>
+                    • Performance bounds transfer<br>
+                    • Memory safety transfers<br>
+                    • Optimization validity transfers
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>Visualization Controls</h3>
+                <button id="show-all-equiv" style="width: 100%; margin-bottom: 8px;">
+                    Show All Equivalences
+                </button>
+                <button id="show-identity" style="width: 100%; margin-bottom: 8px;">
+                    Show Identity Paths
+                </button>
+                <button id="toggle-rotation" style="width: 100%;">
+                    🔄 Toggle Rotation
+                </button>
+            </div>
+        </div>
+        
+        <div class="bottom-controls">
+            <button id="example-glsl-spirv">GLSL ≃ SPIRV</button>
+            <button id="example-transitivity">Demonstrate Transitivity</button>
+            <button id="reset-camera">📷 Reset View</button>
+            <button id="tutorial-btn">📚 Tutorial</button>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global state
+        let scene, camera, renderer;
+        let typeSpaces = [];
+        let equivalenceLines = [];
+        let identityPaths = [];
+        let transportParticles = [];
+        let selectedType = 'GLSL';
+        let autoRotate = true;
+        let transportT = 0;
+        let animatingTransport = false;
+        let animationTime = 0;
+        
+        // Type definitions with 3D positions
+        const typeDefinitions = {
+            GLSL: {
+                position: new THREE.Vector3(-4, 0, 0),
+                color: 0x3b82f6,
+                name: 'GLSL'
+            },
+            SPIRV: {
+                position: new THREE.Vector3(0, 0, 0),
+                color: 0xf59e0b,
+                name: 'SPIRV'
+            },
+            HLSL: {
+                position: new THREE.Vector3(4, 0, 0),
+                color: 0x10b981,
+                name: 'HLSL'
+            },
+            MSL: {
+                position: new THREE.Vector3(0, 4, 0),
+                color: 0x8b5cf6,
+                name: 'MSL'
+            }
+        };
+        
+        // Equivalence definitions
+        const equivalences = [
+            { from: 'GLSL', to: 'SPIRV', label: 'glslang' },
+            { from: 'HLSL', to: 'SPIRV', label: 'DXC' },
+            { from: 'MSL', to: 'SPIRV', label: 'spirv-cross' }
+        ];
+        
+        // Initialize
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 10, 50);
+            
+            // Camera
+            const canvas = document.getElementById('canvas');
+            camera = new THREE.PerspectiveCamera(
+                60,
+                canvas.clientWidth / canvas.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 5, 15);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                antialias: true,
+                alpha: true
+            });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const pointLight1 = new THREE.PointLight(0x8b5cf6, 2, 30);
+            pointLight1.position.set(10, 10, 10);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0x3b82f6, 2, 30);
+            pointLight2.position.set(-10, -5, 5);
+            scene.add(pointLight2);
+            
+            const pointLight3 = new THREE.PointLight(0xf59e0b, 1.5, 30);
+            pointLight3.position.set(0, 5, -10);
+            scene.add(pointLight3);
+            
+            // Create type spaces
+            createTypeSpaces();
+            
+            // Create equivalence connections
+            createEquivalences();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Animation loop
+            animate();
+        }
+        
+        function createTypeSpaces() {
+            Object.entries(typeDefinitions).forEach(([name, def]) => {
+                // Create icosphere for each type
+                const geometry = new THREE.IcosahedronGeometry(1.5, 2);
+                const material = new THREE.MeshPhongMaterial({
+                    color: def.color,
+                    emissive: def.color,
+                    emissiveIntensity: 0.3,
+                    shininess: 100,
+                    transparent: true,
+                    opacity: 0.8,
+                    wireframe: false
+                });
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.copy(def.position);
+                mesh.userData.typeName = name;
+                scene.add(mesh);
+                
+                // Add wireframe overlay
+                const wireframeGeo = new THREE.IcosahedronGeometry(1.52, 2);
+                const wireframeMat = new THREE.MeshBasicMaterial({
+                    color: def.color,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const wireframe = new THREE.Mesh(wireframeGeo, wireframeMat);
+                wireframe.position.copy(def.position);
+                scene.add(wireframe);
+                
+                // Add label
+                createLabel(name, def.position);
+                
+                // Store reference
+                typeSpaces.push({ name, mesh, wireframe });
+            });
+        }
+        
+        function createLabel(text, position) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            
+            context.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            context.font = 'bold 32px Arial';
+            context.fillStyle = '#ffffff';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 128, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(material);
+            sprite.position.copy(position);
+            sprite.position.y += 2.5;
+            sprite.scale.set(2, 0.5, 1);
+            scene.add(sprite);
+        }
+        
+        function createEquivalences() {
+            equivalences.forEach(equiv => {
+                const fromDef = typeDefinitions[equiv.from];
+                const toDef = typeDefinitions[equiv.to];
+                
+                // Create curved line
+                const curve = new THREE.QuadraticBezierCurve3(
+                    fromDef.position,
+                    new THREE.Vector3(
+                        (fromDef.position.x + toDef.position.x) / 2,
+                        (fromDef.position.y + toDef.position.y) / 2 + 1,
+                        (fromDef.position.z + toDef.position.z) / 2
+                    ),
+                    toDef.position
+                );
+                
+                const points = curve.getPoints(50);
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xfbbf24,
+                    linewidth: 3,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                equivalenceLines.push(line);
+                
+                // Add bidirectional arrows
+                createArrow(fromDef.position, toDef.position, 0xfbbf24);
+                createArrow(toDef.position, fromDef.position, 0xfbbf24);
+            });
+        }
+        
+        function createArrow(from, to, color) {
+            const direction = new THREE.Vector3().subVectors(to, from).normalize();
+            const length = from.distanceTo(to) * 0.4;
+            const origin = new THREE.Vector3().lerpVectors(from, to, 0.4);
+            
+            const arrowHelper = new THREE.ArrowHelper(
+                direction,
+                origin,
+                0.5,
+                color,
+                0.3,
+                0.2
+            );
+            scene.add(arrowHelper);
+        }
+        
+        function createTransportParticle(fromType, toType) {
+            const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x10b981,
+                emissive: 0x10b981,
+                emissiveIntensity: 0.8,
+                shininess: 100
+            });
+            
+            const particle = new THREE.Mesh(geometry, material);
+            particle.userData.fromType = fromType;
+            particle.userData.toType = toType;
+            particle.userData.t = 0;
+            
+            scene.add(particle);
+            transportParticles.push(particle);
+            
+            return particle;
+        }
+        
+        function updateTransportParticles() {
+            transportParticles.forEach(particle => {
+                particle.userData.t = transportT;
+                
+                const fromDef = typeDefinitions[particle.userData.fromType];
+                const toDef = typeDefinitions[particle.userData.toType];
+                
+                // Move along curve
+                const curve = new THREE.QuadraticBezierCurve3(
+                    fromDef.position,
+                    new THREE.Vector3(
+                        (fromDef.position.x + toDef.position.x) / 2,
+                        (fromDef.position.y + toDef.position.y) / 2 + 1,
+                        (fromDef.position.z + toDef.position.z) / 2
+                    ),
+                    toDef.position
+                );
+                
+                const pos = curve.getPoint(particle.userData.t);
+                particle.position.copy(pos);
+            });
+        }
+        
+        function setupEventListeners() {
+            // Type selection
+            document.querySelectorAll('.type-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    selectedType = card.dataset.type;
+                    document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    highlightType(selectedType);
+                });
+            });
+            
+            // Transport slider
+            document.getElementById('transport-slider').addEventListener('input', (e) => {
+                transportT = parseFloat(e.target.value);
+                document.getElementById('transport-value').textContent = transportT.toFixed(2);
+                updateTransportParticles();
+            });
+            
+            // Buttons
+            document.getElementById('animate-transport').addEventListener('click', toggleTransportAnimation);
+            document.getElementById('show-all-equiv').addEventListener('click', showAllEquivalences);
+            document.getElementById('show-identity').addEventListener('click', showIdentityPaths);
+            document.getElementById('toggle-rotation').addEventListener('click', () => {
+                autoRotate = !autoRotate;
+            });
+            document.getElementById('example-glsl-spirv').addEventListener('click', demonstrateGLSLtoSPIRV);
+            document.getElementById('example-transitivity').addEventListener('click', demonstrateTransitivity);
+            document.getElementById('reset-camera').addEventListener('click', () => {
+                camera.position.set(0, 5, 15);
+                camera.lookAt(0, 0, 0);
+            });
+            document.getElementById('tutorial-btn').addEventListener('click', showTutorial);
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function highlightType(typeName) {
+            typeSpaces.forEach(space => {
+                if (space.name === typeName) {
+                    space.mesh.material.emissiveIntensity = 0.6;
+                    space.mesh.scale.set(1.2, 1.2, 1.2);
+                    space.wireframe.scale.set(1.2, 1.2, 1.2);
+                } else {
+                    space.mesh.material.emissiveIntensity = 0.3;
+                    space.mesh.scale.set(1, 1, 1);
+                    space.wireframe.scale.set(1, 1, 1);
+                }
+            });
+        }
+        
+        function toggleTransportAnimation() {
+            animatingTransport = !animatingTransport;
+            const btn = document.getElementById('animate-transport');
+            btn.textContent = animatingTransport ? '⏸️ Pause Transport' : '▶️ Animate Transport';
+            
+            if (animatingTransport && transportParticles.length === 0) {
+                // Create particle
+                createTransportParticle('GLSL', 'SPIRV');
+                updateTransportInfo();
+            }
+        }
+        
+        function updateTransportInfo() {
+            const info = document.getElementById('transport-info');
+            info.innerHTML = `
+                <strong>Transport in Action:</strong>
+                <p style="font-size: 0.9em; line-height: 1.5; margin-top: 5px;">
+                    Moving a property (green sphere) from GLSL to SPIRV along the equivalence.
+                    The property is automatically transformed to apply to SPIRV!
+                </p>
+            `;
+        }
+        
+        function showAllEquivalences() {
+            equivalenceLines.forEach(line => {
+                line.material.opacity = 1.0;
+            });
+        }
+        
+        function showIdentityPaths() {
+            // Create identity loops for each type
+            typeSpaces.forEach(space => {
+                const def = typeDefinitions[space.name];
+                
+                // Create circular path
+                const curve = new THREE.EllipseCurve(
+                    def.position.x, def.position.z,
+                    2, 2,
+                    0, 2 * Math.PI,
+                    false,
+                    0
+                );
+                
+                const points = curve.getPoints(50).map(p => 
+                    new THREE.Vector3(p.x, def.position.y + 2, p.y)
+                );
+                
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: 0xec4899,
+                    linewidth: 2,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                identityPaths.push(line);
+            });
+            
+            setTimeout(() => {
+                identityPaths.forEach(line => scene.remove(line));
+                identityPaths = [];
+            }, 5000);
+        }
+        
+        function demonstrateGLSLtoSPIRV() {
+            // Clear existing particles
+            transportParticles.forEach(p => scene.remove(p));
+            transportParticles = [];
+            
+            // Create particle
+            const particle = createTransportParticle('GLSL', 'SPIRV');
+            transportT = 0;
+            document.getElementById('transport-slider').value = 0;
+            document.getElementById('transport-value').textContent = '0.00';
+            
+            // Show explanation
+            showOverlay(`
+                <h3>GLSL ≃ SPIRV Equivalence</h3>
+                <p>The green sphere represents a property (e.g., "uses texture sampling").</p>
+                <p style="margin-top: 10px;">
+                    <strong>Transport:</strong> As we move along the equivalence, the property
+                    is automatically translated from GLSL context to SPIRV context.
+                </p>
+                <p style="margin-top: 10px;">
+                    <strong>Univalence guarantees:</strong> If the property holds in GLSL,
+                    it holds in equivalent SPIRV!
+                </p>
+            `);
+            
+            // Animate
+            animatingTransport = true;
+            document.getElementById('animate-transport').textContent = '⏸️ Pause Transport';
+        }
+        
+        function demonstrateTransitivity() {
+            // Clear existing
+            transportParticles.forEach(p => scene.remove(p));
+            transportParticles = [];
+            
+            // Create two particles
+            createTransportParticle('GLSL', 'SPIRV');
+            createTransportParticle('SPIRV', 'HLSL');
+            
+            showOverlay(`
+                <h3>Transitivity of Equivalence</h3>
+                <p>Since GLSL ≃ SPIRV and SPIRV ≃ HLSL, we get GLSL ≃ HLSL!</p>
+                <p style="margin-top: 10px;">
+                    <strong>Two particles show:</strong><br>
+                    • Property transport from GLSL → SPIRV<br>
+                    • Then from SPIRV → HLSL
+                </p>
+                <p style="margin-top: 10px;">
+                    This is <strong>composition of equivalences</strong>, guaranteed by univalence!
+                </p>
+            `);
+            
+            animatingTransport = true;
+            document.getElementById('animate-transport').textContent = '⏸️ Pause Transport';
+        }
+        
+        function showOverlay(html) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(15, 23, 42, 0.98);
+                padding: 30px;
+                border-radius: 12px;
+                border: 2px solid rgba(139, 92, 246, 0.5);
+                max-width: 500px;
+                z-index: 1000;
+                color: white;
+                font-size: 0.95em;
+                line-height: 1.6;
+            `;
+            overlay.innerHTML = html + `
+                <button onclick="this.parentElement.remove()" style="width: 100%; margin-top: 20px;">
+                    Close
+                </button>
+            `;
+            document.body.appendChild(overlay);
+        }
+        
+        function showTutorial() {
+            showOverlay(`
+                <h3>Univalence Visualizer Tutorial</h3>
+                <p><strong>Types as Spaces:</strong> Each colorful icosahedron is a type (GLSL, HLSL, etc.).</p>
+                <p style="margin-top: 10px;">
+                    <strong>Equivalences:</strong> Yellow curves connect equivalent types.
+                    The arrows show bidirectional conversion (compile and decompile).
+                </p>
+                <p style="margin-top: 10px;">
+                    <strong>Transport:</strong> Green spheres represent properties being
+                    moved from one type to another along equivalences.
+                </p>
+                <p style="margin-top: 10px;">
+                    <strong>Univalence says:</strong> If types are equivalent, they're identical!
+                    Properties proven in one automatically hold in the other.
+                </p>
+            `);
+        }
+        
+        function onWindowResize() {
+            const canvas = document.getElementById('canvas');
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            animationTime += 0.016;
+            
+            // Auto-rotate camera
+            if (autoRotate) {
+                camera.position.x = Math.cos(animationTime * 0.1) * 15;
+                camera.position.z = Math.sin(animationTime * 0.1) * 15;
+                camera.lookAt(0, 0, 0);
+            }
+            
+            // Animate type spaces (gentle floating)
+            typeSpaces.forEach((space, i) => {
+                space.mesh.rotation.y = animationTime * 0.2;
+                space.wireframe.rotation.y = animationTime * 0.2;
+                space.mesh.position.y = typeDefinitions[space.name].position.y + Math.sin(animationTime + i) * 0.2;
+                space.wireframe.position.y = space.mesh.position.y;
+            });
+            
+            // Animate transport
+            if (animatingTransport) {
+                transportT = (transportT + 0.005) % 1;
+                document.getElementById('transport-slider').value = transportT;
+                document.getElementById('transport-value').textContent = transportT.toFixed(2);
+                updateTransportParticles();
+            }
+            
+            // Pulse equivalence lines
+            equivalenceLines.forEach((line, i) => {
+                line.material.opacity = 0.5 + 0.3 * Math.sin(animationTime * 2 + i);
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize
+        init();
+        
+        // Show tutorial after delay
+        setTimeout(() => {
+            showTutorial();
+        }, 1500);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cathedral Complete: 1945-2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .title-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            opacity: 1;
+            transition: opacity 1s ease;
+        }
+        
+        .title-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .title-screen h1 {
+            font-size: 4em;
+            font-weight: 100;
+            letter-spacing: 0.1em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 40px rgba(74, 144, 226, 0.8);
+        }
+        
+        .title-screen .subtitle {
+            font-size: 1.5em;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 40px;
+            color: #aaa;
+        }
+        
+        .title-screen .start-btn {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            border: 2px solid #4a90e2;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 30px rgba(74, 144, 226, 0.5);
+        }
+        
+        .title-screen .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 40px rgba(74, 144, 226, 0.8);
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .controls.visible {
+            opacity: 1;
+        }
+        
+        .control-btn {
+            padding: 12px 24px;
+            background: rgba(74, 144, 226, 0.3);
+            border: 2px solid #4a90e2;
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn:hover {
+            background: rgba(74, 144, 226, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .control-btn.active {
+            background: rgba(74, 144, 226, 0.8);
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.6);
+        }
+        
+        .timeline-control {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .timeline-control.visible {
+            opacity: 1;
+        }
+        
+        .timeline-slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            position: relative;
+            pointer-events: all;
+            cursor: pointer;
+        }
+        
+        .timeline-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #3498db, #9b59b6, #2ecc71);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        
+        .timeline-handle {
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+        
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+        
+        .narration-box {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 700px;
+            padding: 25px 35px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4a90e2;
+            border-radius: 15px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(15px);
+        }
+        
+        .narration-box.visible {
+            opacity: 1;
+        }
+        
+        .narration-box h2 {
+            color: #4a90e2;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+        
+        .narration-box p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #ddd;
+        }
+        
+        .narration-box .highlight {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        
+        .stats-panel {
+            position: absolute;
+            top: 50%;
+            right: 40px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4a90e2;
+            border-radius: 15px;
+            padding: 30px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(15px);
+            min-width: 300px;
+        }
+        
+        .stats-panel.visible {
+            opacity: 1;
+        }
+        
+        .stat-item {
+            margin-bottom: 25px;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: 300;
+            color: #4a90e2;
+        }
+        
+        .stat-comparison {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        
+        .stat-comparison .old {
+            color: #e74c3c;
+        }
+        
+        .stat-comparison .new {
+            color: #2ecc71;
+        }
+        
+        .stat-comparison .arrow {
+            color: #2ecc71;
+            font-size: 1.5em;
+        }
+        
+        .phase-legend {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4a90e2;
+            border-radius: 15px;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(15px);
+        }
+        
+        .phase-legend.visible {
+            opacity: 1;
+        }
+        
+        .phase-legend h3 {
+            color: #4a90e2;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 300;
+        }
+        
+        .phase-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.95em;
+        }
+        
+        .phase-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 12px;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(74, 144, 226, 0.3);
+            border-top: 4px solid #4a90e2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #4a90e2;
+            font-size: 1.2em;
+            font-weight: 300;
+        }
+        
+        .celebration-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(46, 204, 113, 0.3), transparent);
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .celebration-overlay.active {
+            opacity: 1;
+        }
+        
+        .future-paths-panel {
+            position: absolute;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #2ecc71;
+            border-radius: 15px;
+            padding: 25px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(15px);
+            max-width: 350px;
+        }
+        
+        .future-paths-panel.visible {
+            opacity: 1;
+        }
+        
+        .future-paths-panel h3 {
+            color: #2ecc71;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            font-weight: 300;
+        }
+        
+        .future-path {
+            padding: 15px;
+            margin-bottom: 15px;
+            background: rgba(46, 204, 113, 0.1);
+            border-left: 3px solid #2ecc71;
+            border-radius: 5px;
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+        }
+        
+        .future-path:hover {
+            background: rgba(46, 204, 113, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .future-path h4 {
+            color: #2ecc71;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .future-path p {
+            color: #aaa;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Building the Cathedral...</div>
+    </div>
+    
+    <div class="ui-overlay">
+        <div class="title-screen" id="titleScreen">
+            <h1>THE CATHEDRAL COMPLETE</h1>
+            <div class="subtitle">An 80-Year Journey: 1945 - 2025</div>
+            <button class="start-btn" onclick="startJourney()">Begin Journey →</button>
+        </div>
+        
+        <div class="narration-box" id="narrationBox">
+            <h2 id="narrationTitle"></h2>
+            <p id="narrationText"></p>
+        </div>
+        
+        <div class="controls" id="controls">
+            <button class="control-btn" id="playBtn" onclick="togglePlay()">▶ Play</button>
+            <button class="control-btn" id="comparisonBtn" onclick="showComparison()">📊 Comparison</button>
+            <button class="control-btn" id="phasesBtn" onclick="showPhases()">🔷 Phases</button>
+            <button class="control-btn" id="futureBtn" onclick="showFuture()">🚀 Future</button>
+            <button class="control-btn" onclick="resetCamera()">🔄 Reset</button>
+        </div>
+        
+        <div class="timeline-control" id="timelineControl">
+            <div class="timeline-slider" id="timelineSlider">
+                <div class="timeline-progress" id="timelineProgress">
+                    <div class="timeline-handle"></div>
+                </div>
+            </div>
+            <div class="timeline-labels">
+                <span>1945</span>
+                <span>1960s</span>
+                <span>2000s</span>
+                <span>2017</span>
+                <span>2025</span>
+                <span>Future</span>
+            </div>
+        </div>
+        
+        <div class="stats-panel" id="statsPanel">
+            <div class="stat-item">
+                <div class="stat-label">Pages Required</div>
+                <div class="stat-comparison">
+                    <span class="old">900</span>
+                    <span class="arrow">→</span>
+                    <span class="new">5 lines</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Learning Time</div>
+                <div class="stat-comparison">
+                    <span class="old">5+ years</span>
+                    <span class="arrow">→</span>
+                    <span class="new">1.5 years</span>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Compression Ratio</div>
+                <div class="stat-value">180:1</div>
+            </div>
+        </div>
+        
+        <div class="phase-legend" id="phaseLegend">
+            <h3>The Five Phases</h3>
+            <div class="phase-item">
+                <div class="phase-color" style="background: #f1c40f;"></div>
+                <span>Phase 1: Category Theory</span>
+            </div>
+            <div class="phase-item">
+                <div class="phase-color" style="background: #3498db;"></div>
+                <span>Phase 2: ∞-Categories</span>
+            </div>
+            <div class="phase-item">
+                <div class="phase-color" style="background: #9b59b6;"></div>
+                <span>Phase 3: Homotopy Type Theory</span>
+            </div>
+            <div class="phase-item">
+                <div class="phase-color" style="background: #e67e22;"></div>
+                <span>Phase 4: Simplicial HoTT</span>
+            </div>
+            <div class="phase-item">
+                <div class="phase-color" style="background: #2ecc71;"></div>
+                <span>Phase 5: Formalization</span>
+            </div>
+        </div>
+        
+        <div class="future-paths-panel" id="futurePathsPanel">
+            <h3>→ The Future</h3>
+            <div class="future-path">
+                <h4>Teaching Undergraduates</h4>
+                <p>∞-category theory becomes standard undergraduate curriculum</p>
+            </div>
+            <div class="future-path">
+                <h4>AI-Assisted Mathematics</h4>
+                <p>Proof assistants enable human-AI collaborative research</p>
+            </div>
+            <div class="future-path">
+                <h4>New Frontiers</h4>
+                <p>Higher structures open unexplored mathematical territories</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="celebration-overlay" id="celebrationOverlay"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ==================== GLOBAL STATE ====================
+        
+        let scene, camera, renderer;
+        let timeline = 0; // 0 to 1 (1945 to future)
+        let isPlaying = false;
+        let currentMode = 'journey'; // 'journey', 'comparison', 'phases', 'future'
+        let animationFrame;
+        
+        const milestones = [
+            { year: 1945, progress: 0, title: 'Category Theory Born', subtitle: 'Eilenberg & Mac Lane', desc: 'Objects, arrows, composition: foundation for abstraction', color: 0xf1c40f },
+            { year: 1960, progress: 0.15, title: 'Grothendieck\'s Vision', subtitle: 'Higher Categories', desc: 'We need ∞-categories! Set theory cannot express this', color: 0xf39c12 },
+            { year: 2009, progress: 0.5, title: 'Higher Topos Theory', subtitle: 'Jacob Lurie', desc: '944 pages. Foundation in ZFC. Beautiful but inaccessible', color: 0x9b59b6 },
+            { year: 2012, progress: 0.65, title: 'Univalence Axiom', subtitle: 'Vladimir Voevodsky', desc: 'Identity is equivalent to equivalence. Foundations begin to shift', color: 0x8e44ad },
+            { year: 2017, progress: 0.8, title: 'Simplicial HoTT', subtitle: 'Riehl & Shulman', desc: '5 lines define pre-∞-categories. 900 pages → 5 lines', color: 0x2ecc71 },
+            { year: 2023, progress: 0.9, title: 'Rzk Proof Assistant', subtitle: 'Kudasov & Team', desc: 'Yoneda lemma formalized. Teaching ∞-categories to computers', color: 0x27ae60 },
+            { year: 2025, progress: 1.0, title: 'Cathedral Complete', subtitle: 'The Present', desc: 'Foundation laid for the next generation', color: 0x1abc9c }
+        ];
+        
+        let objects = {
+            path: null,
+            milestones: [],
+            httTower: null,
+            rzkSpire: null,
+            phaseCrystals: [],
+            particles: [],
+            futurePaths: []
+        };
+        
+        // ==================== INITIALIZATION ====================
+        
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 50, 200);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 30);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            const spotlight = new THREE.SpotLight(0x4a90e2, 2);
+            spotlight.position.set(0, 50, 0);
+            spotlight.angle = Math.PI / 6;
+            spotlight.penumbra = 0.5;
+            spotlight.castShadow = true;
+            scene.add(spotlight);
+            
+            // Build scene
+            buildTimeline();
+            buildMilestones();
+            buildHTTTower();
+            buildRzkSpire();
+            buildPhaseCrystals();
+            buildFuturePaths();
+            
+            // Events
+            window.addEventListener('resize', onWindowResize);
+            setupTimelineInteraction();
+            
+            // Hide loading screen
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+            }, 1000);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // ==================== SCENE BUILDING ====================
+        
+        function buildTimeline() {
+            // Create flowing path through space
+            const curve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(-40, 0, 20),
+                new THREE.Vector3(-20, 5, 10),
+                new THREE.Vector3(0, 8, 0),
+                new THREE.Vector3(20, 10, -10),
+                new THREE.Vector3(40, 12, -20),
+                new THREE.Vector3(60, 15, -25)
+            ]);
+            
+            const points = curve.getPoints(200);
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0x4a90e2,
+                linewidth: 3,
+                opacity: 0.8,
+                transparent: true
+            });
+            
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            
+            objects.path = { curve, line };
+        }
+        
+        function buildMilestones() {
+            milestones.forEach((milestone, i) => {
+                const pos = objects.path.curve.getPointAt(milestone.progress);
+                
+                // Icosahedron geometry
+                const size = 1 + (i * 0.2);
+                const geometry = new THREE.IcosahedronGeometry(size, 0);
+                const material = new THREE.MeshPhongMaterial({
+                    color: milestone.color,
+                    emissive: milestone.color,
+                    emissiveIntensity: 0.3,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.copy(pos);
+                mesh.userData = milestone;
+                scene.add(mesh);
+                
+                objects.milestones.push(mesh);
+                
+                // Add glow
+                const glowGeometry = new THREE.IcosahedronGeometry(size * 1.3, 0);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: milestone.color,
+                    transparent: true,
+                    opacity: 0.2
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                glow.position.copy(pos);
+                scene.add(glow);
+            });
+        }
+        
+        function buildHTTTower() {
+            // Massive dark tower (Lurie's HTT)
+            const pos = objects.path.curve.getPointAt(0.5);
+            
+            const geometry = new THREE.BoxGeometry(3, 30, 3);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x2c3e50,
+                emissive: 0x9b59b6,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0
+            });
+            
+            const tower = new THREE.Mesh(geometry, material);
+            tower.position.set(pos.x, 15, pos.z);
+            scene.add(tower);
+            
+            objects.httTower = tower;
+        }
+        
+        function buildRzkSpire() {
+            // Elegant spire (Rzk)
+            const pos = objects.path.curve.getPointAt(0.9);
+            
+            const geometry = new THREE.ConeGeometry(0.5, 2, 8);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x2ecc71,
+                emissive: 0x2ecc71,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0
+            });
+            
+            const spire = new THREE.Mesh(geometry, material);
+            spire.position.set(pos.x, 1, pos.z);
+            scene.add(spire);
+            
+            objects.rzkSpire = spire;
+        }
+        
+        function buildPhaseCrystals() {
+            const phaseConfigs = [
+                { color: 0xf1c40f, geometry: new THREE.BoxGeometry(2, 2, 2), pos: [-15, 20, 5] },
+                { color: 0x3498db, geometry: new THREE.OctahedronGeometry(1.5), pos: [-5, 22, 8] },
+                { color: 0x9b59b6, geometry: new THREE.DodecahedronGeometry(1.3), pos: [5, 24, 6] },
+                { color: 0xe67e22, geometry: new THREE.IcosahedronGeometry(1.4, 0), pos: [15, 26, 4] },
+                { color: 0x2ecc71, geometry: new THREE.TetrahedronGeometry(1.8), pos: [25, 28, 2] }
+            ];
+            
+            phaseConfigs.forEach(config => {
+                const material = new THREE.MeshPhongMaterial({
+                    color: config.color,
+                    emissive: config.color,
+                    emissiveIntensity: 0.4,
+                    transparent: true,
+                    opacity: 0
+                });
+                
+                const crystal = new THREE.Mesh(config.geometry, material);
+                crystal.position.set(...config.pos);
+                scene.add(crystal);
+                
+                objects.phaseCrystals.push(crystal);
+            });
+        }
+        
+        function buildFuturePaths() {
+            const basePos = objects.path.curve.getPointAt(1.0);
+            
+            const paths = [
+                { angle: -Math.PI / 6, length: 20, color: 0x2ecc71 },
+                { angle: 0, length: 25, color: 0x3498db },
+                { angle: Math.PI / 6, length: 22, color: 0x9b59b6 }
+            ];
+            
+            paths.forEach(pathData => {
+                const points = [];
+                for (let i = 0; i <= 20; i++) {
+                    const t = i / 20;
+                    const x = basePos.x + Math.cos(pathData.angle) * pathData.length * t;
+                    const y = basePos.y + pathData.length * 0.3 * t;
+                    const z = basePos.z + Math.sin(pathData.angle) * pathData.length * t;
+                    points.push(new THREE.Vector3(x, y, z));
+                }
+                
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({
+                    color: pathData.color,
+                    linewidth: 2,
+                    transparent: true,
+                    opacity: 0
+                });
+                
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                
+                objects.futurePaths.push(line);
+            });
+        }
+        
+        // ==================== ANIMATION ====================
+        
+        function animate() {
+            animationFrame = requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            
+            // Rotate milestones
+            objects.milestones.forEach((milestone, i) => {
+                milestone.rotation.y += 0.01;
+                milestone.rotation.x = Math.sin(time + i) * 0.1;
+            });
+            
+            // Rotate phase crystals
+            objects.phaseCrystals.forEach((crystal, i) => {
+                crystal.rotation.y += 0.02;
+                crystal.rotation.x += 0.01;
+                crystal.position.y += Math.sin(time * 2 + i) * 0.02;
+            });
+            
+            // Auto-play animation
+            if (isPlaying) {
+                timeline += 0.001;
+                if (timeline > 1.1) timeline = 0;
+                updateTimeline();
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        function updateTimeline() {
+            // Update UI
+            const progress = Math.min(timeline * 100, 100);
+            document.getElementById('timelineProgress').style.width = progress + '%';
+            
+            // Update camera
+            if (timeline <= 1.0) {
+                const pos = objects.path.curve.getPointAt(timeline);
+                const tangent = objects.path.curve.getTangentAt(timeline);
+                
+                camera.position.x = pos.x - tangent.x * 15;
+                camera.position.y = pos.y + 10;
+                camera.position.z = pos.z - tangent.z * 15 + 20;
+                camera.lookAt(pos);
+            }
+            
+            // Update narration
+            updateNarration();
+            
+            // Special events
+            if (timeline > 0.48 && timeline < 0.52) {
+                // HTT tower appears
+                objects.httTower.material.opacity = Math.min((timeline - 0.48) * 25, 0.9);
+            }
+            
+            if (timeline > 0.78 && timeline < 0.82) {
+                // Transformation sequence
+                const t = (timeline - 0.78) * 25;
+                objects.httTower.material.opacity = 0.9 * (1 - t);
+                objects.rzkSpire.material.opacity = t;
+                
+                if (t > 0.5) {
+                    document.getElementById('celebrationOverlay').classList.add('active');
+                }
+            }
+            
+            if (timeline > 0.82) {
+                document.getElementById('celebrationOverlay').classList.remove('active');
+            }
+        }
+        
+        function updateNarration() {
+            let current = null;
+            for (let i = milestones.length - 1; i >= 0; i--) {
+                if (timeline >= milestones[i].progress) {
+                    current = milestones[i];
+                    break;
+                }
+            }
+            
+            if (current) {
+                document.getElementById('narrationTitle').textContent = current.year + ': ' + current.title;
+                document.getElementById('narrationText').innerHTML = '<strong>' + current.subtitle + '</strong><br>' + current.desc;
+                document.getElementById('narrationBox').classList.add('visible');
+            }
+        }
+        
+        // ==================== CONTROLS ====================
+        
+        function startJourney() {
+            document.getElementById('titleScreen').classList.add('hidden');
+            document.getElementById('controls').classList.add('visible');
+            document.getElementById('timelineControl').classList.add('visible');
+            document.getElementById('narrationBox').classList.add('visible');
+            
+            isPlaying = true;
+            document.getElementById('playBtn').textContent = '⏸ Pause';
+            document.getElementById('playBtn').classList.add('active');
+        }
+        
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            const btn = document.getElementById('playBtn');
+            btn.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+            btn.classList.toggle('active');
+        }
+        
+        function showComparison() {
+            document.getElementById('statsPanel').classList.add('visible');
+            document.getElementById('comparisonBtn').classList.add('active');
+            
+            // Animate to HTT tower
+            timeline = 0.5;
+            isPlaying = false;
+            updateTimeline();
+            
+            // Show both towers
+            objects.httTower.material.opacity = 0.9;
+            objects.rzkSpire.material.opacity = 0.9;
+            objects.rzkSpire.position.x = objects.httTower.position.x + 8;
+            
+            setTimeout(() => {
+                document.getElementById('comparisonBtn').classList.remove('active');
+            }, 5000);
+        }
+        
+        function showPhases() {
+            document.getElementById('phaseLegend').classList.add('visible');
+            document.getElementById('phasesBtn').classList.add('active');
+            
+            // Make crystals visible and converge
+            objects.phaseCrystals.forEach((crystal, i) => {
+                crystal.material.opacity = 1;
+                
+                // Animate convergence
+                const targetPos = new THREE.Vector3(20, 15, -10);
+                const startPos = crystal.position.clone();
+                
+                let t = 0;
+                const converge = setInterval(() => {
+                    t += 0.02;
+                    if (t >= 1) {
+                        clearInterval(converge);
+                        return;
+                    }
+                    
+                    crystal.position.lerpVectors(startPos, targetPos, t);
+                }, 20);
+            });
+            
+            setTimeout(() => {
+                document.getElementById('phasesBtn').classList.remove('active');
+            }, 5000);
+        }
+        
+        function showFuture() {
+            document.getElementById('futurePathsPanel').classList.add('visible');
+            document.getElementById('futureBtn').classList.add('active');
+            
+            // Animate to future
+            timeline = 1.0;
+            isPlaying = false;
+            updateTimeline();
+            
+            // Show future paths
+            objects.futurePaths.forEach((path, i) => {
+                setTimeout(() => {
+                    let opacity = 0;
+                    const fade = setInterval(() => {
+                        opacity += 0.05;
+                        path.material.opacity = opacity;
+                        if (opacity >= 0.8) clearInterval(fade);
+                    }, 30);
+                }, i * 500);
+            });
+            
+            setTimeout(() => {
+                document.getElementById('futureBtn').classList.remove('active');
+            }, 8000);
+        }
+        
+        function resetCamera() {
+            timeline = 0;
+            isPlaying = false;
+            updateTimeline();
+            
+            // Hide special panels
+            document.getElementById('statsPanel').classList.remove('visible');
+            document.getElementById('phaseLegend').classList.remove('visible');
+            document.getElementById('futurePathsPanel').classList.remove('visible');
+            
+            // Reset objects
+            objects.httTower.material.opacity = 0;
+            objects.rzkSpire.material.opacity = 0;
+            objects.phaseCrystals.forEach(c => c.material.opacity = 0);
+            objects.futurePaths.forEach(p => p.material.opacity = 0);
+        }
+        
+        function setupTimelineInteraction() {
+            const slider = document.getElementById('timelineSlider');
+            
+            slider.addEventListener('click', (e) => {
+                const rect = slider.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = x / rect.width;
+                
+                timeline = percent * 1.1;
+                isPlaying = false;
+                updateTimeline();
+            });
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // ==================== START ====================
+        
+        init();
+    </script>
+</body>
+</html>
