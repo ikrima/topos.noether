@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expert Perverse Sheaves: Riemann-Hilbert & Beyond</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Deep space palette */
+      --void: #000000;
+      --deep-1: #050508;
+      --deep-2: #0a0a12;
+      --deep-3: #0f0f1a;
+      --surface-1: #141424;
+      --surface-2: #1a1a2e;
+      --surface-3: #202038;
+      
+      /* Accent colors - mathematical themes */
+      --gold: #ffd700;
+      --amber: #ffbf00;
+      --ruby: #e0115f;
+      --sapphire: #0f52ba;
+      --emerald: #50c878;
+      --amethyst: #9966cc;
+      
+      /* Functional colors */
+      --text-1: #ffffff;
+      --text-2: #d0d0e0;
+      --text-3: #a0a0b8;
+      --text-4: #707088;
+      
+      /* Borders and glows */
+      --border-dim: rgba(255, 255, 255, 0.06);
+      --border-med: rgba(255, 255, 255, 0.12);
+      --border-bright: rgba(255, 255, 255, 0.18);
+      
+      --glow-gold: rgba(255, 215, 0, 0.4);
+      --glow-ruby: rgba(224, 17, 95, 0.4);
+      --glow-sapphire: rgba(15, 82, 186, 0.4);
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+      background: var(--void);
+      color: var(--text-1);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .app-wrapper {
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* Animated background gradients */
+    .bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .gradient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    .gradient-orb:nth-child(1) {
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--ruby), transparent);
+      top: -10%;
+      left: -10%;
+      animation-delay: 0s;
+    }
+
+    .gradient-orb:nth-child(2) {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--sapphire), transparent);
+      top: 40%;
+      right: -10%;
+      animation-delay: -7s;
+    }
+
+    .gradient-orb:nth-child(3) {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--emerald), transparent);
+      bottom: -10%;
+      left: 30%;
+      animation-delay: -14s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate(0, 0) scale(1);
+      }
+      33% {
+        transform: translate(30px, -30px) scale(1.1);
+      }
+      66% {
+        transform: translate(-20px, 20px) scale(0.9);
+      }
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Masthead */
+    .masthead {
+      text-align: center;
+      padding: 5rem 0 6rem;
+      position: relative;
+    }
+
+    .masthead-ornament {
+      margin: 0 auto 2rem;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--gold), var(--amber));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      box-shadow: 0 0 40px var(--glow-gold);
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 40px var(--glow-gold);
+      }
+      50% {
+        box-shadow: 0 0 60px var(--glow-gold);
+      }
+    }
+
+    .masthead-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 4.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--amber) 50%, var(--ruby) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .masthead-subtitle {
+      font-size: 1.4rem;
+      color: var(--text-2);
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+
+    .masthead-desc {
+      max-width: 900px;
+      margin: 0 auto;
+      font-size: 1.15rem;
+      color: var(--text-3);
+      line-height: 1.9;
+    }
+
+    /* Navigation */
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 3rem;
+      padding-bottom: 0;
+      border-bottom: 1px solid var(--border-dim);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-tab {
+      padding: 1.25rem 2rem;
+      background: none;
+      border: none;
+      color: var(--text-3);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .nav-tab:hover {
+      color: var(--text-1);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .nav-tab.active {
+      color: var(--gold);
+      background: rgba(255, 215, 0, 0.05);
+    }
+
+    .nav-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--ruby));
+      animation: tab-slide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes tab-slide {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    /* Panel */
+    .panel {
+      background: linear-gradient(135deg, var(--deep-2), var(--deep-3));
+      border: 1px solid var(--border-med);
+      border-radius: 20px;
+      padding: 3rem;
+      animation: panel-enter 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0.5;
+    }
+
+    @keyframes panel-enter {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .panel-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--amber), var(--ruby));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .panel-lead {
+      font-size: 1.1rem;
+      color: var(--text-2);
+      line-height: 1.8;
+      max-width: 900px;
+    }
+
+    /* Content sections */
+    .content-section {
+      margin: 3rem 0;
+    }
+
+    .section-heading {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .section-heading::before {
+      content: '';
+      width: 4px;
+      height: 2rem;
+      background: linear-gradient(180deg, var(--gold), var(--amber));
+      border-radius: 2px;
+    }
+
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-dim);
+      border-radius: 16px;
+      padding: 2.5rem;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.03), rgba(224, 17, 95, 0.03));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: var(--border-bright);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .card-text {
+      color: var(--text-2);
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .meta-tag {
+      padding: 0.5rem 1rem;
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--amber);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.02em;
+    }
+
+    /* Diagram container */
+    .diagram-stage {
+      background: var(--deep-1);
+      border: 1px solid var(--border-dim);
+      border-radius: 16px;
+      padding: 3rem;
+      margin: 2rem 0;
+      min-height: 500px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .diagram-caption {
+      position: absolute;
+      top: 1.5rem;
+      left: 1.5rem;
+      padding: 0.75rem 1.25rem;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--amber);
+      backdrop-filter: blur(10px);
+    }
+
+    /* SVG styling */
+    .svg-node {
+      fill: var(--surface-2);
+      stroke: var(--gold);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 8px var(--glow-gold));
+      transition: all 0.3s ease;
+    }
+
+    .svg-node:hover {
+      fill: var(--surface-3);
+      stroke: var(--amber);
+      filter: drop-shadow(0 0 15px var(--glow-gold));
+    }
+
+    .svg-link {
+      stroke: rgba(255, 215, 0, 0.3);
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#arrow-gold);
+    }
+
+    .svg-link-dual {
+      stroke: rgba(224, 17, 95, 0.4);
+      stroke-width: 2;
+      stroke-dasharray: 5, 5;
+      marker-end: url(#arrow-ruby);
+    }
+
+    .svg-text {
+      fill: var(--text-1);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    .svg-label {
+      fill: var(--amber);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    /* Code blocks */
+    .code-panel {
+      background: var(--deep-1);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .code-panel::before {
+      content: '< >';
+      position: absolute;
+      top: 1rem;
+      right: 1.5rem;
+      color: var(--border-med);
+      font-size: 1.2rem;
+    }
+
+    .code-keyword {
+      color: var(--ruby);
+      font-weight: 500;
+    }
+
+    .code-function {
+      color: var(--sapphire);
+    }
+
+    .code-string {
+      color: var(--emerald);
+    }
+
+    .code-comment {
+      color: var(--text-4);
+      font-style: italic;
+    }
+
+    .code-operator {
+      color: var(--amethyst);
+    }
+
+    /* Theorem boxes */
+    .theorem-box {
+      background: linear-gradient(135deg, rgba(15, 82, 186, 0.08), rgba(153, 102, 204, 0.08));
+      border: 2px solid var(--sapphire);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin: 2.5rem 0;
+      position: relative;
+    }
+
+    .theorem-box::before {
+      content: 'THEOREM';
+      position: absolute;
+      top: -14px;
+      left: 2.5rem;
+      background: var(--deep-2);
+      padding: 0 1.5rem;
+      color: var(--sapphire);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .theorem-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .theorem-statement {
+      color: var(--text-1);
+      line-height: 1.9;
+      font-size: 1.05rem;
+    }
+
+    /* Definition boxes */
+    .definition-box {
+      background: linear-gradient(135deg, rgba(80, 200, 120, 0.06), rgba(15, 82, 186, 0.06));
+      border-left: 4px solid var(--emerald);
+      padding: 2rem;
+      margin: 2rem 0;
+      border-radius: 8px;
+    }
+
+    .definition-box h4 {
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--emerald);
+      font-size: 1.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .definition-box p {
+      color: var(--text-2);
+      line-height: 1.8;
+    }
+
+    /* Interactive controls */
+    .controls-panel {
+      background: var(--surface-1);
+      border: 1px solid var(--border-dim);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 250px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .control-label {
+      font-size: 0.9rem;
+      color: var(--text-3);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .control-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--deep-2);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      color: var(--text-1);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    .control-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: linear-gradient(90deg, var(--border-dim), var(--gold));
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      background: var(--gold);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 15px var(--glow-gold);
+      border: 3px solid var(--deep-1);
+      transition: all 0.2s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 25px var(--glow-gold);
+    }
+
+    .btn {
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, var(--gold), var(--amber));
+      border: none;
+      border-radius: 10px;
+      color: var(--void);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      letter-spacing: 0.03em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.5s, height 0.5s;
+    }
+
+    .btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px var(--glow-gold);
+    }
+
+    .btn:active {
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text-1);
+      border: 1px solid var(--border-med);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+    }
+
+    /* Canvas container */
+    .canvas-box {
+      width: 100%;
+      height: 600px;
+      background: var(--deep-1);
+      border: 1px solid var(--border-dim);
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .canvas-overlay-info {
+      position: absolute;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: 1rem 1.5rem;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--border-dim);
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-2);
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .masthead-title {
+        font-size: 3rem;
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls-panel {
+        flex-direction: column;
+      }
+
+      .control-group {
+        min-width: 100%;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--deep-1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, var(--gold), var(--amber));
+      border-radius: 6px;
+      border: 2px solid var(--deep-1);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, var(--amber), var(--ruby));
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // Background component
+    const AnimatedBackground = () => (
+      <div className="bg-canvas">
+        <div className="gradient-orb"></div>
+        <div className="gradient-orb"></div>
+        <div className="gradient-orb"></div>
+      </div>
+    );
+
+    // Enhanced diagram with force-directed layout
+    const ForceDiagram = ({ nodes, links, title }) => {
+      const svgRef = useRef(null);
+      const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+
+      useEffect(() => {
+        if (!svgRef.current) return;
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
+
+        const { width, height } = dimensions;
+
+        // Define arrow markers
+        const defs = svg.append('defs');
+        
+        ['arrow-gold', 'arrow-ruby'].forEach((id, idx) => {
+          defs.append('marker')
+            .attr('id', id)
+            .attr('viewBox', '0 0 10 10')
+            .attr('refX', 25)
+            .attr('refY', 5)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+            .attr('fill', idx === 0 ? '#ffd700' : '#e0115f');
+        });
+
+        // Create force simulation
+        const simulation = d3.forceSimulation(nodes)
+          .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+          .force('charge', d3.forceManyBody().strength(-300))
+          .force('center', d3.forceCenter(width / 2, height / 2))
+          .force('collision', d3.forceCollide().radius(60));
+
+        // Create links
+        const link = svg.append('g')
+          .selectAll('line')
+          .data(links)
+          .join('line')
+          .attr('class', d => d.dual ? 'svg-link-dual' : 'svg-link');
+
+        // Create link labels
+        const linkLabel = svg.append('g')
+          .selectAll('text')
+          .data(links.filter(d => d.label))
+          .join('text')
+          .attr('class', 'svg-label')
+          .text(d => d.label);
+
+        // Create nodes
+        const node = svg.append('g')
+          .selectAll('g')
+          .data(nodes)
+          .join('g')
+          .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended));
+
+        node.append('circle')
+          .attr('class', 'svg-node')
+          .attr('r', d => d.radius || 45);
+
+        node.append('text')
+          .attr('class', 'svg-text')
+          .selectAll('tspan')
+          .data(d => d.label.split('\n'))
+          .join('tspan')
+          .attr('x', 0)
+          .attr('dy', (d, i) => i === 0 ? '-0.5em' : '1.2em')
+          .text(d => d);
+
+        // Update positions on tick
+        simulation.on('tick', () => {
+          link
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+
+          linkLabel
+            .attr('x', d => (d.source.x + d.target.x) / 2)
+            .attr('y', d => (d.source.y + d.target.y) / 2 - 10);
+
+          node.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+
+        function dragstarted(event) {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          event.subject.fx = event.subject.x;
+          event.subject.fy = event.subject.y;
+        }
+
+        function dragged(event) {
+          event.subject.fx = event.x;
+          event.subject.fy = event.y;
+        }
+
+        function dragended(event) {
+          if (!event.active) simulation.alphaTarget(0);
+          event.subject.fx = null;
+          event.subject.fy = null;
+        }
+
+        return () => simulation.stop();
+      }, [nodes, links, dimensions]);
+
+      return (
+        <div className="diagram-stage">
+          {title && <div className="diagram-caption">{title}</div>}
+          <svg ref={svgRef} width="100%" height={dimensions.height} viewBox={`0 0 ${dimensions.width} ${dimensions.height}`} />
+        </div>
+      );
+    };
+
+    // Component 1: Riemann-Hilbert Correspondence
+    const RiemannHilbertPanel = () => {
+      const [example, setExample] = useState('fuchsian');
+
+      const examples = {
+        fuchsian: {
+          name: 'Fuchsian ODEs',
+          equation: 'd/dz + A(z) with poles at z_1,...,z_n',
+          description: 'Regular singular differential equations correspond to local systems. Connection matrices at singularities = monodromy matrices.',
+          correspondence: {
+            left: 'Regular holonomic D-module M',
+            right: 'Perverse sheaf F = DR(M)',
+            relation: 'DR: D-mod → Perv is equivalence'
+          }
+        },
+        gauss: {
+          name: 'Gauss Hypergeometric',
+          equation: 'z(1-z)f\'\' + (c-(a+b+1)z)f\' - abf = 0',
+          description: 'Hypergeometric equation has 3 regular singular points: 0, 1, ∞. Monodromy around these points generates representation.',
+          correspondence: {
+            left: 'Hypergeometric D-module',
+            right: 'Local system on ℙ¹\\{0,1,∞}',
+            relation: 'Solutions = flat sections of connection'
+          }
+        },
+        rendering: {
+          name: 'Rendering Equation Analogy',
+          equation: 'L_o(x,ω_o) = L_e + ∫ f_r L_i dω_i',
+          description: 'The rendering equation is a Fredholm equation of 2nd kind. Solutions = radiancedistributions, analogous to flat sections of sheaf.',
+          correspondence: {
+            left: 'Integral operator K',
+            right: 'Endomorphism of light transport sheaf',
+            relation: 'Fixed points = equilibrium distributions'
+          }
+        }
+      };
+
+      const current = examples[example];
+
+      const rhNodes = [
+        { id: 'dmod', label: 'D-modules\n(DX-mod)' },
+        { id: 'perv', label: 'Perverse\nSheaves' },
+        { id: 'ode', label: 'ODEs with\nsingularities' },
+        { id: 'local', label: 'Local\nSystems' },
+        { id: 'mon', label: 'Monodromy\nReps' }
+      ];
+
+      const rhLinks = [
+        { source: 'dmod', target: 'perv', label: 'DR', dual: false },
+        { source: 'perv', target: 'dmod', label: 'Sol', dual: true },
+        { source: 'dmod', target: 'ode', label: '', dual: false },
+        { source: 'perv', target: 'local', label: '', dual: false },
+        { source: 'local', target: 'mon', label: 'ρ', dual: false }
+      ];
+
+      return (
+        <div className="panel">
+          <div className="panel-header">
+            <h2 className="panel-title">Riemann-Hilbert Correspondence</h2>
+            <p className="panel-lead">
+              The deepest bridge between analysis and topology: regular holonomic D-modules ↔ perverse sheaves.
+              Differential equations with singularities correspond to local systems with monodromy.
+            </p>
+          </div>
+
+          <div className="controls-panel">
+            <div className="control-group">
+              <label className="control-label">Select Example</label>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {Object.keys(examples).map(key => (
+                  <button
+                    key={key}
+                    className={example === key ? 'btn' : 'btn btn-secondary'}
+                    onClick={() => setExample(key)}
+                    style={{ padding: '0.75rem 1.5rem' }}
+                  >
+                    {examples[key].name.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="card-grid">
+            <div className="card">
+              <h3 className="card-title">{current.name}</h3>
+              <p className="card-text"><strong>Equation:</strong> {current.equation}</p>
+              <p className="card-text">{current.description}</p>
+              <div className="card-meta">
+                <span className="meta-tag">Analytic side</span>
+                <span className="meta-tag">Topological side</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">The Correspondence</h3>
+              <p className="card-text">
+                <strong>D-module:</strong> {current.correspondence.left}<br/>
+                <strong>Perverse sheaf:</strong> {current.correspondence.right}
+              </p>
+              <p className="card-text">
+                <strong>Bridge:</strong> {current.correspondence.relation}
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">DR functor</span>
+                <span className="meta-tag">Sol functor</span>
+              </div>
+            </div>
+          </div>
+
+          <ForceDiagram
+            nodes={rhNodes}
+            links={rhLinks}
+            title="Riemann-Hilbert Dictionary"
+          />
+
+          <div className="theorem-box">
+            <h4 className="theorem-title">Riemann-Hilbert Correspondence</h4>
+            <p className="theorem-statement">
+              The de Rham functor DR: D^b_rh(DX-mod) → D^b_c(X, ℂ) restricts to an equivalence
+              between the abelian category of regular holonomic D-modules and perverse sheaves.
+              <br/><br/>
+              Concretely: solutions to differential equations = flat sections of sheaves = elements killed by connection.
+            </p>
+          </div>
+
+          <div className="definition-box">
+            <h4>Connection to Rendering</h4>
+            <p>
+              The rendering equation L_o = L_e + K(L_o) is a Fredholm equation. Its solutions (radiance distributions)
+              are analogous to flat sections: they're "parallel transported" along light paths, satisfying a differential
+              constraint. The operator K plays the role of a connection, and fixed points are the "flat sections."
+              <br/><br/>
+              Path tracing samples these flat sections via Monte Carlo, just like we'd compute monodromy by following paths.
+            </p>
+          </div>
+
+          <div className="code-panel">
+            <span className="code-comment">// Riemann-Hilbert in code</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">RiemannHilbert</span> = (M) <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'  '}<span className="code-comment">// M is regular holonomic D-module</span><br/>
+            {'  '}<span className="code-keyword">const</span> connection = compute_connection(M);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// DR functor: take kernel of connection</span><br/>
+            {'  '}<span className="code-keyword">const</span> flat_sections = ker(connection);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// This gives local system</span><br/>
+            {'  '}<span className="code-keyword">const</span> local_system = sheafify(flat_sections);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Extend to IC complex</span><br/>
+            {'  '}<span className="code-keyword">return</span> IC_extension(local_system);<br/>
+            {`}`}<br/>
+            <br/>
+            <span className="code-comment">// Inverse: Sol functor</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">SolutionSheaf</span> = (F) <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'  '}<span className="code-comment">// F is perverse sheaf</span><br/>
+            {'  '}<span className="code-keyword">const</span> connection = flat_connection(F);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Recover D-module from solutions</span><br/>
+            {'  '}<span className="code-keyword">return</span> {`{ sections: F, differential: connection }`};<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 2: Springer Theory
+    const SpringerTheoryPanel = () => {
+      const [example, setExample] = useState('sl2');
+
+      const examples = {
+        sl2: {
+          name: 'SL(2) Springer',
+          description: 'Nilpotent cone N ⊂ sl(2) has two orbits: {0} and regular nilpotents. Resolution T*ℙ¹ → N contracts zero section.',
+          orbits: [
+            { name: 'Zero orbit', dim: 0, rep: 'Trivial representation' },
+            { name: 'Regular orbit', dim: 2, rep: 'Sign representation' }
+          ],
+          decomposition: 'μ_* ℚ[1] = IC({0}) ⊕ IC(N_reg, sign)[1]'
+        },
+        sl3: {
+          name: 'SL(3) Springer',
+          description: 'Nilpotent cone has 3 orbits corresponding to Jordan blocks. Each orbit gives irreducible representation of S_3.',
+          orbits: [
+            { name: '{0}', dim: 0, rep: 'Trivial' },
+            { name: 'Subreg', dim: 4, rep: 'Sign' },
+            { name: 'Regular', dim: 6, rep: 'Standard' }
+          ],
+          decomposition: 'Springer resolution decomposes into IC sheaves, one per irrep of S_n'
+        },
+        general: {
+          name: 'General Reductive G',
+          description: 'For any reductive group G, Springer resolution μ: T*G/B → N gives geometric construction of irreps of Weyl group.',
+          orbits: [
+            { name: 'Orbit O_λ', dim: 'varies', rep: 'Irrep S_λ' }
+          ],
+          decomposition: 'μ_* ℚ[dim] = ⊕_λ IC(closure(O_λ), L_λ)^{⊕ dim λ}'
+        }
+      };
+
+      const current = examples[example];
+
+      return (
+        <div className="panel">
+          <div className="panel-header">
+            <h2 className="panel-title">Springer Theory</h2>
+            <p className="panel-lead">
+              Geometric representation theory via perverse sheaves. The Springer resolution gives
+              a geometric construction of all irreducible representations of the Weyl group.
+            </p>
+          </div>
+
+          <div className="controls-panel">
+            <div className="control-group">
+              <label className="control-label">Select Group</label>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {Object.keys(examples).map(key => (
+                  <button
+                    key={key}
+                    className={example === key ? 'btn' : 'btn btn-secondary'}
+                    onClick={() => setExample(key)}
+                    style={{ padding: '0.75rem 1.5rem' }}
+                  >
+                    {examples[key].name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="card-title">{current.name}</h3>
+            <p className="card-text">{current.description}</p>
+            
+            <div style={{ marginTop: '2rem' }}>
+              <h4 style={{ color: 'var(--gold)', marginBottom: '1rem', fontSize: '1.2rem' }}>
+                Nilpotent Orbits → Representations
+              </h4>
+              {current.orbits.map((orbit, idx) => (
+                <div key={idx} style={{ 
+                  padding: '1rem', 
+                  background: 'var(--deep-2)', 
+                  borderRadius: '8px',
+                  marginBottom: '0.75rem',
+                  border: '1px solid var(--border-dim)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--amber)' }}>
+                      {orbit.name}
+                    </span>
+                    <span style={{ color: 'var(--text-3)' }}>
+                      dim = {orbit.dim}
+                    </span>
+                    <span style={{ color: 'var(--emerald)' }}>
+                      {orbit.rep}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ 
+              marginTop: '2rem', 
+              padding: '1.5rem', 
+              background: 'var(--deep-1)', 
+              borderRadius: '10px',
+              border: '2px solid var(--gold)',
+              fontFamily: 'JetBrains Mono, monospace',
+              color: 'var(--gold)',
+              textAlign: 'center',
+              fontSize: '1.05rem'
+            }}>
+              {current.decomposition}
+            </div>
+          </div>
+
+          <div className="theorem-box">
+            <h4 className="theorem-title">Springer Correspondence</h4>
+            <p className="theorem-statement">
+              Let G be a reductive group with Weyl group W. The Springer resolution μ: T*G/B → N
+              satisfies:<br/><br/>
+              μ_* ℚ[dim] ≅ ⊕_λ∈Ŵ IC(closure(O_λ), L_λ)^{⊕ dim λ}
+              <br/><br/>
+              where Ŵ are irreps of W, O_λ are nilpotent orbits, and multiplicity = dimension of representation.
+              This gives a bijection: {nilpotent orbits} ↔ {irreps of W}.
+            </p>
+          </div>
+
+          <div className="definition-box">
+            <h4>Connection to Your Symmetry Work</h4>
+            <p>
+              Springer theory is pure eigenobject decomposition! The Springer resolution μ is equivariant
+              under a huge symmetry group, and perverse decomposition extracts the eigenspaces (IC sheaves on orbits).
+              Each IC sheaf is an eigenobject for the symmetry, labeled by representations.
+              <br/><br/>
+              This connects to your Prime Bundle framework: orbits stratify like prime-generated structure,
+              and the IC sheaves are the "atoms" at each level of the stratification.
+            </p>
+          </div>
+
+          <div className="code-panel">
+            <span className="code-comment">// Springer construction</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">SpringerTheory</span> = (G) <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'  '}<span className="code-keyword">const</span> B = Borel_subgroup(G);<br/>
+            {'  '}<span className="code-keyword">const</span> N = nilpotent_cone(Lie(G));<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Springer resolution: cotangent bundle of flag variety</span><br/>
+            {'  '}<span className="code-keyword">const</span> μ = map(T_star(G/B), N);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Compute direct image</span><br/>
+            {'  '}<span className="code-keyword">const</span> pushforward = μ_star(ℚ[dim(T_star(G/B))]);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Decompose into IC sheaves</span><br/>
+            {'  '}<span className="code-keyword">const</span> orbits = nilpotent_orbits(N);<br/>
+            {'  '}<span className="code-keyword">const</span> IC_summands = orbits.map(O <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'    '}<span className="code-keyword">const</span> local_system = compute_springer_local_system(O);<br/>
+            {'    '}<span className="code-keyword">return</span> IC(closure(O), local_system);<br/>
+            {'  '}{'});'}<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-keyword">return</span> {`{ correspondence: zip(orbits, irreps(Weyl(G))) }`};<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 3: Microlocal Sheaves
+    const MicrolocalPanel = () => {
+      const [showCharCycle, setShowCharCycle] = useState(false);
+
+      return (
+        <div className="panel">
+          <div className="panel-header">
+            <h2 className="panel-title">Microlocal Sheaves</h2>
+            <p className="panel-lead">
+              The characteristic cycle lives in T*X (cotangent bundle) and measures "directions of singularities."
+              This is the link between perverse sheaves and symplectic geometry.
+            </p>
+          </div>
+
+          <div className="card-grid">
+            <div className="card">
+              <h3 className="card-title">Characteristic Cycle CC(F)</h3>
+              <p className="card-text">
+                For F ∈ Perv(X), the characteristic cycle CC(F) ⊂ T*X is a Lagrangian cycle.
+                It measures which directions (covectors) the sheaf "sees singularities."
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Lagrangian</span>
+                <span className="meta-tag">Conical</span>
+                <span className="meta-tag">Invariant</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">Microlocal Morse Lemma</h3>
+              <p className="card-text">
+                Near a point (x, ξ) ∈ SS(F) (singular support), there exists a function f with
+                df(x) = ξ such that F ≅ ψ_f(F'), relating microlocal geometry to nearby cycles.
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Local description</span>
+                <span className="meta-tag">Quantization</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">Index Theorem</h3>
+              <p className="card-text">
+                For f: X → Y proper, the characteristic cycle satisfies:
+                CC(f_* F) = f_*(CC(F)) (as cycles in T*Y).
+                This is a sheaf-theoretic version of Atiyah-Singer.
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Pushforward</span>
+                <span className="meta-tag">Functorial</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">Rendering Connection</h3>
+              <p className="card-text">
+                The cotangent bundle T*X parametrizes (position, direction) = phase space of light rays.
+                Characteristic cycles measure which ray directions carry "information" (singularities).
+                This is exactly the transport operator in rendering: propagation along characteristics!
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Phase space</span>
+                <span className="meta-tag">Ray tracing</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="controls-panel">
+            <button
+              className="btn"
+              onClick={() => setShowCharCycle(!showCharCycle)}
+            >
+              {showCharCycle ? 'Hide' : 'Show'} Characteristic Cycle Example
+            </button>
+          </div>
+
+          {showCharCycle && (
+            <div className="card" style={{ marginTop: '2rem' }}>
+              <h3 className="card-title">Example: Constant Sheaf on Closed Disc</h3>
+              <p className="card-text">
+                Let D ⊂ ℂ be the unit disc, F = k_D the constant sheaf.
+              </p>
+              <div style={{ 
+                padding: '1.5rem', 
+                background: 'var(--deep-1)', 
+                borderRadius: '10px',
+                marginTop: '1rem',
+                fontFamily: 'JetBrains Mono, monospace'
+              }}>
+                <div style={{ color: 'var(--amber)', marginBottom: '0.75rem' }}>
+                  <strong>Singular support:</strong> SS(k_D) = T*_D X ∪ (conormal to ∂D)
+                </div>
+                <div style={{ color: 'var(--emerald)', marginBottom: '0.75rem' }}>
+                  <strong>Characteristic cycle:</strong> CC(k_D) = [T*_D X] + [N*∂D]
+                </div>
+                <div style={{ color: 'var(--text-2)' }}>
+                  The sheaf "has singularities" at the boundary, in all normal directions (pointing inward).
+                  This is the cotangent data that captures the boundary discontinuity.
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="theorem-box">
+            <h4 className="theorem-title">Microlocal Characterization of Perversity</h4>
+            <p className="theorem-statement">
+              A constructible sheaf F ∈ D^b_c(X) is perverse if and only if:<br/><br/>
+              1. CC(F) is Lagrangian (dimCC(F) = dim X)<br/>
+              2. CC(F) satisfies microlocal support conditions on strata
+              <br/><br/>
+              This gives a geometric (symplectic) characterization of the perverse t-structure.
+            </p>
+          </div>
+
+          <div className="definition-box">
+            <h4>Phase Space & Light Transport</h4>
+            <p>
+              In rendering, we work in phase space (x, ω) ∈ X × S². The radiancefield L(x, ω) is a function
+              on this space. Transport equation ω·∇L = source - sink propagates along characteristics
+              (straight lines in phase space).
+              <br/><br/>
+              Microlocal sheaf theory is the mathematical formalization of this! The characteristic cycle
+              CC(F) ⊂ T*X encodes exactly which ray directions (ω) carry the sheaf's information.
+              This is why wave propagation ↔ perverse sheaves: both use phase space geometry.
+            </p>
+          </div>
+
+          <div className="code-panel">
+            <span className="code-comment">// Microlocal perspective</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">CharacteristicCycle</span> = (F) <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'  '}<span className="code-comment">// F is constructible sheaf on X</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Singular support: where F is not locally constant</span><br/>
+            {'  '}<span className="code-keyword">const</span> SS = singular_support(F); <span className="code-comment">// subset of T*X</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Characteristic cycle: Lagrangian cycle with multiplicities</span><br/>
+            {'  '}<span className="code-keyword">const</span> CC = sum_over_strata(X, (S) <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'    '}<span className="code-keyword">const</span> multiplicity = euler_char(F|_S);<br/>
+            {'    '}<span className="code-keyword">return</span> multiplicity * [conormal_bundle(S)];<br/>
+            {'  '}{'});'}<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Check Lagrangian condition</span><br/>
+            {'  '}assert(dim(CC) === dim(X)); <span className="code-comment">// half-dimension of T*X</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-keyword">return</span> CC;<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 4: Hodge Modules
+    const HodgeModulesPanel = () => {
+      return (
+        <div className="panel">
+          <div className="panel-header">
+            <h2 className="panel-title">Hodge Modules</h2>
+            <p className="panel-lead">
+              Perverse sheaves equipped with compatible Hodge structures. The ultimate refinement:
+              topology + analysis + algebra unified into one object.
+            </p>
+          </div>
+
+          <div className="card-grid">
+            <div className="card">
+              <h3 className="card-title">Pure Hodge Modules</h3>
+              <p className="card-text">
+                A pure Hodge module of weight w on X combines:<br/>
+                • Perverse sheaf F (topology)<br/>
+                • Filtered D-module M (analysis)<br/>
+                • Hodge filtration compatible with both
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Weight w</span>
+                <span className="meta-tag">Filtered</span>
+                <span className="meta-tag">Compatible</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">Saito's Decomposition</h3>
+              <p className="card-text">
+                For proper f: X → Y with X smooth, f_* 𝒬_X^H[dim X] decomposes into
+                direct sum of pure Hodge modules. This refines BBD decomposition with Hodge data.
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Saito theory</span>
+                <span className="meta-tag">Refined BBD</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">Applications to Geometry</h3>
+              <p className="card-text">
+                • Purity of cohomology for proper maps<br/>
+                • Hodge-theoretic character formulas<br/>
+                • Geometric Langlands (automorphic side)<br/>
+                • Mirror symmetry statements
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Geometric</span>
+                <span className="meta-tag">Arithmetic</span>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 className="card-title">Your Research Connections</h3>
+              <p className="card-text">
+                Hodge modules connect to tropical geometry through degenerations.
+                As complex structure degenerates, Hodge filtration →tropical/combinatorial data.
+                This is your "polynomial-time shadow" philosophy!
+              </p>
+              <div className="card-meta">
+                <span className="meta-tag">Tropical</span>
+                <span className="meta-tag">Degeneration</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="theorem-box">
+            <h4 className="theorem-title">Saito's Decomposition Theorem</h4>
+            <p className="theorem-statement">
+              Let f: X → Y be proper with X smooth. Then in the category of mixed Hodge modules:
+              <br/><br/>
+              f_* 𝒬_X^H[dim X] ≅ ⊕_{i,λ} IC(Y̅_i, ℒ_λ^H)^{⊕ n_{i,λ}}
+              <br/><br/>
+              where ℒ_λ^H are polarizable pure Hodge modules (local systems + Hodge structure).
+              Each summand carries a pure Hodge structure of weight dim(Y_i) + shift.
+            </p>
+          </div>
+
+          <div className="definition-box">
+            <h4>The Complete Picture</h4>
+            <p>
+              Hodge modules are the ultimate synthesis:<br/>
+              <strong>Topology:</strong> Perverse sheaves (IC complexes)<br/>
+              <strong>Analysis:</strong> D-modules (differential equations)<br/>
+              <strong>Algebra:</strong> Hodge filtration (representation theory)
+              <br/><br/>
+              They unify Riemann-Hilbert, perverse sheaves, and Hodge theory into one framework.
+              This is the "maximally enriched" version of the theory, carrying all possible structure.
+            </p>
+          </div>
+
+          <div style={{ marginTop: '3rem', padding: '2rem', background: 'var(--surface-1)', borderRadius: '12px', border: '1px solid var(--border-dim)' }}>
+            <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.8rem', color: 'var(--gold)', marginBottom: '1.5rem' }}>
+              The Tower of Structures
+            </h3>
+            
+            {[
+              { level: '4', name: 'Hodge Modules', info: 'Topology + Analysis + Hodge structure' },
+              { level: '3', name: 'D-modules', info: 'Topology + Differential equations' },
+              { level: '2', name: 'Perverse Sheaves', info: 'Topology + Dimension shift' },
+              { level: '1', name: 'Constructible Sheaves', info: 'Pure topology' }
+            ].map((item, idx) => (
+              <div key={idx} style={{
+                padding: '1.25rem 1.5rem',
+                background: idx === 0 ? 'rgba(255, 215, 0, 0.08)' : 'var(--deep-2)',
+                border: `1px solid ${idx === 0 ? 'var(--gold)' : 'var(--border-dim)'}`,
+                borderRadius: '10px',
+                marginBottom: '1rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <span style={{ 
+                    fontFamily: 'JetBrains Mono, monospace', 
+                    color: 'var(--amber)',
+                    fontSize: '1.1rem',
+                    fontWeight: '600',
+                    marginRight: '1rem'
+                  }}>
+                    Level {item.level}:
+                  </span>
+                  <span style={{ 
+                    fontFamily: 'Cormorant Garamond, serif',
+                    fontSize: '1.3rem',
+                    color: 'var(--text-1)',
+                    fontWeight: '600'
+                  }}>
+                    {item.name}
+                  </span>
+                </div>
+                <span style={{ color: 'var(--text-3)', fontSize: '0.95rem' }}>
+                  {item.info}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="code-panel" style={{ marginTop: '2rem' }}>
+            <span className="code-comment">// Hodge module structure</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">HodgeModule</span> = {`{`}<br/>
+            {'  '}<span className="code-comment">// Underlying perverse sheaf</span><br/>
+            {'  '}perverse_sheaf: F,<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Compatible D-module via Riemann-Hilbert</span><br/>
+            {'  '}D_module: M, <span className="code-comment">// where DR(M) = F</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Hodge filtration on M</span><br/>
+            {'  '}hodge_filtration: F^•M,<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Weight</span><br/>
+            {'  '}weight: w,<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Compatibility: gr^F(M) carries pure Hodge structure</span><br/>
+            {'  '}pure_graded: <span className="code-keyword">true</span><br/>
+            {`}`};<br/>
+            <br/>
+            <span className="code-comment">// Functoriality: pushforward preserves Hodge modules!</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">pushforward_Hodge</span> = (f, 𝒬) <span className="code-operator">=&gt;</span> {`{`}<br/>
+            {'  '}<span className="code-keyword">return</span> f_star(𝒬); <span className="code-comment">// Still a Hodge module</span><br/>
+            {`}`};
+          </div>
+        </div>
+      );
+    };
+
+    // Main App
+    const App = () => {
+      const [activeTab, setActiveTab] = useState('rh');
+
+      const tabs = {
+        rh: { name: 'Riemann-Hilbert', component: RiemannHilbertPanel },
+        springer: { name: 'Springer Theory', component: SpringerTheoryPanel },
+        microlocal: { name: 'Microlocal', component: MicrolocalPanel },
+        hodge: { name: 'Hodge Modules', component: HodgeModulesPanel }
+      };
+
+      const ActivePanel = tabs[activeTab].component;
+
+      return (
+        <div className="app-wrapper">
+          <AnimatedBackground />
+          
+          <div className="content">
+            <header className="masthead">
+              <div className="masthead-ornament">∮</div>
+              <h1 className="masthead-title">Expert Perverse Sheaves</h1>
+              <p className="masthead-subtitle">Riemann-Hilbert • Springer • Microlocal • Hodge</p>
+              <p className="masthead-desc">
+                The deepest layers of perverse sheaf theory: differential equations, representation theory,
+                symplectic geometry, and Hodge structures. This is where the theory shows its full power,
+                connecting analysis, topology, algebra, and geometry into one unified framework.
+              </p>
+            </header>
+
+            <nav className="nav-tabs">
+              {Object.entries(tabs).map(([key, tab]) => (
+                <button
+                  key={key}
+                  className={`nav-tab ${activeTab === key ? 'active' : ''}`}
+                  onClick={() => setActiveTab(key)}
+                >
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+
+            <ActivePanel />
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

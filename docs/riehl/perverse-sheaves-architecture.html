@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perverse Sheaves: The Complete Architecture</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-void: #000000;
+      --bg-deep: #0a0a0f;
+      --bg-primary: #121218;
+      --bg-secondary: #1a1a24;
+      --bg-card: #252530;
+      
+      --gold: #d4af37;
+      --bronze: #cd7f32;
+      --silver: #c0c0c0;
+      --copper: #b87333;
+      
+      --cyan: #00d9ff;
+      --magenta: #ff006e;
+      --violet: #8338ec;
+      --lime: #06ffa5;
+      
+      --text-primary: #ffffff;
+      --text-secondary: #b8b8c8;
+      --text-muted: #7878;
+      
+      --border: rgba(255, 255, 255, 0.1);
+      --border-bright: rgba(255, 255, 255, 0.2);
+      
+      --glow-gold: rgba(212, 175, 55, 0.5);
+      --glow-cyan: rgba(0, 217, 255, 0.5);
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg-void);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .app {
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* Starfield Background */
+    .starfield {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s ease-in-out infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    /* Hero Header */
+    .hero {
+      text-align: center;
+      padding: 5rem 0 6rem;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--glow-gold), transparent 70%);
+      opacity: 0.15;
+      filter: blur(100px);
+      animation: pulse-hero 10s ease-in-out infinite;
+    }
+
+    @keyframes pulse-hero {
+      0%, 100% { opacity: 0.15; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.25; transform: translateX(-50%) scale(1.2); }
+    }
+
+    .hero-title {
+      font-family: 'Crimson Pro', serif;
+      font-size: 5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--gold), var(--silver), var(--copper));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-subtitle {
+      font-size: 1.3rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+
+    .hero-description {
+      max-width: 800px;
+      margin: 0 auto;
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+
+    /* Architecture Map */
+    .architecture-section {
+      margin: 4rem 0;
+    }
+
+    .section-title {
+      font-family: 'Crimson Pro', serif;
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 2rem;
+      text-align: center;
+      background: linear-gradient(135deg, var(--cyan), var(--magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .architecture-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+
+    .concept-card {
+      background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      position: relative;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .concept-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--magenta), var(--gold));
+      border-radius: 16px 16px 0 0;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .concept-card:hover::before {
+      opacity: 1;
+    }
+
+    .concept-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--border-bright);
+      box-shadow: 0 20px 60px rgba(0, 217, 255, 0.2);
+    }
+
+    .concept-icon {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--cyan), var(--magenta));
+      border-radius: 12px;
+      font-size: 2rem;
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    .concept-card h3 {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      color: var(--gold);
+    }
+
+    .concept-card p {
+      color: var(--text-secondary);
+      margin-bottom: 1.5rem;
+      line-height: 1.7;
+    }
+
+    .concept-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tag {
+      padding: 0.4rem 0.9rem;
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--cyan);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* Connection Map SVG */
+    .connection-map {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem;
+      margin: 3rem 0;
+    }
+
+    .connection-node {
+      fill: var(--bg-card);
+      stroke: var(--gold);
+      stroke-width: 2;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .connection-node:hover {
+      fill: var(--bg-secondary);
+      stroke: var(--cyan);
+      filter: drop-shadow(0 0 10px var(--glow-cyan));
+    }
+
+    .connection-link {
+      stroke: rgba(212, 175, 55, 0.4);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .connection-label {
+      fill: var(--text-primary);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .connection-category {
+      fill: var(--text-muted);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      text-anchor: middle;
+    }
+
+    /* Graphics Analogy Section */
+    .analogy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .analogy-item {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .analogy-item:hover {
+      background: var(--bg-card);
+      transform: translateX(4px);
+    }
+
+    .analogy-math {
+      color: var(--gold);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.95rem;
+      text-align: right;
+    }
+
+    .analogy-arrow {
+      color: var(--cyan);
+      font-size: 1.5rem;
+    }
+
+    .analogy-graphics {
+      color: var(--magenta);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.95rem;
+    }
+
+    /* Learning Path */
+    .learning-path {
+      margin: 4rem 0;
+    }
+
+    .path-step {
+      display: flex;
+      gap: 2rem;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: linear-gradient(90deg, var(--bg-primary), var(--bg-secondary));
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .path-step::before {
+      content: attr(data-step);
+      position: absolute;
+      left: -3rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2.5rem;
+      height: 2.5rem;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--bg-void);
+      box-shadow: 0 0 20px var(--glow-gold);
+    }
+
+    .path-content h4 {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1.5rem;
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+    }
+
+    .path-content p {
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .path-links {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .path-link {
+      padding: 0.5rem 1rem;
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid var(--cyan);
+      border-radius: 6px;
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .path-link:hover {
+      background: rgba(0, 217, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--glow-cyan);
+    }
+
+    /* Key Insights */
+    .insight-box {
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(0, 217, 255, 0.1));
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      position: relative;
+    }
+
+    .insight-box::before {
+      content: '✦';
+      position: absolute;
+      top: -15px;
+      left: 2rem;
+      background: var(--bg-void);
+      padding: 0 1rem;
+      color: var(--gold);
+      font-size: 1.5rem;
+    }
+
+    .insight-box h4 {
+      font-family: 'Crimson Pro', serif;
+      color: var(--gold);
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .insight-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .insight-box li {
+      padding: 0.75rem 0;
+      padding-left: 2rem;
+      position: relative;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .insight-box li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--cyan);
+      font-weight: bold;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 6rem;
+      padding: 3rem 0;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 3rem;
+      }
+
+      .architecture-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .analogy-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .analogy-item {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .analogy-math, .analogy-graphics {
+        text-align: center;
+      }
+
+      .path-step {
+        margin-left: 2rem;
+      }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-void);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, var(--gold), var(--copper));
+      border-radius: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, var(--cyan), var(--magenta));
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Starfield Component
+    const Starfield = ({ count = 200 }) => {
+      const stars = Array.from({ length: count }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        animationDelay: Math.random() * 3,
+        size: Math.random() > 0.9 ? 3 : 2
+      }));
+
+      return (
+        <div className="starfield">
+          {stars.map(star => (
+            <div
+              key={star.id}
+              className="star"
+              style={{
+                left: `${star.left}%`,
+                top: `${star.top}%`,
+                animationDelay: `${star.animationDelay}s`,
+                width: `${star.size}px`,
+                height: `${star.size}px`
+              }}
+            />
+          ))}
+        </div>
+      );
+    };
+
+    // Connection Map Component
+    const ConnectionMap = () => {
+      const svgRef = useRef(null);
+      const [hoveredNode, setHoveredNode] = useState(null);
+
+      const concepts = [
+        // Foundation layer
+        { id: 'derived', label: 'Derived\nCategory', x: 200, y: 100, category: 'Foundation' },
+        { id: 'infinity', label: '∞-Category', x: 400, y: 100, category: 'Foundation' },
+        { id: 'stable', label: 'Stable\nStructure', x: 600, y: 100, category: 'Foundation' },
+        
+        // Middle layer - structures
+        { id: 'tstructure', label: 't-Structure', x: 100, y: 250, category: 'Structure' },
+        { id: 'perverse', label: 'Perverse\nSheaves', x: 300, y: 250, category: 'Structure' },
+        { id: 'ic', label: 'IC\nComplexes', x: 500, y: 250, category: 'Structure' },
+        { id: 'stratification', label: 'Stratifi-\ncation', x: 700, y: 250, category: 'Structure' },
+        
+        // Application layer
+        { id: 'decomp', label: 'Decomposition\nTheorem', x: 200, y: 400, category: 'Application' },
+        { id: 'spectral', label: 'Spectral\nSequences', x: 400, y: 400, category: 'Application' },
+        { id: 'cycles', label: 'Vanishing\nCycles', x: 600, y: 400, category: 'Application' }
+      ];
+
+      const connections = [
+        // Foundation connections
+        { from: 'derived', to: 'infinity' },
+        { from: 'infinity', to: 'stable' },
+        { from: 'derived', to: 'stable' },
+        
+        // To structures
+        { from: 'derived', to: 'tstructure' },
+        { from: 'infinity', to: 'tstructure' },
+        { from: 'tstructure', to: 'perverse' },
+        { from: 'stable', to: 'perverse' },
+        { from: 'perverse', to: 'ic' },
+        { from: 'stratification', to: 'ic' },
+        { from: 'stable', to: 'stratification' },
+        
+        // To applications
+        { from: 'perverse', to: 'decomp' },
+        { from: 'ic', to: 'decomp' },
+        { from: 'perverse', to: 'spectral' },
+        { from: 'tstructure', to: 'spectral' },
+        { from: 'ic', to: 'cycles' },
+        { from: 'stratification', to: 'cycles' }
+      ];
+
+      useEffect(() => {
+        if (!svgRef.current) return;
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
+
+        const width = 800;
+        const height = 500;
+
+        // Draw connections
+        const linkGroup = svg.append('g');
+        connections.forEach(conn => {
+          const source = concepts.find(c => c.id === conn.from);
+          const target = concepts.find(c => c.id === conn.to);
+          
+          if (source && target) {
+            linkGroup.append('line')
+              .attr('class', 'connection-link')
+              .attr('x1', source.x)
+              .attr('y1', source.y)
+              .attr('x2', target.x)
+              .attr('y2', target.y)
+              .style('opacity', hoveredNode && (hoveredNode === conn.from || hoveredNode === conn.to) ? 1 : 0.4);
+          }
+        });
+
+        // Draw nodes
+        const nodeGroup = svg.append('g');
+        concepts.forEach(concept => {
+          const g = nodeGroup.append('g')
+            .attr('transform', `translate(${concept.x}, ${concept.y})`)
+            .on('mouseenter', () => setHoveredNode(concept.id))
+            .on('mouseleave', () => setHoveredNode(null));
+
+          g.append('circle')
+            .attr('class', 'connection-node')
+            .attr('r', 40)
+            .style('opacity', hoveredNode && hoveredNode !== concept.id ? 0.5 : 1);
+
+          const lines = concept.label.split('\n');
+          lines.forEach((line, i) => {
+            g.append('text')
+              .attr('class', 'connection-label')
+              .attr('y', (i - lines.length / 2 + 0.5) * 16)
+              .text(line);
+          });
+
+          g.append('text')
+            .attr('class', 'connection-category')
+            .attr('y', 55)
+            .text(concept.category);
+        });
+
+      }, [hoveredNode]);
+
+      return (
+        <div className="connection-map">
+          <svg ref={svgRef} width="100%" height="500" viewBox="0 0 800 500" />
+        </div>
+      );
+    };
+
+    // Main App
+    const App = () => {
+      const concepts = [
+        {
+          icon: '∞',
+          title: '∞-Categorical Foundations',
+          description: 'Derived categories are homotopy categories of stable ∞-categories. Perverse sheaves live in this derived world, with triangulated structure emerging from suspension.',
+          tags: ['Stable ∞-cat', 'Triangulated', 'Homotopy']
+        },
+        {
+          icon: '⊥',
+          title: 't-Structures & Hearts',
+          description: 'Orthogonal factorization systems (D≤⁰, D≥⁰) give abelian hearts. Perverse t-structure shifts by dimension, making Verdier duality involutive.',
+          tags: ['Truncation', 'Gluing', 'Abelian']
+        },
+        {
+          icon: '∫',
+          title: 'Six Functor Formalism',
+          description: '(f*, f_*), (f!, f!), (⊗, RHom) form adjoint pairs between derived categories. Proper base change connects pushforwards to fiber cohomology.',
+          tags: ['Adjunctions', 'Base change', 'Duality']
+        },
+        {
+          icon: '△',
+          title: 'Stratifications',
+          description: 'Whitney stratifications decompose varieties into equi-singular pieces. Local normal triviality ensures well-behaved topology along strata.',
+          tags: ['Whitney', 'Equi-singular', 'Local']
+        },
+        {
+          icon: '⊕',
+          title: 'Decomposition Theorem',
+          description: 'For f: X → Y proper, X smooth: f_*k_X[dim X] = ⊕ IC(Y̅_i, L_i). IC complexes are the "atoms" of topology for singular spaces.',
+          tags: ['BBD', 'IC sheaves', 'Semisimple']
+        },
+        {
+          icon: '⋯',
+          title: 'Spectral Sequences',
+          description: 'Perverse filtration generates spectral sequences converging to hypercohomology. Systematic organization of complex computations.',
+          tags: ['Leray', 'Convergence', 'Pages']
+        },
+        {
+          icon: 'ψ',
+          title: 'Nearby & Vanishing Cycles',
+          description: 'Functors ψ_f, φ_f capture cohomology changes at singularities. Classical Picard-Lefschetz theory with monodromy action.',
+          tags: ['Degeneration', 'Monodromy', 'Limits']
+        },
+        {
+          icon: '⚡',
+          title: 'Computational Methods',
+          description: 'GPU-accelerated cohomology via cellular decomposition. Sparse linear algebra on boundary matrices gives H*(X, F) efficiently.',
+          tags: ['WebGPU', 'Sparse', 'Fast']
+        }
+      ];
+
+      const analogies = [
+        { math: 'Stratification', graphics: 'LOD boundaries' },
+        { math: 'Constructible sheaves', graphics: 'Material discontinuities' },
+        { math: 'f* (pullback)', graphics: 'Texture sampling' },
+        { math: 'f_* (pushforward)', graphics: 'MIP-map construction' },
+        { math: 'Proper base change', graphics: 'Rasterization invariance' },
+        { math: 'Verdier duality', graphics: 'Direct ↔ Inverse rendering' },
+        { math: 'Perverse t-structure', graphics: 'Multi-scale filtering' },
+        { math: 'IC complexes', graphics: 'Optimal boundary interpolation' },
+        { math: 'Vanishing cycles', graphics: 'Temporal coherence tracking' },
+        { math: 'Monodromy', graphics: 'Cyclic buffer states' },
+        { math: 'Spectral sequences', graphics: 'Progressive refinement' },
+        { math: 'Whitney conditions', graphics: 'Smooth normal transitions' }
+      ];
+
+      const learningPath = [
+        {
+          step: 1,
+          title: 'Derived Categories & ∞-Framework',
+          description: 'Start with derived categories as shadow of stable ∞-categories. Understand triangulated structure from fiber sequences. Study how perverse sheaves sit inside D^b(X).',
+          modules: ['Category Theory Bridge', '∞-Categorical Foundations']
+        },
+        {
+          step: 2,
+          title: 'Stratifications & Local Topology',
+          description: 'Learn Whitney stratifications and equi-singularity. Visualize how varieties decompose into smooth pieces. Understand local normal triviality through 3D examples.',
+          modules: ['Stratification Visualizer', 'Whitney Umbrella', 'Elliptic Degeneration']
+        },
+        {
+          step: 3,
+          title: 'Six Functors & t-Structures',
+          description: 'Master the six operations (f*, f_*, f!, f!, ⊗, RHom). See how t-structures give truncation functors. Understand perverse t-structure via dimension shift.',
+          modules: ['Six Functor Playground', 't-Structure Gluing']
+        },
+        {
+          step: 4,
+          title: 'IC Complexes & Minimal Extension',
+          description: 'Compute intersection cohomology via j!∗. See how IC sheaves have no subobjects/quotients on singular locus. Work through curve examples with monodromy.',
+          modules: ['IC Complex Calculator', 'Vanishing Cycles']
+        },
+        {
+          step: 5,
+          title: 'Decomposition Theorem',
+          description: 'Study f_*k_X[dim X] = ⊕ IC(Y_i, L_i) for proper maps. Work through Weierstraß family, quadric resolution, Springer examples. Understand why IC sheaves are "atoms".',
+          modules: ['Decomposition Explorer', 'Spectral Sequences']
+        },
+        {
+          step: 6,
+          title: 'Advanced Applications',
+          description: 'Apply to representation theory, geometric Langlands, Hodge theory. Use GPU acceleration for real computations. Connect to your graphics rendering work.',
+          modules: ['GPU Cohomology', 'All previous modules']
+        }
+      ];
+
+      return (
+        <div className="app">
+          <Starfield count={150} />
+          
+          <div className="content">
+            {/* Hero */}
+            <section className="hero">
+              <h1 className="hero-title">The Architecture of Perverse Sheaves</h1>
+              <p className="hero-subtitle">A Meta-View of the Theory</p>
+              <p className="hero-description">
+                Perverse sheaves unite topology, representation theory, and category theory into a unified framework.
+                They provide computational tools for studying singular spaces while revealing deep structural patterns
+                across mathematics. This guide maps the complete architecture and shows how each piece connects.
+              </p>
+            </section>
+
+            {/* Core Concepts */}
+            <section className="architecture-section">
+              <h2 className="section-title">Core Architectural Components</h2>
+              
+              <div className="architecture-grid">
+                {concepts.map((concept, idx) => (
+                  <div key={idx} className="concept-card">
+                    <div className="concept-icon">{concept.icon}</div>
+                    <h3>{concept.title}</h3>
+                    <p>{concept.description}</p>
+                    <div className="concept-tags">
+                      {concept.tags.map((tag, i) => (
+                        <span key={i} className="tag">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Connection Map */}
+            <section className="architecture-section">
+              <h2 className="section-title">Conceptual Dependency Graph</h2>
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                Hover over nodes to see connections. Foundation → Structure → Application.
+              </p>
+              <ConnectionMap />
+            </section>
+
+            {/* Graphics Analogies */}
+            <section className="architecture-section">
+              <h2 className="section-title">Graphics Pipeline Analogies</h2>
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '800px', margin: '0 auto 2rem' }}>
+                Your 20+ years in rendering provides direct intuition for perverse sheaves.
+                These aren't metaphors – they're structural isomorphisms.
+              </p>
+              
+              <div className="analogy-grid">
+                {analogies.map((analogy, idx) => (
+                  <div key={idx} className="analogy-item">
+                    <div className="analogy-math">{analogy.math}</div>
+                    <div className="analogy-arrow">⟷</div>
+                    <div className="analogy-graphics">{analogy.graphics}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Learning Path */}
+            <section className="architecture-section learning-path">
+              <h2 className="section-title">Guided Learning Pathway</h2>
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', marginBottom: '3rem', maxWidth: '800px', margin: '0 auto 3rem' }}>
+                Sequential path from foundations to advanced applications. Each step builds on previous understanding.
+              </p>
+
+              {learningPath.map((step, idx) => (
+                <div key={idx} className="path-step" data-step={step.step}>
+                  <div className="path-content">
+                    <h4>{step.title}</h4>
+                    <p>{step.description}</p>
+                    <div className="path-links">
+                      {step.modules.map((module, i) => (
+                        <span key={i} className="path-link">{module}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            {/* Key Insights */}
+            <section className="architecture-section">
+              <h2 className="section-title">Fundamental Insights</h2>
+              
+              <div className="insight-box">
+                <h4>Why Perverse Sheaves Matter</h4>
+                <ul>
+                  <li>
+                    <strong>Eigenobject Principle:</strong> IC sheaves are "eigensheaves" under the formalism – 
+                    simple objects that generate everything via direct sums and shifts.
+                  </li>
+                  <li>
+                    <strong>Dimension Shift Magic:</strong> The perverse t-structure shifts by dim(stratum), 
+                    making Verdier duality involutive. This is why intersection cohomology is "self-dual."
+                  </li>
+                  <li>
+                    <strong>Stratification as Data Structure:</strong> Whitney stratifications are the "right" 
+                    way to partition singular spaces – they ensure local topology is constant along strata.
+                  </li>
+                  <li>
+                    <strong>Decomposition = Diagonalization:</strong> The decomposition theorem says proper pushforwards 
+                    "diagonalize" into IC sheaves, just like operators diagonalize into eigenvectors.
+                  </li>
+                  <li>
+                    <strong>Spectral Sequences = Iterative Refinement:</strong> Like progressive rendering, 
+                    spectral sequences compute answers page by page, converging to final result.
+                  </li>
+                  <li>
+                    <strong>∞-Categories = Homotopy Coherence:</strong> Derived categories are shadows of ∞-categories. 
+                    All the "up to homotopy" fuzziness gets rigorous structure.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="insight-box" style={{ borderColor: 'var(--cyan)' }}>
+                <h4>Connections to Your Work</h4>
+                <ul>
+                  <li>
+                    <strong>Eigenobject Theory:</strong> IC sheaves are eigenobjects of the Verdier duality involution, 
+                    connecting directly to your eigenobject decomposition framework.
+                  </li>
+                  <li>
+                    <strong>Stratified Rendering:</strong> LOD systems in graphics are stratifications – 
+                    you switch between representations at boundaries, maintaining visual coherence.
+                  </li>
+                  <li>
+                    <strong>Liquid Droplet Calculus:</strong> Finite agents (like GPU threads) computing cohomology 
+                    of spaces they're embedded in – exact parallel to your epistemic framework.
+                  </li>
+                  <li>
+                    <strong>Prime Bundle Connections:</strong> The decomposition theorem stratifies by orbits/strata 
+                    like your prime bundle stratification of arithmetic geometry.
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="footer">
+              <p>
+                Perverse sheaves are a mathematical cathedral – a unified architecture spanning algebra, topology, and geometry.
+                <br/>
+                Like great rendering engines, they reveal that seemingly complex phenomena emerge from simple, elegant principles.
+              </p>
+              <p style={{ marginTop: '2rem', fontSize: '0.9rem' }}>
+                Created for Z's ∞-category learning sprint • December 2025
+              </p>
+            </footer>
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

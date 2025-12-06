@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Perverse Sheaves: Spectral Sequences & Decomposition</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #050810;
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #131824;
+      --bg-tertiary: #1a1f2e;
+      --bg-card: #1e2433;
+      --accent-gold: #fbbf24;
+      --accent-cyan: #06b6d4;
+      --accent-magenta: #ec4899;
+      --accent-violet: #8b5cf6;
+      --accent-emerald: #10b981;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(255, 255, 255, 0.15);
+      --glow-gold: rgba(251, 191, 36, 0.4);
+      --glow-cyan: rgba(6, 182, 212, 0.4);
+      --glow-magenta: rgba(236, 72, 153, 0.4);
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    #root {
+      min-height: 100vh;
+    }
+
+    .app-container {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Enhanced Header with Geometric Background */
+    .header {
+      text-align: center;
+      padding: 4rem 0 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--glow-violet) 0%, transparent 70%);
+      opacity: 0.2;
+      filter: blur(80px);
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.2; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.3; transform: translateX(-50%) scale(1.1); }
+    }
+
+    .header-ornament {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+    }
+
+    .main-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-magenta) 50%, var(--accent-gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+      padding-bottom: 0;
+    }
+
+    .tab-button {
+      padding: 1.2rem 1.8rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+
+    .tab-button:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-button.active {
+      color: var(--accent-cyan);
+    }
+
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: scaleX(0);
+        opacity: 0;
+      }
+      to {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+    }
+
+    /* Panel Container */
+    .panel {
+      background: var(--bg-primary);
+      border-radius: 16px;
+      padding: 2.5rem;
+      border: 1px solid var(--border-subtle);
+      animation: fadeInUp 0.5s ease-out;
+      position: relative;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+      opacity: 0.3;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--accent-gold), var(--accent-magenta));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .panel-subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 2.5rem;
+      line-height: 1.8;
+      font-size: 1.05rem;
+    }
+
+    /* Spectral Sequence Grid */
+    .spectral-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 2px;
+      background: var(--bg-deep);
+      padding: 2rem;
+      border-radius: 12px;
+      margin: 2rem 0;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .spectral-cell {
+      aspect-ratio: 1;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      transition: all 0.3s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .spectral-cell:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px var(--glow-cyan);
+      z-index: 10;
+    }
+
+    .spectral-cell.nonzero {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(236, 72, 153, 0.2));
+      border-color: var(--accent-cyan);
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    .spectral-cell.differential-source {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(139, 92, 246, 0.3));
+      border-color: var(--accent-magenta);
+      animation: pulse-differential 2s ease-in-out infinite;
+    }
+
+    .spectral-cell.differential-target {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(16, 185, 129, 0.3));
+      border-color: var(--accent-cyan);
+      animation: pulse-differential 2s ease-in-out infinite 1s;
+    }
+
+    @keyframes pulse-differential {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .spectral-arrow {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    /* Enhanced Section Grid */
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 2rem;
+      border: 1px solid var(--border-subtle);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .section-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .section-card:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 8px 30px rgba(6, 182, 212, 0.15);
+      transform: translateY(-4px);
+    }
+
+    .section-card h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--accent-cyan);
+    }
+
+    .section-card p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* Canvas Container */
+    .canvas-container {
+      width: 100%;
+      height: 600px;
+      background: var(--bg-deep);
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+      margin: 2rem 0;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 1.5rem;
+      left: 1.5rem;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--accent-gold);
+      pointer-events: none;
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* Enhanced Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 220px;
+      flex: 1;
+    }
+
+    .control-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: linear-gradient(90deg, var(--border-subtle), var(--accent-cyan));
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 12px var(--glow-cyan);
+      transition: all 0.2s ease;
+      border: 2px solid var(--bg-deep);
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    .button {
+      padding: 0.9rem 1.8rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.03em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .button:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 25px var(--glow-magenta);
+    }
+
+    .button:active {
+      transform: translateY(-1px);
+    }
+
+    .button-secondary {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-bright);
+    }
+
+    .button-secondary:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    /* Diagram Container */
+    .diagram-container {
+      background: var(--bg-deep);
+      border-radius: 12px;
+      padding: 2.5rem;
+      border: 1px solid var(--border-subtle);
+      min-height: 450px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 2rem 0;
+    }
+
+    /* SVG Enhanced Styles */
+    .diagram-arrow {
+      stroke: var(--accent-cyan);
+      stroke-width: 2.5;
+      fill: none;
+      marker-end: url(#arrowhead);
+      filter: drop-shadow(0 0 3px var(--glow-cyan));
+    }
+
+    .diagram-arrow-differential {
+      stroke: var(--accent-magenta);
+      stroke-width: 2;
+      stroke-dasharray: 5, 5;
+      animation: dash 1.5s linear infinite;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -10;
+      }
+    }
+
+    .diagram-node {
+      fill: var(--bg-tertiary);
+      stroke: var(--accent-violet);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 5px var(--glow-cyan));
+    }
+
+    .diagram-text {
+      fill: var(--text-primary);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 15px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    .diagram-label {
+      fill: var(--accent-gold);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+    }
+
+    /* Code Block Enhanced */
+    .code-block {
+      background: var(--bg-deep);
+      border-radius: 12px;
+      padding: 2rem;
+      border: 1px solid var(--border-subtle);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--accent-gold);
+      overflow-x: auto;
+      line-height: 1.8;
+      position: relative;
+    }
+
+    .code-block::before {
+      content: '{ }';
+      position: absolute;
+      top: 1rem;
+      right: 1.5rem;
+      color: var(--border-subtle);
+      font-size: 1.5rem;
+    }
+
+    .code-comment {
+      color: var(--text-muted);
+    }
+
+    .code-keyword {
+      color: var(--accent-magenta);
+    }
+
+    .code-function {
+      color: var(--accent-cyan);
+    }
+
+    /* Info Box Enhanced */
+    .info-box {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(236, 72, 153, 0.08));
+      border-left: 4px solid var(--accent-cyan);
+      padding: 1.5rem 2rem;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+      position: relative;
+    }
+
+    .info-box::before {
+      content: '✦';
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      color: var(--accent-cyan);
+      font-size: 1.5rem;
+      opacity: 0.3;
+    }
+
+    .info-box h4 {
+      color: var(--accent-cyan);
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .info-box p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* Theorem Box */
+    .theorem-box {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(251, 191, 36, 0.1));
+      border: 2px solid var(--accent-violet);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      position: relative;
+    }
+
+    .theorem-box::before {
+      content: 'THEOREM';
+      position: absolute;
+      top: -12px;
+      left: 2rem;
+      background: var(--bg-primary);
+      padding: 0 1rem;
+      color: var(--accent-violet);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+    }
+
+    .theorem-box h4 {
+      color: var(--accent-gold);
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+    }
+
+    .theorem-box p {
+      color: var(--text-primary);
+      line-height: 1.8;
+    }
+
+    /* Animation for nearby cycles */
+    .cycle-path {
+      stroke: var(--accent-gold);
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      animation: draw-cycle 3s ease-in-out infinite;
+    }
+
+    @keyframes draw-cycle {
+      0%, 100% {
+        stroke-dasharray: 0, 1000;
+      }
+      50% {
+        stroke-dasharray: 1000, 0;
+      }
+    }
+
+    /* GPU Status Indicator */
+    .gpu-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .gpu-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      animation: pulse-gpu 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-gpu {
+      0%, 100% {
+        box-shadow: 0 0 0 0 var(--glow-cyan);
+      }
+      50% {
+        box-shadow: 0 0 0 6px transparent;
+      }
+    }
+
+    /* Decomposition Display */
+    .decomposition-summand {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      transition: all 0.3s ease;
+    }
+
+    .decomposition-summand:hover {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 20px var(--glow-gold);
+    }
+
+    .decomposition-summand h5 {
+      color: var(--accent-gold);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-title {
+        font-size: 2.5rem;
+      }
+
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .control-group {
+        min-width: 100%;
+      }
+
+      .spectral-grid {
+        padding: 1rem;
+      }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, var(--accent-magenta), var(--accent-gold));
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+    // Utility: Enhanced SVG Diagram with Animations
+    const AnimatedDiagram = ({ width = 700, height = 500, nodes, arrows, title, onNodeClick }) => {
+      const svgRef = useRef(null);
+      const [hoveredNode, setHoveredNode] = useState(null);
+
+      useEffect(() => {
+        if (!svgRef.current) return;
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
+
+        // Define markers
+        const defs = svg.append('defs');
+        
+        ['arrowhead', 'arrowhead-diff'].forEach((id, idx) => {
+          defs.append('marker')
+            .attr('id', id)
+            .attr('viewBox', '0 0 10 10')
+            .attr('refX', 9)
+            .attr('refY', 5)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+            .attr('fill', idx === 0 ? '#06b6d4' : '#ec4899');
+        });
+
+        // Draw arrows
+        const arrowGroup = svg.append('g').attr('class', 'arrows');
+        arrows.forEach((arrow, i) => {
+          const source = nodes.find(n => n.id === arrow.from);
+          const target = nodes.find(n => n.id === arrow.to);
+          
+          if (source && target) {
+            const curvature = arrow.curvature || 0;
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2 + curvature;
+
+            const path = arrowGroup.append('path')
+              .attr('class', arrow.differential ? 'diagram-arrow-differential' : 'diagram-arrow')
+              .attr('marker-end', arrow.differential ? 'url(#arrowhead-diff)' : 'url(#arrowhead)')
+              .attr('d', `M ${source.x} ${source.y} Q ${midX} ${midY} ${target.x} ${target.y}`)
+              .style('opacity', 0)
+              .transition()
+              .delay(i * 80)
+              .duration(600)
+              .style('opacity', 1);
+
+            if (arrow.label) {
+              arrowGroup.append('text')
+                .attr('class', 'diagram-label')
+                .attr('x', midX)
+                .attr('y', midY - 15)
+                .attr('text-anchor', 'middle')
+                .text(arrow.label)
+                .style('opacity', 0)
+                .transition()
+                .delay(i * 80 + 300)
+                .duration(400)
+                .style('opacity', 1);
+            }
+          }
+        });
+
+        // Draw nodes
+        const nodeGroup = svg.append('g').attr('class', 'nodes');
+        nodes.forEach((node, i) => {
+          const g = nodeGroup.append('g')
+            .attr('transform', `translate(${node.x}, ${node.y})`)
+            .style('cursor', onNodeClick ? 'pointer' : 'default')
+            .on('mouseenter', () => setHoveredNode(node.id))
+            .on('mouseleave', () => setHoveredNode(null))
+            .on('click', () => onNodeClick && onNodeClick(node))
+            .style('opacity', 0)
+            .transition()
+            .delay(i * 120)
+            .duration(500)
+            .style('opacity', 1);
+
+          const radius = node.radius || 45;
+          
+          g.selection()
+            .append('circle')
+            .attr('class', 'diagram-node')
+            .attr('r', radius)
+            .style('fill', node.color || 'var(--bg-tertiary)');
+
+          g.selection()
+            .append('text')
+            .attr('class', 'diagram-text')
+            .attr('dy', '0.35em')
+            .text(node.label)
+            .style('font-size', node.fontSize || '15px');
+
+          if (node.sublabel) {
+            g.selection()
+              .append('text')
+              .attr('class', 'diagram-label')
+              .attr('dy', '1.8em')
+              .attr('text-anchor', 'middle')
+              .text(node.sublabel)
+              .style('font-size', '11px');
+          }
+        });
+
+        if (title) {
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', 30)
+            .attr('text-anchor', 'middle')
+            .attr('class', 'diagram-text')
+            .style('font-size', '18px')
+            .style('fill', 'var(--accent-gold)')
+            .text(title);
+        }
+
+      }, [nodes, arrows, title]);
+
+      return (
+        <div className="diagram-container">
+          <svg ref={svgRef} width={width} height={height} />
+        </div>
+      );
+    };
+
+    // Component 1: Spectral Sequences from Perverse Sheaves
+    const SpectralSequenceExplorer = () => {
+      const [page, setPage] = useState(0);
+      const [example, setExample] = useState('leray');
+      const [highlightDifferential, setHighlightDifferential] = useState(null);
+
+      const spectralSequences = {
+        leray: {
+          name: 'Leray Spectral Sequence',
+          description: 'For f: X → Y, computes H*(X, F) from H*(Y, R^q f_* F). E_2 page connects cohomology of base and fibers.',
+          e2Page: (p, q) => {
+            if (p + q <= 3) {
+              if (p === 0 && q === 1) return 'ℚ²';
+              if (p === 1 && q === 0) return 'ℚ';
+              if (p === 0 && q === 0) return 'ℚ';
+            }
+            return '0';
+          },
+          differentials: [
+            { from: [0, 1], to: [2, 0], page: 2 },
+            { from: [1, 1], to: [3, 0], page: 2 }
+          ],
+          theorem: "E_2^{p,q} = H^p(Y, R^q f_* F) ⟹ H^{p+q}(X, F)"
+        },
+        perverse: {
+          name: 'Perverse Spectral Sequence',
+          description: 'The perverse t-structure gives spectral sequence from perverse cohomology to ordinary cohomology.',
+          e2Page: (p, q) => {
+            if (Math.abs(p + q) <= 2) {
+              if (p === -1 && q === 1) return 'ℚ';
+              if (p === 0 && q === 0) return 'ℚ²';
+            }
+            return '0';
+          },
+          differentials: [
+            { from: [-1, 1], to: [0, 0], page: 1 }
+          ],
+          theorem: "E_1^{p,q} = H^{p+q}(^p H^{-p}(F)) ⟹ H^{p+q}(F)"
+        },
+        hypercohomology: {
+          name: 'Hypercohomology Spectral Sequence',
+          description: 'Computes derived functor cohomology. Two spectral sequences (Čech and injective resolution) converge to same answer.',
+          e2Page: (p, q) => {
+            if (p + q <= 2) {
+              if (q === 0) return 'ℚ';
+              if (p === 0 && q === 1) return 'ℚ';
+            }
+            return '0';
+          },
+          differentials: [
+            { from: [0, 1], to: [2, 0], page: 2 }
+          ],
+          theorem: "E_2^{p,q} = H^p(X, H^q(F^•)) ⟹ H^{p+q}(X, F^•)"
+        }
+      };
+
+      const current = spectralSequences[example];
+      const maxP = 5;
+      const maxQ = 4;
+
+      const isNonzero = (p, q) => {
+        return current.e2Page(p, q) !== '0';
+      };
+
+      const isDifferentialSource = (p, q) => {
+        if (!highlightDifferential) return false;
+        const diff = current.differentials[highlightDifferential];
+        return diff && diff.from[0] === p && diff.from[1] === q;
+      };
+
+      const isDifferentialTarget = (p, q) => {
+        if (!highlightDifferential) return false;
+        const diff = current.differentials[highlightDifferential];
+        return diff && diff.to[0] === p && diff.to[1] === q;
+      };
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">Spectral Sequences</h2>
+          <p className="panel-subtitle">
+            Perverse sheaves generate spectral sequences connecting different cohomology theories. 
+            These are computational engines that systematically organize complex calculations.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Select Spectral Sequence</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {Object.keys(spectralSequences).map(key => (
+                  <button
+                    key={key}
+                    className={example === key ? 'button' : 'button button-secondary'}
+                    onClick={() => setExample(key)}
+                  >
+                    {spectralSequences[key].name.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="control-group">
+              <label className="control-label">Page: E_{page}</label>
+              <input
+                type="range"
+                min="0"
+                max="3"
+                value={page}
+                onChange={(e) => setPage(parseInt(e.target.value))}
+                className="slider"
+              />
+              <span style={{ color: 'var(--accent-cyan)', fontFamily: 'IBM Plex Mono, monospace' }}>
+                E_{page} page
+              </span>
+            </div>
+          </div>
+
+          <div className="section-card">
+            <h3>{current.name}</h3>
+            <p>{current.description}</p>
+          </div>
+
+          <div style={{ marginTop: '2rem' }}>
+            <h4 style={{ color: 'var(--accent-gold)', marginBottom: '1rem', fontSize: '1.2rem' }}>
+              E₂ Page (p-axis horizontal, q-axis vertical)
+            </h4>
+            <div className="spectral-grid" style={{ 
+              gridTemplateColumns: `repeat(${maxP + 1}, 90px)`,
+              gridTemplateRows: `repeat(${maxQ + 1}, 90px)`,
+              display: 'grid'
+            }}>
+              {[...Array(maxQ + 1)].map((_, qIdx) => {
+                const q = maxQ - qIdx;
+                return [...Array(maxP + 1)].map((_, p) => {
+                  const value = current.e2Page(p, q);
+                  const classes = ['spectral-cell'];
+                  if (value !== '0') classes.push('nonzero');
+                  if (isDifferentialSource(p, q)) classes.push('differential-source');
+                  if (isDifferentialTarget(p, q)) classes.push('differential-target');
+
+                  return (
+                    <div
+                      key={`${p}-${q}`}
+                      className={classes.join(' ')}
+                      onMouseEnter={() => {
+                        const idx = current.differentials.findIndex(
+                          d => (d.from[0] === p && d.from[1] === q) || (d.to[0] === p && d.to[1] === q)
+                        );
+                        if (idx !== -1) setHighlightDifferential(idx);
+                      }}
+                      onMouseLeave={() => setHighlightDifferential(null)}
+                      title={`E₂^{${p},${q}} = ${value}`}
+                    >
+                      {value !== '0' && (
+                        <>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            ({p},{q})
+                          </div>
+                          <div style={{ fontWeight: 'bold' }}>{value}</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                });
+              })}
+            </div>
+
+            {current.differentials.length > 0 && (
+              <div style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>
+                <strong>Differentials:</strong>
+                <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                  {current.differentials.map((diff, idx) => (
+                    <li
+                      key={idx}
+                      style={{
+                        color: highlightDifferential === idx ? 'var(--accent-magenta)' : 'var(--text-secondary)',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={() => setHighlightDifferential(idx)}
+                      onMouseLeave={() => setHighlightDifferential(null)}
+                    >
+                      d_{diff.page}: E₂^{diff.from[0]},{diff.from[1]} → E₂^{diff.to[0]},{diff.to[1]}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="theorem-box">
+            <h4>{current.name}</h4>
+            <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '1.05rem', color: 'var(--accent-gold)' }}>
+              {current.theorem}
+            </p>
+          </div>
+
+          <div className="info-box">
+            <h4>Connection to Perverse Sheaves</h4>
+            <p>
+              The perverse t-structure naturally gives rise to spectral sequences. For any F ∈ D^b(X), 
+              the filtration by perverse cohomology groups ^pH^i(F) yields a spectral sequence converging to ordinary cohomology.
+              This is how perverse sheaves "organize" complex cohomology computations.
+            </p>
+          </div>
+
+          <div className="code-block">
+            <span className="code-comment">// Spectral sequence from t-structure</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">SpectralSequence</span> = (F, t_structure) =&gt; {`{`}<br/>
+            {'  '}<span className="code-comment">// E_1 page from associated graded</span><br/>
+            {'  '}E_1: (p, q) =&gt; H^(p+q)(gr^p F) <span className="code-comment">// gr^p = τ_≤p / τ_≤(p-1)</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Differentials from boundary maps in triangles</span><br/>
+            {'  '}d_r: (p, q) =&gt; E_r^(p,q) → E_r^(p+r, q-r+1),<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Convergence to hypercohomology</span><br/>
+            {'  '}E_∞: (p, q) =&gt; gr^p H^(p+q)(F)<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 2: Nearby and Vanishing Cycles
+    const NearbyCyclesAnimator = () => {
+      const canvasRef = useRef(null);
+      const [time, setTime] = useState(0);
+      const [parameter, setParameter] = useState(0.5);
+      const [showVanishing, setShowVanishing] = useState(true);
+      const [isAnimating, setIsAnimating] = useState(false);
+
+      useEffect(() => {
+        if (!isAnimating) return;
+
+        const interval = setInterval(() => {
+          setTime(t => (t + 0.02) % (Math.PI * 2));
+        }, 50);
+
+        return () => clearInterval(interval);
+      }, [isAnimating]);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear
+        ctx.fillStyle = '#050810';
+        ctx.fillRect(0, 0, width, height);
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        // Draw base space (disc in C)
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, height - 100, 80, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw parameter point
+        const paramX = centerX + 80 * Math.cos(parameter * Math.PI * 2);
+        const paramY = height - 100 + 80 * Math.sin(parameter * Math.PI * 2);
+        
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(paramX, paramY, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw fiber (elliptic curve above parameter point)
+        const fiberY = 200;
+        const degeneracy = Math.abs(Math.cos(parameter * Math.PI * 2));
+
+        // Torus degenerating to nodal curve
+        if (degeneracy > 0.5) {
+          // Smooth torus
+          const R = 60;
+          const r = 25 * degeneracy;
+          
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 2;
+          
+          // Outer circle
+          ctx.beginPath();
+          ctx.arc(centerX, fiberY, R + r, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // Inner circle
+          ctx.beginPath();
+          ctx.arc(centerX, fiberY, R - r, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          // Nodal curve (figure-eight)
+          ctx.strokeStyle = '#ec4899';
+          ctx.lineWidth = 2.5;
+          
+          const nodeRadius = 40;
+          ctx.beginPath();
+          ctx.arc(centerX - nodeRadius/2, fiberY, nodeRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.arc(centerX + nodeRadius/2, fiberY, nodeRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // Draw node point
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(centerX, fiberY, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Draw vanishing cycle (if enabled)
+        if (showVanishing && degeneracy < 0.7) {
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([5, 5]);
+          
+          const cycleRadius = 30 * (0.7 - degeneracy) / 0.7;
+          ctx.beginPath();
+          ctx.arc(centerX, fiberY, cycleRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          ctx.setLineDash([]);
+          
+          // Animated point on vanishing cycle
+          const cycleX = centerX + cycleRadius * Math.cos(time);
+          const cycleY = fiberY + cycleRadius * Math.sin(time);
+          
+          ctx.fillStyle = '#10b981';
+          ctx.beginPath();
+          ctx.arc(cycleX, cycleY, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Draw connecting line (family over disc)
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.moveTo(paramX, paramY);
+        ctx.lineTo(centerX, fiberY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Labels
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '14px IBM Plex Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText('Base (parameter space)', centerX, height - 30);
+        ctx.fillText('Fiber X_t', centerX, 150);
+
+      }, [time, parameter, showVanishing]);
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">Nearby & Vanishing Cycles</h2>
+          <p className="panel-subtitle">
+            The functors ψ_f (nearby cycles) and φ_f (vanishing cycles) capture how cohomology changes 
+            as we approach a singularity. This is classical Picard-Lefschetz theory in action.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Parameter t ∈ S¹</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={parameter}
+                onChange={(e) => setParameter(parseFloat(e.target.value))}
+                className="slider"
+              />
+            </div>
+
+            <div className="control-group">
+              <button
+                className={isAnimating ? 'button' : 'button button-secondary'}
+                onClick={() => setIsAnimating(!isAnimating)}
+              >
+                {isAnimating ? 'Pause' : 'Animate'} Monodromy
+              </button>
+            </div>
+
+            <div className="control-group">
+              <label className="control-label">
+                <input
+                  type="checkbox"
+                  checked={showVanishing}
+                  onChange={(e) => setShowVanishing(e.target.checked)}
+                  style={{ marginRight: '0.5rem' }}
+                />
+                Show Vanishing Cycle
+              </label>
+            </div>
+          </div>
+
+          <div style={{ background: 'var(--bg-deep)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+            <canvas
+              ref={canvasRef}
+              width={800}
+              height={500}
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          </div>
+
+          <div className="section-grid">
+            <div className="section-card">
+              <h3>Nearby Cycles ψ_f</h3>
+              <p>
+                For f: X → C with f⁻¹(0) singular, ψ_f captures the limiting cohomology as t → 0.
+                Lives on the special fiber and carries monodromy action.
+              </p>
+              <div style={{ marginTop: '1rem', fontFamily: 'IBM Plex Mono, monospace', color: 'var(--accent-cyan)' }}>
+                ψ_f(F) = i*j*F<br/>
+                where j: X_t ↪ X, i: X_0 ↪ X
+              </div>
+            </div>
+
+            <div className="section-card">
+              <h3>Vanishing Cycles φ_f</h3>
+              <p>
+                The difference between nearby cycles and the actual fiber: φ_f = Cone(i*F → ψ_f F).
+                These are cycles that "vanish" as the fiber degenerates.
+              </p>
+              <div style={{ marginTop: '1rem', fontFamily: 'IBM Plex Mono, monospace', color: 'var(--accent-magenta)' }}>
+                φ_f(F) = Cone(i*i*F → ψ_f F)
+              </div>
+            </div>
+          </div>
+
+          <div className="theorem-box">
+            <h4>Local Invariant Cycle Theorem</h4>
+            <p>
+              The map H*(X_0) → H*(X_t)^μ=1 (invariants under monodromy) is surjective.
+              This follows from the decomposition theorem applied to the family f: X → C.
+            </p>
+          </div>
+
+          <div className="info-box">
+            <h4>Graphics Pipeline Analogy</h4>
+            <p>
+              Vanishing cycles ↔ temporal coherence tracking. As parameters change (camera motion, lighting),
+              we track what "appears/disappears" between frames. Monodromy action ↔ cyclic buffer states.
+              Both measure "what changed" in a systematic way.
+            </p>
+          </div>
+
+          <div className="code-block">
+            <span className="code-comment">// Nearby and vanishing cycles functors</span><br/>
+            <span className="code-keyword">const</span> NearbyCycles = (f, F) =&gt; {`{`}<br/>
+            {'  '}<span className="code-comment">// Setup: f: X → C with singular fiber at 0</span><br/>
+            {'  '}<span className="code-keyword">const</span> j = inclusion(X - X_0, X);<br/>
+            {'  '}<span className="code-keyword">const</span> i = inclusion(X_0, X);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Nearby cycles = limit of smooth fibers</span><br/>
+            {'  '}ψ_f: i^* ∘ j_* <span className="code-comment">// Carries monodromy action T</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Vanishing cycles = what disappears</span><br/>
+            {'  '}φ_f: Cone(i^* F → ψ_f F) <span className="code-comment">// Ker(id - T)</span><br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 3: Decomposition Theorem Explorer
+    const DecompositionTheoremExplorer = () => {
+      const [example, setExample] = useState('elliptic');
+      const [showDecomposition, setShowDecomposition] = useState(false);
+
+      const examples = {
+        elliptic: {
+          name: 'Weierstraß Family',
+          map: 'f: E → C (elliptic curves)',
+          description: 'Family of elliptic curves degenerating at 0, 1. The direct image decomposes into constant sheaf plus local system.',
+          decomposition: [
+            {
+              summand: 'ℚ_C[2]',
+              support: 'Everywhere',
+              description: 'Constant sheaf (from H⁰ of fibers)'
+            },
+            {
+              summand: 'j!∗L[1]',
+              support: 'C \\ {0,1}',
+              description: 'IC of rank-1 local system with monodromy -1 at punctures'
+            },
+            {
+              summand: 'ℚ_C[0]',
+              support: 'Everywhere', 
+              description: 'Constant sheaf (from H² of fibers)'
+            }
+          ],
+          formula: 'f_* ℚ_E[2] ≅ ℚ_C[2] ⊕ j!∗L[1] ⊕ ℚ_C[0]'
+        },
+        resolution: {
+          name: 'Quadric Cone Resolution',
+          map: 'π: T*S^n → C_n (cone)',
+          description: 'Minimal resolution of n-dimensional quadric cone. Direct image is IC plus skyscrapers (for n even).',
+          decomposition: [
+            {
+              summand: 'IC(C_n)',
+              support: 'All of C_n',
+              description: 'Intersection cohomology complex'
+            },
+            {
+              summand: 'i_* ℚ_0[1] (n even)',
+              support: 'Vertex {0}',
+              description: 'Skyscraper at vertex (shifted)'
+            },
+            {
+              summand: 'i_* ℚ_0[-1] (n even)',
+              support: 'Vertex {0}',
+              description: 'Skyscraper at vertex (shifted opposite direction)'
+            }
+          ],
+          formula: 'π_* ℚ[n] ≅ IC(C_n) ⊕ i_* ℚ[1] ⊕ i_* ℚ[-1]  (n even)'
+        },
+        springer: {
+          name: 'Springer Resolution',
+          map: 'μ: T*G/B → N (nilpotent cone)',
+          description: 'Springer resolution for reductive group G. Each summand corresponds to irreducible representation.',
+          decomposition: [
+            {
+              summand: 'IC(N_λ, L_λ)',
+              support: 'Nilpotent orbit N_λ',
+              description: 'IC sheaf for orbit, local system from irrep'
+            }
+          ],
+          formula: 'μ_* ℚ[dim] ≅ ⊕_λ IC(closure(N_λ), L_λ)^{⊕ dim λ}'
+        }
+      };
+
+      const current = examples[example];
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">Decomposition Theorem</h2>
+          <p className="panel-subtitle">
+            The jewel of perverse sheaf theory: for proper map f: X → Y with X smooth, 
+            f_* ℚ_X[dim X] decomposes into direct sum of IC sheaves. This reveals hidden structure in topology.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Select Example</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {Object.keys(examples).map(key => (
+                  <button
+                    key={key}
+                    className={example === key ? 'button' : 'button button-secondary'}
+                    onClick={() => setExample(key)}
+                  >
+                    {examples[key].name.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="control-group">
+              <button
+                className="button"
+                onClick={() => setShowDecomposition(!showDecomposition)}
+              >
+                {showDecomposition ? 'Hide' : 'Show'} Decomposition
+              </button>
+            </div>
+          </div>
+
+          <div className="section-card">
+            <h3>{current.name}</h3>
+            <p><strong style={{ color: 'var(--accent-gold)' }}>Map:</strong> {current.map}</p>
+            <p>{current.description}</p>
+          </div>
+
+          <AnimatedDiagram
+            width={700}
+            height={400}
+            nodes={[
+              { id: 'x', label: 'X', sublabel: 'smooth', x: 150, y: 200, radius: 50, color: 'rgba(6, 182, 212, 0.2)' },
+              { id: 'y', label: 'Y', sublabel: 'singular', x: 550, y: 200, radius: 50, color: 'rgba(236, 72, 153, 0.2)' }
+            ]}
+            arrows={[
+              { from: 'x', to: 'y', label: 'f (proper)', curvature: 0 }
+            ]}
+            title="f_* ℚ_X[dim X] decomposes into IC sheaves on Y"
+          />
+
+          {showDecomposition && (
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ color: 'var(--accent-gold)', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+                Direct Sum Decomposition
+              </h3>
+              
+              {current.decomposition.map((summand, idx) => (
+                <div key={idx} className="decomposition-summand">
+                  <h5>Summand {idx + 1}: {summand.summand}</h5>
+                  <p><strong>Support:</strong> {summand.support}</p>
+                  <p>{summand.description}</p>
+                </div>
+              ))}
+
+              <div style={{ 
+                marginTop: '2rem', 
+                padding: '1.5rem', 
+                background: 'var(--bg-deep)', 
+                borderRadius: '8px',
+                border: '2px solid var(--accent-gold)',
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '1.1rem',
+                color: 'var(--accent-gold)',
+                textAlign: 'center'
+              }}>
+                {current.formula}
+              </div>
+            </div>
+          )}
+
+          <div className="theorem-box">
+            <h4>Decomposition Theorem (BBD)</h4>
+            <p>
+              Let f: X → Y be a proper morphism with X smooth. Then f_* ℚ_X[dim X] ≅ ⊕_i IC(Y̅_i, L_i)[shifts]
+              where Y_i range over strata of Y and L_i are semisimple local systems.
+            </p>
+          </div>
+
+          <div className="info-box">
+            <h4>Why This Matters</h4>
+            <p>
+              The decomposition theorem says: "topology of singular spaces is controlled by intersection cohomology."
+              It's used to prove hard results: purity for Hodge modules, character formulas for representations,
+              geometric Langlands. The IC sheaves are the "atoms" of topology.
+            </p>
+          </div>
+
+          <div className="code-block">
+            <span className="code-comment">// Decomposition theorem structure</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">DecompositionTheorem</span> = (f: X → Y) =&gt; {`{`}<br/>
+            {'  '}<span className="code-comment">// Assumptions: f proper, X smooth, characteristic 0</span><br/>
+            {'  '}<br/>
+            {'  '}<span className="code-keyword">const</span> stratification = compute_stratification(Y);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Decompose into IC summands</span><br/>
+            {'  '}<span className="code-keyword">const</span> summands = stratification.map(Y_i =&gt; {`{`}<br/>
+            {'    '}<span className="code-keyword">const</span> local_systems = compute_R^q_f_*(ℚ_X)|_Y_i;<br/>
+            {'    '}<span className="code-keyword">return</span> local_systems.map(L =&gt;<br/>
+            {'      '}IC(closure(Y_i), L)[shift]<br/>
+            {'    '});<br/>
+            {'  '}{'});'}<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-keyword">return</span> direct_sum(summands);<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 4: GPU Sheaf Cohomology
+    const GPUSheafCohomology = () => {
+      const [space, setSpace] = useState('torus');
+      const [coefficient, setCoefficient] = useState('Q');
+      const [computing, setComputing] = useState(false);
+      const [result, setResult] = useState(null);
+
+      const computeCohomology = () => {
+        setComputing(true);
+        
+        // Simulate GPU computation
+        setTimeout(() => {
+          const cohomology = {
+            torus: {
+              Q: { '0': 'ℚ', '1': 'ℚ²', '2': 'ℚ' },
+              Z: { '0': 'ℤ', '1': 'ℤ²', '2': 'ℤ' }
+            },
+            sphere: {
+              Q: { '0': 'ℚ', '2': 'ℚ' },
+              Z: { '0': 'ℤ', '2': 'ℤ' }
+            },
+            projective: {
+              Q: { '0': 'ℚ', '2': 'ℚ', '4': 'ℚ' },
+              Z: { '0': 'ℤ', '2': 'ℤ', '4': 'ℤ' }
+            }
+          };
+
+          setResult(cohomology[space][coefficient]);
+          setComputing(false);
+        }, 1500);
+      };
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">GPU Sheaf Cohomology</h2>
+          <p className="panel-subtitle">
+            Compute H*(X, F) using GPU acceleration. While toy examples here use lookup tables,
+            real implementation would use cellular decomposition + sparse linear algebra on GPU.
+          </p>
+
+          <div className="gpu-status">
+            <div className="gpu-indicator"></div>
+            WebGPU Ready (Simulated)
+          </div>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Space X</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className={space === 'torus' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSpace('torus')}
+                >
+                  T² (Torus)
+                </button>
+                <button
+                  className={space === 'sphere' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSpace('sphere')}
+                >
+                  S² (Sphere)
+                </button>
+                <button
+                  className={space === 'projective' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSpace('projective')}
+                >
+                  ℙ² (Projective)
+                </button>
+              </div>
+            </div>
+
+            <div className="control-group">
+              <label className="control-label">Coefficients</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className={coefficient === 'Q' ? 'button' : 'button button-secondary'}
+                  onClick={() => setCoefficient('Q')}
+                >
+                  ℚ
+                </button>
+                <button
+                  className={coefficient === 'Z' ? 'button' : 'button button-secondary'}
+                  onClick={() => setCoefficient('Z')}
+                >
+                  ℤ
+                </button>
+              </div>
+            </div>
+
+            <div className="control-group">
+              <button
+                className="button"
+                onClick={computeCohomology}
+                disabled={computing}
+              >
+                {computing ? 'Computing...' : 'Compute H*(X, k)'}
+              </button>
+            </div>
+          </div>
+
+          {result && (
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ color: 'var(--accent-gold)', marginBottom: '1.5rem' }}>
+                Cohomology Groups H^i(X, {coefficient === 'Q' ? 'ℚ' : 'ℤ'})
+              </h3>
+              
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                gap: '1rem' 
+              }}>
+                {Object.entries(result).map(([degree, value]) => (
+                  <div key={degree} className="section-card" style={{ textAlign: 'center' }}>
+                    <h4 style={{ color: 'var(--accent-cyan)', marginBottom: '0.5rem' }}>
+                      H^{degree}
+                    </h4>
+                    <div style={{ 
+                      fontSize: '1.5rem', 
+                      fontFamily: 'IBM Plex Mono, monospace',
+                      color: 'var(--accent-gold)'
+                    }}>
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '2rem' }}>
+                <h4 style={{ color: 'var(--accent-cyan)', marginBottom: '1rem' }}>
+                  Betti Numbers: dim H^i
+                </h4>
+                <div style={{ 
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: '1.1rem',
+                  color: 'var(--text-primary)',
+                  padding: '1rem',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '8px'
+                }}>
+                  b_i = ({Object.values(result).map((v, i) => 
+                    v !== '0' ? '1' : '0'
+                  ).join(', ')})
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="info-box">
+            <h4>GPU Implementation Strategy</h4>
+            <p>
+              Real implementation: (1) Construct cell complex / simplicial structure, (2) Build boundary matrices ∂_i,
+              (3) Compute kernels and images via sparse Gaussian elimination on GPU, (4) H^i = ker(∂_i) / im(∂_{i+1}).
+              WebGPU compute shaders handle large-scale matrix operations efficiently.
+            </p>
+          </div>
+
+          <div className="code-block">
+            <span className="code-comment">// WebGPU cohomology computation (sketch)</span><br/>
+            <span className="code-keyword">const</span> <span className="code-function">computeCohomologyGPU</span> = <span className="code-keyword">async</span> (X, k) =&gt; {`{`}<br/>
+            {'  '}<span className="code-comment">// 1. Build cell complex</span><br/>
+            {'  '}<span className="code-keyword">const</span> cells = triangulate(X);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// 2. Boundary matrices</span><br/>
+            {'  '}<span className="code-keyword">const</span> boundaries = cells.map(compute_boundary_matrix);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// 3. GPU kernel/image computation</span><br/>
+            {'  '}<span className="code-keyword">const</span> kernels = <span className="code-keyword">await</span> gpu_sparse_kernel(boundaries);<br/>
+            {'  '}<span className="code-keyword">const</span> images = <span className="code-keyword">await</span> gpu_sparse_image(boundaries);<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// 4. Quotient for cohomology</span><br/>
+            {'  '}<span className="code-keyword">return</span> kernels.map((ker, i) =&gt;<br/>
+            {'    '}quotient(ker, images[i+1] || {`{}`})<br/>
+            {'  '});<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Main App Component
+    const App = () => {
+      const [activeTab, setActiveTab] = useState('spectral');
+
+      const tabs = {
+        spectral: { name: 'Spectral Sequences', component: SpectralSequenceExplorer },
+        cycles: { name: 'Nearby Cycles', component: NearbyCyclesAnimator },
+        decomposition: { name: 'Decomposition Theorem', component: DecompositionTheoremExplorer },
+        gpu: { name: 'GPU Cohomology', component: GPUSheafCohomology }
+      };
+
+      const ActiveComponent = tabs[activeTab].component;
+
+      return (
+        <div className="app-container">
+          <header className="header">
+            <div className="header-ornament"></div>
+            <h1 className="main-title">Advanced Perverse Sheaves</h1>
+            <p className="subtitle">Spectral Sequences • Decomposition • Computation</p>
+          </header>
+
+          <nav className="tab-nav">
+            {Object.entries(tabs).map(([key, tab]) => (
+              <button
+                key={key}
+                className={`tab-button ${activeTab === key ? 'active' : ''}`}
+                onClick={() => setActiveTab(key)}
+              >
+                {tab.name}
+              </button>
+            ))}
+          </nav>
+
+          <ActiveComponent />
+
+          <div style={{ 
+            marginTop: '4rem', 
+            padding: '2rem', 
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            borderTop: '1px solid var(--border-subtle)'
+          }}>
+            <p>
+              Perverse sheaves bridge topology, representation theory, and geometry.
+              <br/>
+              They reveal hidden structures through systematic categorical machinery.
+            </p>
+          </div>
+        </div>
+      );
+    };
+
+    // Render
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

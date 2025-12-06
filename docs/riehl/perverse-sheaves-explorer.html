@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perverse Sheaves: A Categorical & Geometric Exploration</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #131824;
+      --bg-tertiary: #1a1f2e;
+      --accent-amber: #fbbf24;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #a855f7;
+      --accent-emerald: #10b981;
+      --text-primary: #e5e7eb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --border-subtle: rgba(255, 255, 255, 0.1);
+      --glow-amber: rgba(251, 191, 36, 0.3);
+      --glow-cyan: rgba(6, 182, 212, 0.3);
+      --glow-purple: rgba(168, 85, 247, 0.3);
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    #root {
+      min-height: 100vh;
+    }
+
+    .app-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 3rem 0 4rem;
+      position: relative;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 200px;
+      background: radial-gradient(ellipse at center, var(--glow-purple), transparent);
+      opacity: 0.3;
+      filter: blur(60px);
+      pointer-events: none;
+    }
+
+    .main-title {
+      font-family: 'Spectral', serif;
+      font-size: 3.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+    }
+
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+      padding-bottom: 0;
+    }
+
+    .tab-button {
+      padding: 1rem 1.5rem;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+
+    .tab-button:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-button.active {
+      color: var(--accent-cyan);
+    }
+
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: scaleX(0);
+        opacity: 0;
+      }
+      to {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+    }
+
+    /* Panel Container */
+    .panel {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 2rem;
+      border: 1px solid var(--border-subtle);
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel-title {
+      font-family: 'Spectral', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent-amber);
+    }
+
+    .panel-description {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      line-height: 1.8;
+    }
+
+    /* Section Grid */
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-card {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 1.5rem;
+      border: 1px solid var(--border-subtle);
+      transition: all 0.3s ease;
+    }
+
+    .section-card:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 20px var(--glow-cyan);
+    }
+
+    .section-card h3 {
+      font-family: 'Spectral', serif;
+      font-size: 1.3rem;
+      margin-bottom: 0.75rem;
+      color: var(--accent-cyan);
+    }
+
+    .section-card p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Canvas Container */
+    .canvas-container {
+      width: 100%;
+      height: 500px;
+      background: var(--bg-primary);
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+      margin: 1.5rem 0;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent-amber);
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      padding: 1.5rem;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 200px;
+    }
+
+    .control-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .slider {
+      width: 100%;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--glow-cyan);
+      transition: all 0.2s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 15px var(--glow-cyan);
+    }
+
+    .slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 10px var(--glow-cyan);
+    }
+
+    .button {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.02em;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px var(--glow-purple);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .button-secondary {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .button-secondary:hover {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px var(--glow-cyan);
+    }
+
+    /* Diagram Container */
+    .diagram-container {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 2rem;
+      border: 1px solid var(--border-subtle);
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* SVG Styles */
+    .diagram-arrow {
+      stroke: var(--accent-cyan);
+      stroke-width: 2;
+      fill: none;
+      marker-end: url(#arrowhead);
+    }
+
+    .diagram-node {
+      fill: var(--bg-tertiary);
+      stroke: var(--accent-purple);
+      stroke-width: 2;
+    }
+
+    .diagram-text {
+      fill: var(--text-primary);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    .diagram-label {
+      fill: var(--accent-amber);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+    }
+
+    /* Code Block */
+    .code-block {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 1.5rem;
+      border: 1px solid var(--border-subtle);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--accent-amber);
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    .code-comment {
+      color: var(--text-muted);
+    }
+
+    /* Info Box */
+    .info-box {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(168, 85, 247, 0.1));
+      border-left: 3px solid var(--accent-cyan);
+      padding: 1rem 1.5rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+
+    .info-box h4 {
+      color: var(--accent-cyan);
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .info-box p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    /* Matrix Display */
+    .matrix {
+      display: inline-grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--accent-amber);
+    }
+
+    .matrix-bracket {
+      font-size: 2rem;
+      color: var(--text-secondary);
+    }
+
+    /* Interactive Point */
+    .interactive-point {
+      cursor: grab;
+      transition: all 0.2s ease;
+    }
+
+    .interactive-point:hover {
+      r: 8;
+      filter: drop-shadow(0 0 8px var(--accent-amber));
+    }
+
+    .interactive-point:active {
+      cursor: grabbing;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      color: var(--text-primary);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      pointer-events: none;
+      z-index: 1000;
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Loading State */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      color: var(--text-secondary);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .loading::after {
+      content: '...';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-title {
+        font-size: 2.5rem;
+      }
+
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .control-group {
+        min-width: 100%;
+      }
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
+    }
+
+    /* Mathematical notation helpers */
+    .math-inline {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--accent-amber);
+      font-style: italic;
+    }
+
+    .subscript {
+      font-size: 0.8em;
+      vertical-align: sub;
+    }
+
+    .superscript {
+      font-size: 0.8em;
+      vertical-align: super;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // Utility: Categorical Diagram Renderer
+    const CategoryDiagram = ({ width = 600, height = 400, nodes, arrows, title }) => {
+      const svgRef = useRef(null);
+
+      useEffect(() => {
+        if (!svgRef.current) return;
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
+
+        // Define arrowhead marker
+        svg.append('defs')
+          .append('marker')
+          .attr('id', 'arrowhead')
+          .attr('viewBox', '0 0 10 10')
+          .attr('refX', 8)
+          .attr('refY', 5)
+          .attr('markerWidth', 6)
+          .attr('markerHeight', 6)
+          .attr('orient', 'auto')
+          .append('path')
+          .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+          .attr('fill', '#06b6d4');
+
+        // Draw arrows
+        const arrowGroup = svg.append('g').attr('class', 'arrows');
+        arrows.forEach((arrow, i) => {
+          const source = nodes.find(n => n.id === arrow.from);
+          const target = nodes.find(n => n.id === arrow.to);
+          
+          if (source && target) {
+            const path = arrowGroup.append('path')
+              .attr('class', 'diagram-arrow')
+              .attr('d', arrow.curved 
+                ? `M ${source.x} ${source.y} Q ${(source.x + target.x) / 2} ${(source.y + target.y) / 2 - 50} ${target.x} ${target.y}`
+                : `M ${source.x} ${source.y} L ${target.x} ${target.y}`)
+              .style('opacity', 0)
+              .transition()
+              .delay(i * 100)
+              .duration(600)
+              .style('opacity', 1);
+
+            // Add label
+            if (arrow.label) {
+              const midX = arrow.curved 
+                ? (source.x + target.x) / 2
+                : (source.x + target.x) / 2;
+              const midY = arrow.curved
+                ? (source.y + target.y) / 2 - 50
+                : (source.y + target.y) / 2;
+
+              arrowGroup.append('text')
+                .attr('class', 'diagram-label')
+                .attr('x', midX)
+                .attr('y', midY - 10)
+                .text(arrow.label)
+                .style('opacity', 0)
+                .transition()
+                .delay(i * 100 + 300)
+                .duration(400)
+                .style('opacity', 1);
+            }
+          }
+        });
+
+        // Draw nodes
+        const nodeGroup = svg.append('g').attr('class', 'nodes');
+        nodes.forEach((node, i) => {
+          const g = nodeGroup.append('g')
+            .attr('transform', `translate(${node.x}, ${node.y})`)
+            .style('opacity', 0)
+            .transition()
+            .delay(i * 150)
+            .duration(500)
+            .style('opacity', 1);
+
+          g.selection()
+            .append('circle')
+            .attr('class', 'diagram-node')
+            .attr('r', node.radius || 40);
+
+          g.selection()
+            .append('text')
+            .attr('class', 'diagram-text')
+            .text(node.label);
+        });
+
+      }, [nodes, arrows]);
+
+      return (
+        <div className="diagram-container">
+          <svg ref={svgRef} width={width} height={height} />
+        </div>
+      );
+    };
+
+    // Component 1: Category Theory Bridge
+    const CategoryTheoryBridge = () => {
+      const [selectedConcept, setSelectedConcept] = useState('derived');
+
+      const concepts = {
+        derived: {
+          title: 'Derived Categories → ∞-Categories',
+          description: 'The derived category D^b(X) is the homotopy category of an ∞-category. Perverse sheaves live in this derived world.',
+          diagram: {
+            nodes: [
+              { id: 'chain', label: 'Ch(Sh_X)', x: 100, y: 100, radius: 50 },
+              { id: 'derived', label: 'D^b(X)', x: 300, y: 100, radius: 50 },
+              { id: 'infinity', label: '∞-Cat', x: 500, y: 100, radius: 50 },
+              { id: 'perverse', label: 'Perv(X)', x: 300, y: 250, radius: 50 }
+            ],
+            arrows: [
+              { from: 'chain', to: 'derived', label: 'Localization', curved: false },
+              { from: 'derived', to: 'infinity', label: 'Nerve', curved: false },
+              { from: 'derived', to: 'perverse', label: 't-structure', curved: false }
+            ]
+          },
+          code: `// Derived ∞-category perspective
+const DerivedCategory = {
+  objects: "Complexes F• ∈ Ch(Sh_X)",
+  morphisms: "Hom_D(F•, G•) = H⁰(RHom(F•, G•))",
+  composition: "Derived composition via ∞-structure"
+};
+
+// Perverse t-structure picks out heart
+const PerverseSheaves = {
+  condition: "ᵖD≤⁰ ∩ ᵖD≥⁰",
+  heart: "Abelian category Perv(X)",
+  simples: "IC(X_λ, L) for strata X_λ"
+};`
+        },
+        tstructure: {
+          title: 't-Structures as Factorization Systems',
+          description: 'A t-structure (D≤⁰, D≥⁰) gives orthogonal factorization systems - the ∞-categorical perspective on truncation.',
+          diagram: {
+            nodes: [
+              { id: 'object', label: 'X ∈ D', x: 300, y: 80, radius: 40 },
+              { id: 'leq', label: 'τ≤⁰X', x: 150, y: 200, radius: 45 },
+              { id: 'geq', label: 'τ≥¹X', x: 450, y: 200, radius: 45 },
+              { id: 'heart', label: 'ᵖH⁰(X)', x: 300, y: 320, radius: 45 }
+            ],
+            arrows: [
+              { from: 'leq', to: 'object', label: '', curved: false },
+              { from: 'object', to: 'geq', label: '[1]', curved: false },
+              { from: 'leq', to: 'heart', label: 'τ≥⁰', curved: true },
+              { from: 'heart', to: 'geq', label: 'τ≤⁰', curved: true }
+            ]
+          },
+          code: `// t-structure as orthogonal pair
+const tStructure = {
+  D_leq_0: "Right orthogonal to D≥¹",
+  D_geq_0: "Left orthogonal to D≤⁻¹",
+  truncation: "Functorial distinguished triangle",
+  heart: "D≤⁰ ∩ D≥⁰ = abelian category"
+};
+
+// Perverse shifts by dimension
+const perverse_t = (λ) => ({
+  D_leq_0: { on_stratum_λ: "H^i(i*F) = 0 for i > -dim(X_λ)" },
+  D_geq_0: { on_stratum_λ: "H^i(i!F) = 0 for i < -dim(X_λ)" }
+});`
+        },
+        sixfunctor: {
+          title: 'Six Functors as ∞-Functors',
+          description: 'The six operations (f*, f*, f!, f!, ⊗, RHom) extend to ∞-functors between derived ∞-categories, preserving homotopy coherent structures.',
+          diagram: {
+            nodes: [
+              { id: 'dx', label: 'D^b(X)', x: 150, y: 200, radius: 50 },
+              { id: 'dy', label: 'D^b(Y)', x: 450, y: 200, radius: 50 }
+            ],
+            arrows: [
+              { from: 'dx', to: 'dy', label: 'f*, f!', curved: true },
+              { from: 'dy', to: 'dx', label: 'f*, f!', curved: true }
+            ]
+          },
+          code: `// Six functor formalism (∞-version)
+const SixFunctors = (f: X → Y) => ({
+  exceptional_inverse: {
+    functor: "f! : D(Y) → D(X)",
+    left_adjoint_to: "f!",
+    preserves: "colimits"
+  },
+  pushforward: {
+    functor: "f* : D(X) → D(Y)", 
+    right_adjoint_to: "f*",
+    preserves: "limits"
+  },
+  proper_base_change: {
+    statement: "f* ∘ g! ≃ g'! ∘ f'*",
+    in_pullback: "Natural equivalence of ∞-functors"
+  }
+});
+
+// Verdier duality as contravariant equivalence
+const VerdierDuality = {
+  D: "D(X)^op → D(X)",
+  formula: "D(F) = RHom(F, ω_X)",
+  involutive: "D² ≃ id"
+};`
+        },
+        stability: {
+          title: 'Stable ∞-Category Structure',
+          description: 'D^b(X) is a stable ∞-category: triangulated structure comes from suspension Σ : D → D and the existence of fiber sequences.',
+          diagram: {
+            nodes: [
+              { id: 'f', label: 'F', x: 150, y: 200, radius: 40 },
+              { id: 'g', label: 'G', x: 300, y: 200, radius: 40 },
+              { id: 'h', label: 'H', x: 450, y: 200, radius: 40 },
+              { id: 'sf', label: 'ΣF', x: 550, y: 200, radius: 40 }
+            ],
+            arrows: [
+              { from: 'f', to: 'g', label: '', curved: false },
+              { from: 'g', to: 'h', label: '', curved: false },
+              { from: 'h', to: 'sf', label: '', curved: false }
+            ]
+          },
+          code: `// Stable ∞-category axioms
+const StableStructure = {
+  suspension: "Σ : D → D is an equivalence",
+  fiber_cofiber: "Fiber sequences = Cofiber sequences",
+  zero_object: "Initial = Terminal object",
+  triangulated: "Homotopy category is triangulated"
+};
+
+// Distinguished triangles arise from fiber sequences
+const FiberSequence = {
+  in_infinity_cat: "F → G → H is fiber sequence",
+  in_homotopy_cat: "F → G → H → ΣF is distinguished triangle",
+  perverse_version: "Heart sees short exact sequences"
+};`
+        }
+      };
+
+      const current = concepts[selectedConcept];
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">∞-Categorical Foundations</h2>
+          <p className="panel-description">
+            Connecting classical perverse sheaves to modern ∞-category theory. The derived category is the shadow of a rich ∞-categorical structure.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Select Concept</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {Object.keys(concepts).map(key => (
+                  <button
+                    key={key}
+                    className={selectedConcept === key ? 'button' : 'button button-secondary'}
+                    onClick={() => setSelectedConcept(key)}
+                  >
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="section-card">
+            <h3>{current.title}</h3>
+            <p>{current.description}</p>
+          </div>
+
+          <CategoryDiagram
+            nodes={current.diagram.nodes}
+            arrows={current.diagram.arrows}
+          />
+
+          <div className="info-box">
+            <h4>Implementation Detail</h4>
+            <p>
+              In Lean 4 or other proof assistants, derived categories are constructed via model categories or ∞-categories.
+              The perverse t-structure can be defined axiomatically via the gluing theorem.
+            </p>
+          </div>
+
+          <div className="code-block">
+            {current.code}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 2: Interactive Stratification Visualizer
+    const StratificationVisualizer = () => {
+      const canvasRef = useRef(null);
+      const [example, setExample] = useState('whitney');
+      const [parameter, setParameter] = useState(0);
+      const [autoRotate, setAutoRotate] = useState(true);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0e1a);
+
+        const camera = new THREE.PerspectiveCamera(75, canvasRef.current.clientWidth / canvasRef.current.clientHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvasRef.current });
+        renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0x06b6d4, 1, 100);
+        pointLight1.position.set(10, 10, 10);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xa855f7, 0.8, 100);
+        pointLight2.position.set(-10, -10, 10);
+        scene.add(pointLight2);
+
+        let mesh;
+
+        // Create geometry based on example
+        if (example === 'whitney') {
+          // Whitney umbrella: x² = zy²
+          const geometry = new THREE.ParametricGeometry((u, v, target) => {
+            const x = u * 2 - 1;
+            const y = v * 2 - 1;
+            const z = (x * x) / (y * y + 0.01); // Avoid division by zero
+            target.set(x * 2, y * 2, Math.min(Math.max(z, -2), 2));
+          }, 50, 50);
+
+          const material = new THREE.MeshPhongMaterial({
+            color: 0x06b6d4,
+            wireframe: false,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+
+          mesh = new THREE.Mesh(geometry, material);
+          
+          // Add singular line
+          const lineGeometry = new THREE.BufferGeometry();
+          const linePoints = [];
+          for (let i = -2; i <= 2; i += 0.1) {
+            linePoints.push(new THREE.Vector3(0, 0, i));
+          }
+          lineGeometry.setFromPoints(linePoints);
+          const lineMaterial = new THREE.LineBasicMaterial({ color: 0xfbbf24, linewidth: 3 });
+          const line = new THREE.Line(lineGeometry, lineMaterial);
+          scene.add(line);
+
+        } else if (example === 'elliptic') {
+          // Elliptic curve degeneration
+          const a = parameter;
+          const b = parameter;
+          
+          const geometry = new THREE.ParametricGeometry((u, v, target) => {
+            const theta = u * Math.PI * 2;
+            const phi = v * Math.PI;
+            
+            // Torus that degenerates
+            const R = 1 + 0.3 * Math.abs(parameter);
+            const r = 0.5 - 0.4 * Math.abs(parameter);
+            
+            const x = (R + r * Math.cos(phi)) * Math.cos(theta);
+            const y = (R + r * Math.cos(phi)) * Math.sin(theta);
+            const z = r * Math.sin(phi);
+            
+            target.set(x, y, z);
+          }, 50, 50);
+
+          const material = new THREE.MeshPhongMaterial({
+            color: parameter > 0.9 ? 0xfbbf24 : 0xa855f7,
+            wireframe: false,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+
+          mesh = new THREE.Mesh(geometry, material);
+
+        } else if (example === 'quadric') {
+          // Quadric cone
+          const geometry = new THREE.ConeGeometry(2, 4, 32, 1, true);
+          const material = new THREE.MeshPhongMaterial({
+            color: 0x10b981,
+            wireframe: false,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+
+          mesh = new THREE.Mesh(geometry, material);
+          mesh.rotation.x = Math.PI;
+
+          // Add vertex point
+          const vertexGeometry = new THREE.SphereGeometry(0.15, 32, 32);
+          const vertexMaterial = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+          const vertex = new THREE.Mesh(vertexGeometry, vertexMaterial);
+          vertex.position.set(0, 2, 0);
+          scene.add(vertex);
+        }
+
+        scene.add(mesh);
+
+        // Animation loop
+        let animationId;
+        const animate = () => {
+          animationId = requestAnimationFrame(animate);
+          
+          if (autoRotate) {
+            mesh.rotation.y += 0.005;
+          }
+          
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        // Cleanup
+        return () => {
+          cancelAnimationFrame(animationId);
+          geometry.dispose();
+          material.dispose();
+          renderer.dispose();
+        };
+      }, [example, parameter, autoRotate]);
+
+      const examples = {
+        whitney: {
+          name: 'Whitney Umbrella',
+          equation: 'x² = zy²',
+          description: 'Classic example where stratification X = X_reg ∪ (X_sing \\ {0}) ∪ {0} is needed. The origin is more singular than other points on the z-axis.',
+          strata: ['Smooth surface X_reg', 'Singular line \\ {0}', 'Special point {0}']
+        },
+        elliptic: {
+          name: 'Elliptic Curve Degeneration',
+          equation: 'y² = x(x-a)(x-b)',
+          description: 'As a,b → 0, smooth torus degenerates to nodal/cuspidal curve. Watch monodromy action.',
+          strata: ['Smooth elliptic curve', 'Node/cusp point']
+        },
+        quadric: {
+          name: 'Quadric Cone',
+          equation: 'xy = zw',
+          description: 'Affine quadric cone with isolated singularity. Cotangent bundle T*S^n contracts to vertex.',
+          strata: ['Smooth cone \\ {0}', 'Vertex {0}']
+        }
+      };
+
+      const currentExample = examples[example];
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">Stratification Visualizer</h2>
+          <p className="panel-description">
+            Explore Whitney stratifications and equi-singularity. Stratifications decompose varieties into smooth pieces where local topology is constant.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Select Example</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {Object.keys(examples).map(key => (
+                  <button
+                    key={key}
+                    className={example === key ? 'button' : 'button button-secondary'}
+                    onClick={() => setExample(key)}
+                  >
+                    {examples[key].name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {example === 'elliptic' && (
+              <div className="control-group">
+                <label className="control-label">Degeneration Parameter: {parameter.toFixed(2)}</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={parameter}
+                  onChange={(e) => setParameter(parseFloat(e.target.value))}
+                  className="slider"
+                />
+              </div>
+            )}
+
+            <div className="control-group">
+              <label className="control-label">
+                <input
+                  type="checkbox"
+                  checked={autoRotate}
+                  onChange={(e) => setAutoRotate(e.target.checked)}
+                  style={{ marginRight: '0.5rem' }}
+                />
+                Auto-rotate
+              </label>
+            </div>
+          </div>
+
+          <div className="section-card">
+            <h3>{currentExample.name}: {currentExample.equation}</h3>
+            <p>{currentExample.description}</p>
+            <div style={{ marginTop: '1rem' }}>
+              <strong style={{ color: 'var(--accent-cyan)' }}>Stratification:</strong>
+              <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
+                {currentExample.strata.map((stratum, i) => (
+                  <li key={i}>{stratum}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="canvas-container">
+            <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+            <div className="canvas-overlay">
+              3D Visualization | Drag to rotate
+            </div>
+          </div>
+
+          <div className="info-box">
+            <h4>Whitney Conditions</h4>
+            <p>
+              For strata X_μ ⊂ closure(X_λ): limits of tangent planes at points in X_λ must contain limits of secant lines from X_μ. 
+              This ensures local normal triviality and well-behaved topology.
+            </p>
+          </div>
+
+          <div className="code-block">
+            <span className="code-comment">// Stratification data structure</span><br/>
+            const stratification = {`{`}<br/>
+            {'  '}strata: [<br/>
+            {'    '}{`{ id: 'smooth', dim: n, subset: 'X_reg' }`},<br/>
+            {'    '}{`{ id: 'singular', dim: n-1, subset: 'X_sing' }`}<br/>
+            {'  '}],<br/>
+            {'  '}whitney_conditions: "Verified for all pairs",<br/>
+            {'  '}local_normal_triviality: true<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 3: Six Functor Playground
+    const SixFunctorPlayground = () => {
+      const [functor, setFunctor] = useState('pushforward');
+      const [sheaf, setSheaf] = useState('constant');
+      const [computation, setComputation] = useState(null);
+
+      useEffect(() => {
+        // Compute functor application
+        const compute = () => {
+          if (functor === 'pushforward' && sheaf === 'constant') {
+            return {
+              input: 'k_C* on C*',
+              output: 'Direct image on P^1',
+              stalks: {
+                away_from_0: 'k (constant)',
+                at_0: 'k^m (m copies)'
+              },
+              formula: '(f_* k_C*)_y = H^0(f^{-1}(y), k)'
+            };
+          } else if (functor === 'exceptional' && sheaf === 'ic') {
+            return {
+              input: 'IC(P^1) = k_P^1[1]',
+              output: 'Pullback to C* → P^1',
+              stalks: {
+                everywhere: 'k[1] (shifted constant)'
+              },
+              formula: 'f! preserves perverse sheaves (affine map)'
+            };
+          }
+          return {
+            input: 'Computing...',
+            output: 'Result',
+            stalks: {},
+            formula: ''
+          };
+        };
+
+        setComputation(compute());
+      }, [functor, sheaf]);
+
+      const functors = {
+        pushforward: {
+          name: 'f_* (Pushforward)',
+          adjoint: 'Right adjoint to f*',
+          preserves: 'Limits, proper base change',
+          description: 'Collects sections over preimage. For f: X → Y, (f_*F)(U) = F(f^{-1}(U)).'
+        },
+        pullback: {
+          name: 'f* (Pullback)',
+          adjoint: 'Left adjoint to f_*',
+          preserves: 'Colimits, base change',
+          description: 'Restricts sheaf to fibers. Exact functor between derived categories.'
+        },
+        exceptional: {
+          name: 'f! (Exceptional inverse)',
+          adjoint: 'Right adjoint to f!',
+          preserves: 'Perverse sheaves (if f affine)',
+          description: 'Sections with proper support. f!(F)_x includes "vanishing cycles" data.'
+        },
+        shriek: {
+          name: 'f! (Extraordinary pushforward)',
+          adjoint: 'Left adjoint to f!',
+          preserves: 'Compact support',
+          description: 'Proper pushforward with compact support. f!(F) = f_*(F) when f proper.'
+        }
+      };
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">Six Functor Playground</h2>
+          <p className="panel-description">
+            Explore Grothendieck's six operations: (f*, f_*), (f!, f!), (⊗, RHom). These functors form the computational engine of perverse sheaf theory.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Select Functor</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {Object.keys(functors).map(key => (
+                  <button
+                    key={key}
+                    className={functor === key ? 'button' : 'button button-secondary'}
+                    onClick={() => setFunctor(key)}
+                  >
+                    {functors[key].name.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="control-group">
+              <label className="control-label">Input Sheaf</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className={sheaf === 'constant' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSheaf('constant')}
+                >
+                  k_X
+                </button>
+                <button
+                  className={sheaf === 'local' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSheaf('local')}
+                >
+                  L (local system)
+                </button>
+                <button
+                  className={sheaf === 'ic' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSheaf('ic')}
+                >
+                  IC(X)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="section-grid">
+            <div className="section-card">
+              <h3>{functors[functor].name}</h3>
+              <p>{functors[functor].description}</p>
+              <div style={{ marginTop: '1rem' }}>
+                <strong style={{ color: 'var(--accent-amber)' }}>Adjoint:</strong> {functors[functor].adjoint}<br/>
+                <strong style={{ color: 'var(--accent-amber)' }}>Preserves:</strong> {functors[functor].preserves}
+              </div>
+            </div>
+
+            {computation && (
+              <div className="section-card" style={{ borderColor: 'var(--accent-purple)' }}>
+                <h3>Computation Result</h3>
+                <p><strong>Input:</strong> {computation.input}</p>
+                <p><strong>Output:</strong> {computation.output}</p>
+                {computation.stalks && Object.keys(computation.stalks).length > 0 && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <strong style={{ color: 'var(--accent-cyan)' }}>Stalks:</strong>
+                    <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem', color: 'var(--text-secondary)' }}>
+                      {Object.entries(computation.stalks).map(([key, value]) => (
+                        <li key={key}>{key}: {value}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div style={{ marginTop: '1rem', color: 'var(--accent-amber)', fontFamily: 'IBM Plex Mono, monospace' }}>
+                  {computation.formula}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <CategoryDiagram
+            width={600}
+            height={300}
+            nodes={[
+              { id: 'x', label: 'D^b(X)', x: 150, y: 150, radius: 50 },
+              { id: 'y', label: 'D^b(Y)', x: 450, y: 150, radius: 50 }
+            ]}
+            arrows={[
+              { from: 'x', to: 'y', label: 'f_*, f!', curved: true },
+              { from: 'y', to: 'x', label: 'f*, f!', curved: true }
+            ]}
+          />
+
+          <div className="info-box">
+            <h4>Proper Base Change Theorem</h4>
+            <p>
+              For a pullback square with g proper: f* ∘ g_* ≃ g'_* ∘ f'*. This is crucial for computing stalks of 
+              pushforwards: (g_*F)_y = H*(F_y) where F_y is the fiber.
+            </p>
+          </div>
+
+          <div className="code-block">
+            <span className="code-comment">// Six functor formalism implementation</span><br/>
+            const SixFunctors = (f: X → Y) =&gt; ({`{`}<br/>
+            {'  '}<span className="code-comment">// Adjoint pairs</span><br/>
+            {'  '}(f_star, f_shriek): "Pushforward ⊣ Exceptional inverse",<br/>
+            {'  '}(f_shriek, f_bang): "Compact support ⊣ Proper pushforward",<br/>
+            {'  '}<br/>
+            {'  '}<span className="code-comment">// Key properties</span><br/>
+            {'  '}proper_base_change: "f* ∘ g_* ≃ (g')_* ∘ (f')*",<br/>
+            {'  '}projection_formula: "f_*(F ⊗ f*G) ≃ f_*F ⊗ G",<br/>
+            {'  '}verdier_duality: "f! ≃ D ∘ f_* ∘ D"<br/>
+            {`}`}
+          </div>
+        </div>
+      );
+    };
+
+    // Component 4: Perverse Sheaf Calculator
+    const PerverseSheafCalculator = () => {
+      const svgRef = useRef(null);
+      const [space, setSpace] = useState('curve');
+      const [monodromy, setMonodromy] = useState(1);
+      const [showVanishing, setShowVanishing] = useState(false);
+
+      useEffect(() => {
+        if (!svgRef.current || space !== 'curve') return;
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll('*').remove();
+
+        const width = 600;
+        const height = 300;
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        // Draw curve (circle representing S^1)
+        svg.append('circle')
+          .attr('cx', centerX)
+          .attr('cy', centerY)
+          .attr('r', 80)
+          .attr('fill', 'none')
+          .attr('stroke', '#06b6d4')
+          .attr('stroke-width', 2);
+
+        // Draw singular point
+        svg.append('circle')
+          .attr('cx', centerX)
+          .attr('cy', centerY)
+          .attr('r', 8)
+          .attr('fill', '#fbbf24')
+          .attr('stroke', '#0a0e1a')
+          .attr('stroke-width', 2);
+
+        // Draw monodromy loop
+        if (showVanishing) {
+          const loopRadius = 120;
+          const arc = d3.arc()
+            .innerRadius(loopRadius)
+            .outerRadius(loopRadius)
+            .startAngle(0)
+            .endAngle(Math.PI * 1.8);
+
+          svg.append('path')
+            .attr('d', arc)
+            .attr('transform', `translate(${centerX}, ${centerY})`)
+            .attr('fill', 'none')
+            .attr('stroke', '#a855f7')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '5,5')
+            .attr('opacity', 0)
+            .transition()
+            .duration(800)
+            .attr('opacity', 0.8);
+
+          // Arrow for monodromy direction
+          svg.append('polygon')
+            .attr('points', '-5,-8 5,0 -5,8')
+            .attr('transform', `translate(${centerX + loopRadius * Math.cos(Math.PI * 1.8)}, ${centerY + loopRadius * Math.sin(Math.PI * 1.8)}) rotate(${Math.PI * 1.8 * 180 / Math.PI + 90})`)
+            .attr('fill', '#a855f7')
+            .attr('opacity', 0)
+            .transition()
+            .duration(800)
+            .attr('opacity', 0.8);
+        }
+
+        // Add labels
+        svg.append('text')
+          .attr('x', centerX)
+          .attr('y', centerY - 100)
+          .attr('text-anchor', 'middle')
+          .attr('class', 'diagram-text')
+          .text('U = D \\ {0}');
+
+        svg.append('text')
+          .attr('x', centerX + 20)
+          .attr('y', centerY + 5)
+          .attr('class', 'diagram-text')
+          .text('0');
+
+      }, [space, showVanishing]);
+
+      const computeIC = () => {
+        if (space === 'curve') {
+          const invariants = monodromy === 1 ? 1 : 0;
+          return {
+            name: 'IC(D, L)',
+            stalks: [
+              { location: 'x ∈ U', cohomology: { '-1': 'V', '0': '0' }},
+              { location: 'x = 0', cohomology: { '-1': `V^μ (dim = ${invariants})`, '0': '0' }}
+            ],
+            description: monodromy === 1 
+              ? 'Monodromy is trivial → IC extends to constant sheaf k_D[1]'
+              : 'Nontrivial monodromy → IC has smaller stalk at origin (vanishing cycles!)'
+          };
+        }
+        return null;
+      };
+
+      const ic = computeIC();
+
+      return (
+        <div className="panel">
+          <h2 className="panel-title">IC Complex Calculator</h2>
+          <p className="panel-description">
+            Compute intersection cohomology complexes IC(X, L) = j!∗(L[dim X]). These are the simple perverse sheaves.
+          </p>
+
+          <div className="controls">
+            <div className="control-group">
+              <label className="control-label">Space</label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className={space === 'curve' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSpace('curve')}
+                >
+                  Disc D ⊂ ℂ
+                </button>
+                <button
+                  className={space === 'surface' ? 'button' : 'button button-secondary'}
+                  onClick={() => setSpace('surface')}
+                >
+                  Quadric Cone
+                </button>
+              </div>
+            </div>
+
+            {space === 'curve' && (
+              <>
+                <div className="control-group">
+                  <label className="control-label">Monodromy eigenvalue: e^(2πi·{monodromy})</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={monodromy}
+                    onChange={(e) => setMonodromy(parseFloat(e.target.value))}
+                    className="slider"
+                  />
+                </div>
+
+                <div className="control-group">
+                  <button
+                    className="button"
+                    onClick={() => setShowVanishing(!showVanishing)}
+                  >
+                    {showVanishing ? 'Hide' : 'Show'} Vanishing Cycles
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {ic && (
+            <>
+              <div className="section-card">
+                <h3>{ic.name}</h3>
+                <p>{ic.description}</p>
+              </div>
+
+              <div style={{ background: 'var(--bg-primary)', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '1rem' }}>
+                <svg ref={svgRef} width="600" height="300" />
+              </div>
+
+              <div className="info-box">
+                <h4>Stalk Computation</h4>
+                {ic.stalks.map((stalk, i) => (
+                  <div key={i} style={{ marginBottom: '1rem' }}>
+                    <strong style={{ color: 'var(--accent-cyan)' }}>At {stalk.location}:</strong>
+                    <div style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--accent-amber)', marginTop: '0.5rem' }}>
+                      {Object.entries(stalk.cohomology).map(([deg, value]) => (
+                        <div key={deg}>H^{deg}: {value}</div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="code-block">
+                <span className="code-comment">// IC complex construction via Deligne</span><br/>
+                const IC = (X, L) =&gt; {`{`}<br/>
+                {'  '}const U = X_smooth;<br/>
+                {'  '}const j = inclusion(U, X);<br/>
+                {'  '}const d = dim(X);<br/>
+                {'  '}<br/>
+                {'  '}<span className="code-comment">// Intermediate extension</span><br/>
+                {'  '}const j_shriek_star = (F) =&gt; {`{`}<br/>
+                {'    '}const lower = perverse_truncation_leq(j_star(F), -1);<br/>
+                {'    '}const upper = perverse_truncation_geq(j_shriek(F), 0);<br/>
+                {'    '}return image(lower → upper);<br/>
+                {'  '}{'};'}<br/>
+                {'  '}<br/>
+                {'  '}return j_shriek_star(L[d]);<br/>
+                {`}`}<br/>
+                <br/>
+                <span className="code-comment">// Result: no subobjects or quotients supported on singular locus</span>
+              </div>
+            </>
+          )}
+        </div>
+      );
+    };
+
+    // Main App Component
+    const App = () => {
+      const [activeTab, setActiveTab] = useState('category');
+
+      const tabs = {
+        category: { name: 'Category Theory', component: CategoryTheoryBridge },
+        stratification: { name: 'Stratifications', component: StratificationVisualizer },
+        functors: { name: 'Six Functors', component: SixFunctorPlayground },
+        ic: { name: 'IC Complexes', component: PerverseSheafCalculator }
+      };
+
+      const ActiveComponent = tabs[activeTab].component;
+
+      return (
+        <div className="app-container">
+          <header className="header">
+            <h1 className="main-title">Perverse Sheaves</h1>
+            <p className="subtitle">A Categorical & Geometric Exploration</p>
+          </header>
+
+          <nav className="tab-nav">
+            {Object.entries(tabs).map(([key, tab]) => (
+              <button
+                key={key}
+                className={`tab-button ${activeTab === key ? 'active' : ''}`}
+                onClick={() => setActiveTab(key)}
+              >
+                {tab.name}
+              </button>
+            ))}
+          </nav>
+
+          <ActiveComponent />
+        </div>
+      );
+    };
+
+    // Render
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
