@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathLang DSL: Unified Mathematical Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'SF Mono', Consolas, monospace;
+        }
+        
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        
+        .main-interface {
+            display: grid;
+            grid-template-areas: 
+                "header header header header"
+                "editor ast-view visualization relationships"
+                "examples examples examples examples"
+                "controls controls controls controls";
+            grid-template-columns: 400px 300px 1fr 300px;
+            grid-template-rows: auto 1fr 120px auto;
+            height: 100vh;
+            gap: 2px;
+            background: #333;
+        }
+        
+        .header {
+            grid-area: header;
+            background: linear-gradient(135deg, #2e1a2e, #1a2e2e, #2e2e1a);
+            padding: 15px;
+            text-align: center;
+            border-bottom: 2px solid #444;
+        }
+        
+        .title {
+            font-size: 22px;
+            color: #e0e0e0;
+            margin-bottom: 5px;
+            background: linear-gradient(90deg, #ff6b4a, #4aff6b, #4a9eff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #aaa;
+            font-size: 13px;
+        }
+        
+        .panel {
+            background: #1a1a1a;
+            padding: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .editor-panel {
+            grid-area: editor;
+            border-right: 2px solid #444;
+            background: #1a1a2e;
+        }
+        
+        .ast-panel {
+            grid-area: ast-view;
+            border-right: 2px solid #444;
+            background: #1a2e1a;
+        }
+        
+        .viz-panel {
+            grid-area: visualization;
+            border-right: 2px solid #444;
+            background: #2e1a1a;
+        }
+        
+        .rel-panel {
+            grid-area: relationships;
+            background: #2e2e1a;
+        }
+        
+        .examples-panel {
+            grid-area: examples;
+            background: #2a2a2a;
+            border-top: 2px solid #444;
+        }
+        
+        .controls {
+            grid-area: controls;
+            background: #333;
+            padding: 10px;
+            border-top: 2px solid #444;
+        }
+        
+        .panel-title {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .code-editor {
+            width: 100%;
+            height: 400px;
+            background: #1a1a2e;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'SF Mono', monospace;
+            font-size: 12px;
+            color: #e0e0e0;
+            resize: none;
+            outline: none;
+            line-height: 1.6;
+        }
+        
+        .code-editor:focus {
+            border-color: #4a9eff;
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
+        }
+        
+        .syntax-highlight {
+            background: #2a2a3a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 10px;
+        }
+        
+        .keyword { color: #ff6b4a; font-weight: bold; }
+        .type { color: #4aff6b; }
+        .operator { color: #4a9eff; }
+        .string { color: #fbbf24; }
+        .comment { color: #888; font-style: italic; }
+        
+        .ast-tree {
+            background: #1a2e1a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 10px;
+        }
+        
+        .ast-node {
+            margin: 5px 0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #2a3a2a;
+            border-left: 3px solid #4aff6b;
+        }
+        
+        .ast-node.manifold { border-left-color: #ff6b4a; }
+        .ast-node.topos { border-left-color: #4a9eff; }
+        .ast-node.bundle { border-left-color: #fbbf24; }
+        .ast-node.morphism { border-left-color: #a855f7; }
+        
+        .visualization-canvas {
+            width: 100%;
+            height: 400px;
+            background: radial-gradient(ellipse at center, #2e1a1a 0%, #1a0a0a 100%);
+            border: 2px solid #444;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .math-object {
+            position: absolute;
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .math-object:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+        
+        .manifold-obj {
+            border-color: #ff6b4a;
+            background: rgba(255, 107, 74, 0.1);
+            color: #ff6b4a;
+        }
+        
+        .topos-obj {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            color: #4a9eff;
+        }
+        
+        .bundle-obj {
+            border-color: #4aff6b;
+            background: rgba(74, 255, 107, 0.1);
+            color: #4aff6b;
+        }
+        
+        .tropical-obj {
+            border-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+        }
+        
+        .connection-line {
+            position: absolute;
+            height: 2px;
+            background: #a855f7;
+            transform-origin: left center;
+            opacity: 0.7;
+            animation: connection-flow 2s infinite;
+        }
+        
+        @keyframes connection-flow {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; box-shadow: 0 0 8px #a855f7; }
+        }
+        
+        .relationship-graph {
+            width: 100%;
+            height: 400px;
+            background: radial-gradient(circle at center, #2e2e1a 0%, #1a1a0a 100%);
+            border: 2px solid #444;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .domain-node {
+            position: absolute;
+            width: 80px;
+            height: 60px;
+            border: 2px solid;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .domain-node:hover {
+            transform: scale(1.2);
+        }
+        
+        .domain-node.week2 {
+            border-color: #ff6b4a;
+            background: rgba(255, 107, 74, 0.1);
+            color: #ff6b4a;
+            top: 50px; left: 50px;
+        }
+        
+        .domain-node.week3 {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+            color: #4a9eff;
+            top: 50px; left: 170px;
+        }
+        
+        .domain-node.week4 {
+            border-color: #4aff6b;
+            background: rgba(74, 255, 107, 0.1);
+            color: #4aff6b;
+            top: 150px; left: 110px;
+        }
+        
+        .domain-node.week5 {
+            border-color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+            top: 250px; left: 50px;
+        }
+        
+        .domain-node.week6 {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+            color: #a855f7;
+            top: 250px; left: 170px;
+        }
+        
+        .domain-node.week7 {
+            border-color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+            top: 150px; left: 200px;
+        }
+        
+        .domain-connection {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            opacity: 0.5;
+            animation: domain-pulse 3s infinite;
+        }
+        
+        @keyframes domain-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            height: 100px;
+            padding: 10px;
+        }
+        
+        .example-card {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 10px;
+        }
+        
+        .example-card:hover {
+            border-color: #4a9eff;
+            background: #2a2a2a;
+        }
+        
+        .example-title {
+            color: #4a9eff;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .example-desc {
+            color: #aaa;
+            font-size: 9px;
+        }
+        
+        .control-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin: 0 15px;
+        }
+        
+        .control-button {
+            background: #333;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 11px;
+        }
+        
+        .control-button:hover {
+            background: #4a9eff;
+            border-color: #4a9eff;
+        }
+        
+        .status-indicator {
+            background: #1a2e1a;
+            border: 1px solid #4aff6b;
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 10px;
+            color: #4aff6b;
+        }
+        
+        .error-display {
+            background: #2e1a1a;
+            border: 1px solid #f87171;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 10px;
+            color: #f87171;
+            display: none;
+        }
+        
+        .suggestions-panel {
+            background: #2a2a1a;
+            border: 1px solid #fbbf24;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .suggestion-item {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin: 2px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .suggestion-item:hover {
+            background: #fbbf24;
+            color: #000;
+        }
+        
+        .live-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background: #4aff6b;
+            border-radius: 50%;
+            animation: live-blink 1s infinite;
+        }
+        
+        @keyframes live-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .dsl-documentation {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 9px;
+        }
+        
+        .syntax-example {
+            background: #2a2a2a;
+            border-left: 3px solid #4a9eff;
+            padding: 6px;
+            margin: 4px 0;
+            font-family: 'SF Mono', monospace;
+            font-size: 9px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-interface">
+        <div class="header">
+            <div class="title">MathLang DSL: Unified Mathematical Framework</div>
+            <div class="subtitle">Synthesis of Hyperbolic, Tropical, Categorical, and Algebraic Structures</div>
+        </div>
+        
+        <div class="panel editor-panel">
+            <div class="panel-title">MathLang Code Editor</div>
+            <div class="live-indicator"></div>
+            
+            <textarea class="code-editor" id="code-editor" oninput="parseAndVisualize()" placeholder="// Write MathLang code here...
+// Example:
+manifold M : HyperbolicSurface {
+    genus: 2,
+    monodromy: DehnTwist(alpha)
+}
+
+topos T := Sh(M)
+bundle E : VectorBundle(M) { rank: 2 }
+tropical_curve C := tropicalize(E.character_variety)">// MathLang Unified Framework
+// Combining all mathematical structures
+
+// Week 2: Hyperbolic Geometry
+manifold M : HyperbolicSurface {
+    genus: 2,
+    fundamental_group: <a,b,c,d | [a,b][c,d] = 1>
+}
+
+// Week 3: Topos Theory  
+topos T := Sh(M)
+subobject_classifier Omega : T -> Set
+
+// Week 4: Character Varieties
+variety X := CharacterVariety(pi1(M), PSL2(C))
+trace_coords := [tr(a), tr(b), tr(ab)]
+
+// Week 5: Tropical Geometry
+tropical_curve TC := tropicalize(X) {
+    semiring: (min, +),
+    vertices: [v1, v2, v3]
+}
+
+// Week 6: Fibered Categories
+fibration F : Categories -> S1 {
+    base: S1,
+    fiber: category(M),
+    monodromy: DehnTwist(a)
+}
+
+// Week 7: K-Theory
+bundle E : VectorBundle(M) { rank: 2 }
+ktheory K0 := GrothendieckGroup(E ⊕ F ⊗ L)
+
+// Cross-connections
+connection c1 : M -> X via representation
+connection c2 : X -> TC via tropicalization  
+connection c3 : T -> K0 via internal_semiring</textarea>
+            
+            <div class="dsl-documentation">
+                <strong>MathLang Syntax:</strong>
+                <div class="syntax-example">manifold M : Type { properties }</div>
+                <div class="syntax-example">topos T := Sh(M)</div>
+                <div class="syntax-example">bundle E : VectorBundle(M)</div>
+                <div class="syntax-example">connection c : A -> B via method</div>
+            </div>
+            
+            <div class="error-display" id="error-display"></div>
+        </div>
+        
+        <div class="panel ast-panel">
+            <div class="panel-title">Abstract Syntax Tree</div>
+            
+            <div class="ast-tree" id="ast-tree">
+                <div class="ast-node manifold">
+                    <strong>Manifold</strong> M : HyperbolicSurface<br>
+                    ├─ genus: 2<br>
+                    └─ π₁: &lt;a,b,c,d | [a,b][c,d]=1&gt;
+                </div>
+                
+                <div class="ast-node topos">
+                    <strong>Topos</strong> T := Sh(M)<br>
+                    ├─ base: M<br>
+                    └─ classifier: Ω
+                </div>
+                
+                <div class="ast-node bundle">
+                    <strong>CharacterVariety</strong> X<br>
+                    ├─ group: π₁(M)<br>
+                    ├─ target: PSL₂(ℂ)<br>
+                    └─ coordinates: traces
+                </div>
+                
+                <div class="ast-node morphism">
+                    <strong>TropicalCurve</strong> TC<br>
+                    ├─ source: X<br>
+                    ├─ semiring: (min,+)<br>
+                    └─ skeleton: PL-graph
+                </div>
+                
+                <div class="ast-node bundle">
+                    <strong>Fibration</strong> F<br>
+                    ├─ base: S¹<br>
+                    ├─ fiber: Cat(M)<br>
+                    └─ monodromy: φ*
+                </div>
+                
+                <div class="ast-node bundle">
+                    <strong>VectorBundle</strong> E<br>
+                    ├─ base: M<br>
+                    ├─ rank: 2<br>
+                    └─ K-class: [E]
+                </div>
+            </div>
+            
+            <div class="suggestions-panel">
+                <strong>Suggestions:</strong>
+                <div class="suggestion-item" onclick="addSuggestion('monodromy M.a -> X')">Add monodromy connection</div>
+                <div class="suggestion-item" onclick="addSuggestion('internal_ops E ⊕ F in T')">Internal bundle operations</div>
+                <div class="suggestion-item" onclick="addSuggestion('amoeba X -> TC')">Amoeba limit process</div>
+            </div>
+        </div>
+        
+        <div class="panel viz-panel">
+            <div class="panel-title">Live Mathematical Visualization</div>
+            
+            <div class="visualization-canvas" id="visualization-canvas">
+                <!-- Dynamically generated mathematical objects -->
+                <div class="math-object manifold-obj" style="top: 50px; left: 50px;" id="obj-M">
+                    M<br><small>Hyperbolic</small>
+                </div>
+                
+                <div class="math-object topos-obj" style="top: 150px; left: 150px;" id="obj-T">
+                    Sh(M)<br><small>Topos</small>
+                </div>
+                
+                <div class="math-object bundle-obj" style="top: 250px; left: 250px;" id="obj-X">
+                    X<br><small>Character</small>
+                </div>
+                
+                <div class="math-object tropical-obj" style="top: 200px; left: 350px;" id="obj-TC">
+                    TC<br><small>Tropical</small>
+                </div>
+                
+                <div class="math-object bundle-obj" style="top: 100px; left: 300px;" id="obj-E">
+                    E<br><small>Bundle</small>
+                </div>
+                
+                <!-- Connections between objects -->
+                <div class="connection-line" style="top: 75px; left: 130px; width: 70px; transform: rotate(45deg);"></div>
+                <div class="connection-line" style="top: 175px; left: 230px; width: 90px; transform: rotate(15deg);"></div>
+                <div class="connection-line" style="top: 275px; left: 330px; width: 60px; transform: rotate(-30deg);"></div>
+                <div class="connection-line" style="top: 125px; left: 200px; width: 80px; transform: rotate(75deg);"></div>
+            </div>
+            
+            <div class="status-indicator" id="viz-status">
+                ✓ Visualization updated: 5 objects, 4 connections
+            </div>
+        </div>
+        
+        <div class="panel rel-panel">
+            <div class="panel-title">Cross-Domain Relationships</div>
+            
+            <div class="relationship-graph" id="relationship-graph">
+                <div class="domain-node week2">
+                    Week 2<br>
+                    <small>Hyperbolic</small>
+                </div>
+                
+                <div class="domain-node week3">
+                    Week 3<br>
+                    <small>Topoi</small>
+                </div>
+                
+                <div class="domain-node week4">
+                    Week 4<br>
+                    <small>Character</small>
+                </div>
+                
+                <div class="domain-node week5">
+                    Week 5<br>
+                    <small>Tropical</small>
+                </div>
+                
+                <div class="domain-node week6">
+                    Week 6<br>
+                    <small>Fibered</small>
+                </div>
+                
+                <div class="domain-node week7">
+                    Week 7<br>
+                    <small>K-Theory</small>
+                </div>
+                
+                <!-- Domain connections -->
+                <div class="domain-connection" style="top: 80px; left: 130px; width: 60px;"></div>
+                <div class="domain-connection" style="top: 180px; left: 140px; width: 70px; transform: rotate(90deg);"></div>
+                <div class="domain-connection" style="top: 280px; left: 130px; width: 60px;"></div>
+                <div class="domain-connection" style="top: 180px; left: 140px; width: 80px; transform: rotate(45deg);"></div>
+                <div class="domain-connection" style="top: 200px; left: 190px; width: 60px; transform: rotate(-45deg);"></div>
+            </div>
+            
+            <div class="suggestions-panel">
+                <strong>Cross-Connections:</strong>
+                <div class="suggestion-item">Hyperbolic → Character via π₁ representations</div>
+                <div class="suggestion-item">Character → Tropical via logarithmic limit</div>
+                <div class="suggestion-item">Topoi → K-Theory via internal semirings</div>
+                <div class="suggestion-item">Fibered → Hyperbolic via mapping tori</div>
+            </div>
+        </div>
+        
+        <div class="examples-panel">
+            <div class="examples-grid">
+                <div class="example-card" onclick="loadExample('hyperbolic-topos')">
+                    <div class="example-title">Hyperbolic Topos</div>
+                    <div class="example-desc">Sheaves on hyperbolic surfaces with internal logic</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('tropical-character')">
+                    <div class="example-title">Tropical Character</div>
+                    <div class="example-desc">Tropicalization of representation varieties</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('fibered-ktheory')">
+                    <div class="example-title">Fibered K-Theory</div>
+                    <div class="example-desc">K-theory of mapping torus bundles</div>
+                </div>
+                
+                <div class="example-card" onclick="loadExample('unified-framework')">
+                    <div class="example-title">Unified Framework</div>
+                    <div class="example-desc">All structures connected in single program</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-section">
+                <button class="control-button" onclick="parseCode()">Parse DSL</button>
+                <button class="control-button" onclick="validateSyntax()">Validate</button>
+                <button class="control-button" onclick="visualizeAST()">Show AST</button>
+                <button class="control-button" onclick="generateVisualization()">Visualize</button>
+            </div>
+            
+            <div class="control-section">
+                <button class="control-button" onclick="exportCode()">Export</button>
+                <button class="control-button" onclick="shareFramework()">Share</button>
+                <button class="control-button" onclick="documentAPI()">API Docs</button>
+                <button class="control-button" onclick="runTests()">Run Tests</button>
+            </div>
+            
+            <div class="control-section">
+                <span style="color: #aaa; font-size: 11px;">Status:</span>
+                <div class="status-indicator" id="parser-status">Ready</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentAST = null;
+        let visualizationObjects = [];
+        let parseTimer = null;
+        
+        // DSL Keywords and Types
+        const keywords = [
+            'manifold', 'topos', 'bundle', 'variety', 'tropical_curve', 'fibration', 
+            'connection', 'ktheory', 'subobject_classifier', 'trace_coords'
+        ];
+        
+        const types = [
+            'HyperbolicSurface', 'CharacterVariety', 'VectorBundle', 'TropicalCurve',
+            'Fibration', 'PSL2', 'GrothendieckGroup', 'DehnTwist'
+        ];
+        
+        // DSL Parser (simplified)
+        function parseDSL(code) {
+            const lines = code.split('\n').filter(line => line.trim() && !line.trim().startsWith('//'));
+            const ast = { declarations: [], connections: [] };
+            
+            lines.forEach(line => {
+                line = line.trim();
+                
+                // Parse manifold declarations
+                if (line.includes('manifold')) {
+                    const match = line.match(/manifold\s+(\w+)\s*:\s*(\w+)/);
+                    if (match) {
+                        ast.declarations.push({
+                            type: 'manifold',
+                            name: match[1],
+                            category: match[2],
+                            properties: extractProperties(line)
+                        });
+                    }
+                }
+                
+                // Parse topos declarations
+                else if (line.includes('topos')) {
+                    const match = line.match(/topos\s+(\w+)\s*:=\s*Sh\((\w+)\)/);
+                    if (match) {
+                        ast.declarations.push({
+                            type: 'topos',
+                            name: match[1],
+                            base: match[2]
+                        });
+                    }
+                }
+                
+                // Parse bundle declarations
+                else if (line.includes('bundle')) {
+                    const match = line.match(/bundle\s+(\w+)\s*:\s*(\w+)/);
+                    if (match) {
+                        ast.declarations.push({
+                            type: 'bundle',
+                            name: match[1],
+                            category: match[2],
+                            properties: extractProperties(line)
+                        });
+                    }
+                }
+                
+                // Parse variety declarations
+                else if (line.includes('variety')) {
+                    const match = line.match(/variety\s+(\w+)\s*:=\s*(\w+)/);
+                    if (match) {
+                        ast.declarations.push({
+                            type: 'variety',
+                            name: match[1],
+                            construction: match[2]
+                        });
+                    }
+                }
+                
+                // Parse tropical declarations
+                else if (line.includes('tropical_curve')) {
+                    const match = line.match(/tropical_curve\s+(\w+)\s*:=\s*tropicalize\((\w+)\)/);
+                    if (match) {
+                        ast.declarations.push({
+                            type: 'tropical',
+                            name: match[1],
+                            source: match[2]
+                        });
+                    }
+                }
+                
+                // Parse connections
+                else if (line.includes('connection')) {
+                    const match = line.match(/connection\s+(\w+)\s*:\s*(\w+)\s*->\s*(\w+)\s*via\s*(\w+)/);
+                    if (match) {
+                        ast.connections.push({
+                            name: match[1],
+                            source: match[2],
+                            target: match[3],
+                            method: match[4]
+                        });
+                    }
+                }
+            });
+            
+            return ast;
+        }
+        
+        function extractProperties(line) {
+            const match = line.match(/\{([^}]+)\}/);
+            if (!match) return {};
+            
+            const properties = {};
+            const pairs = match[1].split(',');
+            pairs.forEach(pair => {
+                const [key, value] = pair.split(':').map(s => s.trim());
+                if (key && value) {
+                    properties[key] = value;
+                }
+            });
+            return properties;
+        }
+        
+        function parseAndVisualize() {
+            clearTimeout(parseTimer);
+            parseTimer = setTimeout(() => {
+                const code = document.getElementById('code-editor').value;
+                
+                try {
+                    currentAST = parseDSL(code);
+                    updateASTView();
+                    updateVisualization();
+                    updateStatus('Parsed successfully', 'success');
+                } catch (error) {
+                    showError(error.message);
+                    updateStatus('Parse error', 'error');
+                }
+            }, 500);
+        }
+        
+        function updateASTView() {
+            const astTree = document.getElementById('ast-tree');
+            let html = '';
+            
+            currentAST.declarations.forEach(decl => {
+                const nodeClass = decl.type === 'manifold' ? 'manifold' : 
+                                decl.type === 'topos' ? 'topos' :
+                                decl.type === 'bundle' || decl.type === 'variety' ? 'bundle' : 'morphism';
+                
+                html += `<div class="ast-node ${nodeClass}">`;
+                html += `<strong>${decl.type.charAt(0).toUpperCase() + decl.type.slice(1)}</strong> ${decl.name}`;
+                
+                if (decl.category) html += ` : ${decl.category}`;
+                if (decl.base) html += ` := Sh(${decl.base})`;
+                if (decl.construction) html += ` := ${decl.construction}`;
+                if (decl.source) html += ` := tropicalize(${decl.source})`;
+                
+                html += '<br>';
+                
+                if (decl.properties) {
+                    Object.entries(decl.properties).forEach(([key, value]) => {
+                        html += `├─ ${key}: ${value}<br>`;
+                    });
+                }
+                
+                html += '</div>';
+            });
+            
+            if (currentAST.connections.length > 0) {
+                html += '<div class="ast-node morphism"><strong>Connections:</strong><br>';
+                currentAST.connections.forEach(conn => {
+                    html += `├─ ${conn.source} → ${conn.target} via ${conn.method}<br>`;
+                });
+                html += '</div>';
+            }
+            
+            astTree.innerHTML = html;
+        }
+        
+        function updateVisualization() {
+            const canvas = document.getElementById('visualization-canvas');
+            
+            // Clear existing objects
+            canvas.querySelectorAll('.math-object, .connection-line').forEach(el => el.remove());
+            
+            let objectCount = 0;
+            const positions = [];
+            
+            // Create visual objects for each declaration
+            currentAST.declarations.forEach((decl, index) => {
+                const obj = document.createElement('div');
+                obj.className = `math-object ${getObjectClass(decl.type)}`;
+                obj.id = `obj-${decl.name}`;
+                
+                // Position objects in a grid
+                const x = 50 + (index % 3) * 120;
+                const y = 50 + Math.floor(index / 3) * 100;
+                
+                obj.style.top = y + 'px';
+                obj.style.left = x + 'px';
+                
+                obj.innerHTML = `${decl.name}<br><small>${decl.type}</small>`;
+                obj.onclick = () => showObjectDetails(decl);
+                
+                canvas.appendChild(obj);
+                positions.push({ x: x + 30, y: y + 20 }); // Center of object
+                objectCount++;
+            });
+            
+            // Create connections
+            let connectionCount = 0;
+            currentAST.connections.forEach(conn => {
+                const sourceIndex = currentAST.declarations.findIndex(d => d.name === conn.source);
+                const targetIndex = currentAST.declarations.findIndex(d => d.name === conn.target);
+                
+                if (sourceIndex >= 0 && targetIndex >= 0) {
+                    const line = createConnectionLine(positions[sourceIndex], positions[targetIndex]);
+                    canvas.appendChild(line);
+                    connectionCount++;
+                }
+            });
+            
+            // Update status
+            document.getElementById('viz-status').textContent = 
+                `✓ Visualization updated: ${objectCount} objects, ${connectionCount} connections`;
+        }
+        
+        function getObjectClass(type) {
+            switch (type) {
+                case 'manifold': return 'manifold-obj';
+                case 'topos': return 'topos-obj';
+                case 'bundle': case 'variety': return 'bundle-obj';
+                case 'tropical': return 'tropical-obj';
+                default: return 'bundle-obj';
+            }
+        }
+        
+        function createConnectionLine(start, end) {
+            const line = document.createElement('div');
+            line.className = 'connection-line';
+            
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            
+            line.style.left = start.x + 'px';
+            line.style.top = start.y + 'px';
+            line.style.width = length + 'px';
+            line.style.transform = `rotate(${angle}deg)`;
+            
+            return line;
+        }
+        
+        function showObjectDetails(decl) {
+            alert(`Object: ${decl.name}\nType: ${decl.type}\nProperties: ${JSON.stringify(decl.properties || {}, null, 2)}`);
+        }
+        
+        function showError(message) {
+            const errorDisplay = document.getElementById('error-display');
+            errorDisplay.textContent = `Error: ${message}`;
+            errorDisplay.style.display = 'block';
+            setTimeout(() => {
+                errorDisplay.style.display = 'none';
+            }, 5000);
+        }
+        
+        function updateStatus(message, type) {
+            const status = document.getElementById('parser-status');
+            status.textContent = message;
+            status.style.color = type === 'error' ? '#f87171' : '#4aff6b';
+        }
+        
+        function addSuggestion(suggestion) {
+            const editor = document.getElementById('code-editor');
+            editor.value += '\n' + suggestion;
+            parseAndVisualize();
+        }
+        
+        function loadExample(exampleName) {
+            const examples = {
+                'hyperbolic-topos': `// Hyperbolic surface with topos structure
+manifold M : HyperbolicSurface { genus: 2 }
+topos T := Sh(M)
+subobject_classifier Omega : T -> Set
+connection hyperbolic_logic : M -> T via sheafification`,
+
+                'tropical-character': `// Character variety tropicalization
+manifold S : Surface { genus: 1 }
+variety X := CharacterVariety(pi1(S), PSL2(C))
+tropical_curve TC := tropicalize(X) { semiring: (min, +) }
+connection amoeba : X -> TC via logarithmic_limit`,
+
+                'fibered-ktheory': `// Mapping torus with K-theory
+manifold M : HyperbolicSurface { genus: 1 }
+fibration F : Categories -> S1 { fiber: category(M) }
+bundle E : VectorBundle(M) { rank: 2 }
+ktheory K0 := GrothendieckGroup(E)
+connection monodromy : M -> F via mapping_class`,
+
+                'unified-framework': document.getElementById('code-editor').placeholder
+            };
+            
+            document.getElementById('code-editor').value = examples[exampleName] || examples['unified-framework'];
+            parseAndVisualize();
+        }
+        
+        // Control functions
+        function parseCode() {
+            parseAndVisualize();
+        }
+        
+        function validateSyntax() {
+            const code = document.getElementById('code-editor').value;
+            const lines = code.split('\n');
+            let errors = [];
+            
+            lines.forEach((line, index) => {
+                if (line.trim() && !line.trim().startsWith('//')) {
+                    const hasKeyword = keywords.some(kw => line.includes(kw));
+                    if (!hasKeyword && line.includes(':')) {
+                        errors.push(`Line ${index + 1}: Unknown construct`);
+                    }
+                }
+            });
+            
+            if (errors.length === 0) {
+                updateStatus('Syntax valid', 'success');
+            } else {
+                showError(errors.join('\n'));
+            }
+        }
+        
+        function visualizeAST() {
+            if (currentAST) {
+                console.log('Current AST:', currentAST);
+                alert('AST logged to console. See browser developer tools.');
+            }
+        }
+        
+        function generateVisualization() {
+            updateVisualization();
+        }
+        
+        function exportCode() {
+            const code = document.getElementById('code-editor').value;
+            const blob = new Blob([code], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mathlang-program.ml';
+            a.click();
+        }
+        
+        function shareFramework() {
+            const code = document.getElementById('code-editor').value;
+            const encoded = btoa(code);
+            const url = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Shareable URL copied to clipboard!');
+            });
+        }
+        
+        function documentAPI() {
+            const docs = `
+MathLang DSL Documentation:
+
+Keywords:
+- manifold NAME : TYPE { properties }
+- topos NAME := Sh(BASE)
+- bundle NAME : TYPE(BASE) { properties }
+- variety NAME := CONSTRUCTION
+- tropical_curve NAME := tropicalize(SOURCE)
+- fibration NAME : SOURCE -> TARGET { properties }
+- connection NAME : SOURCE -> TARGET via METHOD
+
+Types:
+- HyperbolicSurface, CharacterVariety, VectorBundle
+- TropicalCurve, Fibration, GrothendieckGroup
+
+Examples:
+manifold M : HyperbolicSurface { genus: 2 }
+topos T := Sh(M)
+connection rep : M -> CharacterVariety(pi1(M), PSL2(C)) via representation
+            `;
+            
+            alert(docs);
+        }
+        
+        function runTests() {
+            const testCases = [
+                'manifold M : HyperbolicSurface { genus: 2 }',
+                'topos T := Sh(M)',
+                'bundle E : VectorBundle(M) { rank: 2 }',
+                'connection c : M -> T via sheafification'
+            ];
+            
+            let passed = 0;
+            testCases.forEach(test => {
+                try {
+                    parseDSL(test);
+                    passed++;
+                } catch (error) {
+                    console.error(`Test failed: ${test}`, error);
+                }
+            });
+            
+            alert(`Tests: ${passed}/${testCases.length} passed`);
+        }
+        
+        // Initialize
+        setTimeout(() => {
+            parseAndVisualize();
+            
+            // Check for shared code in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedCode = urlParams.get('code');
+            if (sharedCode) {
+                try {
+                    document.getElementById('code-editor').value = atob(sharedCode);
+                    parseAndVisualize();
+                } catch (error) {
+                    console.error('Error loading shared code:', error);
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
