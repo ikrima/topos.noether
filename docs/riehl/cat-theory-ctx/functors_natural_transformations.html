@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Functors & Natural Transformations: Interactive Explorer</title>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      overflow-x: hidden;
+    }
+    
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+    
+    .subtitle {
+      font-size: 1.1em;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+    
+    .scene-nav {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      overflow-x: auto;
+    }
+    
+    .scene-button {
+      flex: 1;
+      min-width: 180px;
+      padding: 15px 20px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .scene-button:hover {
+      background: #e9ecef;
+      color: #333;
+    }
+    
+    .scene-button.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: white;
+    }
+    
+    .content {
+      display: flex;
+      min-height: 700px;
+    }
+    
+    .main-panel {
+      flex: 3;
+      padding: 30px;
+      background: #f8f9fa;
+    }
+    
+    .side-panel {
+      flex: 1;
+      padding: 30px;
+      background: white;
+      border-left: 1px solid #dee2e6;
+      overflow-y: auto;
+      max-height: 800px;
+    }
+    
+    .categories-container {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 30px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .category-box {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      min-width: 280px;
+      position: relative;
+    }
+    
+    .category-title {
+      font-size: 1.3em;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 20px;
+      text-align: center;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+    
+    .category-canvas {
+      width: 100%;
+      height: 350px;
+      background: #fafbfc;
+      border-radius: 8px;
+      border: 2px solid #e1e4e8;
+      position: relative;
+      cursor: crosshair;
+    }
+    
+    .object-node {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      cursor: move;
+      user-select: none;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      z-index: 10;
+    }
+    
+    .object-node:hover {
+      transform: scale(1.15);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+    
+    .object-node.selected {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      transform: scale(1.2);
+    }
+    
+    .object-node.mapped {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .morphism-arrow {
+      position: absolute;
+      pointer-events: none;
+    }
+    
+    .morphism-arrow line {
+      stroke: #333;
+      stroke-width: 2;
+      marker-end: url(#arrowhead);
+    }
+    
+    .morphism-arrow.functor-mapped {
+      opacity: 0.6;
+    }
+    
+    .morphism-arrow.functor-mapped line {
+      stroke: #4facfe;
+      stroke-width: 3;
+    }
+    
+    .morphism-arrow.natural-trans line {
+      stroke: #f5576c;
+      stroke-width: 2.5;
+      stroke-dasharray: 5, 5;
+    }
+    
+    .morphism-label {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      font-weight: 600;
+      color: #333;
+      pointer-events: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .functor-arrow {
+      position: absolute;
+      top: 50%;
+      font-size: 3em;
+      color: #667eea;
+      opacity: 0.3;
+      font-weight: 300;
+      pointer-events: none;
+    }
+    
+    .naturality-square {
+      background: rgba(245, 87, 108, 0.05);
+      border: 2px dashed #f5576c;
+      border-radius: 8px;
+      position: absolute;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+    
+    .naturality-square.highlighted {
+      background: rgba(245, 87, 108, 0.15);
+      border-width: 3px;
+    }
+    
+    .control-section {
+      margin-bottom: 25px;
+    }
+    
+    .control-section h3 {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      color: #667eea;
+      font-weight: 500;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #667eea;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    button.secondary {
+      background: #6c757d;
+    }
+    
+    button.danger {
+      background: #dc3545;
+    }
+    
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+    
+    .info-box.warning {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+    }
+    
+    .info-box.success {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+    
+    .explanation {
+      line-height: 1.7;
+      color: #555;
+      margin: 15px 0;
+      font-size: 0.95em;
+    }
+    
+    .explanation p {
+      margin-bottom: 12px;
+    }
+    
+    .math-formula {
+      background: white;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      font-family: 'Times New Roman', serif;
+      text-align: center;
+      font-size: 1.1em;
+    }
+    
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+      font-size: 0.85em;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .legend-swatch {
+      width: 30px;
+      height: 20px;
+      border-radius: 4px;
+      border: 1px solid #333;
+    }
+    
+    .commutative-diagram {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .animation-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .property-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .property-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .property-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .property-list strong {
+      color: #667eea;
+    }
+    
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 0.95em;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .mode-indicator {
+      background: #667eea;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+    
+    // ============================================================================
+    // MATHEMATICAL CORE: Category Theory Operations
+    // ============================================================================
+    
+    // Example categories
+    const EXAMPLE_CATEGORIES = {
+      C: {
+        name: 'C',
+        objects: [
+          { id: 'a', label: 'a', x: 60, y: 80 },
+          { id: 'b', label: 'b', x: 200, y: 80 },
+          { id: 'c', label: 'c', x: 130, y: 200 }
+        ],
+        morphisms: [
+          { id: 'f', source: 'a', target: 'b', label: 'f' },
+          { id: 'g', source: 'b', target: 'c', label: 'g' },
+          { id: 'h', source: 'a', target: 'c', label: 'h' }
+        ]
+      },
+      D: {
+        name: 'D',
+        objects: [
+          { id: 'Fa', label: 'F(a)', x: 60, y: 80 },
+          { id: 'Fb', label: 'F(b)', x: 200, y: 80 },
+          { id: 'Fc', label: 'F(c)', x: 130, y: 200 }
+        ],
+        morphisms: [
+          { id: 'Ff', source: 'Fa', target: 'Fb', label: 'F(f)' },
+          { id: 'Fg', source: 'Fb', target: 'Fc', label: 'F(g)' },
+          { id: 'Fh', source: 'Fa', target: 'Fc', label: 'F(h)' }
+        ]
+      }
+    };
+    
+    const FUNCTOR_EXAMPLES = {
+      identity: {
+        name: 'Identity Functor',
+        description: 'Maps each object and morphism to itself',
+        objectMap: { 'a': 'Fa', 'b': 'Fb', 'c': 'Fc' },
+        morphismMap: { 'f': 'Ff', 'g': 'Fg', 'h': 'Fh' }
+      },
+      forgetful: {
+        name: 'Forgetful Functor',
+        description: 'Group → Set: forgets group structure',
+        objectMap: { 'a': 'Fa', 'b': 'Fb', 'c': 'Fc' },
+        morphismMap: { 'f': 'Ff', 'g': 'Fg', 'h': 'Fh' }
+      }
+    };
+    
+    // Check if diagram commutes
+    function checkCommutativity(category, path1, path2) {
+      // Simplified: just check if paths have same source and target
+      const getEndpoints = (path) => {
+        if (path.length === 0) return null;
+        const first = category.morphisms.find(m => m.id === path[0]);
+        const last = category.morphisms.find(m => m.id === path[path.length - 1]);
+        return { source: first?.source, target: last?.target };
+      };
+      
+      const ends1 = getEndpoints(path1);
+      const ends2 = getEndpoints(path2);
+      
+      return ends1 && ends2 && 
+             ends1.source === ends2.source && 
+             ends1.target === ends2.target;
+    }
+    
+    // Natural transformation: assigns morphism to each object
+    function createNaturalTransformation(sourceFunctor, targetFunctor) {
+      const components = {};
+      
+      // For each object in source category, create component
+      Object.keys(sourceFunctor.objectMap).forEach(obj => {
+        const sourceObj = sourceFunctor.objectMap[obj];
+        const targetObj = targetFunctor.objectMap[obj];
+        components[obj] = {
+          source: sourceObj,
+          target: targetObj,
+          label: `α_${obj}`
+        };
+      });
+      
+      return components;
+    }
+    
+    // ============================================================================
+    // REACT COMPONENTS
+    // ============================================================================
+    
+    function App() {
+      const [state, setState] = useState({
+        currentScene: 0,
+        categoryC: EXAMPLE_CATEGORIES.C,
+        categoryD: EXAMPLE_CATEGORIES.D,
+        selectedFunctor: 'identity',
+        showFunctorMapping: false,
+        selectedObject: null,
+        selectedMorphism: null,
+        showNaturalTransformation: false,
+        naturalTransComponents: {},
+        highlightedSquare: null,
+        interactionMode: 'view', // 'view', 'addObject', 'addMorphism'
+        animating: false,
+        animationProgress: 0
+      });
+      
+      const scenes = [
+        { id: 0, name: "What is a Functor?", short: "Functors" },
+        { id: 1, name: "Functor Composition", short: "Composition" },
+        { id: 2, name: "Natural Transformations", short: "Natural Trans" },
+        { id: 3, name: "Naturality Squares", short: "Naturality" }
+      ];
+      
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>Functors & Natural Transformations</h1>
+            <div className="subtitle">
+              Direct Manipulation Category Theory
+            </div>
+          </div>
+          
+          <div className="scene-nav">
+            {scenes.map(scene => (
+              <button
+                key={scene.id}
+                className={`scene-button ${state.currentScene === scene.id ? 'active' : ''}`}
+                onClick={() => setState(prev => ({ ...prev, currentScene: scene.id }))}
+              >
+                {scene.short}
+              </button>
+            ))}
+          </div>
+          
+          <div className="content">
+            <div className="main-panel">
+              <MainVisualization state={state} setState={setState} />
+            </div>
+            
+            <div className="side-panel">
+              <Controls state={state} setState={setState} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    function MainVisualization({ state, setState }) {
+      const { currentScene } = state;
+      
+      switch(currentScene) {
+        case 0:
+          return <FunctorScene state={state} setState={setState} />;
+        case 1:
+          return <CompositionScene state={state} setState={setState} />;
+        case 2:
+          return <NaturalTransScene state={state} setState={setState} />;
+        case 3:
+          return <NaturalitySquareScene state={state} setState={setState} />;
+        default:
+          return <FunctorScene state={state} setState={setState} />;
+      }
+    }
+    
+    function FunctorScene({ state, setState }) {
+      return (
+        <>
+          <div className="categories-container">
+            <CategoryCanvas
+              category={state.categoryC}
+              title="Category C"
+              state={state}
+              setState={setState}
+              isSource={true}
+            />
+            
+            <div className="functor-arrow" style={{ transform: 'translateY(-50%)' }}>
+              →
+            </div>
+            
+            <CategoryCanvas
+              category={state.categoryD}
+              title="Category D"
+              state={state}
+              setState={setState}
+              isSource={false}
+            />
+          </div>
+          
+          {state.showFunctorMapping && (
+            <div className="commutative-diagram">
+              <h3 style={{ textAlign: 'center', color: '#667eea', marginBottom: '20px' }}>
+                Functor Mapping: F : C → D
+              </h3>
+              <div className="math-formula">
+                F preserves composition: F(g ∘ f) = F(g) ∘ F(f)
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+    
+    function CompositionScene({ state, setState }) {
+      return (
+        <div style={{ padding: '20px' }}>
+          <div className="info-box">
+            <strong>Functor Composition:</strong> Given functors F : C → D and G : D → E,
+            we can compose them to get G ∘ F : C → E.
+          </div>
+          
+          <div className="math-formula" style={{ margin: '30px 0' }}>
+            (G ∘ F)(f : a → b) = G(F(f)) : G(F(a)) → G(F(b))
+          </div>
+          
+          <div className="categories-container" style={{ flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5em', fontWeight: '600', color: '#667eea' }}>C</div>
+              </div>
+              <div style={{ fontSize: '2em', color: '#667eea' }}>→</div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5em', fontWeight: '600', color: '#667eea' }}>D</div>
+              </div>
+              <div style={{ fontSize: '2em', color: '#667eea' }}>→</div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.5em', fontWeight: '600', color: '#667eea' }}>E</div>
+              </div>
+            </div>
+            
+            <div style={{ textAlign: 'center', fontSize: '0.9em', color: '#666' }}>
+              Functors compose associatively: (H ∘ G) ∘ F = H ∘ (G ∘ F)
+            </div>
+          </div>
+          
+          <div className="info-box success" style={{ marginTop: '30px' }}>
+            <strong>Key Property:</strong> Functors form a category themselves! Objects are categories,
+            morphisms are functors, and composition is functor composition.
+          </div>
+        </div>
+      );
+    }
+    
+    function NaturalTransScene({ state, setState }) {
+      return (
+        <>
+          <div className="categories-container">
+            <CategoryCanvas
+              category={state.categoryC}
+              title="Category C"
+              state={state}
+              setState={setState}
+              isSource={true}
+            />
+            
+            <div className="functor-arrow" style={{ transform: 'translateY(-50%)' }}>
+              ⇒
+            </div>
+            
+            <CategoryCanvas
+              category={state.categoryD}
+              title="Category D"
+              state={state}
+              setState={setState}
+              isSource={false}
+              showNaturalTrans={state.showNaturalTransformation}
+            />
+          </div>
+          
+          {state.showNaturalTransformation && (
+            <div className="commutative-diagram">
+              <h3 style={{ textAlign: 'center', color: '#f5576c', marginBottom: '15px' }}>
+                Natural Transformation: α : F ⇒ G
+              </h3>
+              <div className="math-formula">
+                For each object a in C, we have a morphism α_a : F(a) → G(a) in D
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+    
+    function NaturalitySquareScene({ state, setState }) {
+      return (
+        <div style={{ padding: '20px' }}>
+          <div className="info-box">
+            <strong>Naturality Condition:</strong> For α : F ⇒ G and any morphism f : a → b in C,
+            the following square must commute:
+          </div>
+          
+          <svg width="400" height="300" style={{ margin: '30px auto', display: 'block' }}>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="#333" />
+              </marker>
+            </defs>
+            
+            {/* Objects */}
+            <circle cx="80" cy="80" r="30" fill="#667eea" />
+            <text x="80" y="85" textAnchor="middle" fill="white" fontWeight="600">F(a)</text>
+            
+            <circle cx="320" cy="80" r="30" fill="#667eea" />
+            <text x="320" y="85" textAnchor="middle" fill="white" fontWeight="600">F(b)</text>
+            
+            <circle cx="80" cy="220" r="30" fill="#4facfe" />
+            <text x="80" y="225" textAnchor="middle" fill="white" fontWeight="600">G(a)</text>
+            
+            <circle cx="320" cy="220" r="30" fill="#4facfe" />
+            <text x="320" y="225" textAnchor="middle" fill="white" fontWeight="600">G(b)</text>
+            
+            {/* Morphisms */}
+            <line x1="110" y1="80" x2="290" y2="80" stroke="#333" strokeWidth="2" markerEnd="url(#arrow)" />
+            <text x="200" y="70" textAnchor="middle" fontSize="14" fontWeight="600">F(f)</text>
+            
+            <line x1="110" y1="220" x2="290" y2="220" stroke="#333" strokeWidth="2" markerEnd="url(#arrow)" />
+            <text x="200" y="240" textAnchor="middle" fontSize="14" fontWeight="600">G(f)</text>
+            
+            <line x1="80" y1="110" x2="80" y2="190" stroke="#f5576c" strokeWidth="3" markerEnd="url(#arrow)" strokeDasharray="5,5" />
+            <text x="55" y="155" textAnchor="middle" fontSize="14" fontWeight="600" fill="#f5576c">α_a</text>
+            
+            <line x1="320" y1="110" x2="320" y2="190" stroke="#f5576c" strokeWidth="3" markerEnd="url(#arrow)" strokeDasharray="5,5" />
+            <text x="355" y="155" textAnchor="middle" fontSize="14" fontWeight="600" fill="#f5576c">α_b</text>
+            
+            {/* Highlight square */}
+            <rect x="60" y="60" width="280" height="180" fill="rgba(245, 87, 108, 0.1)" stroke="#f5576c" strokeWidth="2" strokeDasharray="10,5" rx="8" />
+          </svg>
+          
+          <div className="math-formula">
+            G(f) ∘ α_a = α_b ∘ F(f)
+          </div>
+          
+          <div className="info-box success" style={{ marginTop: '20px' }}>
+            This commutativity holds for <strong>every</strong> morphism f in C.
+            This is what makes α "natural" - it's compatible with the structure of the functors.
+          </div>
+        </div>
+      );
+    }
+    
+    function CategoryCanvas({ category, title, state, setState, isSource, showNaturalTrans }) {
+      const canvasRef = useRef(null);
+      const [dragging, setDragging] = useState(null);
+      
+      const handleMouseDown = (e, obj) => {
+        if (state.interactionMode === 'view') {
+          const rect = canvasRef.current.getBoundingClientRect();
+          setDragging({
+            id: obj.id,
+            offsetX: e.clientX - rect.left - obj.x,
+            offsetY: e.clientY - rect.top - obj.y
+          });
+        }
+      };
+      
+      const handleMouseMove = (e) => {
+        if (dragging && canvasRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          const newX = e.clientX - rect.left - dragging.offsetX;
+          const newY = e.clientY - rect.top - dragging.offsetY;
+          
+          // Update object position
+          const updatedCategory = {
+            ...category,
+            objects: category.objects.map(obj =>
+              obj.id === dragging.id ? { ...obj, x: newX, y: newY } : obj
+            )
+          };
+          
+          setState(prev => ({
+            ...prev,
+            [isSource ? 'categoryC' : 'categoryD']: updatedCategory
+          }));
+        }
+      };
+      
+      const handleMouseUp = () => {
+        setDragging(null);
+      };
+      
+      useEffect(() => {
+        if (dragging) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+          return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+          };
+        }
+      }, [dragging]);
+      
+      return (
+        <div className="category-box">
+          <div className="category-title">{title}</div>
+          <div
+            ref={canvasRef}
+            className="category-canvas"
+            style={{ position: 'relative' }}
+          >
+            <svg style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none' }}>
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#333" />
+                </marker>
+                <marker id="arrowhead-functor" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#4facfe" />
+                </marker>
+                <marker id="arrowhead-nat" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#f5576c" />
+                </marker>
+              </defs>
+              
+              {/* Draw morphisms */}
+              {category.morphisms.map(morph => {
+                const source = category.objects.find(o => o.id === morph.source);
+                const target = category.objects.find(o => o.id === morph.target);
+                if (!source || !target) return null;
+                
+                const dx = target.x - source.x;
+                const dy = target.y - source.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const offset = 25; // radius of node
+                
+                const x1 = source.x + (dx / dist) * offset;
+                const y1 = source.y + (dy / dist) * offset;
+                const x2 = target.x - (dx / dist) * offset;
+                const y2 = target.y - (dy / dist) * offset;
+                
+                // Curve for self-loops
+                const isSelfLoop = source.id === target.id;
+                
+                return (
+                  <g key={morph.id}>
+                    {isSelfLoop ? (
+                      <path
+                        d={`M ${source.x} ${source.y - 25} Q ${source.x + 40} ${source.y - 60} ${source.x} ${source.y - 25}`}
+                        fill="none"
+                        stroke="#333"
+                        strokeWidth="2"
+                        markerEnd="url(#arrowhead)"
+                      />
+                    ) : (
+                      <line
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke="#333"
+                        strokeWidth="2"
+                        markerEnd="url(#arrowhead)"
+                      />
+                    )}
+                    <text
+                      x={(source.x + target.x) / 2}
+                      y={(source.y + target.y) / 2 - 10}
+                      textAnchor="middle"
+                      fontSize="13"
+                      fontWeight="600"
+                      fill="#333"
+                    >
+                      {morph.label}
+                    </text>
+                  </g>
+                );
+              })}
+              
+              {/* Draw natural transformation components */}
+              {showNaturalTrans && !isSource && category.objects.map((obj, idx) => {
+                const sourceObj = state.categoryC.objects[idx];
+                if (!sourceObj) return null;
+                
+                return (
+                  <g key={`nat-${obj.id}`}>
+                    <line
+                      x1={sourceObj.x}
+                      y1={sourceObj.y + 30}
+                      x2={obj.x}
+                      y2={obj.y - 30}
+                      stroke="#f5576c"
+                      strokeWidth="2.5"
+                      strokeDasharray="5,5"
+                      markerEnd="url(#arrowhead-nat)"
+                    />
+                  </g>
+                );
+              })}
+            </svg>
+            
+            {/* Draw objects */}
+            {category.objects.map(obj => (
+              <div
+                key={obj.id}
+                className="object-node"
+                style={{
+                  left: obj.x - 25,
+                  top: obj.y - 25,
+                  cursor: state.interactionMode === 'view' ? 'move' : 'pointer'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, obj)}
+              >
+                {obj.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    function Controls({ state, setState }) {
+      const { currentScene } = state;
+      
+      switch(currentScene) {
+        case 0:
+          return <FunctorControls state={state} setState={setState} />;
+        case 1:
+          return <CompositionControls state={state} setState={setState} />;
+        case 2:
+          return <NaturalTransControls state={state} setState={setState} />;
+        case 3:
+          return <NaturalityControls state={state} setState={setState} />;
+        default:
+          return null;
+      }
+    }
+    
+    function FunctorControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>What is a Functor?</h3>
+            <div className="explanation">
+              <p>A <strong>functor</strong> F : C → D is a structure-preserving map between categories.</p>
+              <p>It consists of:</p>
+              <ul style={{ marginLeft: '20px', marginTop: '10px' }}>
+                <li>An <strong>object function</strong>: F(a) for each object a in C</li>
+                <li>A <strong>morphism function</strong>: F(f) for each morphism f in C</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <h3>Controls</h3>
+            <button onClick={() => setState(prev => ({ 
+              ...prev, 
+              showFunctorMapping: !prev.showFunctorMapping 
+            }))}>
+              {state.showFunctorMapping ? 'Hide' : 'Show'} Functor Details
+            </button>
+            
+            <button className="secondary" onClick={() => {
+              setState(prev => ({
+                ...prev,
+                categoryC: EXAMPLE_CATEGORIES.C,
+                categoryD: EXAMPLE_CATEGORIES.D
+              }));
+            }}>
+              Reset Layout
+            </button>
+          </div>
+          
+          <div className="info-box">
+            <strong>Try it:</strong> Drag objects around to see how the categories rearrange!
+            The functor structure is preserved no matter how you move things.
+          </div>
+          
+          <div className="control-section">
+            <h3>Functor Properties</h3>
+            <ul className="property-list">
+              <li><strong>Identity:</strong> F(id_a) = id_F(a)</li>
+              <li><strong>Composition:</strong> F(g ∘ f) = F(g) ∘ F(f)</li>
+            </ul>
+          </div>
+          
+          <div className="math-formula">
+            F : C → D
+          </div>
+        </>
+      );
+    }
+    
+    function CompositionControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>Functor Composition</h3>
+            <div className="explanation">
+              <p>Functors can be composed like functions:</p>
+              <p>If F : C → D and G : D → E, then G ∘ F : C → E</p>
+            </div>
+          </div>
+          
+          <div className="info-box success">
+            <strong>Key Insight:</strong> Composition is associative, and there are identity functors Id_C : C → C.
+            This means <strong>categories form a category</strong> (called Cat)!
+          </div>
+          
+          <div className="control-section">
+            <h3>Examples</h3>
+            <ul className="property-list">
+              <li><strong>Hom functors:</strong> C(a,−) : C → Set</li>
+              <li><strong>Forgetful:</strong> Grp → Set</li>
+              <li><strong>Free:</strong> Set → Grp</li>
+              <li><strong>Diagonal:</strong> C → C × C</li>
+            </ul>
+          </div>
+        </>
+      );
+    }
+    
+    function NaturalTransControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>Natural Transformations</h3>
+            <div className="explanation">
+              <p>A <strong>natural transformation</strong> α : F ⇒ G is a "morphism between functors".</p>
+              <p>For each object a in C, we get a morphism α_a : F(a) → G(a) in D.</p>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <button onClick={() => setState(prev => ({
+              ...prev,
+              showNaturalTransformation: !prev.showNaturalTransformation
+            }))}>
+              {state.showNaturalTransformation ? 'Hide' : 'Show'} Natural Transformation
+            </button>
+          </div>
+          
+          <div className="info-box">
+            <strong>Components:</strong> The morphisms α_a are called the "components" of the natural transformation.
+            They must satisfy the naturality condition (see next scene).
+          </div>
+          
+          <div className="math-formula">
+            α : F ⇒ G
+          </div>
+          
+          <div className="control-section">
+            <h3>Famous Examples</h3>
+            <ul className="property-list">
+              <li><strong>Double dual:</strong> V → V** (natural)</li>
+              <li><strong>Determinant:</strong> GL_n → ℝ* (natural)</li>
+              <li><strong>Yoneda:</strong> F(a) ≅ Nat(C(a,−), F)</li>
+            </ul>
+          </div>
+        </>
+      );
+    }
+    
+    function NaturalityControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>Naturality Condition</h3>
+            <div className="explanation">
+              <p>The components α_a must be <strong>compatible with morphisms</strong> in C.</p>
+              <p>For every f : a → b, this square must commute:</p>
+            </div>
+          </div>
+          
+          <div className="math-formula" style={{ textAlign: 'left', padding: '20px' }}>
+            <div>F(a) --F(f)-→ F(b)</div>
+            <div>  |              |</div>
+            <div>α_a            α_b</div>
+            <div>  |              |</div>
+            <div>  ↓              ↓</div>
+            <div>G(a) --G(f)-→ G(b)</div>
+          </div>
+          
+          <div className="info-box success">
+            <strong>Why "Natural"?</strong> The transformation works uniformly across all objects,
+            without needing to make arbitrary choices. It respects the structure of the categories.
+          </div>
+          
+          <div className="info-box">
+            <strong>Historical Note:</strong> Eilenberg and Mac Lane invented category theory in 1945
+            specifically to formalize the notion of "natural transformation" that appeared everywhere
+            in algebraic topology.
+          </div>
+          
+          <div className="legend">
+            <div className="legend-item">
+              <div className="legend-swatch" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></div>
+              <span>Source Functor</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-swatch" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}></div>
+              <span>Target Functor</span>
+            </div>
+            <div className="legend-item">
+              <div className="legend-swatch" style={{ background: '#f5576c' }}></div>
+              <span>Natural Transformation</span>
+            </div>
+          </div>
+        </>
+      );
+    }
+    
+    // ============================================================================
+    // RENDER
+    // ============================================================================
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>

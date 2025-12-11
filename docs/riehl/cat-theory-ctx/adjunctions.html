@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adjunctions: Universal Construction Explorer</title>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react.production.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: #333;
+    }
+    
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+      border-radius: 12px 12px 0 0;
+    }
+    
+    .header h1 {
+      font-size: 3em;
+      margin-bottom: 15px;
+      font-weight: 300;
+      letter-spacing: 2px;
+    }
+    
+    .subtitle {
+      font-size: 1.2em;
+      opacity: 0.95;
+      font-weight: 300;
+    }
+    
+    .scene-tabs {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 2px solid #dee2e6;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 20px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s ease;
+      border-bottom: 4px solid transparent;
+    }
+    
+    .tab:hover {
+      background: #e9ecef;
+    }
+    
+    .tab.active {
+      color: #4facfe;
+      background: white;
+      border-bottom-color: #4facfe;
+    }
+    
+    .content {
+      padding: 40px;
+      min-height: 700px;
+    }
+    
+    .adjunction-diagram {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 50px;
+      align-items: center;
+      margin: 40px 0;
+    }
+    
+    .category-box {
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+      border-radius: 16px;
+      padding: 35px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      min-height: 400px;
+      position: relative;
+    }
+    
+    .category-name {
+      font-size: 2em;
+      font-weight: 700;
+      color: #4facfe;
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #4facfe;
+    }
+    
+    .functor-arrows {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    .functor-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      min-width: 180px;
+    }
+    
+    .functor-arrow .arrow {
+      font-size: 3em;
+      font-weight: 300;
+      color: #4facfe;
+      margin: 10px 0;
+    }
+    
+    .functor-arrow .label {
+      font-weight: 600;
+      color: #333;
+      font-size: 1.1em;
+    }
+    
+    .functor-arrow .description {
+      font-size: 0.85em;
+      color: #666;
+      text-align: center;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    
+    .functor-arrow.left-adjoint {
+      border: 3px solid #f093fb;
+    }
+    
+    .functor-arrow.left-adjoint .arrow {
+      color: #f093fb;
+    }
+    
+    .functor-arrow.right-adjoint {
+      border: 3px solid #00c9ff;
+    }
+    
+    .functor-arrow.right-adjoint .arrow {
+      color: #00c9ff;
+    }
+    
+    .object-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .object-item {
+      background: white;
+      padding: 15px 20px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #4facfe;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    
+    .object-item:hover {
+      transform: translateX(5px);
+      box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+      border-left-width: 6px;
+    }
+    
+    .object-item.selected {
+      background: linear-gradient(135deg, #4facfe15 0%, #00f2fe15 100%);
+      border-left-color: #00f2fe;
+      border-left-width: 6px;
+    }
+    
+    .object-item .name {
+      font-weight: 600;
+      color: #333;
+      font-size: 1.05em;
+      margin-bottom: 5px;
+    }
+    
+    .object-item .details {
+      font-size: 0.9em;
+      color: #666;
+      font-style: italic;
+    }
+    
+    .bijection-panel {
+      background: linear-gradient(135deg, #fff5f7 0%, #ffe4e8 100%);
+      border-radius: 16px;
+      padding: 30px;
+      margin: 30px 0;
+      border: 3px solid #f5576c;
+    }
+    
+    .bijection-panel h3 {
+      color: #f5576c;
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .hom-set-bijection {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 20px;
+      align-items: center;
+      margin: 20px 0;
+    }
+    
+    .hom-set {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      min-height: 150px;
+    }
+    
+    .hom-set .title {
+      font-weight: 600;
+      color: #4facfe;
+      margin-bottom: 12px;
+      font-size: 1.05em;
+    }
+    
+    .morphism-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .morphism-list li {
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin: 5px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95em;
+    }
+    
+    .bijection-arrow {
+      font-size: 2.5em;
+      color: #f5576c;
+      font-weight: 300;
+    }
+    
+    .unit-counit-display {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+      margin: 30px 0;
+    }
+    
+    .unit-box, .counit-box {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      border: 3px solid #667eea;
+    }
+    
+    .unit-box h4, .counit-box h4 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+    }
+    
+    .natural-trans-diagram {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      line-height: 1.8;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: #4facfe;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      margin: 5px;
+    }
+    
+    button:hover {
+      background: #00c9ff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 172, 254, 0.4);
+    }
+    
+    button.secondary {
+      background: #6c757d;
+    }
+    
+    button.highlight {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #4facfe;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      line-height: 1.7;
+    }
+    
+    .info-box.success {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+    
+    .info-box.insight {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+    }
+    
+    .math-formula {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 12px;
+      border: 2px solid #dee2e6;
+      font-family: 'Times New Roman', serif;
+      text-align: center;
+      font-size: 1.2em;
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .theorem-box {
+      background: linear-gradient(135deg, #4facfe10 0%, #00f2fe10 100%);
+      border: 3px solid #4facfe;
+      border-radius: 16px;
+      padding: 30px;
+      margin: 30px 0;
+    }
+    
+    .theorem-box h3 {
+      color: #4facfe;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+    
+    .example-selector {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin: 25px 0;
+    }
+    
+    .example-card {
+      flex: 1;
+      min-width: 250px;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .example-card:hover {
+      border-color: #4facfe;
+      transform: translateY(-4px);
+      box-shadow: 0 6px 20px rgba(79, 172, 254, 0.3);
+    }
+    
+    .example-card.active {
+      border-color: #00c9ff;
+      background: linear-gradient(135deg, #4facfe10 0%, #00f2fe10 100%);
+    }
+    
+    .example-card h4 {
+      color: #4facfe;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+    
+    .example-card p {
+      font-size: 0.9em;
+      color: #666;
+      line-height: 1.5;
+    }
+    
+    .triangle-diagram {
+      margin: 30px auto;
+      text-align: center;
+    }
+    
+    .triangle-diagram svg {
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState } = React;
+    
+    // ============================================================================
+    // MATHEMATICAL CORE: Adjunctions
+    // ============================================================================
+    
+    const ADJUNCTION_EXAMPLES = {
+      freeForgetful: {
+        name: 'Free ⊣ Forgetful',
+        leftCategory: 'Set',
+        rightCategory: 'Grp',
+        leftFunctor: 'F (Free Group)',
+        rightFunctor: 'U (Forget Structure)',
+        leftDescription: 'Freely generates a group',
+        rightDescription: 'Forgets group structure',
+        leftObjects: [
+          { id: 'X', name: 'Set X', details: 'Any set' },
+          { id: '{a,b}', name: '{a, b}', details: 'Two-element set' },
+          { id: '∅', name: '∅', details: 'Empty set' }
+        ],
+        rightObjects: [
+          { id: 'Z', name: 'ℤ', details: 'Integers under addition' },
+          { id: 'S3', name: 'S₃', details: 'Symmetric group on 3 elements' },
+          { id: 'F(X)', name: 'F(X)', details: 'Free group on X' }
+        ],
+        bijectionExample: {
+          left: 'Grp(F(X), G)',
+          right: 'Set(X, U(G))',
+          explanation: 'Group homomorphisms from F(X) correspond to set functions from X'
+        }
+      },
+      productExponential: {
+        name: 'Product ⊣ Exponential',
+        leftCategory: 'C',
+        rightCategory: 'C',
+        leftFunctor: '− × A',
+        rightFunctor: '(−)^A',
+        leftDescription: 'Product with A',
+        rightDescription: 'Exponential object',
+        leftObjects: [
+          { id: 'B', name: 'B', details: 'Object B' },
+          { id: 'C', name: 'C', details: 'Object C' }
+        ],
+        rightObjects: [
+          { id: 'D', name: 'D', details: 'Object D' },
+          { id: 'E', name: 'E', details: 'Object E' }
+        ],
+        bijectionExample: {
+          left: 'C(B × A, C)',
+          right: 'C(B, C^A)',
+          explanation: 'Currying: functions of two variables correspond to functions returning functions'
+        }
+      },
+      tensorHom: {
+        name: 'Tensor ⊣ Hom',
+        leftCategory: 'Vect',
+        rightCategory: 'Vect',
+        leftFunctor: '− ⊗ V',
+        rightFunctor: 'Hom(V, −)',
+        leftDescription: 'Tensor with V',
+        rightDescription: 'Linear maps from V',
+        leftObjects: [
+          { id: 'W', name: 'W', details: 'Vector space W' },
+          { id: 'R^n', name: 'ℝⁿ', details: 'n-dimensional space' }
+        ],
+        rightObjects: [
+          { id: 'U', name: 'U', details: 'Vector space U' },
+          { id: 'R^m', name: 'ℝᵐ', details: 'm-dimensional space' }
+        ],
+        bijectionExample: {
+          left: 'Vect(W ⊗ V, U)',
+          right: 'Vect(W, Hom(V, U))',
+          explanation: 'Bilinear maps correspond to linear maps into the hom-space'
+        }
+      }
+    };
+    
+    // ============================================================================
+    // REACT COMPONENTS
+    // ============================================================================
+    
+    function App() {
+      const [state, setState] = useState({
+        currentTab: 0,
+        selectedExample: 'freeForgetful',
+        selectedLeftObject: null,
+        selectedRightObject: null,
+        showBijection: false,
+        showUnitCounit: false
+      });
+      
+      const tabs = [
+        { id: 0, name: 'What is an Adjunction?' },
+        { id: 1, name: 'The Bijection' },
+        { id: 2, name: 'Unit & Counit' },
+        { id: 3, name: 'Examples Gallery' }
+      ];
+      
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>Adjunctions</h1>
+            <div className="subtitle">
+              "Adjoint functors arise everywhere" — Saunders Mac Lane
+            </div>
+          </div>
+          
+          <div className="scene-tabs">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`tab ${state.currentTab === tab.id ? 'active' : ''}`}
+                onClick={() => setState(prev => ({ ...prev, currentTab: tab.id }))}
+              >
+                {tab.name}
+              </button>
+            ))}
+          </div>
+          
+          <div className="content">
+            <TabContent state={state} setState={setState} />
+          </div>
+        </div>
+      );
+    }
+    
+    function TabContent({ state, setState }) {
+      switch(state.currentTab) {
+        case 0:
+          return <IntroTab state={state} setState={setState} />;
+        case 1:
+          return <BijectionTab state={state} setState={setState} />;
+        case 2:
+          return <UnitCounitTab state={state} setState={setState} />;
+        case 3:
+          return <ExamplesTab state={state} setState={setState} />;
+        default:
+          return <IntroTab state={state} setState={setState} />;
+      }
+    }
+    
+    function IntroTab({ state, setState }) {
+      const example = ADJUNCTION_EXAMPLES[state.selectedExample];
+      
+      return (
+        <>
+          <div className="theorem-box">
+            <h3>Definition: Adjunction</h3>
+            <p style={{ lineHeight: '1.8', fontSize: '1.05em', marginTop: '15px' }}>
+              An <strong>adjunction</strong> between categories C and D consists of:
+            </p>
+            <ul style={{ marginLeft: '30px', marginTop: '15px', lineHeight: '2' }}>
+              <li>A functor <strong>F : C → D</strong> (left adjoint)</li>
+              <li>A functor <strong>G : D → C</strong> (right adjoint)</li>
+              <li>A natural bijection: <strong>D(F(c), d) ≅ C(c, G(d))</strong></li>
+            </ul>
+            <div className="math-formula" style={{ marginTop: '20px' }}>
+              F ⊣ G
+            </div>
+            <div className="info-box insight" style={{ marginTop: '20px' }}>
+              <strong>Intuition:</strong> F and G are "almost inverses" - not quite, but they're 
+              as close as possible. Morphisms from F(c) correspond exactly to morphisms into G(d).
+            </div>
+          </div>
+          
+          <ExampleSelector state={state} setState={setState} />
+          
+          <div className="adjunction-diagram">
+            <div className="category-box">
+              <div className="category-name">{example.leftCategory}</div>
+              <ul className="object-list">
+                {example.leftObjects.map(obj => (
+                  <li
+                    key={obj.id}
+                    className={`object-item ${state.selectedLeftObject === obj.id ? 'selected' : ''}`}
+                    onClick={() => setState(prev => ({ ...prev, selectedLeftObject: obj.id }))}
+                  >
+                    <div className="name">{obj.name}</div>
+                    <div className="details">{obj.details}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <div className="functor-arrows">
+              <div className="functor-arrow left-adjoint">
+                <div className="label">{example.leftFunctor}</div>
+                <div className="arrow">→</div>
+                <div className="description">{example.leftDescription}</div>
+              </div>
+              
+              <div className="functor-arrow right-adjoint">
+                <div className="arrow">←</div>
+                <div className="label">{example.rightFunctor}</div>
+                <div className="description">{example.rightDescription}</div>
+              </div>
+            </div>
+            
+            <div className="category-box">
+              <div className="category-name">{example.rightCategory}</div>
+              <ul className="object-list">
+                {example.rightObjects.map(obj => (
+                  <li
+                    key={obj.id}
+                    className={`object-item ${state.selectedRightObject === obj.id ? 'selected' : ''}`}
+                    onClick={() => setState(prev => ({ ...prev, selectedRightObject: obj.id }))}
+                  >
+                    <div className="name">{obj.name}</div>
+                    <div className="details">{obj.details}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          
+          <div className="info-box">
+            <strong>Try it:</strong> Click on objects to explore how the functors map between categories!
+          </div>
+        </>
+      );
+    }
+    
+    function BijectionTab({ state, setState }) {
+      const example = ADJUNCTION_EXAMPLES[state.selectedExample];
+      
+      return (
+        <>
+          <ExampleSelector state={state} setState={setState} />
+          
+          <div className="theorem-box">
+            <h3>The Hom-Set Bijection</h3>
+            <p style={{ lineHeight: '1.8', fontSize: '1.05em', marginTop: '15px' }}>
+              The key property of an adjunction F ⊣ G is a natural bijection:
+            </p>
+            <div className="math-formula">
+              D(F(c), d) ≅ C(c, G(d))
+            </div>
+            <p style={{ lineHeight: '1.8', marginTop: '15px' }}>
+              For every object c in C and d in D, there's a bijection between:
+            </p>
+            <ul style={{ marginLeft: '30px', marginTop: '10px', lineHeight: '2' }}>
+              <li>Morphisms from F(c) to d in D</li>
+              <li>Morphisms from c to G(d) in C</li>
+            </ul>
+          </div>
+          
+          <div className="bijection-panel">
+            <h3>Concrete Bijection</h3>
+            <div className="hom-set-bijection">
+              <div className="hom-set">
+                <div className="title">{example.bijectionExample.left}</div>
+                <ul className="morphism-list">
+                  <li>f : F(c) → d</li>
+                  <li>g : F(c) → d</li>
+                  <li>h : F(c) → d</li>
+                </ul>
+              </div>
+              
+              <div className="bijection-arrow">⟷</div>
+              
+              <div className="hom-set">
+                <div className="title">{example.bijectionExample.right}</div>
+                <ul className="morphism-list">
+                  <li>f̃ : c → G(d)</li>
+                  <li>g̃ : c → G(d)</li>
+                  <li>h̃ : c → G(d)</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="info-box success">
+              <strong>Example:</strong> {example.bijectionExample.explanation}
+            </div>
+          </div>
+          
+          <div className="info-box insight">
+            <strong>Why "Natural"?</strong> This bijection is natural in both c and d, 
+            meaning it commutes with morphisms on both sides. This is what makes the adjunction 
+            structure-preserving and not just a set-theoretic coincidence.
+          </div>
+          
+          {state.selectedExample === 'freeForgetful' && (
+            <div className="info-box">
+              <strong>Free-Forgetful Example:</strong>
+              <p style={{ marginTop: '10px', lineHeight: '1.7' }}>
+                A group homomorphism F(X) → G is the same as a set function X → U(G). 
+                Why? Because F(X) is freely generated by X, so a homomorphism is determined 
+                entirely by where it sends the generators - and those can go anywhere in the underlying set!
+              </p>
+            </div>
+          )}
+        </>
+      );
+    }
+    
+    function UnitCounitTab({ state, setState }) {
+      const example = ADJUNCTION_EXAMPLES[state.selectedExample];
+      
+      return (
+        <>
+          <ExampleSelector state={state} setState={setState} />
+          
+          <div className="theorem-box">
+            <h3>Unit and Counit</h3>
+            <p style={{ lineHeight: '1.8', fontSize: '1.05em', marginTop: '15px' }}>
+              An adjunction can equivalently be described by two natural transformations:
+            </p>
+            <ul style={{ marginLeft: '30px', marginTop: '15px', lineHeight: '2' }}>
+              <li><strong>Unit η : Id<sub>C</sub> ⇒ GF</strong> (how to embed into the round trip)</li>
+              <li><strong>Counit ε : FG ⇒ Id<sub>D</sub></strong> (how to extract from the round trip)</li>
+            </ul>
+          </div>
+          
+          <div className="unit-counit-display">
+            <div className="unit-box">
+              <h4>Unit: η : Id → GF</h4>
+              <div className="natural-trans-diagram">
+                For each c in C:<br/>
+                η<sub>c</sub> : c → GF(c)
+              </div>
+              <div className="info-box" style={{ marginTop: '15px' }}>
+                The unit "embeds" c into GF(c). This is the "universal" way to turn a c into something 
+                that G produces.
+              </div>
+              {state.selectedExample === 'freeForgetful' && (
+                <div className="info-box success">
+                  <strong>Example:</strong> For a set X, η<sub>X</sub> : X → U(F(X)) sends each 
+                  element to itself viewed as a generator of the free group.
+                </div>
+              )}
+            </div>
+            
+            <div className="counit-box">
+              <h4>Counit: ε : FG → Id</h4>
+              <div className="natural-trans-diagram">
+                For each d in D:<br/>
+                ε<sub>d</sub> : FG(d) → d
+              </div>
+              <div className="info-box" style={{ marginTop: '15px' }}>
+                The counit "extracts" from FG(d) back to d. This is the canonical map from the 
+                "free" structure back to the original.
+              </div>
+              {state.selectedExample === 'freeForgetful' && (
+                <div className="info-box success">
+                  <strong>Example:</strong> For a group G, ε<sub>G</sub> : F(U(G)) → G is the unique 
+                  homomorphism that sends each generator g ∈ G to itself.
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="theorem-box">
+            <h3>Triangle Identities</h3>
+            <p style={{ lineHeight: '1.8', marginTop: '15px' }}>
+              The unit and counit must satisfy two coherence conditions:
+            </p>
+            
+            <div className="triangle-diagram">
+              <svg width="500" height="250">
+                <defs>
+                  <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#333" />
+                  </marker>
+                </defs>
+                
+                {/* Triangle 1 */}
+                <text x="80" y="30" fontSize="18" fontWeight="600" fill="#4facfe">F</text>
+                <text x="200" y="30" fontSize="18" fontWeight="600" fill="#4facfe">FGF</text>
+                <text x="140" y="150" fontSize="18" fontWeight="600" fill="#4facfe">F</text>
+                
+                <line x1="90" y1="35" x2="190" y2="35" stroke="#333" strokeWidth="2" markerEnd="url(#arrow)" />
+                <text x="130" y="25" fontSize="14">Fη</text>
+                
+                <line x1="210" y1="40" x2="160" y2="130" stroke="#333" strokeWidth="2" markerEnd="url(#arrow)" />
+                <text x="200" y="90" fontSize="14">εF</text>
+                
+                <line x1="90" y1="45" x2="130" y2="135" stroke="#f5576c" strokeWidth="3" strokeDasharray="5,5" />
+                <text x="90" y="100" fontSize="14" fill="#f5576c">id<sub>F</sub></text>
+                
+                {/* Triangle 2 */}
+                <text x="330" y="30" fontSize="18" fontWeight="600" fill="#4facfe">G</text>
+                <text x="450" y="30" fontSize="18" fontWeight="600" fill="#4facfe">GFG</text>
+                <text x="390" y="150" fontSize="18" fontWeight="600" fill="#4facfe">G</text>
+                
+                <line x1="340" y1="35" x2="440" y2="35" stroke="#333" strokeWidth="2" markerEnd="url(#arrow)" />
+                <text x="380" y="25" fontSize="14">ηG</text>
+                
+                <line x1="460" y1="40" x2="410" y2="130" stroke="#333" strokeWidth="2" markerEnd="url(#arrow)" />
+                <text x="450" y="90" fontSize="14">Gε</text>
+                
+                <line x1="340" y1="45" x2="380" y2="135" stroke="#f5576c" strokeWidth="3" strokeDasharray="5,5" />
+                <text x="340" y="100" fontSize="14" fill="#f5576c">id<sub>G</sub></text>
+              </svg>
+            </div>
+            
+            <div className="math-formula">
+              ε<sub>F</sub> ∘ F(η) = id<sub>F</sub>  &nbsp;&nbsp;&nbsp;  G(ε) ∘ η<sub>G</sub> = id<sub>G</sub>
+            </div>
+          </div>
+          
+          <div className="info-box insight">
+            <strong>Intuition:</strong> Going around the "wrong way" (applying both F and G) and then 
+            correcting with η or ε gets you back where you started. This ensures F and G are 
+            "inverses up to natural isomorphism" in the right sense.
+          </div>
+        </>
+      );
+    }
+    
+    function ExamplesTab({ state, setState }) {
+      return (
+        <>
+          <h2 style={{ fontSize: '2em', marginBottom: '30px', color: '#4facfe' }}>
+            Gallery of Adjunctions
+          </h2>
+          
+          <ExampleSelector state={state} setState={setState} />
+          
+          <div className="info-box">
+            <strong>Why Adjunctions Matter:</strong>
+            <p style={{ marginTop: '10px', lineHeight: '1.7' }}>
+              Adjunctions appear throughout mathematics because they capture the essence of 
+              "optimal" or "universal" constructions. If you have a construction that's "the best" 
+              in some sense, it's usually part of an adjunction.
+            </p>
+          </div>
+          
+          <div className="theorem-box">
+            <h3>Famous Adjunctions</h3>
+            <ul style={{ marginLeft: '30px', marginTop: '15px', lineHeight: '2.2' }}>
+              <li><strong>Free ⊣ Forgetful:</strong> Free algebras (groups, monoids, etc.) are left adjoint to forgetful functors</li>
+              <li><strong>Product ⊣ Exponential:</strong> In cartesian closed categories (currying)</li>
+              <li><strong>Tensor ⊣ Hom:</strong> In monoidal categories (linear algebra)</li>
+              <li><strong>Direct Image ⊣ Inverse Image:</strong> In sheaf theory (geometry)</li>
+              <li><strong>Diagonal ⊣ Product:</strong> C → C × C and C × C → C</li>
+              <li><strong>Coproduct ⊣ Diagonal:</strong> Dual of product-diagonal</li>
+            </ul>
+          </div>
+          
+          <div className="info-box success">
+            <strong>Mac Lane's Observation:</strong> "Adjoint functors arise everywhere" - almost every 
+            important construction in mathematics can be understood as part of an adjoint pair.
+          </div>
+          
+          <div className="theorem-box">
+            <h3>Properties of Adjunctions</h3>
+            <ul style={{ marginLeft: '30px', marginTop: '15px', lineHeight: '2' }}>
+              <li>Left adjoints preserve colimits</li>
+              <li>Right adjoints preserve limits</li>
+              <li>Adjunctions compose: if F ⊣ G and G' ⊣ H, then (G ∘ G') ⊣ (F ∘ H')</li>
+              <li>Adjunctions are unique up to natural isomorphism</li>
+              <li>Equivalences are adjunctions where unit and counit are isomorphisms</li>
+            </ul>
+          </div>
+        </>
+      );
+    }
+    
+    function ExampleSelector({ state, setState }) {
+      return (
+        <div className="example-selector">
+          {Object.entries(ADJUNCTION_EXAMPLES).map(([key, example]) => (
+            <div
+              key={key}
+              className={`example-card ${state.selectedExample === key ? 'active' : ''}`}
+              onClick={() => setState(prev => ({ ...prev, selectedExample: key }))}
+            >
+              <h4>{example.name}</h4>
+              <p>{example.leftFunctor} ⊣ {example.rightFunctor}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    // ============================================================================
+    // RENDER
+    // ============================================================================
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>

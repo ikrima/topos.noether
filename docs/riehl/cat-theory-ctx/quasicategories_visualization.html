@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quasi-Categories: Inner Horn Filling Interactive</title>
+  
+  <!-- React, Three.js, and KaTeX from CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/three@0.150.0/build/three.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: #333;
+      overflow-x: hidden;
+    }
+    
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+    
+    .header .subtitle {
+      font-size: 1.1em;
+      opacity: 0.9;
+      font-weight: 300;
+    }
+    
+    .scene-nav {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      overflow-x: auto;
+    }
+    
+    .scene-button {
+      flex: 1;
+      min-width: 150px;
+      padding: 15px 20px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .scene-button:hover {
+      background: #e9ecef;
+      color: #333;
+    }
+    
+    .scene-button.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: white;
+    }
+    
+    .content {
+      display: flex;
+      min-height: 600px;
+    }
+    
+    .visualization-panel {
+      flex: 2;
+      padding: 30px;
+      background: #f8f9fa;
+      position: relative;
+    }
+    
+    .controls-panel {
+      flex: 1;
+      padding: 30px;
+      background: white;
+      border-left: 1px solid #dee2e6;
+      overflow-y: auto;
+      max-height: 700px;
+    }
+    
+    .canvas-container {
+      width: 100%;
+      height: 500px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .control-section {
+      margin-bottom: 25px;
+    }
+    
+    .control-section h3 {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      color: #667eea;
+      font-weight: 500;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.9em;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #667eea;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button.secondary {
+      background: #6c757d;
+    }
+    
+    button.secondary:hover {
+      background: #5a6268;
+    }
+    
+    button.danger {
+      background: #dc3545;
+    }
+    
+    button.danger:hover {
+      background: #c82333;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      margin: 10px 0;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .checkbox-group input {
+      margin-right: 8px;
+    }
+    
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+    
+    .info-box.warning {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+    }
+    
+    .info-box.success {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+    
+    .math-display {
+      background: white;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 6px;
+      border: 1px solid #dee2e6;
+      font-family: 'KaTeX_Main', 'Times New Roman', serif;
+      text-align: center;
+    }
+    
+    .simplex-info {
+      background: white;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      border: 1px solid #dee2e6;
+      font-size: 0.85em;
+    }
+    
+    .simplex-info strong {
+      color: #667eea;
+    }
+    
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 15px;
+      font-size: 0.85em;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+      border: 1px solid #333;
+    }
+    
+    .explanation {
+      line-height: 1.7;
+      color: #555;
+      margin: 15px 0;
+    }
+    
+    .explanation p {
+      margin-bottom: 12px;
+    }
+    
+    .explanation strong {
+      color: #333;
+      font-weight: 600;
+    }
+    
+    .katex { font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useRef } = React;
+    
+    // ============================================================================
+    // MATHEMATICAL CORE: Simplicial Set Operations
+    // ============================================================================
+    
+    // Generate vertices for standard n-simplex
+    function standardSimplexVertices(n) {
+      const vertices = [];
+      for (let i = 0; i <= n; i++) {
+        const angle = (i / (n + 1)) * Math.PI * 2;
+        const radius = 2;
+        vertices.push({
+          id: i,
+          position: {
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius,
+            z: n === 3 ? (i === 3 ? 2 : 0) : 0
+          }
+        });
+      }
+      return vertices;
+    }
+    
+    // Generate face map: removes k-th vertex from simplex
+    function face(k, vertices) {
+      return vertices.filter((_, i) => i !== k);
+    }
+    
+    // Create a horn: all faces except the k-th face
+    function createHorn(n, k) {
+      const allVertices = standardSimplexVertices(n);
+      const faces = [];
+      
+      for (let i = 0; i <= n; i++) {
+        if (i !== k) {
+          faces.push({
+            id: i,
+            vertices: face(i, allVertices),
+            label: `∂${i}Δ${n}`
+          });
+        }
+      }
+      
+      return {
+        dimension: n,
+        missingFace: k,
+        isInner: k > 0 && k < n,
+        faces,
+        vertices: allVertices,
+        label: `Λ${n}${k}`
+      };
+    }
+    
+    // Check if a horn can be filled (for visualization purposes)
+    function canFillHorn(horn, simplicialSet) {
+      // Simplified check: in a real quasi-category, we'd verify
+      // the existence of a compatible n-simplex
+      return horn.isInner;
+    }
+    
+    // Example simplicial sets
+    const EXAMPLES = {
+      interval: {
+        name: "Interval Δ¹",
+        description: "The simplest quasi-category: just two vertices and one edge.",
+        vertices: [{id: 0}, {id: 1}],
+        edges: [{id: 0, source: 0, target: 1}],
+        triangles: [],
+        isQuasiCat: true,
+        reason: "No inner horns exist (only 0- and 1-simplices present)."
+      },
+      triangle: {
+        name: "Filled Triangle Δ²",
+        description: "Three vertices, three edges, and one 2-simplex filling.",
+        vertices: [{id: 0}, {id: 1}, {id: 2}],
+        edges: [
+          {id: 0, source: 0, target: 1},
+          {id: 1, source: 1, target: 2},
+          {id: 2, source: 0, target: 2}
+        ],
+        triangles: [{id: 0, edges: [0, 1, 2]}],
+        isQuasiCat: true,
+        reason: "The single Λ²₁ horn (edges 0,1) is filled by the triangle."
+      },
+      emptyTriangle: {
+        name: "Empty Triangle ∂Δ²",
+        description: "Three edges forming a cycle, but no 2-simplex filling.",
+        vertices: [{id: 0}, {id: 1}, {id: 2}],
+        edges: [
+          {id: 0, source: 0, target: 1},
+          {id: 1, source: 1, target: 2},
+          {id: 2, source: 0, target: 2}
+        ],
+        triangles: [],
+        isQuasiCat: false,
+        reason: "The inner horn Λ²₁ has no filler (missing the 2-simplex interior)."
+      },
+      nerve: {
+        name: "Nerve of a Poset",
+        description: "The nerve of a 3-element chain 0 < 1 < 2.",
+        vertices: [{id: 0}, {id: 1}, {id: 2}],
+        edges: [
+          {id: 0, source: 0, target: 1},
+          {id: 1, source: 1, target: 2},
+          {id: 2, source: 0, target: 2}
+        ],
+        triangles: [{id: 0, edges: [0, 1, 2]}],
+        isQuasiCat: true,
+        reason: "Nerve of a category always satisfies horn-filling (composition exists uniquely)."
+      }
+    };
+    
+    // ============================================================================
+    // THREE.JS VISUALIZATION SETUP
+    // ============================================================================
+    
+    function useThreeScene(canvasRef, state) {
+      const sceneRef = useRef(null);
+      const rendererRef = useRef(null);
+      const cameraRef = useRef(null);
+      
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f9fa);
+        sceneRef.current = scene;
+        
+        // Camera
+        const camera = new THREE.PerspectiveCamera(
+          50,
+          canvasRef.current.clientWidth / canvasRef.current.clientHeight,
+          0.1,
+          1000
+        );
+        camera.position.set(5, 5, 8);
+        camera.lookAt(0, 0, 0);
+        cameraRef.current = camera;
+        
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({
+          canvas: canvasRef.current,
+          antialias: true
+        });
+        renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        rendererRef.current = renderer;
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 10, 7);
+        scene.add(directionalLight);
+        
+        // Grid helper
+        const gridHelper = new THREE.GridHelper(10, 10, 0xcccccc, 0xe0e0e0);
+        scene.add(gridHelper);
+        
+        // Animation loop
+        let animationId;
+        const animate = () => {
+          animationId = requestAnimationFrame(animate);
+          
+          if (state.autoRotate) {
+            camera.position.x = 8 * Math.cos(Date.now() * 0.0005);
+            camera.position.z = 8 * Math.sin(Date.now() * 0.0005);
+            camera.lookAt(0, 0, 0);
+          }
+          
+          renderer.render(scene, camera);
+        };
+        animate();
+        
+        // Cleanup
+        return () => {
+          cancelAnimationFrame(animationId);
+          renderer.dispose();
+        };
+      }, []);
+      
+      // Update scene when state changes
+      useEffect(() => {
+        if (!sceneRef.current) return;
+        
+        // Clear previous objects (except lights and grid)
+        const scene = sceneRef.current;
+        const objectsToRemove = scene.children.filter(
+          child => child.type === 'Mesh' || child.type === 'Line' || child.type === 'Group'
+        );
+        objectsToRemove.forEach(obj => scene.remove(obj));
+        
+        // Draw based on current scene
+        drawScene(scene, state);
+        
+      }, [state]);
+      
+      return { scene: sceneRef.current, camera: cameraRef.current, renderer: rendererRef.current };
+    }
+    
+    // Draw the appropriate visualization based on scene
+    function drawScene(scene, state) {
+      const { currentScene, hornData, selectedElements, showFiller } = state;
+      
+      switch(currentScene) {
+        case 1: // Horn visualization
+          drawHorn(scene, hornData, selectedElements);
+          break;
+        case 2: // Composition
+          drawComposition(scene, showFiller);
+          break;
+        case 3: // Associativity
+          drawAssociativity(scene, state.associativityStep);
+          break;
+        case 4: // Gallery
+          drawExample(scene, state.currentExample);
+          break;
+        default:
+          drawSimplicialBasics(scene, state.dimension);
+      }
+    }
+    
+    // Draw a horn (Λᵏₙ)
+    function drawHorn(scene, hornData, selectedElements) {
+      const { vertices, faces, missingFace } = hornData;
+      
+      // Draw vertices
+      vertices.forEach(v => {
+        const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const material = new THREE.MeshPhongMaterial({
+          color: selectedElements.vertices.includes(v.id) ? 0xff6b6b : 0x667eea
+        });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(v.position.x, v.position.y, v.position.z);
+        scene.add(sphere);
+      });
+      
+      // Draw edges for each face
+      faces.forEach((face, idx) => {
+        const faceVertices = face.vertices;
+        for (let i = 0; i < faceVertices.length; i++) {
+          const v1 = faceVertices[i];
+          const v2 = faceVertices[(i + 1) % faceVertices.length];
+          
+          const points = [
+            new THREE.Vector3(v1.position.x, v1.position.y, v1.position.z),
+            new THREE.Vector3(v2.position.x, v2.position.y, v2.position.z)
+          ];
+          
+          const geometry = new THREE.BufferGeometry().setFromPoints(points);
+          const material = new THREE.LineBasicMaterial({
+            color: idx === missingFace ? 0xff0000 : 0x333333,
+            linewidth: 2
+          });
+          const line = new THREE.Line(geometry, material);
+          scene.add(line);
+        }
+        
+        // Draw face as semi-transparent plane
+        if (faceVertices.length === 3) {
+          const geometry = new THREE.BufferGeometry();
+          const positions = new Float32Array([
+            faceVertices[0].position.x, faceVertices[0].position.y, faceVertices[0].position.z,
+            faceVertices[1].position.x, faceVertices[1].position.y, faceVertices[1].position.z,
+            faceVertices[2].position.x, faceVertices[2].position.y, faceVertices[2].position.z
+          ]);
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          geometry.computeVertexNormals();
+          
+          const material = new THREE.MeshPhongMaterial({
+            color: 0x4ecdc4,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+        }
+      });
+    }
+    
+    // Draw composition scenario
+    function drawComposition(scene, showFiller) {
+      const vertices = [
+        { x: -2, y: 0, z: 0 },
+        { x: 0, y: 0, z: 0 },
+        { x: 2, y: 0, z: 0 }
+      ];
+      
+      // Draw vertices
+      ['x', 'y', 'z'].forEach((label, i) => {
+        const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+        const material = new THREE.MeshPhongMaterial({ color: 0x667eea });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(vertices[i].x, vertices[i].y, vertices[i].z);
+        scene.add(sphere);
+      });
+      
+      // Draw edges f and g
+      const drawEdge = (start, end, color, label) => {
+        const points = [
+          new THREE.Vector3(start.x, start.y, start.z),
+          new THREE.Vector3(end.x, end.y, end.z)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color, linewidth: 3 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+      };
+      
+      drawEdge(vertices[0], vertices[1], 0xff6b6b, 'f');
+      drawEdge(vertices[1], vertices[2], 0x4ecdc4, 'g');
+      
+      // Draw composite edge if filler shown
+      if (showFiller) {
+        drawEdge(vertices[0], vertices[2], 0xffa500, 'g∘f');
+        
+        // Draw 2-simplex filler
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array([
+          vertices[0].x, vertices[0].y, vertices[0].z,
+          vertices[1].x, vertices[1].y, vertices[1].z,
+          vertices[2].x, vertices[2].y, vertices[2].z
+        ]);
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.computeVertexNormals();
+        
+        const material = new THREE.MeshPhongMaterial({
+          color: 0xffd700,
+          transparent: true,
+          opacity: 0.4,
+          side: THREE.DoubleSide
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+      }
+    }
+    
+    // Draw associativity scenario
+    function drawAssociativity(scene, step) {
+      const vertices = [
+        { x: -2, y: 0, z: 2 },
+        { x: 0, y: 0, z: 2 },
+        { x: 2, y: 0, z: 2 },
+        { x: 0, y: 0, z: -1 }
+      ];
+      
+      // Draw vertices
+      vertices.forEach(v => {
+        const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const material = new THREE.MeshPhongMaterial({ color: 0x667eea });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(v.x, v.y, v.z);
+        scene.add(sphere);
+      });
+      
+      // Draw edges
+      const edges = [
+        [0, 1], [1, 2], [2, 3], [0, 3], [1, 3], [0, 2]
+      ];
+      edges.forEach(([i, j]) => {
+        const points = [
+          new THREE.Vector3(vertices[i].x, vertices[i].y, vertices[i].z),
+          new THREE.Vector3(vertices[j].x, vertices[j].y, vertices[j].z)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 2 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+      });
+      
+      // Draw faces based on step
+      if (step >= 1) {
+        // Draw some faces as examples
+        const drawFace = (indices, color) => {
+          const geometry = new THREE.BufferGeometry();
+          const positions = new Float32Array(
+            indices.flatMap(i => [vertices[i].x, vertices[i].y, vertices[i].z])
+          );
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          geometry.computeVertexNormals();
+          
+          const material = new THREE.MeshPhongMaterial({
+            color,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+        };
+        
+        drawFace([0, 1, 3], 0xff6b6b);
+        drawFace([1, 2, 3], 0x4ecdc4);
+      }
+    }
+    
+    // Draw simplicial basics
+    function drawSimplicialBasics(scene, dimension) {
+      const vertices = standardSimplexVertices(dimension);
+      
+      vertices.forEach(v => {
+        const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+        const material = new THREE.MeshPhongMaterial({ color: 0x667eea });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(v.position.x, v.position.y, v.position.z);
+        scene.add(sphere);
+      });
+      
+      // Draw edges
+      for (let i = 0; i < vertices.length; i++) {
+        for (let j = i + 1; j < vertices.length; j++) {
+          const points = [
+            new THREE.Vector3(vertices[i].position.x, vertices[i].position.y, vertices[i].position.z),
+            new THREE.Vector3(vertices[j].position.x, vertices[j].position.y, vertices[j].position.z)
+          ];
+          const geometry = new THREE.BufferGeometry().setFromPoints(points);
+          const material = new THREE.LineBasicMaterial({ color: 0x333333 });
+          const line = new THREE.Line(geometry, material);
+          scene.add(line);
+        }
+      }
+    }
+    
+    // Draw example from gallery
+    function drawExample(scene, example) {
+      if (!example) return;
+      
+      const exData = EXAMPLES[example];
+      if (!exData) return;
+      
+      // Position vertices in a circle
+      const n = exData.vertices.length;
+      exData.vertices.forEach((v, i) => {
+        const angle = (i / n) * Math.PI * 2;
+        const radius = 2;
+        
+        const geometry = new THREE.SphereGeometry(0.2, 16, 16);
+        const material = new THREE.MeshPhongMaterial({ color: 0x667eea });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+        scene.add(sphere);
+        
+        // Store position for edges
+        v.position = { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, z: 0 };
+      });
+      
+      // Draw edges
+      exData.edges.forEach(edge => {
+        const v1 = exData.vertices[edge.source].position;
+        const v2 = exData.vertices[edge.target].position;
+        
+        const points = [
+          new THREE.Vector3(v1.x, v1.y, v1.z),
+          new THREE.Vector3(v2.x, v2.y, v2.z)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0x333333, linewidth: 2 });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+      });
+      
+      // Draw triangles
+      exData.triangles.forEach(tri => {
+        const edgeIndices = tri.edges;
+        const verts = new Set();
+        edgeIndices.forEach(ei => {
+          verts.add(exData.edges[ei].source);
+          verts.add(exData.edges[ei].target);
+        });
+        const vertArray = Array.from(verts);
+        
+        if (vertArray.length === 3) {
+          const geometry = new THREE.BufferGeometry();
+          const positions = new Float32Array(
+            vertArray.flatMap(vi => {
+              const pos = exData.vertices[vi].position;
+              return [pos.x, pos.y, pos.z];
+            })
+          );
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          geometry.computeVertexNormals();
+          
+          const material = new THREE.MeshPhongMaterial({
+            color: 0xffd700,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+        }
+      });
+    }
+    
+    // ============================================================================
+    // REACT COMPONENTS
+    // ============================================================================
+    
+    function App() {
+      const [state, setState] = useState({
+        currentScene: 0,
+        dimension: 2,
+        hornDimension: 2,
+        hornMissingFace: 1,
+        hornData: createHorn(2, 1),
+        selectedElements: { vertices: [], edges: [], faces: [] },
+        autoRotate: false,
+        showFiller: false,
+        associativityStep: 0,
+        currentExample: 'interval'
+      });
+      
+      const canvasRef = useRef(null);
+      useThreeScene(canvasRef, state);
+      
+      const scenes = [
+        { id: 0, name: "Simplicial Basics", shortName: "Basics" },
+        { id: 1, name: "What is a Horn?", shortName: "Horns" },
+        { id: 2, name: "Composition", shortName: "Composition" },
+        { id: 3, name: "Associativity", shortName: "Associativity" },
+        { id: 4, name: "Gallery", shortName: "Gallery" }
+      ];
+      
+      const updateHorn = () => {
+        const horn = createHorn(state.hornDimension, state.hornMissingFace);
+        setState(prev => ({ ...prev, hornData: horn }));
+      };
+      
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>Quasi-Categories: Inner Horn Filling</h1>
+            <div className="subtitle">
+              An Interactive Introduction to ∞-Category Theory
+            </div>
+          </div>
+          
+          <div className="scene-nav">
+            {scenes.map(scene => (
+              <button
+                key={scene.id}
+                className={`scene-button ${state.currentScene === scene.id ? 'active' : ''}`}
+                onClick={() => setState(prev => ({ ...prev, currentScene: scene.id }))}
+              >
+                {scene.shortName}
+              </button>
+            ))}
+          </div>
+          
+          <div className="content">
+            <div className="visualization-panel">
+              <div className="canvas-container">
+                <canvas ref={canvasRef}></canvas>
+              </div>
+              
+              <div className="legend">
+                <div className="legend-item">
+                  <div className="legend-color" style={{background: '#667eea'}}></div>
+                  <span>Vertices</span>
+                </div>
+                <div className="legend-item">
+                  <div className="legend-color" style={{background: '#333333'}}></div>
+                  <span>Edges</span>
+                </div>
+                <div className="legend-item">
+                  <div className="legend-color" style={{background: '#4ecdc4'}}></div>
+                  <span>Faces</span>
+                </div>
+                <div className="legend-item">
+                  <div className="legend-color" style={{background: '#ffd700'}}></div>
+                  <span>Fillers</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="controls-panel">
+              <SceneControls state={state} setState={setState} updateHorn={updateHorn} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    function SceneControls({ state, setState, updateHorn }) {
+      const { currentScene } = state;
+      
+      switch(currentScene) {
+        case 0:
+          return <BasicsControls state={state} setState={setState} />;
+        case 1:
+          return <HornControls state={state} setState={setState} updateHorn={updateHorn} />;
+        case 2:
+          return <CompositionControls state={state} setState={setState} />;
+        case 3:
+          return <AssociativityControls state={state} setState={setState} />;
+        case 4:
+          return <GalleryControls state={state} setState={setState} />;
+        default:
+          return <div>Select a scene</div>;
+      }
+    }
+    
+    function BasicsControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>Simplicial Set Basics</h3>
+            <div className="explanation">
+              <p>A <strong>simplicial set</strong> is a combinatorial structure built from simplices of all dimensions:</p>
+              <ul style={{marginLeft: '20px', marginTop: '10px'}}>
+                <li><strong>0-simplices</strong>: vertices (points)</li>
+                <li><strong>1-simplices</strong>: edges (lines)</li>
+                <li><strong>2-simplices</strong>: triangles (filled)</li>
+                <li><strong>3-simplices</strong>: tetrahedra</li>
+              </ul>
+              <p style={{marginTop: '12px'}}>These are connected by <strong>face maps</strong> (∂ᵢ) and <strong>degeneracy maps</strong> (sⱼ) that satisfy the simplicial identities.</p>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <h3>Visualization Controls</h3>
+            <div className="control-group">
+              <label>Dimension: {state.dimension}</label>
+              <input
+                type="range"
+                min="0"
+                max="3"
+                value={state.dimension}
+                onChange={e => setState(prev => ({ ...prev, dimension: parseInt(e.target.value) }))}
+              />
+            </div>
+            
+            <div className="checkbox-group">
+              <input
+                type="checkbox"
+                checked={state.autoRotate}
+                onChange={e => setState(prev => ({ ...prev, autoRotate: e.target.checked }))}
+              />
+              <label>Auto-rotate camera</label>
+            </div>
+          </div>
+          
+          <div className="info-box">
+            <strong>Key Insight:</strong> Simplicial sets are purely combinatorial, but we can visualize them geometrically by realizing each n-simplex as a geometric object in space.
+          </div>
+          
+          <div className="simplex-info">
+            <strong>Current Simplex:</strong> Δ<sup>{state.dimension}</sup><br/>
+            <strong>Vertices:</strong> {state.dimension + 1}<br/>
+            <strong>Edges:</strong> {state.dimension * (state.dimension + 1) / 2}<br/>
+            <strong>Faces:</strong> {state.dimension >= 2 ? 'present' : 'none'}
+          </div>
+        </>
+      );
+    }
+    
+    function HornControls({ state, setState, updateHorn }) {
+      const { hornData } = state;
+      
+      return (
+        <>
+          <div className="control-section">
+            <h3>Horn Construction: Λ<sup>{hornData.dimension}</sup><sub>{hornData.missingFace}</sub></h3>
+            <div className="explanation">
+              <p>A <strong>horn</strong> Λᵏₙ is formed by taking an n-simplex and removing its k-th face.</p>
+              <p><strong>Inner horn</strong>: 0 &lt; k &lt; n (missing an interior face)</p>
+              <p><strong>Outer horn</strong>: k = 0 or k = n (missing a boundary face)</p>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <h3>Controls</h3>
+            <div className="control-group">
+              <label>Dimension n: {state.hornDimension}</label>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                value={state.hornDimension}
+                onChange={e => {
+                  const dim = parseInt(e.target.value);
+                  setState(prev => ({ 
+                    ...prev, 
+                    hornDimension: dim,
+                    hornMissingFace: Math.min(prev.hornMissingFace, dim)
+                  }));
+                }}
+              />
+            </div>
+            
+            <div className="control-group">
+              <label>Missing Face k: {state.hornMissingFace}</label>
+              <input
+                type="range"
+                min="0"
+                max={state.hornDimension}
+                value={state.hornMissingFace}
+                onChange={e => setState(prev => ({ ...prev, hornMissingFace: parseInt(e.target.value) }))}
+              />
+            </div>
+            
+            <button onClick={updateHorn}>Update Horn</button>
+          </div>
+          
+          <div className={`info-box ${hornData.isInner ? 'success' : 'warning'}`}>
+            <strong>Type:</strong> {hornData.isInner ? 'Inner Horn ✓' : 'Outer Horn'}<br/>
+            <strong>Label:</strong> {hornData.label}<br/>
+            {hornData.isInner ? (
+              <p>This horn must be fillable in any quasi-category!</p>
+            ) : (
+              <p>Outer horns don't need to be fillable.</p>
+            )}
+          </div>
+          
+          <div className="simplex-info">
+            <strong>Faces Present:</strong> {hornData.faces.length}<br/>
+            <strong>Missing Face:</strong> ∂<sub>{hornData.missingFace}</sub>Δ<sup>{hornData.dimension}</sup><br/>
+            <strong>Vertices:</strong> {hornData.vertices.length}
+          </div>
+        </>
+      );
+    }
+    
+    function CompositionControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>Composition via Horn Filling</h3>
+            <div className="explanation">
+              <p>Given two composable morphisms:</p>
+              <p style={{marginLeft: '20px'}}>f: x → y and g: y → z</p>
+              <p>They form an <strong>inner horn Λ²₁</strong>: the boundary of a triangle missing its middle edge.</p>
+              <p>A <strong>filler</strong> for this horn gives us:</p>
+              <ul style={{marginLeft: '20px', marginTop: '8px'}}>
+                <li>The composite morphism g∘f: x → z</li>
+                <li>A 2-simplex witnessing this composition</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <h3>Visualization</h3>
+            <button onClick={() => setState(prev => ({ ...prev, showFiller: !prev.showFiller }))}>
+              {state.showFiller ? 'Hide' : 'Show'} Filler
+            </button>
+          </div>
+          
+          {!state.showFiller ? (
+            <div className="info-box warning">
+              <strong>Problem:</strong> We have f and g, but how do we compose them? In ordinary category theory, composition is given. In ∞-categories, it's <em>witnessed</em> by a 2-simplex.
+            </div>
+          ) : (
+            <div className="info-box success">
+              <strong>Solution:</strong> The filled triangle (2-simplex) provides:<br/>
+              • The composite edge g∘f (orange)<br/>
+              • A witness (the filled triangle) certifying this is the correct composition<br/>
+              • The space of all such fillers is contractible
+            </div>
+          )}
+          
+          <div className="math-display">
+            <div>The horn Λ²₁ consists of:</div>
+            <div style={{marginTop: '8px'}}>∂₀Δ² = [y,z] (edge g)</div>
+            <div>∂₂Δ² = [x,y] (edge f)</div>
+            <div style={{marginTop: '8px'}}>Missing: ∂₁Δ² = [x,z]</div>
+          </div>
+          
+          <div className="simplex-info">
+            <strong>Key Insight:</strong> In a quasi-category, composition is not a function but rather is witnessed by a contractible space of 2-simplices. This captures the idea that "composition exists essentially uniquely."
+          </div>
+        </>
+      );
+    }
+    
+    function AssociativityControls({ state, setState }) {
+      return (
+        <>
+          <div className="control-section">
+            <h3>Associativity & 3-Simplices</h3>
+            <div className="explanation">
+              <p>For three composable morphisms f, g, h, we can form:</p>
+              <ul style={{marginLeft: '20px', marginTop: '8px'}}>
+                <li>(h∘g)∘f via filling two Λ²₁ horns</li>
+                <li>h∘(g∘f) via filling two different Λ²₁ horns</li>
+              </ul>
+              <p>These give potentially different composites! How do we know they're "the same"?</p>
+              <p><strong>Answer:</strong> A 3-simplex fills the horns Λ³₁ and Λ³₂, witnessing that the two compositions are related by an invertible 2-morphism.</p>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <h3>Visualization Step</h3>
+            <button onClick={() => setState(prev => ({ ...prev, associativityStep: (prev.associativityStep + 1) % 3 }))}>
+              Next Step ({state.associativityStep + 1}/3)
+            </button>
+          </div>
+          
+          <div className="info-box">
+            <strong>Current Step: {state.associativityStep + 1}</strong><br/>
+            {state.associativityStep === 0 && "Starting configuration: four vertices and six edges forming a tetrahedron skeleton."}
+            {state.associativityStep === 1 && "Two 2-simplices filled, representing the two different ways to compose."}
+            {state.associativityStep === 2 && "3-simplex witnesses that both composition paths are coherently related."}
+          </div>
+          
+          <div className="math-display">
+            <div>Associativity coherence:</div>
+            <div style={{marginTop: '8px'}}>Λ³₁ witnesses: (h∘g)∘f ≃ composite</div>
+            <div>Λ³₂ witnesses: h∘(g∘f) ≃ composite</div>
+          </div>
+          
+          <div className="simplex-info">
+            <strong>Higher Coherence:</strong> This pattern continues infinitely. n-simplices provide coherence witnesses for (n-1)-dimensional composition ambiguities. This is why we need ∞-categories!
+          </div>
+        </>
+      );
+    }
+    
+    function GalleryControls({ state, setState }) {
+      const currentEx = EXAMPLES[state.currentExample];
+      
+      return (
+        <>
+          <div className="control-section">
+            <h3>Quasi-Category Gallery</h3>
+            <div className="explanation">
+              <p>Explore examples and counterexamples of quasi-categories. Each simplicial set is checked for the inner horn-filling condition.</p>
+            </div>
+          </div>
+          
+          <div className="control-section">
+            <h3>Examples</h3>
+            {Object.keys(EXAMPLES).map(key => (
+              <button
+                key={key}
+                className={state.currentExample === key ? '' : 'secondary'}
+                onClick={() => setState(prev => ({ ...prev, currentExample: key }))}
+              >
+                {EXAMPLES[key].name}
+              </button>
+            ))}
+          </div>
+          
+          <div className={`info-box ${currentEx.isQuasiCat ? 'success' : 'warning'}`}>
+            <strong>{currentEx.name}</strong><br/>
+            <strong>Quasi-Category:</strong> {currentEx.isQuasiCat ? 'YES ✓' : 'NO ✗'}<br/>
+            <p style={{marginTop: '8px'}}>{currentEx.description}</p>
+          </div>
+          
+          <div className="simplex-info">
+            <strong>Reason:</strong><br/>
+            {currentEx.reason}
+          </div>
+          
+          <div className="math-display">
+            <strong>Structure:</strong><br/>
+            Vertices: {currentEx.vertices.length}<br/>
+            Edges: {currentEx.edges.length}<br/>
+            2-Simplices: {currentEx.triangles.length}
+          </div>
+        </>
+      );
+    }
+    
+    // ============================================================================
+    // RENDER APP
+    // ============================================================================
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>

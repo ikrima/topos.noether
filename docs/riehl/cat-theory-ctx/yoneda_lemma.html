@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Yoneda Lemma: Interactive Exploration</title>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react.production.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+    
+    #root {
+      width: 100%;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 3em;
+      margin-bottom: 15px;
+      font-weight: 300;
+      letter-spacing: 2px;
+    }
+    
+    .subtitle {
+      font-size: 1.2em;
+      opacity: 0.95;
+      font-weight: 300;
+      font-style: italic;
+    }
+    
+    .three-panel-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+      min-height: 800px;
+    }
+    
+    .panel {
+      padding: 30px;
+      border-right: 1px solid #dee2e6;
+      position: relative;
+      overflow-y: auto;
+    }
+    
+    .panel:last-child {
+      border-right: none;
+    }
+    
+    .panel-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid;
+    }
+    
+    .panel-header h2 {
+      font-size: 1.5em;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    .panel-header .description {
+      font-size: 0.9em;
+      opacity: 0.8;
+      line-height: 1.5;
+    }
+    
+    .panel.category-panel .panel-header {
+      border-bottom-color: #667eea;
+      color: #667eea;
+    }
+    
+    .panel.functors-panel .panel-header {
+      border-bottom-color: #4facfe;
+      color: #4facfe;
+    }
+    
+    .panel.bijection-panel .panel-header {
+      border-bottom-color: #f5576c;
+      color: #f5576c;
+    }
+    
+    .category-diagram {
+      background: #fafbfc;
+      border-radius: 12px;
+      padding: 30px;
+      min-height: 350px;
+      position: relative;
+      border: 2px solid #e1e4e8;
+      margin-bottom: 20px;
+    }
+    
+    .object-node {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      z-index: 10;
+    }
+    
+    .object-node:hover {
+      transform: scale(1.2);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+    
+    .object-node.selected {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      transform: scale(1.3);
+      box-shadow: 0 8px 25px rgba(245, 87, 108, 0.6);
+    }
+    
+    .functor-display {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .functor-display h3 {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      color: #4facfe;
+      text-align: center;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #4facfe;
+    }
+    
+    .hom-set-display {
+      background: #f0f8ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border: 2px solid #4facfe;
+    }
+    
+    .hom-set-display .label {
+      font-weight: 600;
+      color: #4facfe;
+      margin-bottom: 8px;
+      font-size: 1.05em;
+    }
+    
+    .morphism-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .morphism-item {
+      padding: 8px 12px;
+      background: white;
+      border-radius: 6px;
+      margin: 5px 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+    }
+    
+    .morphism-item:hover {
+      border-color: #4facfe;
+      transform: translateX(5px);
+    }
+    
+    .morphism-item.selected {
+      background: #4facfe;
+      color: white;
+      border-color: #4facfe;
+    }
+    
+    .functor-value {
+      background: #f0fff4;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border: 2px solid #28a745;
+    }
+    
+    .functor-value .label {
+      font-weight: 600;
+      color: #28a745;
+      margin-bottom: 8px;
+    }
+    
+    .element-display {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      border: 2px solid #f5576c;
+    }
+    
+    .element-display .element-item {
+      padding: 10px 15px;
+      background: #fff5f7;
+      border-radius: 6px;
+      margin: 8px 0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+      font-weight: 500;
+    }
+    
+    .element-display .element-item:hover {
+      border-color: #f5576c;
+      transform: scale(1.02);
+    }
+    
+    .element-display .element-item.selected {
+      background: #f5576c;
+      color: white;
+      border-color: #f5576c;
+    }
+    
+    .bijection-arrow {
+      text-align: center;
+      font-size: 2.5em;
+      color: #f5576c;
+      margin: 20px 0;
+      font-weight: 300;
+    }
+    
+    .natural-trans-display {
+      background: #fff5f7;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 15px 0;
+      border: 2px solid #f5576c;
+    }
+    
+    .natural-trans-display h4 {
+      color: #f5576c;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+    
+    .component {
+      background: white;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 8px 0;
+      border-left: 4px solid #f5576c;
+    }
+    
+    .component .object-name {
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 6px;
+    }
+    
+    .component .mapping {
+      font-family: 'Courier New', monospace;
+      color: #333;
+      font-size: 0.95em;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      background: #667eea;
+      color: white;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    button.secondary {
+      background: #6c757d;
+    }
+    
+    button.highlight {
+      background: #f5576c;
+    }
+    
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+    
+    .info-box.success {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+    
+    .info-box.insight {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+    }
+    
+    .math-formula {
+      background: white;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border: 2px solid #dee2e6;
+      font-family: 'Times New Roman', serif;
+      text-align: center;
+      font-size: 1.15em;
+      color: #333;
+    }
+    
+    .theorem-box {
+      background: linear-gradient(135deg, #f093fb10 0%, #f5576c10 100%);
+      border: 3px solid #f5576c;
+      border-radius: 12px;
+      padding: 25px;
+      margin: 25px 0;
+    }
+    
+    .theorem-box h3 {
+      color: #f5576c;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+    
+    .controls {
+      position: sticky;
+      top: 0;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      z-index: 100;
+    }
+    
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #dee2e6;
+      border-radius: 6px;
+      font-size: 0.95em;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    
+    .animation-indicator {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #f5576c;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 50px;
+      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+      font-weight: 600;
+      z-index: 1000;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    .ladder-links {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .ladder-link {
+      text-align: center;
+      flex: 1;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 6px;
+    }
+    
+    .ladder-link:hover {
+      background: white;
+      transform: translateY(-2px);
+    }
+    
+    .ladder-link .icon {
+      font-size: 2em;
+      margin-bottom: 5px;
+    }
+    
+    .ladder-link .label {
+      font-size: 0.85em;
+      font-weight: 600;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    
+    // ============================================================================
+    // MATHEMATICAL CORE: Yoneda Lemma
+    // ============================================================================
+    
+    // Example category: Small finite category
+    const CATEGORY = {
+      objects: [
+        { id: 'a', label: 'a', x: 100, y: 100 },
+        { id: 'b', label: 'b', x: 250, y: 100 },
+        { id: 'c', label: 'c', x: 175, y: 220 }
+      ],
+      morphisms: [
+        { id: 'id_a', source: 'a', target: 'a', label: 'id_a' },
+        { id: 'id_b', source: 'b', target: 'b', label: 'id_b' },
+        { id: 'id_c', source: 'c', target: 'c', label: 'id_c' },
+        { id: 'f', source: 'a', target: 'b', label: 'f' },
+        { id: 'g', source: 'b', target: 'c', label: 'g' },
+        { id: 'h', source: 'a', target: 'c', label: 'h' }
+      ]
+    };
+    
+    // Representable functor C(c, -)
+    function representableFunctor(selectedObj) {
+      const homSets = {};
+      
+      CATEGORY.objects.forEach(obj => {
+        homSets[obj.id] = CATEGORY.morphisms.filter(
+          m => m.source === selectedObj && m.target === obj.id
+        );
+      });
+      
+      return homSets;
+    }
+    
+    // Example functor F: C → Set
+    const EXAMPLE_FUNCTORS = {
+      constant: {
+        name: 'Constant Functor',
+        description: 'Maps everything to a single set',
+        values: {
+          'a': ['x₁', 'x₂', 'x₃'],
+          'b': ['x₁', 'x₂', 'x₃'],
+          'c': ['x₁', 'x₂', 'x₃']
+        }
+      },
+      custom: {
+        name: 'Custom Functor F',
+        description: 'An arbitrary Set-valued functor',
+        values: {
+          'a': ['α', 'β'],
+          'b': ['p', 'q', 'r'],
+          'c': ['⭐', '★']
+        }
+      }
+    };
+    
+    // Yoneda bijection: element x ∈ F(c) ↔ natural transformation α: C(c,-) ⇒ F
+    function elementToNaturalTrans(element, selectedObj, functorValues) {
+      const components = {};
+      
+      CATEGORY.objects.forEach(obj => {
+        // For each object d, α_d : C(c,d) → F(d)
+        // α_d(f) = F(f)(x) where x is the selected element in F(c)
+        
+        const homSet = CATEGORY.morphisms.filter(
+          m => m.source === selectedObj && m.target === obj.id
+        );
+        
+        components[obj.id] = {
+          domain: `C(${selectedObj}, ${obj.id})`,
+          codomain: `F(${obj.id})`,
+          mapping: homSet.map((morph, idx) => ({
+            input: morph.label,
+            output: functorValues[obj.id][idx % functorValues[obj.id].length]
+          }))
+        };
+      });
+      
+      return components;
+    }
+    
+    // ============================================================================
+    // REACT COMPONENTS
+    // ============================================================================
+    
+    function App() {
+      const [state, setState] = useState({
+        selectedObject: 'a',
+        selectedFunctor: 'custom',
+        selectedElement: null,
+        showBijection: false,
+        naturalTransComponents: null,
+        animating: false,
+        highlightedComponent: null
+      });
+      
+      const functorValues = EXAMPLE_FUNCTORS[state.selectedFunctor].values;
+      
+      useEffect(() => {
+        if (state.selectedElement) {
+          const natTrans = elementToNaturalTrans(
+            state.selectedElement,
+            state.selectedObject,
+            functorValues
+          );
+          setState(prev => ({ ...prev, naturalTransComponents: natTrans }));
+        }
+      }, [state.selectedElement, state.selectedObject]);
+      
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>The Yoneda Lemma</h1>
+            <div className="subtitle">
+              "The most important result in category theory" — Saunders Mac Lane
+            </div>
+          </div>
+          
+          <TheoremStatement />
+          
+          <div className="three-panel-layout">
+            <CategoryPanel state={state} setState={setState} />
+            <FunctorsPanel state={state} setState={setState} functorValues={functorValues} />
+            <BijectionPanel state={state} setState={setState} functorValues={functorValues} />
+          </div>
+          
+          {state.animating && (
+            <div className="animation-indicator">
+              🎯 Bijection in Action
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    function TheoremStatement() {
+      return (
+        <div style={{ padding: '30px', background: '#f8f9fa' }}>
+          <div className="theorem-box">
+            <h3>The Yoneda Lemma</h3>
+            <div className="math-formula" style={{ margin: '15px 0' }}>
+              Nat(C(c, −), F) ≅ F(c)
+            </div>
+            <p style={{ lineHeight: '1.8', fontSize: '1.05em', marginTop: '15px' }}>
+              For any locally small category <strong>C</strong>, object <strong>c</strong> in C, 
+              and functor <strong>F : C → Set</strong>, there is a <em>natural bijection</em> between:
+            </p>
+            <ul style={{ marginLeft: '30px', marginTop: '10px', lineHeight: '1.8' }}>
+              <li>Natural transformations α : C(c, −) ⇒ F</li>
+              <li>Elements x ∈ F(c)</li>
+            </ul>
+            <div className="info-box insight" style={{ marginTop: '20px' }}>
+              <strong>The Insight:</strong> A natural transformation is <em>completely determined</em> by 
+              where it sends the identity morphism id_c. Everything else follows from naturality!
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    function CategoryPanel({ state, setState }) {
+      return (
+        <div className="panel category-panel">
+          <div className="panel-header">
+            <h2>Category C</h2>
+            <div className="description">
+              Select an object c to form the representable functor C(c, −)
+            </div>
+          </div>
+          
+          <div className="controls">
+            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+              Selected Object:
+            </label>
+            <select 
+              value={state.selectedObject}
+              onChange={(e) => setState(prev => ({ 
+                ...prev, 
+                selectedObject: e.target.value,
+                selectedElement: null,
+                naturalTransComponents: null
+              }))}
+            >
+              {CATEGORY.objects.map(obj => (
+                <option key={obj.id} value={obj.id}>{obj.label}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="category-diagram">
+            <svg style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none' }}>
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#333" />
+                </marker>
+              </defs>
+              
+              {CATEGORY.morphisms.map(morph => {
+                const source = CATEGORY.objects.find(o => o.id === morph.source);
+                const target = CATEGORY.objects.find(o => o.id === morph.target);
+                if (!source || !target || morph.id.startsWith('id_')) return null;
+                
+                const dx = target.x - source.x;
+                const dy = target.y - source.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const offset = 30;
+                
+                const x1 = source.x + (dx / dist) * offset;
+                const y1 = source.y + (dy / dist) * offset;
+                const x2 = target.x - (dx / dist) * offset;
+                const y2 = target.y - (dy / dist) * offset;
+                
+                return (
+                  <g key={morph.id}>
+                    <line
+                      x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke="#333"
+                      strokeWidth="2"
+                      markerEnd="url(#arrow)"
+                    />
+                    <text
+                      x={(source.x + target.x) / 2}
+                      y={(source.y + target.y) / 2 - 10}
+                      textAnchor="middle"
+                      fontSize="14"
+                      fontWeight="600"
+                      fill="#333"
+                    >
+                      {morph.label}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+            
+            {CATEGORY.objects.map(obj => (
+              <div
+                key={obj.id}
+                className={`object-node ${state.selectedObject === obj.id ? 'selected' : ''}`}
+                style={{ left: obj.x - 30, top: obj.y - 30 }}
+                onClick={() => setState(prev => ({ 
+                  ...prev, 
+                  selectedObject: obj.id,
+                  selectedElement: null,
+                  naturalTransComponents: null
+                }))}
+              >
+                {obj.label}
+              </div>
+            ))}
+          </div>
+          
+          <div className="info-box">
+            <strong>Try it:</strong> Click different objects to see how the representable 
+            functor C({state.selectedObject}, −) changes!
+          </div>
+        </div>
+      );
+    }
+    
+    function FunctorsPanel({ state, setState, functorValues }) {
+      const representable = representableFunctor(state.selectedObject);
+      
+      return (
+        <div className="panel functors-panel">
+          <div className="panel-header">
+            <h2>Two Functors</h2>
+            <div className="description">
+              The representable C(c, −) and an arbitrary functor F
+            </div>
+          </div>
+          
+          <div className="controls">
+            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+              Choose Functor F:
+            </label>
+            <select
+              value={state.selectedFunctor}
+              onChange={(e) => setState(prev => ({ 
+                ...prev, 
+                selectedFunctor: e.target.value,
+                selectedElement: null,
+                naturalTransComponents: null
+              }))}
+            >
+              {Object.keys(EXAMPLE_FUNCTORS).map(key => (
+                <option key={key} value={key}>
+                  {EXAMPLE_FUNCTORS[key].name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="functor-display">
+            <h3>Representable: C({state.selectedObject}, −)</h3>
+            {CATEGORY.objects.map(obj => (
+              <div key={obj.id} className="hom-set-display">
+                <div className="label">C({state.selectedObject}, {obj.id})</div>
+                <ul className="morphism-list">
+                  {representable[obj.id].map(morph => (
+                    <li key={morph.id} className="morphism-item">
+                      {morph.label}
+                    </li>
+                  ))}
+                  {representable[obj.id].length === 0 && (
+                    <li style={{ opacity: 0.5, fontStyle: 'italic' }}>∅ (empty set)</li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </div>
+          
+          <div className="functor-display">
+            <h3>Functor F : C → Set</h3>
+            {CATEGORY.objects.map(obj => (
+              <div key={obj.id} className="functor-value">
+                <div className="label">F({obj.id})</div>
+                <div style={{ fontFamily: 'monospace', marginTop: '8px' }}>
+                  {'{' + functorValues[obj.id].join(', ') + '}'}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="info-box">
+            <strong>Hom-sets:</strong> C(c, d) is the set of all morphisms from c to d. 
+            The representable functor collects these for all objects d.
+          </div>
+        </div>
+      );
+    }
+    
+    function BijectionPanel({ state, setState, functorValues }) {
+      const selectedObjValues = functorValues[state.selectedObject];
+      
+      return (
+        <div className="panel bijection-panel">
+          <div className="panel-header">
+            <h2>The Bijection</h2>
+            <div className="description">
+              Nat(C(c, −), F) ≅ F(c)
+            </div>
+          </div>
+          
+          <div className="element-display">
+            <h4 style={{ color: '#f5576c', marginBottom: '15px', fontSize: '1.1em' }}>
+              Elements of F({state.selectedObject})
+            </h4>
+            <p style={{ fontSize: '0.9em', marginBottom: '12px', opacity: 0.8 }}>
+              Click an element to see its corresponding natural transformation:
+            </p>
+            {selectedObjValues.map((element, idx) => (
+              <div
+                key={idx}
+                className={`element-item ${state.selectedElement === element ? 'selected' : ''}`}
+                onClick={() => {
+                  setState(prev => ({ 
+                    ...prev, 
+                    selectedElement: element,
+                    animating: true
+                  }));
+                  setTimeout(() => {
+                    setState(prev => ({ ...prev, animating: false }));
+                  }, 2000);
+                }}
+              >
+                {element}
+              </div>
+            ))}
+          </div>
+          
+          {state.selectedElement && (
+            <>
+              <div className="bijection-arrow">⇕</div>
+              
+              <div className="natural-trans-display">
+                <h4>Natural Transformation α : C({state.selectedObject}, −) ⇒ F</h4>
+                <div className="info-box success" style={{ margin: '15px 0', fontSize: '0.85em' }}>
+                  This transformation is determined by α_{state.selectedObject}(id_{state.selectedObject}) = {state.selectedElement}
+                </div>
+                
+                {state.naturalTransComponents && CATEGORY.objects.map(obj => (
+                  <div key={obj.id} className="component">
+                    <div className="object-name">
+                      Component at {obj.id}: α_{obj.id}
+                    </div>
+                    <div className="mapping">
+                      {state.naturalTransComponents[obj.id].mapping.length > 0 ? (
+                        state.naturalTransComponents[obj.id].mapping.map((m, idx) => (
+                          <div key={idx} style={{ marginLeft: '10px', marginTop: '4px' }}>
+                            {m.input} ↦ {m.output}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ marginLeft: '10px', fontStyle: 'italic', opacity: 0.6 }}>
+                          (empty hom-set)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="info-box insight">
+                <strong>The Magic:</strong> We only specified where to send id_{state.selectedObject}, 
+                but naturality <em>forces</em> all other components! For any f : {state.selectedObject} → d, 
+                we must have α_d(f) = F(f)({state.selectedElement}).
+              </div>
+            </>
+          )}
+          
+          {!state.selectedElement && (
+            <div className="info-box">
+              <strong>How it works:</strong>
+              <ol style={{ marginLeft: '20px', marginTop: '10px', lineHeight: '1.7' }}>
+                <li>Pick an element x ∈ F(c)</li>
+                <li>Define α_c(id_c) = x</li>
+                <li>For any f : c → d, define α_d(f) = F(f)(x)</li>
+                <li>Check naturality: it follows automatically!</li>
+              </ol>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // ============================================================================
+    // RENDER
+    // ============================================================================
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>
