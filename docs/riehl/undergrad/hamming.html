@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamming's Epistemic Cathedral - Stratified ∞-Categories</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        /* UI Overlay */
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Header */
+        #header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 24px 32px;
+            background: linear-gradient(180deg, rgba(10, 14, 39, 0.95) 0%, rgba(10, 14, 39, 0) 100%);
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #a0a0a0;
+            font-weight: 400;
+        }
+
+        /* Control Panel */
+        #controls {
+            position: absolute;
+            left: 32px;
+            top: 120px;
+            width: 280px;
+            background: rgba(26, 31, 58, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 20px;
+            pointer-events: auto;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-section {
+            margin-bottom: 24px;
+        }
+
+        .control-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .stratum-button {
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stratum-button:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .stratum-button.active {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .stratum-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .stratum-count {
+            font-size: 11px;
+            color: #a0a0a0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Motive Panel */
+        #motive-panel {
+            position: absolute;
+            right: 32px;
+            top: 120px;
+            width: 320px;
+            background: rgba(26, 31, 58, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 20px;
+            pointer-events: auto;
+            border: 1px solid rgba(118, 75, 162, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+
+        .motive-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(118, 75, 162, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .motive-card:hover {
+            border-color: #764ba2;
+            box-shadow: 0 4px 16px rgba(118, 75, 162, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .motive-card.active {
+            background: rgba(118, 75, 162, 0.2);
+            border-color: #764ba2;
+        }
+
+        .motive-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+        }
+
+        .motive-description {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #a0a0a0;
+            margin-bottom: 12px;
+        }
+
+        .motive-strata {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .motive-stratum-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            background: rgba(118, 75, 162, 0.2);
+            border: 1px solid rgba(118, 75, 162, 0.4);
+        }
+
+        .motive-strength {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+        }
+
+        .strength-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 2px;
+            margin-left: 8px;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Detail Panel */
+        #detail-panel {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            max-width: calc(100vw - 64px);
+            background: rgba(26, 31, 58, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 24px;
+            pointer-events: auto;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #detail-panel.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 12px;
+        }
+
+        .detail-content {
+            font-size: 13px;
+            line-height: 1.7;
+            color: #b0b0b0;
+        }
+
+        .detail-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .detail-close:hover {
+            opacity: 1;
+        }
+
+        /* Legend */
+        #legend {
+            position: absolute;
+            bottom: 32px;
+            right: 32px;
+            background: rgba(26, 31, 58, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 16px;
+            pointer-events: auto;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #a0a0a0;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-symbol {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+
+        /* Scrollbar styling */
+        #motive-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #motive-panel::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        #motive-panel::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.4);
+            border-radius: 3px;
+        }
+
+        #motive-panel::-webkit-scrollbar-thumb:hover {
+            background: rgba(102, 126, 234, 0.6);
+        }
+
+        /* Loading State */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        #tooltip {
+            position: absolute;
+            background: rgba(10, 14, 39, 0.95);
+            border: 1px solid rgba(102, 126, 234, 0.4);
+            border-radius: 8px;
+            padding: 12px 16px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 13px;
+            max-width: 300px;
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        #tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-text {
+            color: #b0b0b0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+
+        <div id="ui-overlay">
+            <!-- Header -->
+            <div id="header">
+                <h1>∞-Epistemic Cathedral</h1>
+                <div class="subtitle">Stratified Categories & Universal Motives from Hamming's Lectures</div>
+            </div>
+
+            <!-- Controls -->
+            <div id="controls">
+                <div class="control-section">
+                    <div class="control-label">Knowledge Strata</div>
+                    <div id="strata-buttons"></div>
+                </div>
+                <div class="control-section">
+                    <div class="control-label">View Options</div>
+                    <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px; margin-bottom: 8px;">
+                        <input type="checkbox" id="show-connections" checked style="margin-right: 8px;">
+                        Show Morphisms
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
+                        <input type="checkbox" id="show-motives" checked style="margin-right: 8px;">
+                        Highlight Motives
+                    </label>
+                </div>
+            </div>
+
+            <!-- Motive Panel -->
+            <div id="motive-panel">
+                <div class="control-label" style="margin-bottom: 16px;">Universal Patterns</div>
+                <div id="motive-cards"></div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div id="detail-panel">
+                <div class="detail-close" onclick="hideDetail()">✕</div>
+                <div class="detail-title" id="detail-title"></div>
+                <div class="detail-content" id="detail-content"></div>
+            </div>
+
+            <!-- Legend -->
+            <div id="legend">
+                <div class="legend-item">
+                    <div class="legend-symbol" style="border-color: #667eea; background: rgba(102, 126, 234, 0.2);"></div>
+                    <span>Concept Node</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-symbol" style="border-color: #764ba2; background: rgba(118, 75, 162, 0.3); border-style: dashed;"></div>
+                    <span>Motive Connection</span>
+                </div>
+                <div class="legend-item">
+                    <div style="width: 20px; height: 2px; background: rgba(102, 126, 234, 0.4); margin-right: 8px;"></div>
+                    <span>1-Morphism</span>
+                </div>
+            </div>
+
+            <!-- Tooltip -->
+            <div id="tooltip">
+                <div class="tooltip-title" id="tooltip-title"></div>
+                <div class="tooltip-text" id="tooltip-text"></div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading">
+                <div class="spinner"></div>
+                <div>Constructing epistemic space...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // SYNTHETIC DATA - Hamming Lecture Structure
+        // ============================================================
+
+        const STRATA = [
+            {
+                id: 'learning',
+                name: 'Learning & Metacognition',
+                color: '#667eea',
+                concepts: [
+                    { name: 'Learning to Learn', x: -2, y: 2, salience: 0.95 },
+                    { name: 'Pattern Recognition', x: -1, y: 2.5, salience: 0.85 },
+                    { name: 'Mental Models', x: -2.5, y: 1, salience: 0.80 },
+                    { name: 'Deliberate Practice', x: -1, y: 1, salience: 0.75 }
+                ]
+            },
+            {
+                id: 'creativity',
+                name: 'Creativity & Innovation',
+                color: '#48bb78',
+                concepts: [
+                    { name: 'Subconscious Processing', x: 1, y: 2, salience: 0.90 },
+                    { name: 'Problem Reframing', x: 2, y: 2.5, salience: 0.85 },
+                    { name: 'Connecting Ideas', x: 1.5, y: 1.5, salience: 0.80 },
+                    { name: 'Serendipity', x: 2.5, y: 1, salience: 0.70 }
+                ]
+            },
+            {
+                id: 'systems',
+                name: 'Systems Thinking',
+                color: '#f6ad55',
+                concepts: [
+                    { name: 'Feedback Loops', x: -1.5, y: -1, salience: 0.88 },
+                    { name: 'Emergence', x: -2, y: -2, salience: 0.82 },
+                    { name: 'Nonlinearity', x: -0.5, y: -1.5, salience: 0.78 },
+                    { name: 'Leverage Points', x: -1, y: -2.5, salience: 0.85 }
+                ]
+            },
+            {
+                id: 'communication',
+                name: 'Communication & Influence',
+                color: '#fc8181',
+                concepts: [
+                    { name: 'Audience Modeling', x: 1, y: -1, salience: 0.80 },
+                    { name: 'Storytelling', x: 2, y: -1.5, salience: 0.85 },
+                    { name: 'Clarity', x: 1.5, y: -2, salience: 0.75 },
+                    { name: 'Persuasion', x: 2.5, y: -2.5, salience: 0.70 }
+                ]
+            },
+            {
+                id: 'research',
+                name: 'Research Excellence',
+                color: '#b794f4',
+                concepts: [
+                    { name: 'Important Problems', x: 0, y: 0, salience: 1.0 },
+                    { name: 'Long-term Vision', x: 0.5, y: -0.5, salience: 0.90 },
+                    { name: 'Incremental Progress', x: -0.5, y: 0.5, salience: 0.75 }
+                ]
+            }
+        ];
+
+        const MOTIVES = [
+            {
+                id: 'pattern-recognition-motive',
+                name: 'Universal Pattern Recognition',
+                description: 'The ability to see deep structure across domains - from learning patterns to research opportunities to system dynamics.',
+                strata: ['learning', 'creativity', 'systems'],
+                strength: 0.92,
+                instances: [
+                    { stratum: 'learning', concept: 'Pattern Recognition' },
+                    { stratum: 'creativity', concept: 'Connecting Ideas' },
+                    { stratum: 'systems', concept: 'Feedback Loops' }
+                ]
+            },
+            {
+                id: 'meta-cognitive-motive',
+                name: 'Meta-Level Thinking',
+                description: 'Operating at a level above the problem - whether learning how to learn, thinking about thinking, or analyzing systems that analyze.',
+                strata: ['learning', 'research', 'systems'],
+                strength: 0.88,
+                instances: [
+                    { stratum: 'learning', concept: 'Learning to Learn' },
+                    { stratum: 'research', concept: 'Long-term Vision' },
+                    { stratum: 'systems', concept: 'Emergence' }
+                ]
+            },
+            {
+                id: 'leverage-motive',
+                name: 'Seeking Leverage',
+                description: 'Finding points of maximal impact - the 80/20 principle manifesting across creativity, systems, and research.',
+                strata: ['creativity', 'systems', 'research'],
+                strength: 0.85,
+                instances: [
+                    { stratum: 'creativity', concept: 'Problem Reframing' },
+                    { stratum: 'systems', concept: 'Leverage Points' },
+                    { stratum: 'research', concept: 'Important Problems' }
+                ]
+            },
+            {
+                id: 'communication-clarity-motive',
+                name: 'Clarity as Virtue',
+                description: 'The deep importance of clear thinking and expression - from mental models to storytelling to research communication.',
+                strata: ['learning', 'communication', 'research'],
+                strength: 0.80,
+                instances: [
+                    { stratum: 'learning', concept: 'Mental Models' },
+                    { stratum: 'communication', concept: 'Clarity' },
+                    { stratum: 'research', concept: 'Important Problems' }
+                ]
+            },
+            {
+                id: 'serendipity-motive',
+                name: 'Structured Serendipity',
+                description: 'Creating conditions for discovery - deliberate preparation meeting creative accident.',
+                strata: ['creativity', 'learning', 'research'],
+                strength: 0.75,
+                instances: [
+                    { stratum: 'creativity', concept: 'Serendipity' },
+                    { stratum: 'learning', concept: 'Deliberate Practice' },
+                    { stratum: 'research', concept: 'Incremental Progress' }
+                ]
+            }
+        ];
+
+        // ============================================================
+        // CANVAS SETUP
+        // ============================================================
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, dpr;
+
+        function resizeCanvas() {
+            dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.scale(dpr, dpr);
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // ============================================================
+        // STATE
+        // ============================================================
+
+        const state = {
+            camera: { x: 0, y: 0, z: 5, targetZ: 5 },
+            rotation: { x: 0.2, y: 0, targetY: 0 },
+            mouse: { x: 0, y: 0, down: false, lastX: 0, lastY: 0 },
+            activeStrata: new Set(STRATA.map(s => s.id)),
+            activeMotive: null,
+            hoveredNode: null,
+            selectedNode: null,
+            showConnections: true,
+            showMotives: true,
+            time: 0,
+            nodes: [],
+            connections: []
+        };
+
+        // ============================================================
+        // INITIALIZE DATA
+        // ============================================================
+
+        function initializeData() {
+            // Create nodes from strata
+            let nodeId = 0;
+            STRATA.forEach((stratum, stratumIndex) => {
+                stratum.concepts.forEach(concept => {
+                    const node = {
+                        id: nodeId++,
+                        stratum: stratum.id,
+                        stratumIndex: stratumIndex,
+                        color: stratum.color,
+                        name: concept.name,
+                        x: concept.x,
+                        y: stratumIndex * 0.8,
+                        z: concept.y,
+                        salience: concept.salience,
+                        radius: 0.15 + concept.salience * 0.15,
+                        velocity: { x: 0, y: 0, z: 0 },
+                        motives: []
+                    };
+                    state.nodes.push(node);
+                });
+            });
+
+            // Create connections within strata (1-morphisms)
+            state.nodes.forEach((node, i) => {
+                state.nodes.forEach((other, j) => {
+                    if (i < j && node.stratum === other.stratum) {
+                        const dx = node.x - other.x;
+                        const dy = node.y - other.y;
+                        const dz = node.z - other.z;
+                        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+                        if (dist < 2.0) {
+                            state.connections.push({
+                                source: node,
+                                target: other,
+                                type: 'morphism',
+                                strength: 0.3 + (1 - dist/2) * 0.4
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Add motive connections
+            MOTIVES.forEach(motive => {
+                motive.instances.forEach((instance, i) => {
+                    if (i < motive.instances.length - 1) {
+                        const nextInstance = motive.instances[i + 1];
+                        const sourceNode = state.nodes.find(n =>
+                            n.stratum === instance.stratum && n.name === instance.concept);
+                        const targetNode = state.nodes.find(n =>
+                            n.stratum === nextInstance.stratum && n.name === nextInstance.concept);
+
+                        if (sourceNode && targetNode) {
+                            state.connections.push({
+                                source: sourceNode,
+                                target: targetNode,
+                                type: 'motive',
+                                motive: motive.id,
+                                strength: motive.strength
+                            });
+                            sourceNode.motives.push(motive.id);
+                            targetNode.motives.push(motive.id);
+                        }
+                    }
+                });
+            });
+
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // ============================================================
+        // UI INITIALIZATION
+        // ============================================================
+
+        function initializeUI() {
+            // Stratum buttons
+            const strataButtons = document.getElementById('strata-buttons');
+            STRATA.forEach(stratum => {
+                const button = document.createElement('button');
+                button.className = 'stratum-button active';
+                button.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <div class="stratum-color" style="background: ${stratum.color};"></div>
+                        <span>${stratum.name}</span>
+                    </div>
+                    <span class="stratum-count">${stratum.concepts.length}</span>
+                `;
+                button.onclick = () => toggleStratum(stratum.id, button);
+                strataButtons.appendChild(button);
+            });
+
+            // Motive cards
+            const motiveCards = document.getElementById('motive-cards');
+            MOTIVES.forEach(motive => {
+                const card = document.createElement('div');
+                card.className = 'motive-card';
+                card.innerHTML = `
+                    <div class="motive-title">${motive.name}</div>
+                    <div class="motive-description">${motive.description}</div>
+                    <div class="motive-strata">
+                        ${motive.strata.map(s => {
+                            const stratum = STRATA.find(st => st.id === s);
+                            return `<div class="motive-stratum-tag" style="border-color: ${stratum.color};">${stratum.name}</div>`;
+                        }).join('')}
+                    </div>
+                    <div class="motive-strength">
+                        Strength
+                        <div class="strength-bar">
+                            <div class="strength-fill" style="width: ${motive.strength * 100}%"></div>
+                        </div>
+                    </div>
+                `;
+                card.onclick = () => toggleMotive(motive.id, card);
+                motiveCards.appendChild(card);
+            });
+
+            // Checkboxes
+            document.getElementById('show-connections').onchange = (e) => {
+                state.showConnections = e.target.checked;
+            };
+            document.getElementById('show-motives').onchange = (e) => {
+                state.showMotives = e.target.checked;
+            };
+        }
+
+        function toggleStratum(stratumId, button) {
+            if (state.activeStrata.has(stratumId)) {
+                state.activeStrata.delete(stratumId);
+                button.classList.remove('active');
+            } else {
+                state.activeStrata.add(stratumId);
+                button.classList.add('active');
+            }
+        }
+
+        function toggleMotive(motiveId, card) {
+            if (state.activeMotive === motiveId) {
+                state.activeMotive = null;
+                card.classList.remove('active');
+            } else {
+                state.activeMotive = motiveId;
+                document.querySelectorAll('.motive-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+            }
+        }
+
+        // ============================================================
+        // INTERACTION
+        // ============================================================
+
+        canvas.addEventListener('mousedown', (e) => {
+            state.mouse.down = true;
+            state.mouse.lastX = e.clientX;
+            state.mouse.lastY = e.clientY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            state.mouse.down = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            state.mouse.x = e.clientX;
+            state.mouse.y = e.clientY;
+
+            if (state.mouse.down) {
+                const dx = e.clientX - state.mouse.lastX;
+                const dy = e.clientY - state.mouse.lastY;
+                state.rotation.targetY += dx * 0.005;
+                state.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, state.rotation.x - dy * 0.005));
+                state.mouse.lastX = e.clientX;
+                state.mouse.lastY = e.clientY;
+            } else {
+                updateHover();
+            }
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            state.camera.targetZ *= (1 + e.deltaY * 0.001);
+            state.camera.targetZ = Math.max(2, Math.min(15, state.camera.targetZ));
+        });
+
+        canvas.addEventListener('click', () => {
+            if (state.hoveredNode) {
+                selectNode(state.hoveredNode);
+            }
+        });
+
+        function updateHover() {
+            const ray = screenToWorld(state.mouse.x, state.mouse.y);
+            let closest = null;
+            let closestDist = Infinity;
+
+            state.nodes.forEach(node => {
+                if (!state.activeStrata.has(node.stratum)) return;
+
+                const projected = project3D(node.x, node.y, node.z);
+                if (!projected) return;
+
+                const dx = state.mouse.x - projected.x;
+                const dy = state.mouse.y - projected.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < projected.radius * 30 && dist < closestDist) {
+                    closest = node;
+                    closestDist = dist;
+                }
+            });
+
+            if (closest !== state.hoveredNode) {
+                state.hoveredNode = closest;
+                updateTooltip(closest);
+            }
+        }
+
+        function updateTooltip(node) {
+            const tooltip = document.getElementById('tooltip');
+            if (node) {
+                document.getElementById('tooltip-title').textContent = node.name;
+                document.getElementById('tooltip-text').textContent =
+                    `${STRATA.find(s => s.id === node.stratum).name} • Salience: ${(node.salience * 100).toFixed(0)}%`;
+                tooltip.style.left = state.mouse.x + 20 + 'px';
+                tooltip.style.top = state.mouse.y + 'px';
+                tooltip.classList.add('visible');
+            } else {
+                tooltip.classList.remove('visible');
+            }
+        }
+
+        function selectNode(node) {
+            state.selectedNode = node;
+            const detailPanel = document.getElementById('detail-panel');
+            document.getElementById('detail-title').textContent = node.name;
+
+            let content = `<p>From the <strong>${STRATA.find(s => s.id === node.stratum).name}</strong> stratum.</p>`;
+            content += `<p>Salience: ${(node.salience * 100).toFixed(0)}%</p>`;
+
+            if (node.motives.length > 0) {
+                content += `<p><strong>Participates in motives:</strong></p><ul>`;
+                node.motives.forEach(motiveId => {
+                    const motive = MOTIVES.find(m => m.id === motiveId);
+                    content += `<li>${motive.name}</li>`;
+                });
+                content += `</ul>`;
+            }
+
+            document.getElementById('detail-content').innerHTML = content;
+            detailPanel.classList.add('visible');
+        }
+
+        function hideDetail() {
+            document.getElementById('detail-panel').classList.remove('visible');
+            state.selectedNode = null;
+        }
+
+        // ============================================================
+        // 3D PROJECTION
+        // ============================================================
+
+        function project3D(x, y, z) {
+            // Apply rotation
+            const cosY = Math.cos(state.rotation.y);
+            const sinY = Math.sin(state.rotation.y);
+            const cosX = Math.cos(state.rotation.x);
+            const sinX = Math.sin(state.rotation.x);
+
+            let x1 = x * cosY - z * sinY;
+            let z1 = x * sinY + z * cosY;
+
+            let y2 = y * cosX - z1 * sinX;
+            let z2 = y * sinX + z1 * cosX;
+
+            // Apply camera
+            z2 = z2 - state.camera.z;
+
+            if (z2 >= -0.1) return null; // Behind camera
+
+            // Perspective projection
+            const scale = 300 / -z2;
+            return {
+                x: width/2 + x1 * scale,
+                y: height/2 + y2 * scale,
+                z: z2,
+                radius: scale * 0.1
+            };
+        }
+
+        function screenToWorld(screenX, screenY) {
+            // Simplified ray from screen to world
+            const x = (screenX - width/2) / 300;
+            const y = (screenY - height/2) / 300;
+            return { x, y };
+        }
+
+        // ============================================================
+        // RENDERING
+        // ============================================================
+
+        function render() {
+            // Clear
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update camera smoothly
+            state.camera.z += (state.camera.targetZ - state.camera.z) * 0.1;
+            state.rotation.y += (state.rotation.targetY - state.rotation.y) * 0.1;
+
+            // Sort nodes by depth for proper rendering
+            const sortedNodes = state.nodes
+                .map(node => ({ node, projected: project3D(node.x, node.y, node.z) }))
+                .filter(item => item.projected !== null)
+                .sort((a, b) => a.projected.z - b.projected.z);
+
+            // Draw connections first
+            if (state.showConnections) {
+                state.connections.forEach(conn => {
+                    // Skip if either node's stratum is inactive
+                    if (!state.activeStrata.has(conn.source.stratum) ||
+                        !state.activeStrata.has(conn.target.stratum)) return;
+
+                    // Skip motive connections if not showing motives
+                    if (conn.type === 'motive' && !state.showMotives) return;
+
+                    // Highlight if part of active motive
+                    const isActiveMotive = conn.type === 'motive' &&
+                                         conn.motive === state.activeMotive;
+
+                    const p1 = project3D(conn.source.x, conn.source.y, conn.source.z);
+                    const p2 = project3D(conn.target.x, conn.target.y, conn.target.z);
+
+                    if (!p1 || !p2) return;
+
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+
+                    if (conn.type === 'motive') {
+                        // Curved line for motives
+                        const midX = (p1.x + p2.x) / 2;
+                        const midY = (p1.y + p2.y) / 2;
+                        const offsetX = -(p2.y - p1.y) * 0.2;
+                        const offsetY = (p2.x - p1.x) * 0.2;
+                        ctx.quadraticCurveTo(
+                            midX + offsetX,
+                            midY + offsetY,
+                            p2.x, p2.y
+                        );
+                        ctx.strokeStyle = isActiveMotive
+                            ? 'rgba(118, 75, 162, 0.8)'
+                            : 'rgba(118, 75, 162, 0.3)';
+                        ctx.lineWidth = isActiveMotive ? 2.5 : 1.5;
+                        ctx.setLineDash([5, 5]);
+                    } else {
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = `rgba(102, 126, 234, ${conn.strength * 0.4})`;
+                        ctx.lineWidth = conn.strength * 2;
+                        ctx.setLineDash([]);
+                    }
+
+                    ctx.stroke();
+                });
+            }
+
+            // Draw nodes
+            sortedNodes.forEach(({ node, projected }) => {
+                if (!state.activeStrata.has(node.stratum)) return;
+
+                const isHovered = state.hoveredNode === node;
+                const isSelected = state.selectedNode === node;
+                const isPartOfActiveMotive = state.activeMotive &&
+                                           node.motives.includes(state.activeMotive);
+
+                // Pulsing animation
+                const pulse = Math.sin(state.time * 2 + node.id) * 0.1 + 1;
+
+                // Outer glow
+                if (isHovered || isPartOfActiveMotive) {
+                    const gradient = ctx.createRadialGradient(
+                        projected.x, projected.y, 0,
+                        projected.x, projected.y, projected.radius * 40
+                    );
+                    gradient.addColorStop(0, hexToRgba(node.color, 0.3));
+                    gradient.addColorStop(1, hexToRgba(node.color, 0));
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(
+                        projected.x - projected.radius * 40,
+                        projected.y - projected.radius * 40,
+                        projected.radius * 80,
+                        projected.radius * 80
+                    );
+                }
+
+                // Main circle
+                ctx.beginPath();
+                ctx.arc(
+                    projected.x,
+                    projected.y,
+                    projected.radius * (isHovered ? 1.3 : 1) * pulse,
+                    0,
+                    Math.PI * 2
+                );
+
+                const gradient = ctx.createRadialGradient(
+                    projected.x, projected.y, 0,
+                    projected.x, projected.y, projected.radius
+                );
+                gradient.addColorStop(0, hexToRgba(node.color, 0.8));
+                gradient.addColorStop(1, hexToRgba(node.color, 0.4));
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Border
+                ctx.strokeStyle = isSelected ? '#ffffff' : node.color;
+                ctx.lineWidth = isSelected ? 3 : (isPartOfActiveMotive ? 2 : 1);
+                ctx.setLineDash([]);
+                ctx.stroke();
+
+                // Label for important nodes
+                if (node.salience > 0.85 || isHovered || isSelected) {
+                    ctx.font = '12px Inter';
+                    ctx.fillStyle = '#e0e0e0';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(
+                        node.name,
+                        projected.x,
+                        projected.y + projected.radius * 1.5
+                    );
+                }
+            });
+
+            state.time += 0.016;
+        }
+
+        // ============================================================
+        // UTILITIES
+        // ============================================================
+
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // ============================================================
+        // ANIMATION LOOP
+        // ============================================================
+
+        function animate() {
+            render();
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================================
+        // INITIALIZE
+        // ============================================================
+
+        initializeData();
+        initializeUI();
+        animate();
+    </script>
+</body>
+</html>

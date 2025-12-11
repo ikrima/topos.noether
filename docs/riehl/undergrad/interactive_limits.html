@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Product (Limit) Example</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f9f9fb;
+  }
+  #container {
+    max-width: 800px;
+    margin: auto;
+    padding: 1rem;
+  }
+  h1 {
+    color: #2a9d8f;
+  }
+  #description {
+    background: #fffdf9;
+    border-left: 5px solid #2a9d8f;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  #diagram {
+    border: 1px solid #ddd;
+    background: white;
+  }
+  .node circle {
+    fill: #2a9d8f;
+    stroke: #235c5e;
+    stroke-width: 2px;
+  }
+  .node text {
+    fill: #fff;
+    font-weight: bold;
+    pointer-events: none;
+  }
+  .arrow {
+    fill: none;
+    stroke: #666;
+    stroke-width: 2px;
+    marker-end: url(#arrowhead);
+  }
+  .proj {
+    stroke: #666;
+  }
+  .map {
+    stroke: #4b8bbe;
+    cursor: pointer;
+  }
+  .map.selected {
+    stroke: #e45756;
+    stroke-width: 4px;
+  }
+  .unique {
+    stroke: #2a9d8f;
+    stroke-width: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>Exploring Cartesian Products as Limits</h1>
+  <div id="description">
+    In any category, a product \(P\) of objects \(B\) and \(C\) is equipped with projection morphisms \(p_1: P \to B\) and \(p_2: P \to C\). For any object \(X\) with morphisms \(f: X \to B\) and \(g: X \to C\), there exists a unique morphism \(u: X \to P\) such that \(p_1 \circ u = f\) and \(p_2 \circ u = g\). This universal property defines the product up to a unique isomorphism. Select arrows \(f\) and \(g\) to see the unique arrow \(u\).
+  </div>
+  <svg id="diagram" width="760" height="450"></svg>
+</div>
+<script>
+(function(){
+  const svg = d3.select('#diagram');
+  const width = +svg.attr('width');
+  const height = +svg.attr('height');
+
+  // arrow marker
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id','arrowhead')
+    .attr('viewBox','0 -5 10 10')
+    .attr('refX',10)
+    .attr('refY',0)
+    .attr('markerWidth',6)
+    .attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path')
+      .attr('d','M0,-5L10,0L0,5')
+      .attr('fill','#666');
+
+  // positions of nodes
+  const positions = {
+    'X': { x: 100, y: height / 2 },
+    'B': { x: 600, y: height / 3 },
+    'C': { x: 600, y: height * 2 / 3 },
+    'P': { x: 400, y: height / 2 }
+  };
+
+  const nodes = Object.keys(positions).map(id => ({ id, ...positions[id] }));
+
+  // define edges
+  const edges = [
+    { id:'p1', source:'P', target:'B', type:'proj' },
+    { id:'p2', source:'P', target:'C', type:'proj' },
+    { id:'f',  source:'X', target:'B', type:'map' },
+    { id:'g',  source:'X', target:'C', type:'map' },
+    { id:'u',  source:'X', target:'P', type:'unique' }
+  ];
+
+  const nodeGroup = svg.append('g');
+  const edgeGroup = svg.append('g');
+
+  // draw edges
+  const edgeSelection = edgeGroup.selectAll('path')
+    .data(edges)
+    .enter().append('path')
+      .attr('class', d => `arrow ${d.type}`)
+      .attr('id', d => d.id);
+
+  // add edge labels
+  edgeGroup.selectAll('text')
+    .data(edges)
+    .enter().append('text')
+      .attr('class','edgeLabel')
+      .attr('font-size',12)
+      .attr('fill','#333')
+      .text(d => d.id);
+
+  // draw nodes
+  const nodeSel = nodeGroup.selectAll('.node')
+    .data(nodes)
+    .enter().append('g')
+      .attr('class','node')
+      .attr('transform', d => `translate(${d.x},${d.y})`);
+
+  nodeSel.append('circle')
+    .attr('r', 18);
+
+  nodeSel.append('text')
+    .attr('dy', 5)
+    .attr('text-anchor','middle')
+    .text(d => d.id);
+
+  // update edges positions
+  function updateEdges() {
+    edgeSelection.attr('d', d => {
+      const s = positions[d.source];
+      const t = positions[d.target];
+      return `M${s.x},${s.y} L${t.x},${t.y}`;
+    });
+    // position labels at midpoints
+    edgeGroup.selectAll('text').attr('x', d => (positions[d.source].x + positions[d.target].x)/2 + 10)
+      .attr('y', d => (positions[d.source].y + positions[d.target].y)/2 - 5);
+  }
+  updateEdges();
+
+  // interactive selection of f and g
+  let selected = [];
+  // make f and g selectable
+  edgeSelection.filter(d => d.type === 'map').style('stroke', '#4b8bbe').style('cursor','pointer')
+    .on('click', function(event, d) {
+      if (d3.select(this).classed('selected')) {
+        d3.select(this).classed('selected', false);
+        selected = selected.filter(x => x !== d.id);
+      } else {
+        if (selected.length >= 2) {
+          // reset
+          edgeSelection.classed('selected', false);
+          edgeSelection.classed('unique', false);
+          selected = [];
+        }
+        d3.select(this).classed('selected', true);
+        selected.push(d.id);
+      }
+      updateHighlight();
+    });
+
+  function updateHighlight() {
+    // highlight u if both f and g selected
+    if (selected.includes('f') && selected.includes('g')) {
+      edgeSelection.filter(d => d.id === 'u').classed('unique', true);
+      d3.select('#description').append('p').html('<strong>Unique morphism u:</strong> Since both morphisms f and g are selected, there is a unique morphism u: X → P such that p₁ ∘ u = f and p₂ ∘ u = g.');
+    } else {
+      edgeSelection.filter(d => d.id === 'u').classed('unique', false);
+      // remove previous explanation paragraphs
+      d3.select('#description').selectAll('p:last-child').remove();
+    }
+  }
+})();
+</script>
+</body>
+</html>

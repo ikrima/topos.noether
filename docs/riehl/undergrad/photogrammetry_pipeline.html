@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photogrammetry Pipeline &amp; Yoneda</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: #333;
+      line-height: 1.6;
+    }
+    h1, h2 {
+      margin-top: 1.5rem;
+    }
+    .section {
+      padding: 1rem 2rem;
+      max-width: 900px;
+      margin: auto;
+    }
+    .section:nth-child(odd) {
+      background: #f8fafc;
+    }
+    .hero {
+      background: #0f172a;
+      color: white;
+      padding-top: 2rem;
+      padding-bottom: 2rem;
+      text-align: center;
+    }
+    .diagram {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 0.5rem;
+    }
+    button {
+      padding: 0.4rem 0.8rem;
+      margin: 0.2rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #2563eb;
+      color: white;
+      font-size: 0.9rem;
+    }
+    button:active {
+      background: #1e3a8a;
+    }
+    input[type=range] {
+      width: 100%;
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <header class="hero">
+    <h1>Reconstructing Reality: Photogrammetry &amp; the Yoneda Perspective</h1>
+    <p>Explore how 3D reconstruction stages parallel the universal properties of category theory.</p>
+  </header>
+
+  <section class="section">
+    <h2>Stage 1: Capturing — Cameras as Probes</h2>
+    <p>
+      In photogrammetry, the first step is to take photographs of an object from many angles.  Each
+      camera position acts as a <em>probe</em>, gathering local information about the scene.  The
+      software aligns these images by matching common points and estimates the camera positions,
+      forming a <em>sparse point cloud</em> and a set of camera locations【96876225406343†L204-L219】.  In categorical
+      terms, each camera projection corresponds to a morphism into the hidden object; the
+      collection of all such morphisms begins to determine the object, echoing the Yoneda
+      philosophy.
+    </p>
+    <div class="diagram" id="stage1-diagram"></div>
+    <div class="note">Drag the cameras around the circle to change the viewing angles. Each camera casts rays towards the object.</div>
+  </section>
+
+  <section class="section">
+    <h2>Stage 2: Alignment &amp; Sparse Reconstruction</h2>
+    <p>
+      Once the photos are captured, the software searches for overlapping features and aligns the
+      images.  This process produces a sparse set of 3D points and refines the estimated camera
+      positions【96876225406343†L205-L221】.  In our simulation, the points on the object become visible only when
+      seen by at least two cameras.  Increase the number of cameras to reveal more of the
+      structure.  Each newly visible point is a piece of the “cone” connecting cameras to the
+      object.
+    </p>
+    <div class="diagram" id="stage2-diagram"></div>
+    <div class="note">
+      Use the slider to adjust the number of cameras.  More cameras expose more points on the
+      object, illustrating how additional probes refine the reconstruction.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Stage 3: Dense Point Cloud &amp; Surfacing</h2>
+    <p>
+      After alignment, photogrammetry software generates a dense point cloud by using the
+      estimated camera positions and the image data【96876225406343†L221-L225】.  A mesh is then constructed to
+      approximate the surface【96876225406343†L226-L239】.  In our simplified 2D illustration, the density of points
+      increases as you move the slider.  Think of the dense cloud as approximating the object by
+      gluing together all the local projections—mirroring how colimits assemble data.
+    </p>
+    <div class="diagram" id="stage3-diagram"></div>
+    <div class="note">
+      Slide to adjust the density of the reconstructed cloud.  More density approaches a smooth
+      surface.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Stage 4: From Points to Gaussians: Splatting</h2>
+    <p>
+      Modern techniques like <em>3D Gaussian splatting</em> treat each point as a fuzzy Gaussian blob rather
+      than a sharp vertex.  When projected back into space, these splats overlap to form a
+      continuous radiance field.  This stage resonates with the notion that the Yoneda embedding
+      doesn’t just reconstruct an object as a set of points, but as an entity enriched by how it
+      appears from every perspective.  Adjust the slider to see how the splats accumulate into
+      a smooth approximation of the original shape.
+    </p>
+    <div class="diagram" id="stage4-diagram"></div>
+    <div class="note">Slide to adjust the number of splats.  More splats yield a smoother appearance.</div>
+  </section>
+
+  <script>
+    // Stage 1: cameras around a circle with rays
+    (function() {
+      const width = 600;
+      const height = 400;
+      const svg = d3.select('#stage1-diagram').append('svg')
+        .attr('width', width)
+        .attr('height', height);
+      const center = {x: width / 2, y: height / 2};
+      const radius = 120;
+      // initial camera angles
+      const cameras = [0, 60, 120, 180, 240, 300].map((angle, i) => ({ angle: angle * Math.PI / 180 }));
+      // Draw object as circle
+      svg.append('circle')
+        .attr('cx', center.x)
+        .attr('cy', center.y)
+        .attr('r', 60)
+        .attr('fill', '#fde047')
+        .attr('stroke', '#f59e0b')
+        .attr('stroke-width', 2);
+      // Draw rays group
+      const rayGroup = svg.append('g');
+      // Draw cameras
+      const camGroup = svg.append('g');
+      function updateStage1() {
+        // Update camera positions
+        camGroup.selectAll('polygon')
+          .data(cameras)
+          .join('polygon')
+          .attr('points', d => {
+            const cx = center.x + Math.cos(d.angle) * radius;
+            const cy = center.y + Math.sin(d.angle) * radius;
+            // camera icon: triangle pointing to object
+            const size = 12;
+            const angle = d.angle + Math.PI; // pointing inward
+            const p1 = [cx + Math.cos(angle) * size, cy + Math.sin(angle) * size];
+            const p2 = [cx + Math.cos(angle + Math.PI * 0.75) * size, cy + Math.sin(angle + Math.PI * 0.75) * size];
+            const p3 = [cx + Math.cos(angle - Math.PI * 0.75) * size, cy + Math.sin(angle - Math.PI * 0.75) * size];
+            return [p1, p2, p3].map(p => p.join(',')).join(' ');
+          })
+          .attr('fill', '#3b82f6')
+          .attr('stroke', '#1e40af')
+          .attr('stroke-width', 1.5)
+          .call(d3.drag().on('drag', function(event, d) {
+            // Drag the camera around the circle: compute angle from center
+            const dx = event.x - center.x;
+            const dy = event.y - center.y;
+            d.angle = Math.atan2(dy, dx);
+            updateStage1();
+          }));
+        // Update rays
+        const rays = rayGroup.selectAll('line')
+          .data(cameras);
+        rays.join('line')
+          .attr('x1', d => center.x + Math.cos(d.angle) * radius)
+          .attr('y1', d => center.y + Math.sin(d.angle) * radius)
+          .attr('x2', center.x)
+          .attr('y2', center.y)
+          .attr('stroke', '#94a3b8')
+          .attr('stroke-width', 1.2)
+          .attr('stroke-dasharray', '4,3');
+      }
+      updateStage1();
+    })();
+
+    // Stage 2: adjust number of cameras and reveal points
+    (function() {
+      const width = 600;
+      const height = 400;
+      const svg = d3.select('#stage2-diagram').append('svg')
+        .attr('width', width)
+        .attr('height', height);
+      const center = {x: width / 2, y: height / 2};
+      const objRadius = 80;
+      const maxCameras = 12;
+      let cameraCount = 3;
+      // Generate candidate points on the object (for simplicity, random points in a disc)
+      const totalPoints = 150;
+      const points = d3.range(totalPoints).map(() => {
+        // random polar coordinates inside circle
+        const r = Math.sqrt(Math.random()) * objRadius;
+        const theta = Math.random() * 2 * Math.PI;
+        return { x: center.x + r * Math.cos(theta), y: center.y + r * Math.sin(theta), visible: false };
+      });
+      // Cameras positions
+      function computeCameras(n) {
+        const cams = [];
+        for (let i = 0; i < n; i++) {
+          const angle = (i / n) * 2 * Math.PI;
+          cams.push({ angle });
+        }
+        return cams;
+      }
+      let cameras = computeCameras(cameraCount);
+      // Draw object outline
+      svg.append('circle')
+        .attr('cx', center.x)
+        .attr('cy', center.y)
+        .attr('r', objRadius)
+        .attr('fill', '#fef3c7')
+        .attr('stroke', '#fbbf24')
+        .attr('stroke-width', 1.5);
+      // Draw cameras
+      const camGroup = svg.append('g');
+      // Draw points
+      const ptsGroup = svg.append('g');
+      // Slider
+      const sliderDiv = d3.select('#stage2-diagram').append('div').style('margin-top', '0.5rem');
+      sliderDiv.append('input')
+        .attr('type', 'range')
+        .attr('min', 1)
+        .attr('max', maxCameras)
+        .attr('value', cameraCount)
+        .on('input', function(event) {
+          cameraCount = +this.value;
+          cameras = computeCameras(cameraCount);
+          update();
+        });
+      function update() {
+        // Determine visible points: a point is visible if within ±20 degrees of any camera direction
+        points.forEach(p => {
+          p.visible = false;
+          for (const cam of cameras) {
+            const dx = p.x - center.x;
+            const dy = p.y - center.y;
+            const angle = Math.atan2(dy, dx);
+            let diff = Math.abs(angle - cam.angle);
+            diff = Math.min(diff, 2 * Math.PI - diff);
+            if (diff < (Math.PI / (2 * cameraCount))) {
+              p.visible = true;
+              break;
+            }
+          }
+        });
+        // Render cameras
+        camGroup.selectAll('polygon')
+          .data(cameras)
+          .join('polygon')
+          .attr('points', d => {
+            const cx = center.x + Math.cos(d.angle) * (objRadius + 60);
+            const cy = center.y + Math.sin(d.angle) * (objRadius + 60);
+            const size = 10;
+            const angle = d.angle + Math.PI; // point inwards
+            const p1 = [cx + Math.cos(angle) * size, cy + Math.sin(angle) * size];
+            const p2 = [cx + Math.cos(angle + Math.PI * 0.75) * size, cy + Math.sin(angle + Math.PI * 0.75) * size];
+            const p3 = [cx + Math.cos(angle - Math.PI * 0.75) * size, cy + Math.sin(angle - Math.PI * 0.75) * size];
+            return [p1, p2, p3].map(p => p.join(',')).join(' ');
+          })
+          .attr('fill', '#60a5fa')
+          .attr('stroke', '#2563eb')
+          .attr('stroke-width', 1.2);
+        // Render points
+        ptsGroup.selectAll('circle')
+          .data(points)
+          .join('circle')
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y)
+          .attr('r', 3)
+          .attr('fill', d => d.visible ? '#10b981' : '#94a3b8');
+      }
+      update();
+    })();
+
+    // Stage 3: adjust density of points in a cloud
+    (function() {
+      const width = 600;
+      const height = 400;
+      const svg = d3.select('#stage3-diagram').append('svg')
+        .attr('width', width)
+        .attr('height', height);
+      const center = {x: width / 2, y: height / 2};
+      const objRadius = 80;
+      let density = 30;
+      // Generate random points each update
+      function generatePoints(n) {
+        return d3.range(n).map(() => {
+          const r = Math.sqrt(Math.random()) * objRadius;
+          const theta = Math.random() * 2 * Math.PI;
+          return { x: center.x + r * Math.cos(theta), y: center.y + r * Math.sin(theta) };
+        });
+      }
+      let points = generatePoints(density);
+      // Slider to control density
+      const sliderDiv = d3.select('#stage3-diagram').append('div').style('margin-top', '0.5rem');
+      sliderDiv.append('input')
+        .attr('type', 'range')
+        .attr('min', 10)
+        .attr('max', 300)
+        .attr('value', density)
+        .on('input', function(event) {
+          density = +this.value;
+          points = generatePoints(density);
+          update();
+        });
+      // Draw object outline
+      svg.append('circle')
+        .attr('cx', center.x)
+        .attr('cy', center.y)
+        .attr('r', objRadius)
+        .attr('fill', '#f0fdf4')
+        .attr('stroke', '#34d399')
+        .attr('stroke-width', 1.5);
+      // Points group
+      const ptsGroup = svg.append('g');
+      function update() {
+        ptsGroup.selectAll('circle')
+          .data(points)
+          .join('circle')
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y)
+          .attr('r', 2.5)
+          .attr('fill', '#22c55e')
+          .attr('fill-opacity', 0.8);
+      }
+      update();
+    })();
+
+    // Stage 4: Gaussian splats approximation
+    (function() {
+      const width = 600;
+      const height = 400;
+      const canvas = d3.select('#stage4-diagram').append('canvas')
+        .attr('width', width)
+        .attr('height', height)
+        .node();
+      const ctx = canvas.getContext('2d');
+      const center = {x: width / 2, y: height / 2};
+      const objRadius = 80;
+      let splatCount = 50;
+      // Slider control
+      const sliderDiv = d3.select('#stage4-diagram').append('div').style('margin-top', '0.5rem');
+      sliderDiv.append('input')
+        .attr('type', 'range')
+        .attr('min', 10)
+        .attr('max', 200)
+        .attr('value', splatCount)
+        .on('input', function(event) {
+          splatCount = +this.value;
+          drawSplats();
+        });
+      function randomPoint() {
+        const r = Math.sqrt(Math.random()) * objRadius;
+        const theta = Math.random() * 2 * Math.PI;
+        return { x: center.x + r * Math.cos(theta), y: center.y + r * Math.sin(theta) };
+      }
+      function drawSplats() {
+        // Clear
+        ctx.clearRect(0, 0, width, height);
+        // Draw background circle lightly
+        ctx.fillStyle = '#f0fdf4';
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, objRadius, 0, 2 * Math.PI);
+        ctx.fill();
+        // Draw each splat as a radial gradient circle
+        for (let i = 0; i < splatCount; i++) {
+          const p = randomPoint();
+          const size = 15;
+          const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+          gradient.addColorStop(0, 'rgba(52,211,153,0.7)');
+          gradient.addColorStop(1, 'rgba(52,211,153,0)');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+      drawSplats();
+    })();
+  </script>
+</body>
+</html>

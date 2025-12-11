@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Yoneda Lemma</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f9f9fb;
+  }
+  #container {
+    max-width: 900px;
+    margin: auto;
+    padding: 1rem;
+  }
+  h1 {
+    color: #6c5b7b;
+  }
+  #explanation {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #fffdf9;
+    border-left: 5px solid #6c5b7b;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  #yonedaViz {
+    border: 1px solid #ddd;
+    background: white;
+  }
+  .fSetCircle {
+    cursor: pointer;
+    stroke: #333;
+    stroke-width: 1px;
+  }
+  .fSetCircle.selected {
+    stroke: #e45756;
+    stroke-width: 3px;
+  }
+  .fSetText {
+    pointer-events: none;
+    font-size: 12px;
+    fill: #fff;
+    font-weight: bold;
+  }
+  .arrow {
+    stroke: #999;
+    stroke-width: 1.5px;
+    fill: none;
+    marker-end: url(#arrowHead);
+  }
+  .highlight {
+    fill: #e45756;
+  }
+  .morphismText {
+    font-size: 12px;
+    fill: #333;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+<h1>Exploring the Yoneda Lemma</h1>
+<div id="explanation">
+  The Yoneda lemma states that for a locally small category \(C\), a functor \(F : C \to \textbf{Set}\), and an object \(c\) in \(C\), natural transformations from the represented functor \(C(c, -)\) to \(F\) correspond bijectively to elements of \(F(c)\)【607663452290599†L4120-L4125】. In this example, select an element in \(F(A)\) to see the corresponding natural transformation — a mapping from each hom-set \(C(A, X)\) to the set \(F(X)\).
+</div>
+<svg id="yonedaViz" width="800" height="500"></svg>
+</div>
+
+<script>
+(function(){
+  const svg = d3.select('#yonedaViz');
+  const width = +svg.attr('width');
+  const height = +svg.attr('height');
+
+  // arrow marker definition
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id','arrowHead')
+    .attr('viewBox','0 -5 10 10')
+    .attr('refX',10)
+    .attr('refY',0)
+    .attr('markerWidth',6)
+    .attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path')
+      .attr('d','M0,-5L10,0L0,5')
+      .attr('fill','#999');
+
+  const objects = ['A','B','C'];
+
+  const F = {
+    'A': ['α','β'],
+    'B': ['γ','δ','ζ'],
+    'C': ['ε']
+  };
+
+  // Hom-sets from A to X
+  const Hom = {
+    'A': ['1_A'],
+    'B': ['f'],
+    'C': ['h']
+  };
+
+  // Functor actions on morphisms: specify how each morphism maps elements
+  const F_maps = {
+    '1_A': { 'α':'α', 'β':'β' },
+    'f':   { 'α':'γ', 'β':'δ' },
+    'g':   { 'γ':'ε', 'δ':'ε', 'ζ':'ε' },
+    'h':   { 'α':'ε', 'β':'ε' }
+  };
+
+  // colours for F-sets
+  const colorScale = d3.scaleOrdinal()
+    .domain(['α','β','γ','δ','ζ','ε'])
+    .range(['#4b8bbe','#f37736','#00a8a8','#8e44ad','#27ae60','#c0392b']);
+
+  // positions for objects (x coordinate)
+  const xScale = d3.scalePoint()
+    .domain(objects)
+    .range([100, width-100]);
+
+  // container groups for each object
+  const objectGroups = svg.selectAll('.objectGroup')
+    .data(objects)
+    .enter().append('g')
+      .attr('class','objectGroup')
+      .attr('transform', d => `translate(${xScale(d)},${height/2})`);
+
+  // Add object labels
+  objectGroups.append('text')
+    .attr('y', -170)
+    .attr('text-anchor','middle')
+    .attr('font-size',16)
+    .attr('font-weight','bold')
+    .attr('fill','#6c5b7b')
+    .text(d => d);
+
+  // Add hom-set labels
+  objectGroups.append('text')
+    .attr('y', -145)
+    .attr('x', -80)
+    .attr('font-size',13)
+    .attr('fill','#555')
+    .text(d => `Hom(A, ${d})`);
+
+  // Add F(X) labels
+  objectGroups.append('text')
+    .attr('y', -145)
+    .attr('x', 80)
+    .attr('font-size',13)
+    .attr('fill','#555')
+    .text(d => `F(${d})`);
+
+  // Draw hom-set elements and F-set elements
+  // store positions for drawing arrows later
+  let homPositions = {};
+  let fPositions = {};
+
+  objects.forEach(obj => {
+    homPositions[obj] = [];
+    fPositions[obj] = [];
+  });
+
+  const homGroup = objectGroups.append('g')
+    .attr('class','homSet');
+  const fGroup = objectGroups.append('g')
+    .attr('class','fSet');
+
+  // draw Hom(A,X) lists
+  homGroup.each(function(obj) {
+    const morphisms = Hom[obj];
+    const g = d3.select(this);
+    morphisms.forEach((m, i) => {
+      const y = -110 + i*30;
+      g.append('text')
+        .attr('x', -80)
+        .attr('y', y)
+        .attr('class','morphismText')
+        .text(m);
+      homPositions[obj].push({ name: m, x: -80, y: y });
+    });
+  });
+
+  // draw F(X) lists as circles with labels
+  fGroup.each(function(obj) {
+    const elems = F[obj];
+    const g = d3.select(this);
+    elems.forEach((el, i) => {
+      const y = -110 + i*30;
+      g.append('circle')
+        .attr('cx', 80)
+        .attr('cy', y-5)
+        .attr('r', 12)
+        .attr('fill', colorScale(el))
+        .attr('class','fSetCircle')
+        .on('click', function(event) {
+          if (obj !== 'A') return; // only F(A) elements are selectable
+          selectElement(el);
+        });
+      g.append('text')
+        .attr('x', 80)
+        .attr('y', y-5)
+        .attr('dy', 4)
+        .attr('class','fSetText')
+        .attr('text-anchor','middle')
+        .text(el);
+      fPositions[obj].push({ name: el, x: 80, y: y-5 });
+    });
+  });
+
+  // container for arrows
+  const arrowsGroup = svg.append('g').attr('class','arrows');
+  let selectedElement = null;
+
+  function selectElement(el) {
+    // update selection highlight in F(A)
+    svg.selectAll('.fSetCircle').classed('selected', false);
+    // highlight selected element in F(A)
+    objectGroups.filter(d => d === 'A').selectAll('.fSet circle')
+      .filter((d,i,nodes) => F['A'][i] === el)
+      .classed('selected', true);
+    selectedElement = el;
+    updateArrows();
+  }
+
+  function updateArrows() {
+    // clear previous arrows
+    arrowsGroup.selectAll('*').remove();
+    if (!selectedElement) return;
+    // for each object X, draw arrow from each morphism in Hom(A,X) to the image in F(X)
+    objects.forEach(obj => {
+      Hom[obj].forEach((morph, i) => {
+        const source = homPositions[obj][i];
+        // compute image of selectedElement under F(morph)
+        const map = F_maps[morph];
+        const targetElem = map[selectedElement];
+        // find position of target element in F(obj)
+        const target = fPositions[obj].find(p => p.name === targetElem);
+        if (!target) return;
+        arrowsGroup.append('path')
+          .attr('d', `M${xScale(obj)+source.x},${height/2+source.y} C${xScale(obj)+source.x+40},${height/2+source.y} ${xScale(obj)+target.x-40},${height/2+target.y} ${xScale(obj)+target.x},${height/2+target.y}`)
+          .attr('class','arrow')
+          .attr('stroke', colorScale(selectedElement));
+      });
+    });
+  }
+
+  // initial hint arrow (no selection)
+  updateArrows();
+})();
+</script>
+</body>
+</html>

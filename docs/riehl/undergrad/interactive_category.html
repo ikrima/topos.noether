@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Category: Composition and Identity</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    background: #f9f9fb;
+  }
+  #wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+  }
+  #diagram {
+    margin-top: 1rem;
+    border: 1px solid #ddd;
+    background: white;
+  }
+  #info {
+    margin-top: 1rem;
+    width: 80%;
+    max-width: 700px;
+    background: #fffdf9;
+    border-left: 5px solid #4b8bbe;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #4b8bbe;
+    margin-top: 0;
+  }
+  .node circle {
+    fill: #4b8bbe;
+    stroke: #003f5c;
+    stroke-width: 2px;
+    cursor: pointer;
+  }
+  .node text {
+    pointer-events: none;
+    fill: #ffffff;
+    font-weight: bold;
+  }
+  .link path {
+    fill: none;
+    stroke: #666;
+    stroke-width: 2px;
+    marker-end: url(#arrow);
+  }
+  .link text {
+    font-size: 12px;
+    fill: #333;
+    pointer-events: none;
+  }
+  .selected path {
+    stroke: #e45756;
+    stroke-width: 4px;
+  }
+  .composite path {
+    stroke: #2e8b57;
+    stroke-width: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <h1>Exploring Categories: Objects, Morphisms & Composition</h1>
+  <p style="max-width:700px;">In a category, we have objects (nodes) and morphisms (arrows) equipped with identity morphisms and a law of composition【607663452290599†L761-L770】. Click on the arrows in order to explore how composition works. Selecting two composable morphisms will reveal their composite.</p>
+  <svg id="diagram" width="700" height="450"></svg>
+  <div id="info">Click on arrows to see their role. Select two composable morphisms (e.g. <code>f</code> then <code>g</code>) to highlight their composite <code>h</code>.</div>
+</div>
+
+<script>
+(function(){
+  const svg = d3.select("#diagram");
+  const width = +svg.attr("width");
+  const height = +svg.attr("height");
+
+  // define arrow marker
+  svg.append('defs').append('marker')
+    .attr('id','arrow')
+    .attr('viewBox','0 -5 10 10')
+    .attr('refX',15)
+    .attr('refY',0)
+    .attr('markerWidth',6)
+    .attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path')
+      .attr('d','M0,-5L10,0L0,5')
+      .attr('fill','#666');
+
+  const nodes = [
+    {id:'A'},
+    {id:'B'},
+    {id:'C'}
+  ];
+
+  // links with type to differentiate identity and composites
+  const links = [
+    {source:'A', target:'A', name:'1_A', type:'identity'},
+    {source:'B', target:'B', name:'1_B', type:'identity'},
+    {source:'C', target:'C', name:'1_C', type:'identity'},
+    {source:'A', target:'B', name:'f', type:'morphism'},
+    {source:'B', target:'C', name:'g', type:'morphism'},
+    {source:'A', target:'C', name:'h', type:'composite'},
+  ];
+
+  // mapping from node id to node object
+  const nodeById = {};
+  nodes.forEach(n => nodeById[n.id] = n);
+
+  // convert link source/target to node objects
+  links.forEach(l => {
+    l.source = nodeById[l.source];
+    l.target = nodeById[l.target];
+  });
+
+  const simulation = d3.forceSimulation(nodes)
+    .force('charge', d3.forceManyBody().strength(-400))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('link', d3.forceLink(links).id(d => d.id).distance(200).strength(0.2))
+    .on('tick', ticked);
+
+  // create link groups
+  const linkGroup = svg.append('g').attr('class','links');
+  const link = linkGroup.selectAll('.link')
+      .data(links)
+      .enter().append('g')
+        .attr('class', d => 'link ' + d.type)
+        .on('click', handleLinkClick);
+
+  link.append('path')
+      .attr('stroke-width', 2);
+
+  link.append('text')
+      .attr('dy', -5)
+      .attr('text-anchor','middle')
+      .text(d => d.name);
+
+  // create node groups
+  const node = svg.append('g').selectAll('.node')
+    .data(nodes)
+    .enter().append('g')
+      .attr('class','node')
+      .call(d3.drag()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended));
+
+  node.append('circle')
+      .attr('r', 18);
+
+  node.append('text')
+      .attr('dy', 5)
+      .attr('text-anchor', 'middle')
+      .text(d => d.id);
+
+  let selected = [];
+
+  function handleLinkClick(event, d) {
+    // ignore clicks on identity morphisms
+    if (d.type === 'identity') return;
+    // toggle selection
+    if (d3.select(this).classed('selected')) {
+      d3.select(this).classed('selected', false);
+      selected = selected.filter(x => x !== d);
+    } else {
+      if (selected.length >= 2) {
+        // reset selection if more than 2
+        link.classed('selected', false);
+        link.classed('composite', false);
+        selected = [];
+      }
+      d3.select(this).classed('selected', true);
+      selected.push(d);
+    }
+    updateInfo();
+  }
+
+  function updateInfo() {
+    const info = d3.select('#info');
+    // check if we have a composite pair f: A->B and g: B->C
+    info.html('');
+    if (selected.length === 1) {
+      info.append('p').html(`<strong>Selected morphism:</strong> ${selected[0].name}`);
+      if (selected[0].type === 'morphism') {
+        info.append('p').text(`It goes from ${selected[0].source.id} to ${selected[0].target.id}.`);
+      }
+    } else if (selected.length === 2) {
+      // sort so composition is g∘f when type is morphism->morphism
+      let f = selected[0];
+      let g = selected[1];
+      // ensure f.target === g.source to be composable
+      if (f.target === g.source) {
+        const compositeName = 'h';
+        // highlight composite link
+        link.classed('composite', d => (d.name === compositeName));
+        info.append('p').html(`<strong>Composition:</strong> You selected morphisms ${f.name}: ${f.source.id}→${f.target.id} and ${g.name}: ${g.source.id}→${g.target.id}. Their composite is ${compositeName}: ${f.source.id}→${g.target.id}.`);
+        info.append('p').text('Composition must be associative, and identity morphisms act as units【607663452290599†L761-L770】.');
+      } else {
+        info.append('p').html('These morphisms are not composable since the codomain of the first does not match the domain of the second.');
+        // remove composite highlight
+        link.classed('composite', false);
+      }
+    } else {
+      info.html('Click on arrows to see their role. Select two composable morphisms (e.g. f then g) to highlight their composite h.');
+      link.classed('composite', false);
+    }
+  }
+
+  function ticked() {
+    link.select('path').attr('d', function(d) {
+      if (d.source === d.target) {
+        // draw self-loop as an arc
+        const x = d.source.x;
+        const y = d.source.y;
+        const loopRadius = 35;
+        return `M${x},${y} A${loopRadius},${loopRadius} 0 1,1 ${x-0.1},${y-0.1}`;
+      }
+      const dx = d.target.x - d.source.x;
+      const dy = d.target.y - d.source.y;
+      const dr = Math.sqrt(dx * dx + dy * dy);
+      return `M${d.source.x},${d.source.y} L${d.target.x},${d.target.y}`;
+    });
+    link.select('text').attr('x', function(d) {
+      return (d.source.x + d.target.x) / 2;
+    })
+    .attr('y', function(d) {
+      return (d.source.y + d.target.y) / 2;
+    });
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+
+  function dragstarted(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+
+  function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+
+  function dragended(event, d) {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
+})();
+</script>
+</body>
+</html>

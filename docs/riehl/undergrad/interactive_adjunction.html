@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Adjunction via Galois Connection</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f9f9fb;
+  }
+  #container {
+    max-width: 800px;
+    margin: auto;
+    padding: 1rem;
+  }
+  h1 { color: #e17c05; }
+  #description {
+    background: #fffdf9;
+    border-left: 5px solid #e17c05;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  #viz {
+    border: 1px solid #ddd;
+    background: white;
+  }
+  .posetGroup text {
+    font-size: 14px;
+    fill: #333;
+  }
+  .element circle {
+    fill: #e17c05;
+    stroke: #b34e00;
+    stroke-width: 2px;
+    cursor: pointer;
+  }
+  .element.selected circle {
+    stroke: #d62828;
+    stroke-width: 4px;
+  }
+  .element text {
+    fill: #fff;
+    font-size: 12px;
+    pointer-events: none;
+  }
+  .arrow {
+    fill: none;
+    stroke: #666;
+    stroke-width: 2px;
+    marker-end: url(#arrowHead);
+  }
+  #result {
+    margin-top: 1rem;
+    font-size: 16px;
+  }
+  #result span.true {
+    color: #2a9d8f;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>Exploring Adjunctions via a Galois Connection</h1>
+  <div id="description">
+    In this example, we have two posets \(P\) and \(Q\) each consisting of the numbers \(0,1,2,3,4\). Define monotone functions \(f: P \to Q\) and \(g: Q \to P\) by \(f(p) = \min(p+1,4)\) and \(g(q) = \max(q-1,0)\). These form an adjunction because for all \(p \in P\) and \(q \in Q\), \(f(p) \le q\) if and only if \(p \le g(q)\)【607663452290599†L480-L489】. Select elements \(p\) and \(q\) to see how this condition holds.
+  </div>
+  <svg id="viz" width="760" height="500"></svg>
+  <div id="result">Select elements in \(P\) and \(Q\) to evaluate the adjunction condition.</div>
+</div>
+<script>
+(function(){
+  const svg = d3.select('#viz');
+  const width = +svg.attr('width');
+  const height = +svg.attr('height');
+
+  // arrow marker
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id','arrowHead')
+    .attr('viewBox','0 -5 10 10')
+    .attr('refX',10)
+    .attr('refY',0)
+    .attr('markerWidth',6)
+    .attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path')
+      .attr('d','M0,-5L10,0L0,5')
+      .attr('fill','#666');
+
+  const P = [0,1,2,3,4];
+  const Q = [0,1,2,3,4];
+
+  const xPositions = { 'P': width * 0.25, 'Q': width * 0.75 };
+
+  // create groups for P and Q
+  const posetGroups = svg.selectAll('.posetGroup')
+    .data(['P','Q'])
+    .enter().append('g')
+      .attr('class','posetGroup')
+      .attr('transform', d => `translate(${xPositions[d]},${height/2})`);
+
+  // add titles
+  posetGroups.append('text')
+    .attr('y', -130)
+    .attr('text-anchor','middle')
+    .attr('font-size',16)
+    .attr('fill','#e17c05')
+    .text(d => d);
+
+  // draw elements
+  let pSelection = null;
+  let qSelection = null;
+
+  const elementGroups = posetGroups.selectAll('.element')
+    .data(d => (d==='P' ? P : Q).map(v => ({poset:d, value:v})))
+    .enter().append('g')
+      .attr('class','element')
+      .attr('transform', (d,i) => `translate(0,${-80 + i*40})`)
+      .on('click', function(event,d){
+        if (d.poset === 'P') {
+          // update selection p
+          pSelection = d.value;
+          // highlight
+          posetGroups.selectAll('.element').classed('selected', d => (d.poset==='P' && d.value===pSelection) || (d.poset==='Q' && d.value===qSelection));
+        } else {
+          qSelection = d.value;
+          posetGroups.selectAll('.element').classed('selected', d => (d.poset==='P' && d.value===pSelection) || (d.poset==='Q' && d.value===qSelection));
+        }
+        updateResults();
+      });
+
+  elementGroups.append('circle')
+    .attr('cx', 0)
+    .attr('cy', 0)
+    .attr('r', 15);
+
+  elementGroups.append('text')
+    .attr('x', 0)
+    .attr('y', 5)
+    .attr('text-anchor','middle')
+    .text(d => d.value);
+
+  // function definitions
+  function f(p) {
+    return Math.min(p + 1, 4);
+  }
+  function g(q) {
+    return Math.max(q - 1, 0);
+  }
+
+  // arrow group
+  const arrowGroup = svg.append('g').attr('class','arrows');
+
+  function updateResults() {
+    // clear arrows
+    arrowGroup.selectAll('*').remove();
+    const resultDiv = d3.select('#result');
+    if (pSelection === null || qSelection === null) {
+      resultDiv.text('Select elements in P and Q to evaluate the adjunction condition.');
+      return;
+    }
+    const fp = f(pSelection);
+    const gq = g(qSelection);
+    // compute condition
+    const condition = fp <= qSelection && pSelection <= gq;
+    // draw arrows for f(p) and g(q)
+    // arrow from P value to f(p) in Q
+    const pPos = getElementPosition('P', pSelection);
+    const fpPos = getElementPosition('Q', fp);
+    const qPos = getElementPosition('Q', qSelection);
+    const gqPos = getElementPosition('P', gq);
+    // arrow for f
+    arrowGroup.append('path')
+      .attr('d', `M${pPos.x},${pPos.y} C${pPos.x+60},${pPos.y} ${fpPos.x-60},${fpPos.y} ${fpPos.x},${fpPos.y}`)
+      .attr('class','arrow')
+      .attr('stroke','#4b8bbe');
+    // arrow for g
+    arrowGroup.append('path')
+      .attr('d', `M${qPos.x},${qPos.y} C${qPos.x-60},${qPos.y} ${gqPos.x+60},${gqPos.y} ${gqPos.x},${gqPos.y}`)
+      .attr('class','arrow')
+      .attr('stroke','#8e44ad');
+    // display numbers next to arrows
+    arrowGroup.append('text')
+      .attr('x',(pPos.x + fpPos.x)/2 + 10)
+      .attr('y',(pPos.y + fpPos.y)/2 - 5)
+      .attr('font-size',12)
+      .attr('fill','#4b8bbe')
+      .text(`f(${pSelection}) = ${fp}`);
+    arrowGroup.append('text')
+      .attr('x',(qPos.x + gqPos.x)/2 - 60)
+      .attr('y',(qPos.y + gqPos.y)/2 - 5)
+      .attr('font-size',12)
+      .attr('fill','#8e44ad')
+      .text(`g(${qSelection}) = ${gq}`);
+    // display condition
+    const leftCond = `f(${pSelection}) = ${fp} \le ${qSelection}`;
+    const rightCond = `${pSelection} \le g(${qSelection}) = ${gq}`;
+    resultDiv.html(`Selected p = ${pSelection}, q = ${qSelection}.<br>` +
+      `Left condition: ${leftCond}.<br>` +
+      `Right condition: ${rightCond}.<br>` +
+      (condition ? `<span class="true">Both conditions are true ⇒ f \dashv g holds.</span>` : `<span style="color:#d62828;font-weight:bold;">Conditions fail ⇒ not adjoint</span>`));
+  }
+
+  function getElementPosition(poset, value) {
+    const groupX = xPositions[poset];
+    const index = (poset === 'P' ? P : Q).indexOf(value);
+    const y = height/2 - 80 + index * 40;
+    return { x: groupX, y: y };
+  }
+})();
+</script>
+</body>
+</html>
