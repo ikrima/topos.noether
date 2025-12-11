@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adjunctions &amp; Resampling</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #fafafa;
+      color: #222;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+    p {
+      max-width: 800px;
+      margin: 0.5rem auto;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin: 1rem 0;
+      gap: 1rem;
+    }
+    .toggle {
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle.active {
+      background: #007ACC;
+      color: white;
+      border-color: #007ACC;
+    }
+    .chart {
+      margin: 0 auto;
+    }
+    .label {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>Adjunctions &amp; Resampling</h1>
+  <p>
+    Adjunctions arise when two functors form a perfectly balanced pair: one adds
+    structure, and the other forgets it.  When a “forgetful” functor
+    admits an adjoint, the adjoint provides a <em>free</em> construction that is
+    universal for solving certain problems【409654009506997†L645-L652】.  In the realm
+    of signal processing and graphics, upsampling and downsampling form such a
+    pair: upsampling (the left adjoint) inserts additional samples, while
+    downsampling (the right adjoint) averages adjacent values and discards
+    information.  Here we explore their adjunction by connecting coarse and fine
+    signals.
+  </p>
+  <div class="container">
+    <div class="controls">
+      <div class="toggle active" id="edit-f">Edit f (coarse → coarse)</div>
+      <div class="toggle" id="edit-g">Edit g (fine → coarse)</div>
+    </div>
+    <svg id="chart" width="900" height="200" class="chart"></svg>
+    <div class="label" id="label-f">f : coarse signal → output</div>
+    <div class="label" id="label-g" style="display: none;">g : fine signal → output</div>
+  </div>
+  <p>
+    Select either <strong>Edit f</strong> or <strong>Edit g</strong>.  Drag the circles on the
+    active function's bar chart to adjust its values.  The adjunction says
+    there is a one-to-one correspondence between maps \(f\) on coarse signals
+    and maps \(g\) on fine signals such that \(g\) respects downsampling:
+    \(g(x) = f(\mathrm{Down}(x))\).  Conversely, given any \(g\) on fine
+    signals, \(f\) is determined by \(f(z) = g(\mathrm{Up}(z))\), where
+    \(\mathrm{Up}\) inserts each sample twice.  Try editing one mapping and watch
+    the other update automatically.
+  </p>
+  <script>
+    (function() {
+      const svg = d3.select('#chart');
+      const width = +svg.attr('width');
+      const height = +svg.attr('height');
+      const margin = {top: 20, right: 20, bottom: 20, left: 40};
+
+      // Domain sizes
+      const coarseN = 6;
+      const fineN = coarseN * 2;
+
+      // Create random initial coarse and fine signals
+      let coarseSignal = d3.range(coarseN).map(() => Math.random() * 0.8 + 0.1);
+      let fineSignal = d3.range(fineN).map(() => Math.random() * 0.8 + 0.1);
+
+      // Function values f: mapping from coarse signal positions to output (height)
+      // g: mapping from fine signal positions to output
+      let fValues = d3.range(coarseN).map(() => Math.random() * 0.8 + 0.1);
+      let gValues = []; // derived from f or user-specified
+
+      // Flags for editing
+      let editingF = true;
+
+      // Build scales
+      const x0 = d3.scaleBand()
+        .domain(d3.range(coarseN))
+        .range([margin.left, width - margin.right])
+        .padding(0.1);
+      const x1 = d3.scaleBand()
+        .domain(d3.range(fineN))
+        .range([margin.left, width - margin.right])
+        .padding(0.05);
+      const y = d3.scaleLinear()
+        .domain([0, 1])
+        .range([height - margin.bottom, margin.top]);
+
+      // Draw background bars for coarse and fine signals
+      svg.selectAll('.coarse-bar')
+        .data(coarseSignal)
+        .enter().append('rect')
+        .attr('class', 'coarse-bar')
+        .attr('x', (d, i) => x0(i))
+        .attr('y', d => y(d))
+        .attr('width', x0.bandwidth())
+        .attr('height', d => y(0) - y(d))
+        .attr('fill', '#e6e6e6');
+      svg.selectAll('.fine-bar')
+        .data(fineSignal)
+        .enter().append('rect')
+        .attr('class', 'fine-bar')
+        .attr('x', (d, i) => x1(i))
+        .attr('y', d => y(d))
+        .attr('width', x1.bandwidth())
+        .attr('height', d => y(0) - y(d))
+        .attr('fill', '#f7f7f7');
+
+      // Create group for function values
+      const fGroup = svg.append('g');
+      const gGroup = svg.append('g');
+
+      function computeGfromF() {
+        // g(x) = f(Down(x)), Down maps fine positions i to coarse position floor(i/2)
+        gValues = d3.range(fineN).map(i => fValues[Math.floor(i / 2)]);
+      }
+      function computeFfromG() {
+        // f(z) = g(Up(z)), Up maps coarse pos j to fine pos 2j (first of pair)
+        fValues = d3.range(coarseN).map(j => gValues[j * 2]);
+      }
+
+      // Initially compute g from f
+      computeGfromF();
+
+      function updateCharts() {
+        // Update coarse function circles
+        const fCircles = fGroup.selectAll('.f-circle')
+          .data(fValues);
+        fCircles.enter().append('circle')
+          .attr('class', 'f-circle')
+          .attr('r', 6)
+          .merge(fCircles)
+          .attr('cx', (d, i) => x0(i) + x0.bandwidth() / 2)
+          .attr('cy', d => y(d))
+          .style('fill', '#ff6666')
+          .style('cursor', 'pointer')
+          .call(d3.drag()
+            .on('drag', function(event, d, i) {
+              if (!editingF) return;
+              const yVal = Math.min(1, Math.max(0, y.invert(event.y)));
+              fValues[i] = yVal;
+              d3.select(this).attr('cy', y(yVal));
+              computeGfromF();
+              updateCharts();
+            }));
+        fCircles.exit().remove();
+
+        // Update g circles
+        const gCircles = gGroup.selectAll('.g-circle')
+          .data(gValues);
+        gCircles.enter().append('circle')
+          .attr('class', 'g-circle')
+          .attr('r', 4)
+          .merge(gCircles)
+          .attr('cx', (d, i) => x1(i) + x1.bandwidth() / 2)
+          .attr('cy', d => y(d))
+          .style('fill', '#336699')
+          .style('cursor', 'pointer')
+          .call(d3.drag()
+            .on('drag', function(event, d, i) {
+              if (editingF) return;
+              const yVal = Math.min(1, Math.max(0, y.invert(event.y)));
+              gValues[i] = yVal;
+              d3.select(this).attr('cy', y(yVal));
+              computeFfromG();
+              updateCharts();
+            }));
+        gCircles.exit().remove();
+      }
+
+      updateCharts();
+
+      // Toggle editing modes
+      const toggleF = d3.select('#edit-f');
+      const toggleG = d3.select('#edit-g');
+      toggleF.on('click', () => {
+        editingF = true;
+        toggleF.classed('active', true);
+        toggleG.classed('active', false);
+        d3.select('#label-f').style('display', 'block');
+        d3.select('#label-g').style('display', 'none');
+      });
+      toggleG.on('click', () => {
+        editingF = false;
+        toggleF.classed('active', false);
+        toggleG.classed('active', true);
+        d3.select('#label-f').style('display', 'none');
+        d3.select('#label-g').style('display', 'block');
+      });
+    })();
+  </script>
+</body>
+</html>

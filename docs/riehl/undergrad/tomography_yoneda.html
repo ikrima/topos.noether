@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tomography &amp; the Yoneda Lemma</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #f9f9f9;
+      color: #222;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      margin: 1rem 0;
+    }
+    p {
+      max-width: 800px;
+      margin: 0.5rem auto;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-gap: 1.5rem;
+    }
+    .canvas-container {
+      position: relative;
+    }
+    canvas {
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    #angle-value {
+      min-width: 50px;
+    }
+    .legend {
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+      text-align: center;
+    }
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Tomography &amp; the Yoneda Lemma</h1>
+  <p>
+    Computed tomography (CT) reconstructs an internal structure from many
+    projection measurements.  A detector measures the integral of densities
+    along a line at a given angle, recording how much each ray is attenuated.
+    With enough angles, these <em>probes</em> determine the original object.
+    This mirrors the Yoneda Lemma: an object \(X\) is determined by how all
+    other objects map into it【409654009506997†L700-L714】.  Each projection is like
+    a morphism probing our hidden shape.  As we accumulate projections, the
+    reconstructed image emerges.
+  </p>
+  <div class="container">
+    <div class="canvas-container">
+      <canvas id="original" width="350" height="350"></canvas>
+      <div class="legend">Hidden Object</div>
+    </div>
+    <div class="canvas-container">
+      <canvas id="reconstruction" width="350" height="350"></canvas>
+      <div class="legend">Accumulated Backprojection</div>
+    </div>
+  </div>
+  <div class="container">
+    <div style="grid-column: span 2; text-align: center;">
+      <div class="controls">
+        <label for="angle">Angle: </label>
+        <input type="range" id="angle" min="0" max="180" value="0" step="1" />
+        <span id="angle-value">0°</span>
+        <button id="add-projection">Add Projection</button>
+        <button id="reset">Reset</button>
+      </div>
+      <canvas id="sinogram" width="700" height="150"></canvas>
+      <div class="legend">Sinogram (Projections vs. Angle)</div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const n = 64; // grid size for phantom and reconstruction
+      const phantom = []; // 2D array storing density values
+      // Generate a simple phantom: sum of Gaussian blobs
+      for (let y = 0; y < n; y++) {
+        phantom[y] = [];
+        for (let x = 0; x < n; x++) {
+          // Normalized coordinates in [-1, 1]
+          const nx = (x - n/2) / (n/2);
+          const ny = (y - n/2) / (n/2);
+          let value = 0;
+          // Circular blob
+          const r1 = Math.sqrt(nx*nx + ny*ny);
+          value += Math.exp(-10 * r1*r1);
+          // Off‑center ellipse
+          const nx2 = (nx + 0.3);
+          const ny2 = ny * 1.5;
+          const r2 = Math.sqrt(nx2*nx2 + ny2*ny2);
+          value += 0.8 * Math.exp(-15 * r2*r2);
+          phantom[y][x] = value;
+        }
+      }
+
+      // Reconstruction array
+      let reconstruction = [];
+      function resetReconstruction() {
+        reconstruction = [];
+        for (let y = 0; y < n; y++) {
+          reconstruction[y] = [];
+          for (let x = 0; x < n; x++) {
+            reconstruction[y][x] = 0;
+          }
+        }
+      }
+      resetReconstruction();
+
+      // Draw phantom onto canvas
+      const canvasOriginal = document.getElementById('original');
+      const ctxOriginal = canvasOriginal.getContext('2d');
+      function drawPhantom() {
+        const imgData = ctxOriginal.createImageData(canvasOriginal.width, canvasOriginal.height);
+        for (let y = 0; y < canvasOriginal.height; y++) {
+          for (let x = 0; x < canvasOriginal.width; x++) {
+            // Map canvas pixel to phantom grid
+            const gx = Math.floor((x / canvasOriginal.width) * n);
+            const gy = Math.floor((y / canvasOriginal.height) * n);
+            const v = phantom[gy][gx];
+            const i = (y * canvasOriginal.width + x) * 4;
+            const col = Math.min(255, Math.max(0, Math.floor(v * 255)));
+            imgData.data[i] = col;
+            imgData.data[i+1] = col;
+            imgData.data[i+2] = col;
+            imgData.data[i+3] = 255;
+          }
+        }
+        ctxOriginal.putImageData(imgData, 0, 0);
+      }
+      drawPhantom();
+
+      // Draw reconstruction
+      const canvasRecon = document.getElementById('reconstruction');
+      const ctxRecon = canvasRecon.getContext('2d');
+      function drawReconstruction() {
+        const imgData = ctxRecon.createImageData(canvasRecon.width, canvasRecon.height);
+        // Normalize reconstruction values for display
+        let maxVal = 0;
+        for (let y = 0; y < n; y++) {
+          for (let x = 0; x < n; x++) {
+            if (reconstruction[y][x] > maxVal) maxVal = reconstruction[y][x];
+          }
+        }
+        maxVal = maxVal || 1;
+        for (let y = 0; y < canvasRecon.height; y++) {
+          for (let x = 0; x < canvasRecon.width; x++) {
+            const gx = Math.floor((x / canvasRecon.width) * n);
+            const gy = Math.floor((y / canvasRecon.height) * n);
+            const v = reconstruction[gy][gx] / maxVal;
+            const col = Math.min(255, Math.max(0, Math.floor(v * 255)));
+            const idx = (y * canvasRecon.width + x) * 4;
+            imgData.data[idx] = col;
+            imgData.data[idx+1] = col;
+            imgData.data[idx+2] = col;
+            imgData.data[idx+3] = 255;
+          }
+        }
+        ctxRecon.putImageData(imgData, 0, 0);
+      }
+      drawReconstruction();
+
+      // Sinogram canvas
+      const sinogramCanvas = document.getElementById('sinogram');
+      const ctxSino = sinogramCanvas.getContext('2d');
+      const sinoWidth = sinogramCanvas.width;
+      const sinoHeight = sinogramCanvas.height;
+      const projections = []; // store {angle: degrees, values: array}
+
+      function drawSinogram() {
+        // Clear
+        ctxSino.fillStyle = '#ffffff';
+        ctxSino.fillRect(0, 0, sinoWidth, sinoHeight);
+        // Determine maximum value for normalisation
+        let globalMax = 0;
+        projections.forEach(p => {
+          p.values.forEach(v => {
+            if (v > globalMax) globalMax = v;
+          });
+        });
+        globalMax = globalMax || 1;
+        // Draw each projection as a vertical strip
+        const stripWidth = sinoWidth / Math.max(projections.length, 1);
+        projections.forEach((p, idx) => {
+          const vals = p.values;
+          const h = vals.length;
+          for (let y = 0; y < h; y++) {
+            const value = vals[y] / globalMax;
+            const colour = Math.floor(value * 255);
+            ctxSino.fillStyle = `rgb(${colour},${colour},${colour})`;
+            const sy = (y / h) * sinoHeight;
+            ctxSino.fillRect(idx * stripWidth, sy, stripWidth, sinoHeight / h);
+          }
+        });
+      }
+      drawSinogram();
+
+      // Compute projection for a given angle in degrees
+      function computeProjection(angleDeg) {
+        const angleRad = (angleDeg * Math.PI) / 180;
+        const cosTheta = Math.cos(angleRad);
+        const sinTheta = Math.sin(angleRad);
+        // Number of detectors equals n (for simplicity)
+        const m = n;
+        const values = new Array(m).fill(0);
+        // For each detector position t, integrate along the line
+        for (let t = -m/2; t < m/2; t++) {
+          const detIdx = t + m/2;
+          // For each sample along ray s
+          const steps = n * 2; // integrate across the object
+          for (let s = -n/2; s < n/2; s++) {
+            // Parametric equation of ray: (x0, y0) = (t, -n/2) rotated
+            // Actually we take each pixel coordinate and project onto perpendicular axis
+            // Instead we iterate through all pixels and assign contributions to detectors
+          }
+        }
+        // Instead of ray tracing, approximate by summing phantom values across each line
+        // For each pixel (x,y), compute its projection coordinate on detector axis
+        for (let y = 0; y < n; y++) {
+          for (let x = 0; x < n; x++) {
+            // Coordinates relative to center
+            const xr = x - n/2;
+            const yr = y - n/2;
+            // Compute the detector index: signed distance to the line perpendicular to angle
+            const t = xr * cosTheta + yr * sinTheta;
+            // Map to detector index
+            const det = Math.floor((t + (n/2)) / n * m);
+            if (det >= 0 && det < m) {
+              values[det] += phantom[y][x];
+            }
+          }
+        }
+        return values;
+      }
+
+      // Backproject: accumulate values onto reconstruction grid
+      function backproject(values, angleDeg) {
+        const angleRad = (angleDeg * Math.PI) / 180;
+        const cosTheta = Math.cos(angleRad);
+        const sinTheta = Math.sin(angleRad);
+        const m = values.length;
+        for (let y = 0; y < n; y++) {
+          for (let x = 0; x < n; x++) {
+            const xr = x - n/2;
+            const yr = y - n/2;
+            const t = xr * cosTheta + yr * sinTheta;
+            const det = Math.floor((t + (n/2)) / n * m);
+            if (det >= 0 && det < m) {
+              reconstruction[y][x] += values[det];
+            }
+          }
+        }
+      }
+
+      // UI interactions
+      const angleSlider = document.getElementById('angle');
+      const angleValueSpan = document.getElementById('angle-value');
+      angleSlider.addEventListener('input', () => {
+        angleValueSpan.textContent = `${angleSlider.value}\u00B0`;
+      });
+      document.getElementById('add-projection').addEventListener('click', () => {
+        const angle = parseInt(angleSlider.value, 10);
+        const proj = computeProjection(angle);
+        projections.push({angle: angle, values: proj});
+        backproject(proj, angle);
+        drawSinogram();
+        drawReconstruction();
+      });
+      document.getElementById('reset').addEventListener('click', () => {
+        projections.length = 0;
+        resetReconstruction();
+        drawSinogram();
+        drawReconstruction();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kan Extensions &amp; Texture Atlases</title>
+  <!-- Pull in a neutral sans‑serif font and D3.js for interactivity -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/6.7.0/d3.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: #fefefe;
+      line-height: 1.5;
+      color: #222;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin: 1.2rem 0;
+      text-align: center;
+    }
+    h2 {
+      margin-top: 2rem;
+      font-size: 1.4rem;
+    }
+    p {
+      max-width: 700px;
+      margin: 0 auto 1rem;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-gap: 2rem;
+    }
+    .grid-label {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 1rem 0;
+    }
+    .palette {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      margin: 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .color-swatch.selected {
+      border: 2px solid #222;
+    }
+    svg {
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Kan Extensions &amp; Texture Atlases</h1>
+  <p>
+    Category theory offers a unified lens through which many constructions can be
+    understood. <em>Kan extensions</em> generalize representable functors, limits,
+    colimits, adjunctions, and monads【409654009506997†L700-L714】.  In practical terms,
+    a Kan extension lets us “extend” data along a functor.  This page uses
+    texture mapping as a metaphor: we begin with a coarse texture atlas and
+    extend it onto a finer atlas.
+  </p>
+  <p>
+    In this demonstration, the coarse atlas (left) represents a functor
+    \(F:I \to \text{Set}\) assigning a colour to each cell in the index category
+    \(I\).  A refinement functor \(K:I \to J\) subdivides each coarse cell into
+    smaller ones in \(J\).  The <strong>left Kan extension</strong> \(\mathrm{Lan}_K F\)
+    assigns to each refined cell \(j\in J\) a value determined by the colours
+    of the coarse cells that map to it.  Here we take the simplest
+    colimit: each fine cell inherits the colour of its enclosing coarse cell.
+    Adjust the colours on the coarse grid and watch the refinement update.
+  </p>
+  <div class="container">
+    <div>
+      <div class="grid-label">Coarse Atlas (Functor \(F\))</div>
+      <svg id="coarse" width="400" height="400"></svg>
+      <div class="controls">
+        <div>Select colour:</div>
+        <div class="palette" id="palette"></div>
+      </div>
+    </div>
+    <div>
+      <div class="grid-label">Refined Atlas (\(\mathrm{Lan}_K F\))</div>
+      <svg id="fine" width="400" height="400"></svg>
+    </div>
+  </div>
+  <p>
+    A left Kan extension can be thought of as taking a <em>colimit</em> over the
+    category of ways a refined cell is covered by coarse cells.  In general,
+    Kan extensions capture how to extend partial data functorially and
+    form the backbone of homological algebra, derived functors, sheaf theory,
+    and much more【409654009506997†L700-L714】.
+  </p>
+  <script>
+    (function() {
+      // Dimensions for coarse and fine grids
+      const coarseSize = 4; // number of cells per side on coarse grid
+      const finePerCoarse = 3; // subdivide each coarse cell into 3x3 fine cells
+      const fineSize = coarseSize * finePerCoarse;
+
+      // Create a set of colours for user selection
+      const colours = [
+        '#D7263D', '#F46036', '#2E294E', '#1B998B', '#DAFDBA', '#C5D86D',
+        '#E8A87C', '#A4B3B6', '#355C7D', '#6C5B7B'
+      ];
+      let selectedColour = colours[0];
+
+      // Represent the coarse functor F: map from coarse cells to colours
+      // We'll index cells by row, col
+      const coarseValues = {};
+      for (let r = 0; r < coarseSize; r++) {
+        for (let c = 0; c < coarseSize; c++) {
+          coarseValues[`${r},${c}`] = '#FFFFFF'; // default white
+        }
+      }
+
+      // Build colour palette
+      const palette = d3.select('#palette');
+      palette.selectAll('div')
+        .data(colours)
+        .enter()
+        .append('div')
+        .attr('class', 'color-swatch')
+        .style('background', d => d)
+        .classed('selected', (d, i) => i === 0)
+        .on('click', function(event, d) {
+          selectedColour = d;
+          // Mark selected
+          palette.selectAll('.color-swatch').classed('selected', false);
+          d3.select(this).classed('selected', true);
+        });
+
+      // Draw coarse grid
+      const coarseSvg = d3.select('#coarse');
+      const coarseCellSize = 400 / coarseSize;
+      const coarseCells = [];
+      for (let r = 0; r < coarseSize; r++) {
+        for (let c = 0; c < coarseSize; c++) {
+          coarseCells.push({r, c});
+        }
+      }
+      coarseSvg.selectAll('rect')
+        .data(coarseCells)
+        .enter()
+        .append('rect')
+        .attr('x', d => d.c * coarseCellSize)
+        .attr('y', d => d.r * coarseCellSize)
+        .attr('width', coarseCellSize)
+        .attr('height', coarseCellSize)
+        .attr('fill', d => coarseValues[`${d.r},${d.c}`])
+        .attr('stroke', '#ccc')
+        .on('click', function(event, d) {
+          // Update colour for this cell
+          coarseValues[`${d.r},${d.c}`] = selectedColour;
+          d3.select(this).attr('fill', selectedColour);
+          updateFine();
+        });
+
+      // Draw fine grid
+      const fineSvg = d3.select('#fine');
+      const fineCellSize = 400 / fineSize;
+      const fineCells = [];
+      for (let r = 0; r < fineSize; r++) {
+        for (let c = 0; c < fineSize; c++) {
+          fineCells.push({r, c});
+        }
+      }
+      const fineRects = fineSvg.selectAll('rect')
+        .data(fineCells)
+        .enter()
+        .append('rect')
+        .attr('x', d => d.c * fineCellSize)
+        .attr('y', d => d.r * fineCellSize)
+        .attr('width', fineCellSize)
+        .attr('height', fineCellSize)
+        .attr('fill', '#FFFFFF')
+        .attr('stroke', '#eee');
+
+      // Function to update fine grid colours based on coarse grid values
+      function updateFine() {
+        fineRects.attr('fill', d => {
+          // Determine which coarse cell this fine cell lies in
+          const coarseRow = Math.floor(d.r / finePerCoarse);
+          const coarseCol = Math.floor(d.c / finePerCoarse);
+          return coarseValues[`${coarseRow},${coarseCol}`] || '#FFFFFF';
+        });
+      }
+      updateFine();
+    })();
+  </script>
+</body>
+</html>
