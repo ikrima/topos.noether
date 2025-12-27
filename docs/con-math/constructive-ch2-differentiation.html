@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Differentiation with Modulus — Constructive Analysis Chapter 2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --constructive-primary: #2D5A4A;
+      --derivative-color: #DC2626;
+      --tangent-color: #F59E0B;
+      --error-color: #8B5CF6;
+      --convergence-band: #10B981;
+      --regular-sequence: #2563EB;
+      --fog-light: #9CA3AF;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Opening */
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(180deg, var(--derivative-color) 0%, #991B1B 100%);
+      color: var(--ink-light);
+      position: relative;
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Narrative Sections */
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      background: rgba(220, 38, 38, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--derivative-color);
+    }
+
+    .dark .math-display {
+      background: rgba(220, 38, 38, 0.15);
+    }
+
+    /* Derivative Visualizer */
+    .derivative-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .derivative-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .derivative-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--derivative-color);
+      color: white;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .panel-title {
+      font-family: var(--display);
+      font-size: 1.3rem;
+    }
+
+    .panel-formula {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .panel-body {
+      padding: 2rem;
+    }
+
+    .derivative-grid {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .derivative-grid { grid-template-columns: 1fr; }
+    }
+
+    .canvas-container {
+      height: 400px;
+      background: #FAFAFA;
+      border-radius: 12px;
+    }
+
+    #derivativeCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .control-card {
+      background: #FAFAFA;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+
+    .control-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fog-light);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .function-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .fn-btn {
+      padding: 0.4rem 0.6rem;
+      border: 2px solid #E0E0E0;
+      border-radius: 6px;
+      background: white;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .fn-btn:hover { border-color: var(--derivative-color); }
+    .fn-btn.active {
+      border-color: var(--derivative-color);
+      background: var(--derivative-color);
+      color: white;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .control-slider {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #E0E0E0;
+      border-radius: 3px;
+    }
+
+    .control-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--derivative-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .slider-values {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    .output-box {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 2px solid var(--error-color);
+      text-align: center;
+    }
+
+    .output-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fog-light);
+    }
+
+    .output-value {
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      color: var(--error-color);
+    }
+
+    .output-meaning {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 0.2rem;
+    }
+
+    /* Taylor Section */
+    .taylor-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .taylor-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .taylor-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .taylor-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .taylor-subtitle {
+      color: var(--fog-light);
+      font-size: 1rem;
+    }
+
+    .taylor-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .taylor-canvas-container {
+      height: 300px;
+      margin-bottom: 1.5rem;
+    }
+
+    #taylorCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: #0A0A0F;
+    }
+
+    .taylor-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .degree-control {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .degree-label {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--fog-light);
+    }
+
+    .degree-btn {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--tangent-color);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--tangent-color);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .degree-btn:hover {
+      background: var(--tangent-color);
+      color: var(--background-dark);
+    }
+
+    .degree-value {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      color: var(--tangent-color);
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .taylor-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .info-card {
+      background: rgba(20, 20, 30, 0.5);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .info-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fog-light);
+      margin-bottom: 0.3rem;
+    }
+
+    .info-value {
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+
+    /* Mean Value Theorem */
+    .mvt-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .mvt-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .mvt-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .mvt-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .mvt-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .mvt-canvas-container {
+      height: 280px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    #mvtCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .mvt-result {
+      padding: 1.5rem;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid var(--convergence-band);
+      text-align: center;
+    }
+
+    .mvt-formula {
+      font-family: var(--mono);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .mvt-explanation {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    /* Navigation */
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, var(--derivative-color) 0%, #991B1B 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 2: Calculus and the Real Numbers</p>
+      <p class="section-label">Section 5: Differentiation</p>
+      <h1 class="main-title">Differentiation with Modulus</h1>
+      <p class="subtitle">The derivative f'(x) exists with a modulus δ(ε) that bounds the linearization error. The tangent line approximation is guaranteed.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Introduction -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>The derivative is the rate of change—the slope of the tangent line. But constructively, we need more than just the slope. We need to know <em>how close</em> we must stay to x for the tangent line to be a good approximation.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: The Definition -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <div class="math-display">
+        f is differentiable with derivative g if there exists <strong>δ : ℝ⁺ → ℝ⁺</strong> such that<br><br>
+        |f(y) - f(x) - g(x)(y - x)| ≤ ε|y - x|<br><br>
+        whenever |y - x| ≤ δ(ε)
+      </div>
+      <p>The modulus δ(ε) tells us: if you want the tangent line to be within ε of the true function (per unit of distance), stay within δ(ε) of x.</p>
+    </div>
+  </section>
+
+  <!-- Derivative Visualizer -->
+  <section class="derivative-section">
+    <div class="section-header">
+      <h2 class="section-title">The Linearization Error</h2>
+      <p class="section-subtitle">Watch how the tangent line approximation improves as you zoom in</p>
+    </div>
+
+    <div class="derivative-container">
+      <div class="derivative-panel">
+        <div class="panel-header">
+          <span class="panel-title">Tangent Line Approximation</span>
+          <span class="panel-formula">Error ≤ ε · |y - x| when |y - x| < δ(ε)</span>
+        </div>
+
+        <div class="panel-body">
+          <div class="derivative-grid">
+            <div class="canvas-container">
+              <canvas id="derivativeCanvas"></canvas>
+            </div>
+
+            <div class="controls-panel">
+              <div class="control-card">
+                <label class="control-label">Function</label>
+                <div class="function-selector">
+                  <button class="fn-btn active" data-fn="x2">x²</button>
+                  <button class="fn-btn" data-fn="sin">sin(x)</button>
+                  <button class="fn-btn" data-fn="exp">eˣ</button>
+                  <button class="fn-btn" data-fn="x3">x³</button>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <label class="control-label">Point x₀</label>
+                <div class="slider-container">
+                  <input type="range" class="control-slider" id="x0Slider" 
+                         min="0.5" max="2" step="0.05" value="1">
+                  <div class="slider-values">
+                    <span>x₀ =</span>
+                    <span id="x0Value">1.00</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <label class="control-label">Error Tolerance ε</label>
+                <div class="slider-container">
+                  <input type="range" class="control-slider" id="epsSlider" 
+                         min="0.05" max="0.5" step="0.05" value="0.2">
+                  <div class="slider-values">
+                    <span>ε =</span>
+                    <span id="epsValue">0.20</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <label class="control-label">Zoom Level</label>
+                <div class="slider-container">
+                  <input type="range" class="control-slider" id="zoomSlider" 
+                         min="0.2" max="2" step="0.1" value="1">
+                  <div class="slider-values">
+                    <span>Window =</span>
+                    <span id="zoomValue">±1.00</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="output-box">
+                <p class="output-label">Modulus δ(ε)</p>
+                <p class="output-value" id="deltaOutput">δ = 0.10</p>
+                <p class="output-meaning" id="deltaMeaning">
+                  Stay within δ for ε-accurate tangent
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Taylor Series -->
+  <section class="taylor-section">
+    <div class="taylor-container">
+      <div class="taylor-header">
+        <h2 class="taylor-title">Taylor Polynomial Approximation</h2>
+        <p class="taylor-subtitle">Higher derivatives give better local approximations</p>
+      </div>
+
+      <div class="taylor-panel">
+        <div class="taylor-canvas-container">
+          <canvas id="taylorCanvas"></canvas>
+        </div>
+
+        <div class="taylor-controls">
+          <div class="degree-control">
+            <span class="degree-label">Degree:</span>
+            <button class="degree-btn" id="degMinus">−</button>
+            <span class="degree-value" id="degValue">1</span>
+            <button class="degree-btn" id="degPlus">+</button>
+          </div>
+        </div>
+
+        <div class="taylor-info">
+          <div class="info-card">
+            <p class="info-label">Function</p>
+            <p class="info-value" style="color: #2563EB;">f(x) = eˣ</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">Expansion Point</p>
+            <p class="info-value" style="color: #EC4899;">a = 0</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">Taylor Polynomial</p>
+            <p class="info-value" style="color: #F59E0B;" id="taylorPoly">1 + x</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">Max Error on [-1,1]</p>
+            <p class="info-value" style="color: #8B5CF6;" id="taylorError">0.218</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mean Value Theorem -->
+  <section class="mvt-section">
+    <div class="mvt-container">
+      <div class="mvt-header">
+        <h2 class="mvt-title">The Mean Value Theorem</h2>
+      </div>
+
+      <div class="mvt-panel">
+        <div class="mvt-canvas-container">
+          <canvas id="mvtCanvas"></canvas>
+        </div>
+
+        <div class="mvt-result">
+          <p class="mvt-formula">
+            For each ε > 0, there exists c ∈ [a, b] with |f(b) - f(a) - f'(c)(b - a)| < ε
+          </p>
+          <p class="mvt-explanation">
+            The secant slope equals the tangent slope somewhere in the interval—constructively, to within any ε.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Coming Next</p>
+    <h3 class="next-title">Integration as Riemann Sums</h3>
+    <p class="next-description">The integral is built from finite sums, with explicit bounds on mesh size.</p>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    // Functions
+    const functions = {
+      x2: { f: x => x*x, df: x => 2*x, name: 'x²' },
+      sin: { f: x => Math.sin(x), df: x => Math.cos(x), name: 'sin(x)' },
+      exp: { f: x => Math.exp(x), df: x => Math.exp(x), name: 'eˣ' },
+      x3: { f: x => x*x*x, df: x => 3*x*x, name: 'x³' }
+    };
+
+    let currentFn = 'x2';
+    let x0 = 1, eps = 0.2, zoom = 1;
+
+    // Derivative Visualizer
+    const derivativeCanvas = document.getElementById('derivativeCanvas');
+    const x0Slider = document.getElementById('x0Slider');
+    const epsSlider = document.getElementById('epsSlider');
+    const zoomSlider = document.getElementById('zoomSlider');
+
+    function drawDerivative() {
+      const { ctx, width, height } = setupCanvas(derivativeCanvas);
+      const fn = functions[currentFn];
+
+      const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const xMin = x0 - zoom, xMax = x0 + zoom;
+      
+      // Calculate y-range
+      const samples = [];
+      for (let i = 0; i <= 50; i++) {
+        const x = xMin + (i / 50) * (xMax - xMin);
+        samples.push(fn.f(x));
+      }
+      let yMin = Math.min(...samples);
+      let yMax = Math.max(...samples);
+      const yMargin = (yMax - yMin) * 0.15;
+      yMin -= yMargin; yMax += yMargin;
+
+      const toScreenX = x => padding.left + ((x - xMin) / (xMax - xMin)) * plotWidth;
+      const toScreenY = y => padding.top + ((yMax - y) / (yMax - yMin)) * plotHeight;
+
+      // Compute delta (simplified: based on second derivative bound)
+      const delta = eps / (Math.abs(fn.df(x0)) + 1);
+
+      // Draw delta region
+      const deltaLeft = toScreenX(Math.max(xMin, x0 - delta));
+      const deltaRight = toScreenX(Math.min(xMax, x0 + delta));
+      ctx.fillStyle = 'rgba(139, 92, 246, 0.1)';
+      ctx.fillRect(deltaLeft, padding.top, deltaRight - deltaLeft, plotHeight);
+
+      // Draw error band around tangent
+      const y0 = fn.f(x0);
+      const slope = fn.df(x0);
+      
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+      ctx.beginPath();
+      for (let i = 0; i <= 50; i++) {
+        const x = xMin + (i / 50) * (xMax - xMin);
+        const tangentY = y0 + slope * (x - x0);
+        const errorBand = eps * Math.abs(x - x0);
+        const sy = toScreenY(tangentY + errorBand);
+        if (i === 0) ctx.moveTo(toScreenX(x), sy);
+        else ctx.lineTo(toScreenX(x), sy);
+      }
+      for (let i = 50; i >= 0; i--) {
+        const x = xMin + (i / 50) * (xMax - xMin);
+        const tangentY = y0 + slope * (x - x0);
+        const errorBand = eps * Math.abs(x - x0);
+        ctx.lineTo(toScreenX(x), toScreenY(tangentY - errorBand));
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw tangent line
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(xMin), toScreenY(y0 + slope * (xMin - x0)));
+      ctx.lineTo(toScreenX(xMax), toScreenY(y0 + slope * (xMax - x0)));
+      ctx.stroke();
+
+      // Draw function
+      ctx.strokeStyle = '#2563EB';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = xMin + (i / 100) * (xMax - xMin);
+        const y = fn.f(x);
+        if (i === 0) ctx.moveTo(toScreenX(x), toScreenY(y));
+        else ctx.lineTo(toScreenX(x), toScreenY(y));
+      }
+      ctx.stroke();
+
+      // Draw point
+      ctx.fillStyle = '#EC4899';
+      ctx.beginPath();
+      ctx.arc(toScreenX(x0), toScreenY(y0), 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Labels
+      ctx.fillStyle = '#8B5CF6';
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('δ', (deltaLeft + deltaRight) / 2, height - padding.bottom + 18);
+
+      // Update outputs
+      document.getElementById('x0Value').textContent = x0.toFixed(2);
+      document.getElementById('epsValue').textContent = eps.toFixed(2);
+      document.getElementById('zoomValue').textContent = `±${zoom.toFixed(2)}`;
+      document.getElementById('deltaOutput').textContent = `δ = ${delta.toFixed(4)}`;
+    }
+
+    x0Slider.addEventListener('input', () => { x0 = parseFloat(x0Slider.value); drawDerivative(); });
+    epsSlider.addEventListener('input', () => { eps = parseFloat(epsSlider.value); drawDerivative(); });
+    zoomSlider.addEventListener('input', () => { zoom = parseFloat(zoomSlider.value); drawDerivative(); });
+
+    document.querySelectorAll('.fn-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.fn-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFn = btn.dataset.fn;
+        drawDerivative();
+      });
+    });
+
+    // Taylor Series
+    const taylorCanvas = document.getElementById('taylorCanvas');
+    let taylorDegree = 1;
+
+    function factorial(n) {
+      if (n <= 1) return 1;
+      let result = 1;
+      for (let i = 2; i <= n; i++) result *= i;
+      return result;
+    }
+
+    function taylorExp(x, n) {
+      let sum = 0;
+      for (let k = 0; k <= n; k++) {
+        sum += Math.pow(x, k) / factorial(k);
+      }
+      return sum;
+    }
+
+    function drawTaylor() {
+      const { ctx, width, height } = setupCanvas(taylorCanvas);
+
+      ctx.fillStyle = '#0A0A0F';
+      ctx.fillRect(0, 0, width, height);
+
+      const padding = { left: 50, right: 20, top: 30, bottom: 40 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      const xMin = -2, xMax = 2;
+      const yMin = -0.5, yMax = 4;
+
+      const toScreenX = x => padding.left + ((x - xMin) / (xMax - xMin)) * plotWidth;
+      const toScreenY = y => padding.top + ((yMax - y) / (yMax - yMin)) * plotHeight;
+
+      // Draw axes
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(xMin), toScreenY(0));
+      ctx.lineTo(toScreenX(xMax), toScreenY(0));
+      ctx.moveTo(toScreenX(0), toScreenY(yMin));
+      ctx.lineTo(toScreenX(0), toScreenY(yMax));
+      ctx.stroke();
+
+      // Draw eˣ
+      ctx.strokeStyle = '#2563EB';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = xMin + (i / 100) * (xMax - xMin);
+        const y = Math.exp(x);
+        if (i === 0) ctx.moveTo(toScreenX(x), toScreenY(y));
+        else ctx.lineTo(toScreenX(x), toScreenY(y));
+      }
+      ctx.stroke();
+
+      // Draw Taylor polynomial
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = xMin + (i / 100) * (xMax - xMin);
+        const y = taylorExp(x, taylorDegree);
+        if (i === 0) ctx.moveTo(toScreenX(x), toScreenY(y));
+        else ctx.lineTo(toScreenX(x), toScreenY(y));
+      }
+      ctx.stroke();
+
+      // Draw expansion point
+      ctx.fillStyle = '#EC4899';
+      ctx.beginPath();
+      ctx.arc(toScreenX(0), toScreenY(1), 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Update info
+      document.getElementById('degValue').textContent = taylorDegree;
+      
+      // Build polynomial string
+      let polyStr = '';
+      for (let k = 0; k <= taylorDegree; k++) {
+        if (k === 0) polyStr = '1';
+        else if (k === 1) polyStr += ' + x';
+        else polyStr += ` + x^${k}/${factorial(k)}`;
+      }
+      document.getElementById('taylorPoly').textContent = polyStr.length > 25 ? polyStr.substring(0, 25) + '...' : polyStr;
+
+      // Calculate max error on [-1, 1]
+      let maxError = 0;
+      for (let i = 0; i <= 50; i++) {
+        const x = -1 + (i / 50) * 2;
+        const error = Math.abs(Math.exp(x) - taylorExp(x, taylorDegree));
+        if (error > maxError) maxError = error;
+      }
+      document.getElementById('taylorError').textContent = maxError.toFixed(6);
+    }
+
+    document.getElementById('degMinus').addEventListener('click', () => {
+      if (taylorDegree > 0) { taylorDegree--; drawTaylor(); }
+    });
+    document.getElementById('degPlus').addEventListener('click', () => {
+      if (taylorDegree < 10) { taylorDegree++; drawTaylor(); }
+    });
+
+    // Mean Value Theorem
+    const mvtCanvas = document.getElementById('mvtCanvas');
+
+    function drawMvt() {
+      const { ctx, width, height } = setupCanvas(mvtCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      const a = 0.5, b = 2.5;
+      const f = x => Math.sin(x) + x * 0.3;
+      const df = x => Math.cos(x) + 0.3;
+
+      // Find c where f'(c) = secant slope
+      const secantSlope = (f(b) - f(a)) / (b - a);
+      let c = (a + b) / 2;
+      for (let i = 0; i < 20; i++) {
+        const dc = df(c) - secantSlope;
+        c -= dc / (-Math.sin(c)); // Newton's method approximation
+        c = Math.max(a, Math.min(b, c));
+      }
+
+      const xMin = 0, xMax = 3;
+      const samples = [];
+      for (let i = 0; i <= 50; i++) {
+        samples.push(f(xMin + (i / 50) * (xMax - xMin)));
+      }
+      let yMin = Math.min(...samples) - 0.3;
+      let yMax = Math.max(...samples) + 0.3;
+
+      const toScreenX = x => padding.left + ((x - xMin) / (xMax - xMin)) * plotWidth;
+      const toScreenY = y => padding.top + ((yMax - y) / (yMax - yMin)) * plotHeight;
+
+      // Draw function
+      ctx.strokeStyle = '#2563EB';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = xMin + (i / 100) * (xMax - xMin);
+        if (i === 0) ctx.moveTo(toScreenX(x), toScreenY(f(x)));
+        else ctx.lineTo(toScreenX(x), toScreenY(f(x)));
+      }
+      ctx.stroke();
+
+      // Draw secant
+      ctx.strokeStyle = '#10B981';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(a), toScreenY(f(a)));
+      ctx.lineTo(toScreenX(b), toScreenY(f(b)));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw tangent at c
+      const tangentY = x => f(c) + df(c) * (x - c);
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(c - 0.8), toScreenY(tangentY(c - 0.8)));
+      ctx.lineTo(toScreenX(c + 0.8), toScreenY(tangentY(c + 0.8)));
+      ctx.stroke();
+
+      // Points
+      ctx.fillStyle = '#10B981';
+      ctx.beginPath();
+      ctx.arc(toScreenX(a), toScreenY(f(a)), 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(toScreenX(b), toScreenY(f(b)), 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#F59E0B';
+      ctx.beginPath();
+      ctx.arc(toScreenX(c), toScreenY(f(c)), 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Labels
+      ctx.fillStyle = '#666';
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('a', toScreenX(a), height - padding.bottom + 18);
+      ctx.fillText('b', toScreenX(b), height - padding.bottom + 18);
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillText('c', toScreenX(c), height - padding.bottom + 18);
+    }
+
+    // Initialize
+    drawDerivative();
+    drawTaylor();
+    drawMvt();
+
+    window.addEventListener('resize', () => {
+      drawDerivative();
+      drawTaylor();
+      drawMvt();
+    });
+  </script>
+</body>
+</html>

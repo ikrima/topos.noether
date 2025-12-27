@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linear Equations & Spectral Norm — Chapter 9</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --equation-green: #22C55E;
+      --convergence-blue: #3B82F6;
+      --spectral-purple: #8B5CF6;
+      --compact-amber: #F59E0B;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--equation-green) 0%, #16A34A 100%);
+      color: var(--ink-light);
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      background: rgba(34, 197, 94, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: left;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--equation-green);
+    }
+
+    .dark .math-display {
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Theorem Section */
+    .theorem-section {
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .theorem-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .theorem-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .theorem-card {
+      background: rgba(34, 197, 94, 0.1);
+      border: 2px solid var(--equation-green);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .theorem-card h3 {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--equation-green);
+      margin-bottom: 0.5rem;
+    }
+
+    .theorem-card p {
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    .theorem-formula {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--equation-green);
+      text-align: center;
+      margin: 1rem 0;
+      padding: 1rem;
+      background: rgba(34, 197, 94, 0.05);
+      border-radius: 8px;
+    }
+
+    /* Spectral Norm Section */
+    .spectral-section {
+      min-height: 80vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .spectral-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .spectral-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .spectral-canvas-container {
+      height: 280px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    #spectralCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .spectral-prop {
+      background: rgba(59, 130, 246, 0.15);
+      border: 2px solid var(--convergence-blue);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .spectral-prop h3 {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--convergence-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .spectral-prop p {
+      font-size: 0.95rem;
+      color: #9CA3AF;
+    }
+
+    .equi-formula {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--convergence-blue);
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    /* Compactness Section */
+    .compact-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .compact-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .compact-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .compact-result {
+      background: rgba(245, 158, 11, 0.1);
+      border: 2px solid var(--compact-amber);
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .compact-result h3 {
+      font-family: var(--display);
+      font-size: 1.3rem;
+      color: var(--compact-amber);
+      margin-bottom: 1rem;
+    }
+
+    .compact-result p {
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    .compact-formula {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      color: var(--compact-amber);
+      margin: 1rem 0;
+    }
+
+    /* Summary Section */
+    .summary-section {
+      min-height: 60vh;
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #1A1A20 0%, var(--background-dark) 100%);
+      color: var(--ink-light);
+    }
+
+    .summary-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .summary-card {
+      background: rgba(139, 92, 246, 0.15);
+      border: 2px solid var(--spectral-purple);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .summary-card h3 {
+      font-family: var(--display);
+      font-size: 1.5rem;
+      color: var(--spectral-purple);
+      margin-bottom: 1rem;
+    }
+
+    .summary-card p {
+      font-size: 1rem;
+      color: #9CA3AF;
+      margin-bottom: 1rem;
+    }
+
+    .summary-list {
+      list-style: none;
+      text-align: left;
+      max-width: 500px;
+      margin: 1.5rem auto 0;
+    }
+
+    .summary-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(107, 114, 128, 0.3);
+      font-size: 0.95rem;
+      color: #9CA3AF;
+    }
+
+    .summary-list li:last-child {
+      border-bottom: none;
+    }
+
+    .summary-list strong {
+      color: var(--spectral-purple);
+    }
+
+    /* Navigation */
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--equation-green) 0%, #16A34A 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 9: Commutative Banach Algebras</p>
+      <p class="section-label">Section 2: Linear Equations</p>
+      <h1 class="main-title">Linear Equations & Spectral Norm</h1>
+      <p class="subtitle">Solving equations without maximal ideals. The spectral norm formula becomes an equiconvergence result.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: The Challenge -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>Classically, every proper ideal extends to a maximal ideal. This fails constructively. Instead, we work with <strong>finite linear combinations</strong>.</p>
+      <div class="math-display">
+        <strong>The Classical Approach:</strong><br>
+        Every ideal I ⊂ maximal ideal M ⟹ spectrum Σ is compact<br><br>
+        <strong>The Constructive Approach:</strong><br>
+        Solve linear equations Σaᵢxᵢ = e directly using Theorem 2.1
+      </div>
+      <p>The key insight: if we can approximately solve equations for all λ, we can exactly solve them.</p>
+    </div>
+  </section>
+
+  <!-- Main Theorem -->
+  <section class="theorem-section">
+    <div class="section-header">
+      <h2 class="section-title">Solving Linear Equations</h2>
+      <p class="section-subtitle">The fundamental tool for Banach algebra theory</p>
+    </div>
+
+    <div class="theorem-container">
+      <div class="theorem-panel">
+        <div class="theorem-card">
+          <h3>Theorem 2.1</h3>
+          <p>Let x₁, ..., xₙ and y be elements of 𝒜. If for each λ ∈ ℂ there exist a₁, ..., aₙ and b in 𝒜 with bounded norms such that:</p>
+          <p class="theorem-formula">Σ aᵢxᵢ + b(y - λe) = e</p>
+          <p>Then there exist a'₁, ..., a'ₙ with bounded norms such that:</p>
+          <p class="theorem-formula">Σ a'ᵢxᵢ = e</p>
+        </div>
+
+        <div class="theorem-card" style="background: rgba(139, 92, 246, 0.1); border-color: var(--spectral-purple);">
+          <h3 style="color: var(--spectral-purple);">Theorem 2.6: The Fundamental Tool</h3>
+          <p>Let x₁, ..., xₙ ∈ 𝒜 and δ > 0. If |u(x₁)| + ... + |u(xₙ)| ≥ δ for all u ∈ Σₙ, then:</p>
+          <p class="theorem-formula" style="color: var(--spectral-purple);">x₁y₁ + ... + xₙyₙ = e</p>
+          <p>for some y₁, ..., yₙ ∈ 𝒜 with bounded norms.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Spectral Norm -->
+  <section class="spectral-section">
+    <div class="section-header" style="color: var(--ink-light);">
+      <h2 class="section-title">The Spectral Norm</h2>
+      <p class="section-subtitle" style="color: #9CA3AF;">Equiconvergence replaces the classical formula</p>
+    </div>
+
+    <div class="spectral-container">
+      <div class="spectral-panel">
+        <div class="spectral-canvas-container">
+          <canvas id="spectralCanvas"></canvas>
+        </div>
+
+        <div class="spectral-prop">
+          <h3>Proposition 2.9: Equiconvergence</h3>
+          <p>For each x ∈ 𝒜, define ‖x‖_{Σₙ} = sup{|u(x)| : u ∈ Σₙ}. Then the sequences</p>
+          <p class="equi-formula">(‖xᵐ‖^(1/m)) &nbsp;&nbsp;and&nbsp;&nbsp; (‖x‖_{Σₙ})</p>
+          <p>are <strong>equiconvergent</strong>: for each term of one sequence and each ε > 0, there exists N such that terms of the other sequence beyond N are within ε.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Compactness -->
+  <section class="compact-section">
+    <div class="section-header">
+      <h2 class="section-title">Compactness of Σₙ</h2>
+      <p class="section-subtitle">Each approximating set is compact</p>
+    </div>
+
+    <div class="compact-container">
+      <div class="compact-panel">
+        <div class="compact-result">
+          <h3>Proposition 2.7</h3>
+          <p>For each positive integer N, the set Σₙ is compact.</p>
+          <p class="compact-formula">Σₙ is compact (or void)</p>
+          <p style="margin-top: 0.5rem;">This follows from Theorem 2.6: if Σₙ were void, we could solve 0·y = e, which is absurd.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Narrative: Classical vs Constructive -->
+  <section class="narrative-section dark">
+    <div class="narrative-content" data-animate>
+      <p>The classical spectral norm formula ‖x‖_Σ = lim ‖xⁿ‖^(1/n) may fail constructively:</p>
+      <div class="math-display">
+        <strong>Classical:</strong><br>
+        ‖x‖_Σ = sup{|u(x)| : u ∈ Σ} = lim_{n→∞} ‖xⁿ‖^(1/n)<br><br>
+        <strong>Constructive:</strong><br>
+        The sup may not exist, but the two sequences are equiconvergent
+      </div>
+      <p>Equiconvergence captures the essential content without requiring the supremum to exist.</p>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section class="summary-section">
+    <div class="section-header" style="color: var(--ink-light);">
+      <h2 class="section-title">Chapter Summary</h2>
+      <p class="section-subtitle" style="color: #9CA3AF;">Constructive Banach algebra theory</p>
+    </div>
+
+    <div class="summary-container">
+      <div class="summary-card">
+        <h3>Key Results</h3>
+        <p>Constructive substitutes for classical Banach algebra theory:</p>
+
+        <ul class="summary-list">
+          <li><strong>Spectrum Structure:</strong> Σ = ∩Σₙ with each Σₙ compact</li>
+          <li><strong>Linear Equations:</strong> Theorem 2.1 replaces maximal ideals</li>
+          <li><strong>Compactness:</strong> Each Σₙ is compact (Prop. 2.7)</li>
+          <li><strong>Spectral Norm:</strong> Equiconvergence formula (Prop. 2.9)</li>
+          <li><strong>Applications:</strong> Same power as classical theory</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Constructive Analysis Complete</p>
+    <h3 class="next-title">All Nine Chapters Covered</h3>
+    <p class="next-description">From the foundations of constructive mathematics through measure theory, complex analysis, and Banach algebras.</p>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    // ============================================
+    // SPECTRAL NORM CONVERGENCE
+    // ============================================
+    
+    const spectralCanvas = document.getElementById('spectralCanvas');
+
+    function drawSpectral() {
+      const { ctx, width, height } = setupCanvas(spectralCanvas);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(0, 0, width, height);
+
+      const marginX = 60, marginY = 40;
+      const plotW = width - 2 * marginX;
+      const plotH = height - 2 * marginY;
+
+      // Axes
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(marginX, marginY);
+      ctx.lineTo(marginX, height - marginY);
+      ctx.lineTo(width - marginX, height - marginY);
+      ctx.stroke();
+
+      // Example: x with spectral radius 0.7
+      const spectralRadius = 0.7;
+      const nMax = 20;
+
+      // ‖x^n‖^(1/n) sequence (converges from above)
+      const seq1 = [];
+      for (let n = 1; n <= nMax; n++) {
+        // Simulated: starts higher, converges to spectral radius
+        const val = spectralRadius + 0.3 * Math.exp(-0.3 * n);
+        seq1.push(val);
+      }
+
+      // ‖x‖_{Σ_n} sequence (bounded approximations)
+      const seq2 = [];
+      for (let n = 1; n <= nMax; n++) {
+        // Simulated: oscillates slightly around spectral radius
+        const val = spectralRadius + 0.1 * Math.sin(n * 0.5) * Math.exp(-0.2 * n);
+        seq2.push(val);
+      }
+
+      const yRange = [0.5, 1.2];
+
+      function toPixelX(n) {
+        return marginX + (n / nMax) * plotW;
+      }
+      function toPixelY(y) {
+        return height - marginY - ((y - yRange[0]) / (yRange[1] - yRange[0])) * plotH;
+      }
+
+      // Spectral radius line
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(marginX, toPixelY(spectralRadius));
+      ctx.lineTo(width - marginX, toPixelY(spectralRadius));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Sequence 1: ‖x^n‖^(1/n)
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let n = 1; n <= nMax; n++) {
+        const x = toPixelX(n);
+        const y = toPixelY(seq1[n-1]);
+        if (n === 1) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Points
+      ctx.fillStyle = '#3B82F6';
+      for (let n = 1; n <= nMax; n++) {
+        ctx.beginPath();
+        ctx.arc(toPixelX(n), toPixelY(seq1[n-1]), 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Sequence 2: ‖x‖_{Σ_n}
+      ctx.strokeStyle = '#22C55E';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let n = 1; n <= nMax; n++) {
+        const x = toPixelX(n);
+        const y = toPixelY(seq2[n-1]);
+        if (n === 1) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Points
+      ctx.fillStyle = '#22C55E';
+      for (let n = 1; n <= nMax; n++) {
+        ctx.beginPath();
+        ctx.arc(toPixelX(n), toPixelY(seq2[n-1]), 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Labels
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.fillStyle = '#3B82F6';
+      ctx.textAlign = 'left';
+      ctx.fillText('‖xⁿ‖^(1/n)', marginX + 10, marginY + 15);
+
+      ctx.fillStyle = '#22C55E';
+      ctx.fillText('‖x‖_{Σₙ}', marginX + 10, marginY + 30);
+
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillText('spectral radius', width - marginX - 90, toPixelY(spectralRadius) - 8);
+
+      // Axis labels
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.textAlign = 'center';
+      ctx.fillText('n', width - marginX + 20, height - marginY + 5);
+      ctx.save();
+      ctx.translate(marginX - 35, height / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('norm', 0, 0);
+      ctx.restore();
+    }
+
+    // Initialize
+    drawSpectral();
+
+    window.addEventListener('resize', drawSpectral);
+  </script>
+</body>
+</html>

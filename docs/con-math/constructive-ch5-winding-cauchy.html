@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winding Numbers & Cauchy's Formula — Chapter 5</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --winding-green: #22C55E;
+      --winding-red: #EF4444;
+      --contour-purple: #8B5CF6;
+      --interior-amber: #F59E0B;
+      --formula-cyan: #06B6D4;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--winding-green) 0%, #16A34A 100%);
+      color: var(--ink-light);
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      background: rgba(34, 197, 94, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--winding-green);
+    }
+
+    .dark .math-display {
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Winding Number Section */
+    .winding-section {
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .winding-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .winding-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .winding-canvas-container {
+      height: 400px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      cursor: crosshair;
+    }
+
+    #windingCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .winding-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .winding-btn {
+      padding: 0.8rem 1.2rem;
+      border: 2px solid var(--contour-purple);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--contour-purple);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .winding-btn:hover {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .winding-btn.active {
+      background: var(--contour-purple);
+      color: white;
+    }
+
+    .winding-info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 700px) {
+      .winding-info { grid-template-columns: 1fr; }
+    }
+
+    .info-card {
+      background: #FAFAFA;
+      padding: 1.2rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .info-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .info-value {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+    }
+
+    .winding-big {
+      font-size: 2rem !important;
+      font-weight: bold;
+    }
+
+    /* Cauchy Formula Section */
+    .formula-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .formula-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .formula-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .formula-canvas-container {
+      height: 350px;
+      margin-bottom: 1.5rem;
+    }
+
+    #formulaCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: #0A0A0F;
+    }
+
+    .formula-result {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(6, 182, 212, 0.1);
+      border-radius: 12px;
+      border: 2px solid var(--formula-cyan);
+      margin-bottom: 1.5rem;
+    }
+
+    .formula-eq {
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      color: var(--formula-cyan);
+      margin-bottom: 0.5rem;
+    }
+
+    .formula-note {
+      font-size: 0.9rem;
+      color: #9CA3AF;
+    }
+
+    .formula-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .formula-info { grid-template-columns: 1fr; }
+    }
+
+    .formula-card {
+      background: rgba(20, 20, 30, 0.5);
+      padding: 1.2rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .formula-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #9CA3AF;
+      margin-bottom: 0.3rem;
+    }
+
+    .formula-value {
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+
+    /* Derivatives Section */
+    .deriv-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .deriv-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .deriv-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .deriv-formula {
+      background: rgba(245, 158, 11, 0.1);
+      padding: 2rem;
+      border-radius: 12px;
+      border-left: 4px solid var(--interior-amber);
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .deriv-formula h3 {
+      font-family: var(--display);
+      font-size: 1.3rem;
+      color: var(--interior-amber);
+      margin-bottom: 1rem;
+    }
+
+    .deriv-formula p {
+      font-family: var(--mono);
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .deriv-explanation {
+      padding: 1.5rem;
+      background: #FAFAFA;
+      border-radius: 12px;
+    }
+
+    .deriv-explanation p {
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .deriv-explanation p:last-child { margin-bottom: 0; }
+
+    /* Navigation */
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--winding-green) 0%, #16A34A 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 5: Complex Analysis</p>
+      <p class="section-label">Section 4: The Winding Number</p>
+      <h1 class="main-title">Counting Wraps Around a Point</h1>
+      <p class="subtitle">The winding number is always an integer. It's the key to Cauchy's integral formula: boundary values determine interior.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Winding Number -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>How many times does a closed path γ wrap around a point z₀?</p>
+      <div class="math-display">
+        <strong>Proposition 4.3:</strong><br><br>
+        j(γ, z₀) = (2πi)⁻¹ ∮_γ (z - z₀)⁻¹ dz<br><br>
+        <em>This quantity is always an integer!</em>
+      </div>
+      <p>The winding number j(γ, z₀) counts net counterclockwise rotations: +1 for each counterclockwise wrap, -1 for clockwise.</p>
+    </div>
+  </section>
+
+  <!-- Winding Number Visualization -->
+  <section class="winding-section">
+    <div class="section-header">
+      <h2 class="section-title">Winding Number Visualizer</h2>
+      <p class="section-subtitle">Move the point z₀ to see how the winding number changes</p>
+    </div>
+
+    <div class="winding-container">
+      <div class="winding-panel">
+        <div class="winding-canvas-container" id="windingCanvasContainer">
+          <canvas id="windingCanvas"></canvas>
+        </div>
+
+        <div class="winding-controls">
+          <button class="winding-btn active" data-path="circle1">Circle (1 wrap)</button>
+          <button class="winding-btn" data-path="circle2">Circle (2 wraps)</button>
+          <button class="winding-btn" data-path="figure8">Figure-8</button>
+        </div>
+
+        <div class="winding-info">
+          <div class="info-card">
+            <p class="info-label">Point z₀</p>
+            <p class="info-value" id="z0Value" style="color: var(--interior-amber);">0 + 0i</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">Winding Number j(γ, z₀)</p>
+            <p class="info-value winding-big" id="windingValue" style="color: var(--winding-green);">1</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">Inside contour?</p>
+            <p class="info-value" id="insideStatus" style="color: var(--winding-green);">Yes</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cauchy's Formula -->
+  <section class="formula-section">
+    <div class="section-header" style="color: var(--ink-light);">
+      <h2 class="section-title">Cauchy's Integral Formula</h2>
+      <p class="section-subtitle" style="color: #9CA3AF;">Boundary values completely determine interior values</p>
+    </div>
+
+    <div class="formula-container">
+      <div class="formula-panel">
+        <div class="formula-canvas-container">
+          <canvas id="formulaCanvas"></canvas>
+        </div>
+
+        <div class="formula-result">
+          <p class="formula-eq">j(γ, z) · f(z) = (2πi)⁻¹ ∮_γ f(ζ)/(ζ - z) dζ</p>
+          <p class="formula-note">When j(γ, z) = 1, the value f(z) is determined by f on the contour!</p>
+        </div>
+
+        <div class="formula-info">
+          <div class="formula-card">
+            <p class="formula-label">Function f(z)</p>
+            <p class="formula-value" id="fzValue" style="color: var(--formula-cyan);">z²</p>
+          </div>
+          <div class="formula-card">
+            <p class="formula-label">f(z₀) from formula</p>
+            <p class="formula-value" id="cauchyValue" style="color: var(--interior-amber);">—</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Derivatives from Integrals -->
+  <section class="deriv-section">
+    <div class="section-header">
+      <h2 class="section-title">Derivatives from Boundary Values</h2>
+      <p class="section-subtitle">All derivatives are computable from the contour integral</p>
+    </div>
+
+    <div class="deriv-container">
+      <div class="deriv-panel">
+        <div class="deriv-formula">
+          <h3>Theorem 4.10</h3>
+          <p>f⁽ⁿ⁾(z) = (2πi)⁻¹ · n! ∮_γ f(ζ)/(ζ - z)^(n+1) dζ</p>
+          <p style="font-size: 0.85rem; color: #666; margin-top: 1rem;">Every derivative of f at z is determined by f on the boundary!</p>
+        </div>
+
+        <div class="deriv-explanation">
+          <p><strong>Cauchy's Inequalities (Corollary 4.13):</strong></p>
+          <p style="font-family: var(--mono); text-align: center;">|f⁽ⁿ⁾(z₀)| ≤ n! · r⁻ⁿ · sup{|f(z)| : |z - z₀| = r}</p>
+          <p>This bounds derivatives by the maximum on circles — a powerful tool for proving theorems.</p>
+          <p><strong>Consequence:</strong> A bounded entire function is constant (Liouville's theorem).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Narrative: Taylor Series -->
+  <section class="narrative-section dark">
+    <div class="narrative-content" data-animate>
+      <p>Cauchy's formula implies that differentiable functions have <strong>Taylor series</strong>:</p>
+      <div class="math-display">
+        <strong>Theorem 4.15:</strong><br><br>
+        f(z) = Σ_{n=0}^∞ aₙ(z - z₀)ⁿ<br><br>
+        where aₙ = f⁽ⁿ⁾(z₀)/n! = (2πi)⁻¹ ∮_γ f(ζ)/(ζ - z₀)^(n+1) dζ
+      </div>
+      <p>The series converges on the largest disk around z₀ contained in the domain of f.</p>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Coming Next</p>
+    <h3 class="next-title">Power Series & Singularities</h3>
+    <p class="next-description">Taylor and Laurent series. Poles vs essential singularities. Picard's theorem on the range near singularities.</p>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    function formatComplex(re, im) {
+      const reStr = re.toFixed(2);
+      const imAbs = Math.abs(im).toFixed(2);
+      const sign = im >= 0 ? '+' : '-';
+      return `${reStr} ${sign} ${imAbs}i`;
+    }
+
+    // ============================================
+    // WINDING NUMBER VISUALIZATION
+    // ============================================
+    
+    const windingCanvas = document.getElementById('windingCanvas');
+    const windingContainer = document.getElementById('windingCanvasContainer');
+    let z0 = { x: 0, y: 0 };
+    let currentPath = 'circle1';
+    let dragging = false;
+
+    function getPathPoints(type, centerX, centerY, scale) {
+      const points = [];
+      if (type === 'circle1') {
+        for (let t = 0; t <= 2 * Math.PI + 0.1; t += 0.1) {
+          points.push({
+            x: 1.5 * Math.cos(t),
+            y: 1.5 * Math.sin(t),
+            px: centerX + 1.5 * Math.cos(t) * scale,
+            py: centerY - 1.5 * Math.sin(t) * scale
+          });
+        }
+      } else if (type === 'circle2') {
+        for (let t = 0; t <= 4 * Math.PI + 0.1; t += 0.1) {
+          points.push({
+            x: 1.5 * Math.cos(t),
+            y: 1.5 * Math.sin(t),
+            px: centerX + 1.5 * Math.cos(t) * scale,
+            py: centerY - 1.5 * Math.sin(t) * scale
+          });
+        }
+      } else if (type === 'figure8') {
+        for (let t = 0; t <= 2 * Math.PI + 0.1; t += 0.1) {
+          const x = 1.2 * Math.sin(2 * t);
+          const y = 1.5 * Math.sin(t);
+          points.push({
+            x, y,
+            px: centerX + x * scale,
+            py: centerY - y * scale
+          });
+        }
+      }
+      return points;
+    }
+
+    function computeWindingNumber(pathPoints, z0x, z0y) {
+      let totalAngle = 0;
+      for (let i = 0; i < pathPoints.length - 1; i++) {
+        const p1 = pathPoints[i];
+        const p2 = pathPoints[i + 1];
+        
+        const dx1 = p1.x - z0x;
+        const dy1 = p1.y - z0y;
+        const dx2 = p2.x - z0x;
+        const dy2 = p2.y - z0y;
+        
+        // Cross product for angle change
+        const cross = dx1 * dy2 - dy1 * dx2;
+        const dot = dx1 * dx2 + dy1 * dy2;
+        const angle = Math.atan2(cross, dot);
+        totalAngle += angle;
+      }
+      return Math.round(totalAngle / (2 * Math.PI));
+    }
+
+    function drawWinding() {
+      const { ctx, width, height } = setupCanvas(windingCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const scale = Math.min(width, height) / 5;
+
+      // Grid
+      ctx.strokeStyle = '#E5E5E5';
+      ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + i * scale, 0);
+        ctx.lineTo(centerX + i * scale, height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, centerY - i * scale);
+        ctx.lineTo(width, centerY - i * scale);
+        ctx.stroke();
+      }
+
+      // Axes
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.moveTo(centerX, 0);
+      ctx.lineTo(centerX, height);
+      ctx.stroke();
+
+      // Get path
+      const pathPoints = getPathPoints(currentPath, centerX, centerY, scale);
+
+      // Draw path
+      ctx.strokeStyle = '#8B5CF6';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pathPoints[0].px, pathPoints[0].py);
+      for (let i = 1; i < pathPoints.length; i++) {
+        ctx.lineTo(pathPoints[i].px, pathPoints[i].py);
+      }
+      ctx.stroke();
+
+      // Direction arrows
+      for (let i = 0; i < pathPoints.length - 1; i += Math.floor(pathPoints.length / 8)) {
+        const p1 = pathPoints[i];
+        const p2 = pathPoints[Math.min(i + 1, pathPoints.length - 1)];
+        const midX = (p1.px + p2.px) / 2;
+        const midY = (p1.py + p2.py) / 2;
+        const angle = Math.atan2(p2.py - p1.py, p2.px - p1.px);
+
+        ctx.fillStyle = '#8B5CF6';
+        ctx.save();
+        ctx.translate(midX, midY);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(8, 0);
+        ctx.lineTo(-4, 5);
+        ctx.lineTo(-4, -5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Point z0
+      const z0px = centerX + z0.x * scale;
+      const z0py = centerY - z0.y * scale;
+
+      ctx.fillStyle = '#F59E0B';
+      ctx.beginPath();
+      ctx.arc(z0px, z0py, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('z₀', z0px, z0py + 4);
+
+      // Compute winding number
+      const winding = computeWindingNumber(pathPoints, z0.x, z0.y);
+
+      // Update info
+      document.getElementById('z0Value').textContent = formatComplex(z0.x, z0.y);
+      document.getElementById('windingValue').textContent = winding.toString();
+      document.getElementById('windingValue').style.color = winding > 0 ? '#22C55E' : (winding < 0 ? '#EF4444' : '#666');
+      document.getElementById('insideStatus').textContent = winding !== 0 ? 'Yes' : 'No';
+      document.getElementById('insideStatus').style.color = winding !== 0 ? '#22C55E' : '#EF4444';
+    }
+
+    windingContainer.addEventListener('mousedown', (e) => {
+      const rect = windingCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const scale = Math.min(rect.width, rect.height) / 5;
+
+      const z0px = centerX + z0.x * scale;
+      const z0py = centerY - z0.y * scale;
+
+      if (Math.sqrt((mx - z0px) ** 2 + (my - z0py) ** 2) < 20) {
+        dragging = true;
+      }
+    });
+
+    windingContainer.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const rect = windingCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const scale = Math.min(rect.width, rect.height) / 5;
+
+      z0.x = (mx - centerX) / scale;
+      z0.y = (centerY - my) / scale;
+      drawWinding();
+    });
+
+    windingContainer.addEventListener('mouseup', () => { dragging = false; });
+    windingContainer.addEventListener('mouseleave', () => { dragging = false; });
+
+    document.querySelectorAll('.winding-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.winding-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPath = btn.dataset.path;
+        drawWinding();
+      });
+    });
+
+    // ============================================
+    // CAUCHY FORMULA VISUALIZATION
+    // ============================================
+    
+    const formulaCanvas = document.getElementById('formulaCanvas');
+    let z0Formula = { x: 0.5, y: 0.3 };
+
+    function drawFormula() {
+      const { ctx, width, height } = setupCanvas(formulaCanvas);
+
+      ctx.fillStyle = '#0A0A0F';
+      ctx.fillRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const scale = Math.min(width, height) / 5;
+      const r = 1.5;
+
+      // Grid
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + i * scale, 0);
+        ctx.lineTo(centerX + i * scale, height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, centerY - i * scale);
+        ctx.lineTo(width, centerY - i * scale);
+        ctx.stroke();
+      }
+
+      // Axes
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.moveTo(centerX, 0);
+      ctx.lineTo(centerX, height);
+      ctx.stroke();
+
+      // Contour (circle)
+      ctx.strokeStyle = '#8B5CF6';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r * scale, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Fill interior lightly
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.1)';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Direction arrow on contour
+      const arrowAngle = Math.PI / 4;
+      const arrowX = centerX + r * Math.cos(arrowAngle) * scale;
+      const arrowY = centerY - r * Math.sin(arrowAngle) * scale;
+      ctx.fillStyle = '#8B5CF6';
+      ctx.save();
+      ctx.translate(arrowX, arrowY);
+      ctx.rotate(-arrowAngle - Math.PI / 2);
+      ctx.beginPath();
+      ctx.moveTo(10, 0);
+      ctx.lineTo(-5, 6);
+      ctx.lineTo(-5, -6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Interior point z0
+      const z0px = centerX + z0Formula.x * scale;
+      const z0py = centerY - z0Formula.y * scale;
+
+      ctx.fillStyle = '#F59E0B';
+      ctx.beginPath();
+      ctx.arc(z0px, z0py, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('z', z0px, z0py + 4);
+
+      // Labels
+      ctx.fillStyle = '#8B5CF6';
+      ctx.font = '12px "JetBrains Mono"';
+      ctx.fillText('γ', centerX + (r + 0.3) * scale, centerY - (r + 0.1) * scale);
+
+      ctx.fillStyle = '#06B6D4';
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.fillText('Boundary determines interior', centerX, height - 20);
+
+      // Compute f(z) = z² at z0
+      const fRe = z0Formula.x * z0Formula.x - z0Formula.y * z0Formula.y;
+      const fIm = 2 * z0Formula.x * z0Formula.y;
+
+      document.getElementById('cauchyValue').textContent = formatComplex(fRe, fIm);
+    }
+
+    formulaCanvas.addEventListener('click', (e) => {
+      const rect = formulaCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const scale = Math.min(rect.width, rect.height) / 5;
+
+      const newX = (mx - centerX) / scale;
+      const newY = (centerY - my) / scale;
+
+      // Only allow points inside the contour
+      if (Math.sqrt(newX * newX + newY * newY) < 1.4) {
+        z0Formula.x = newX;
+        z0Formula.y = newY;
+        drawFormula();
+      }
+    });
+
+    // Initialize
+    drawWinding();
+    drawFormula();
+
+    window.addEventListener('resize', () => {
+      drawWinding();
+      drawFormula();
+    });
+  </script>
+</body>
+</html>

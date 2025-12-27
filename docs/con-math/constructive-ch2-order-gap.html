@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Undecidable Gap — Constructive Analysis Chapter 2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --constructive-primary: #2D5A4A;
+      --constructive-glow: #4A9D7C;
+      --regular-sequence: #2563EB;
+      --limit-point: #EC4899;
+      --modulus-function: #F59E0B;
+      --convergence-band: #10B981;
+      --divergence: #EF4444;
+      --positive-zone: #10B981;
+      --negative-zone: #EF4444;
+      --undecidable-zone: #6B7280;
+      --fog-light: #9CA3AF;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--body);
+      background: var(--background-dark);
+      color: var(--ink-light);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ============================================
+       OPENING
+       ============================================ */
+    
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(180deg, #1A1A20 0%, #0F0F12 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .opening::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 30% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 70% 50%, rgba(239, 68, 68, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(107, 114, 128, 0.15) 0%, transparent 30%);
+      pointer-events: none;
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--undecidable-zone);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .main-title .fog {
+      color: var(--undecidable-zone);
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.7);
+      max-width: 650px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================
+       NARRATIVE SECTIONS
+       ============================================ */
+
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.light {
+      background: var(--background);
+      color: var(--ink);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      background: rgba(107, 114, 128, 0.15);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--undecidable-zone);
+    }
+
+    .light .math-display {
+      background: rgba(107, 114, 128, 0.1);
+    }
+
+    .quote-block {
+      border-left: 3px solid var(--modulus-function);
+      padding-left: 1.5rem;
+      margin: 2rem 0;
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 1.25rem;
+    }
+
+    .strike {
+      text-decoration: line-through;
+      text-decoration-color: var(--divergence);
+      opacity: 0.7;
+    }
+
+    /* ============================================
+       TRICHOTOMY FAILURE
+       ============================================ */
+
+    .trichotomy-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #12121A 0%, #0F0F12 100%);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: var(--fog-light);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .trichotomy-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .number-line-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .line-canvas-container {
+      height: 200px;
+      margin-bottom: 1.5rem;
+    }
+
+    #trichotomyCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .zone-legend {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+
+    .legend-color.positive { background: var(--positive-zone); }
+    .legend-color.negative { background: var(--negative-zone); }
+    .legend-color.undecidable { 
+      background: repeating-linear-gradient(
+        45deg,
+        var(--undecidable-zone),
+        var(--undecidable-zone) 2px,
+        transparent 2px,
+        transparent 6px
+      );
+    }
+
+    .comparison-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .comparison-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comparison-card {
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 2px solid;
+    }
+
+    .comparison-card.classical {
+      background: rgba(139, 92, 246, 0.1);
+      border-color: rgba(139, 92, 246, 0.5);
+    }
+
+    .comparison-card.constructive {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .card-header {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+
+    .classical .card-header { color: #8B5CF6; }
+    .constructive .card-header { color: var(--modulus-function); }
+
+    .card-title {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .card-content {
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.6;
+    }
+
+    .card-formula {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 0.8rem;
+      border-radius: 6px;
+      margin: 0.8rem 0;
+      text-align: center;
+    }
+
+    /* ============================================
+       FUGITIVE SEQUENCE BUILDER
+       ============================================ */
+
+    .fugitive-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: var(--background);
+      color: var(--ink);
+    }
+
+    .fugitive-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .fugitive-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .fugitive-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .fugitive-subtitle {
+      color: #666;
+      font-size: 1rem;
+    }
+
+    .fugitive-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .problem-selector {
+      display: flex;
+      border-bottom: 1px solid #E8E4DC;
+    }
+
+    .problem-tab {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      background: transparent;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+    }
+
+    .problem-tab:hover {
+      background: #F5F3F0;
+    }
+
+    .problem-tab.active {
+      background: #F5F3F0;
+      border-bottom-color: var(--modulus-function);
+      color: var(--modulus-function);
+    }
+
+    .fugitive-body {
+      padding: 2rem;
+    }
+
+    .problem-description {
+      background: #F5F3F0;
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .problem-name {
+      font-family: var(--display);
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .problem-text {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 1rem;
+    }
+
+    .sequence-definition {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 3px solid var(--modulus-function);
+    }
+
+    .sequence-visualization {
+      margin-bottom: 2rem;
+    }
+
+    .fugitive-canvas-container {
+      height: 250px;
+      background: #FAFAFA;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    #fugitiveCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .fugitive-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .fugitive-btn {
+      padding: 0.7rem 1.2rem;
+      border: 2px solid #E0E0E0;
+      border-radius: 8px;
+      background: white;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .fugitive-btn:hover {
+      border-color: var(--modulus-function);
+    }
+
+    .fugitive-btn.active {
+      border-color: var(--modulus-function);
+      background: var(--modulus-function);
+      color: white;
+    }
+
+    .fugitive-result {
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .fugitive-result.undecidable {
+      background: rgba(107, 114, 128, 0.1);
+      border: 2px dashed var(--undecidable-zone);
+    }
+
+    .fugitive-result.positive {
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid var(--positive-zone);
+    }
+
+    .fugitive-result.negative {
+      background: rgba(239, 68, 68, 0.1);
+      border: 2px solid var(--negative-zone);
+    }
+
+    .result-title {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--undecidable-zone);
+      margin-bottom: 0.5rem;
+    }
+
+    .result-text {
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       CANTOR'S DIAGONAL
+       ============================================ */
+
+    .cantor-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #0F0F12 0%, #1A1A20 100%);
+    }
+
+    .cantor-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .cantor-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .cantor-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .cantor-subtitle {
+      color: var(--fog-light);
+      font-size: 1rem;
+    }
+
+    .cantor-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .diagonal-grid {
+      display: grid;
+      grid-template-columns: auto repeat(10, 1fr);
+      gap: 2px;
+      margin-bottom: 2rem;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+    }
+
+    .grid-cell {
+      padding: 0.5rem;
+      text-align: center;
+      background: rgba(20, 20, 28, 0.5);
+      border-radius: 4px;
+    }
+
+    .grid-cell.header {
+      background: transparent;
+      color: var(--fog-light);
+    }
+
+    .grid-cell.row-label {
+      background: transparent;
+      color: var(--regular-sequence);
+      text-align: right;
+      padding-right: 0.8rem;
+    }
+
+    .grid-cell.diagonal {
+      background: var(--limit-point);
+      color: white;
+    }
+
+    .grid-cell.new-digit {
+      background: var(--convergence-band);
+      color: white;
+    }
+
+    .cantor-explanation {
+      background: rgba(236, 72, 153, 0.1);
+      padding: 1.5rem;
+      border-radius: 12px;
+      border-left: 3px solid var(--limit-point);
+    }
+
+    .cantor-explanation p {
+      font-size: 0.95rem;
+      margin-bottom: 0.8rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .cantor-explanation p:last-child {
+      margin-bottom: 0;
+    }
+
+    .new-number {
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--convergence-band);
+      margin-top: 1rem;
+    }
+
+    /* ============================================
+       THE KEY INSIGHT
+       ============================================ */
+
+    .insight-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, 
+        rgba(107, 114, 128, 0.1) 0%,
+        var(--background-dark) 50%,
+        rgba(107, 114, 128, 0.1) 100%);
+    }
+
+    .insight-content {
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .insight-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--modulus-function);
+      margin-bottom: 1.5rem;
+    }
+
+    .insight-text {
+      font-family: var(--display);
+      font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+      font-style: italic;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .insight-text em {
+      color: var(--undecidable-zone);
+      font-style: normal;
+    }
+
+    .insight-coda {
+      font-size: 1rem;
+      color: var(--fog-light);
+      max-width: 550px;
+      margin: 0 auto;
+    }
+
+    /* ============================================
+       NAVIGATION
+       ============================================ */
+
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, var(--undecidable-zone) 0%, #4A4A5A 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.8);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 2: Calculus and the Real Numbers</p>
+      <p class="section-label">The Order Relations</p>
+      <h1 class="main-title">The <span class="fog">Undecidable</span> Gap</h1>
+      <p class="subtitle">Every real number is positive, negative, or zero—right? In constructive mathematics, this trichotomy fails. There are real numbers for which we cannot decide.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: The Shock -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>In school we learn a simple truth about real numbers: given any x, exactly one of these holds:</p>
+      <div class="math-display">
+        x < 0 &nbsp;&nbsp;or&nbsp;&nbsp; x = 0 &nbsp;&nbsp;or&nbsp;&nbsp; x > 0
+      </div>
+      <p>This is the <em>law of trichotomy</em>. It seems as obvious as the number line itself. And yet, constructively, <strong>it fails</strong>.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Why It Fails -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>The reason is subtle but devastating. To prove x > 0 constructively, we need to find a rational r > 0 such that xₙ > r for all sufficiently large n. To prove x = 0, we need |xₙ| < 2/n for all n.</p>
+      <p>But what if we don't know which holds? What if the sequence hovers near zero in a way that depends on an unsolved problem?</p>
+      <div class="quote-block">
+        "It is not true that for every real number x ≥ 0, either x > 0 or x = 0. Since nothing is true unless and until it has been proved, it is untrue that x > 0 or x = 0."
+        <br><span style="font-size: 0.85rem; color: rgba(255,255,255,0.6); font-style: normal;">— Bishop & Bridges</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trichotomy Failure Visualization -->
+  <section class="trichotomy-section">
+    <div class="section-header">
+      <h2 class="section-title">The Three Zones</h2>
+      <p class="section-subtitle">Positive, negative, and... the fog where we cannot decide</p>
+    </div>
+
+    <div class="trichotomy-container">
+      <div class="number-line-panel">
+        <div class="line-canvas-container">
+          <canvas id="trichotomyCanvas"></canvas>
+        </div>
+
+        <div class="zone-legend">
+          <div class="legend-item">
+            <div class="legend-color positive"></div>
+            <span>x > 0 (provably positive)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color undecidable"></div>
+            <span>Undecidable zone</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color negative"></div>
+            <span>x < 0 (provably negative)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comparison-cards">
+        <div class="comparison-card classical">
+          <p class="card-header">Classical View</p>
+          <h3 class="card-title">Trichotomy Always Holds</h3>
+          <div class="card-content">
+            <p>Every real number x satisfies exactly one of:</p>
+            <div class="card-formula">x < 0 &nbsp;∨&nbsp; x = 0 &nbsp;∨&nbsp; x > 0</div>
+            <p>This is guaranteed by the law of excluded middle. Even if we don't know which case holds, one of them must.</p>
+          </div>
+        </div>
+
+        <div class="comparison-card constructive">
+          <p class="card-header">Constructive View</p>
+          <h3 class="card-title">Trichotomy Requires Proof</h3>
+          <div class="card-content">
+            <p>To claim x > 0, we must <em>construct</em> evidence:</p>
+            <div class="card-formula">∃ n, r : xₙ > r > 0</div>
+            <p>Without such evidence, we cannot assert positivity. The number lives in the undecidable fog.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fugitive Sequence Builder -->
+  <section class="fugitive-section">
+    <div class="fugitive-container">
+      <div class="fugitive-header">
+        <h2 class="fugitive-title">Build a Fugitive Number</h2>
+        <p class="fugitive-subtitle">Tie a real number's sign to an unsolved problem</p>
+      </div>
+
+      <div class="fugitive-panel">
+        <div class="problem-selector">
+          <button class="problem-tab active" data-problem="goldbach">Goldbach</button>
+          <button class="problem-tab" data-problem="twinprime">Twin Primes</button>
+          <button class="problem-tab" data-problem="collatz">Collatz</button>
+          <button class="problem-tab" data-problem="custom">Custom</button>
+        </div>
+
+        <div class="fugitive-body">
+          <div class="problem-description" id="problemDescription">
+            <h3 class="problem-name">Goldbach's Conjecture</h3>
+            <p class="problem-text">Every even number greater than 2 is the sum of two primes. Unproven since 1742.</p>
+            <div class="sequence-definition">
+              <strong>Define:</strong> nₖ = 1 if 2k is <em>not</em> the sum of two primes; nₖ = 0 otherwise.<br>
+              <strong>Then:</strong> x = Σ 2⁻ᵏ · nₖ
+            </div>
+          </div>
+
+          <div class="sequence-visualization">
+            <div class="fugitive-canvas-container">
+              <canvas id="fugitiveCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="fugitive-controls">
+            <button class="fugitive-btn active" data-scenario="unknown">Unknown (Current State)</button>
+            <button class="fugitive-btn" data-scenario="proven">If Conjecture Proven</button>
+            <button class="fugitive-btn" data-scenario="disproven">If Counterexample Found</button>
+          </div>
+
+          <div class="fugitive-result undecidable" id="fugitiveResult">
+            <p class="result-title">Current Status</p>
+            <p class="result-text">
+              We cannot determine if x > 0 or x = 0. The number exists in the undecidable zone—constructively, its sign is unknown.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The x ≤ y Gap -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>Here's another way the gap manifests. Classically, these are equivalent:</p>
+      <div class="math-display">
+        x ≤ y &nbsp;&nbsp;⟺&nbsp;&nbsp; (x < y &nbsp;∨&nbsp; x = y)
+      </div>
+      <p>But constructively, x ≤ y means only that x - y ∈ ℝ⁰⁺ (nonnegative). This does <em>not</em> guarantee we can prove x < y or x = y.</p>
+      <p>The implication x ≤ y → (x < y ∨ x = y) would give us trichotomy—and we've seen that fails.</p>
+    </div>
+  </section>
+
+  <!-- Cantor's Diagonal -->
+  <section class="cantor-section">
+    <div class="cantor-container">
+      <div class="cantor-header">
+        <h2 class="cantor-title">Cantor's Diagonal: Constructive Version</h2>
+        <p class="cantor-subtitle">The reals are uncountable—and constructively, we can build the missing number</p>
+      </div>
+
+      <div class="cantor-panel">
+        <div class="diagonal-grid" id="diagonalGrid">
+          <!-- Generated by JavaScript -->
+        </div>
+
+        <div class="cantor-explanation">
+          <p><strong>Theorem 2.19 (Cantor):</strong> Given any sequence (aₙ) of real numbers and any interval [x₀, y₀], there exists a real number x with x₀ ≤ x ≤ y₀ such that x ≠ aₙ for all n.</p>
+          <p>The proof is constructive: we build x by successively narrowing the interval, ensuring at each step that we exclude aₙ. The diagonal construction gives an explicit algorithm.</p>
+          <div class="new-number" id="newNumber">
+            New number: 0.246813579...
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The Key Insight -->
+  <section class="insight-section">
+    <div class="insight-content" data-animate>
+      <p class="insight-label">The Deeper Truth</p>
+      <p class="insight-text">
+        The undecidable gap isn't a failure—it's <em>honesty</em>. When we cannot compute an answer, we do not pretend to know it.
+      </p>
+      <p class="insight-coda">
+        Constructive mathematics reflects the limits of finite computation. The fog zone is where our algorithms cannot yet reach—and may never reach.
+      </p>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Coming Next</p>
+    <h3 class="next-title">Convergence & The Modulus Machine</h3>
+    <p class="next-description">Every limit comes with a function N(ε) that computes when we're close enough.</p>
+  </section>
+
+  <script>
+    // ============================================
+    // SCROLL ANIMATIONS
+    // ============================================
+    
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    // ============================================
+    // CANVAS UTILITIES
+    // ============================================
+    
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    // ============================================
+    // TRICHOTOMY VISUALIZATION
+    // ============================================
+    
+    const trichotomyCanvas = document.getElementById('trichotomyCanvas');
+
+    function drawTrichotomy() {
+      const { ctx, width, height } = setupCanvas(trichotomyCanvas);
+
+      // Clear
+      ctx.fillStyle = '#12121A';
+      ctx.fillRect(0, 0, width, height);
+
+      const centerY = height / 2;
+      const padding = 60;
+      const lineWidth = width - 2 * padding;
+
+      // Draw the number line
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(padding, centerY);
+      ctx.lineTo(width - padding, centerY);
+      ctx.stroke();
+
+      // Draw tick marks
+      const zeroX = width / 2;
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 2;
+      for (let i = -5; i <= 5; i++) {
+        const x = zeroX + (i / 5) * (lineWidth / 2 - 20);
+        ctx.beginPath();
+        ctx.moveTo(x, centerY - 8);
+        ctx.lineTo(x, centerY + 8);
+        ctx.stroke();
+      }
+
+      // Zero label
+      ctx.fillStyle = '#FFF';
+      ctx.font = 'bold 14px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('0', zeroX, centerY + 30);
+
+      // Positive zone (right side, but with gap near zero)
+      const fogWidth = 60;
+      const gradient1 = ctx.createLinearGradient(zeroX + fogWidth, 0, width - padding, 0);
+      gradient1.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+      gradient1.addColorStop(1, 'rgba(16, 185, 129, 0.6)');
+      ctx.fillStyle = gradient1;
+      ctx.fillRect(zeroX + fogWidth, centerY - 25, width - padding - zeroX - fogWidth, 50);
+
+      // Negative zone (left side, but with gap near zero)
+      const gradient2 = ctx.createLinearGradient(padding, 0, zeroX - fogWidth, 0);
+      gradient2.addColorStop(0, 'rgba(239, 68, 68, 0.6)');
+      gradient2.addColorStop(1, 'rgba(239, 68, 68, 0.3)');
+      ctx.fillStyle = gradient2;
+      ctx.fillRect(padding, centerY - 25, zeroX - fogWidth - padding, 50);
+
+      // Undecidable fog zone (center)
+      ctx.fillStyle = 'rgba(107, 114, 128, 0.2)';
+      ctx.fillRect(zeroX - fogWidth, centerY - 25, fogWidth * 2, 50);
+
+      // Fog pattern
+      ctx.strokeStyle = 'rgba(107, 114, 128, 0.4)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 20; i++) {
+        const x = zeroX - fogWidth + (i / 20) * fogWidth * 2;
+        ctx.beginPath();
+        ctx.moveTo(x, centerY - 25);
+        ctx.lineTo(x + 10, centerY + 25);
+        ctx.stroke();
+      }
+
+      // Question mark in fog zone
+      ctx.fillStyle = 'rgba(107, 114, 128, 0.8)';
+      ctx.font = 'bold 24px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText('?', zeroX, centerY + 8);
+
+      // Labels
+      ctx.font = '12px "JetBrains Mono"';
+      ctx.fillStyle = '#10B981';
+      ctx.fillText('x > 0', width - padding - 40, centerY - 35);
+
+      ctx.fillStyle = '#EF4444';
+      ctx.fillText('x < 0', padding + 40, centerY - 35);
+
+      ctx.fillStyle = '#6B7280';
+      ctx.fillText('undecidable', zeroX, centerY - 35);
+
+      // Sample points
+      // Clearly positive
+      ctx.fillStyle = '#10B981';
+      ctx.beginPath();
+      ctx.arc(zeroX + 120, centerY, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Clearly negative
+      ctx.fillStyle = '#EF4444';
+      ctx.beginPath();
+      ctx.arc(zeroX - 120, centerY, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Undecidable point
+      ctx.fillStyle = '#6B7280';
+      ctx.beginPath();
+      ctx.arc(zeroX + 15, centerY, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawTrichotomy();
+    window.addEventListener('resize', drawTrichotomy);
+
+    // ============================================
+    // FUGITIVE SEQUENCE BUILDER
+    // ============================================
+    
+    const problems = {
+      goldbach: {
+        name: "Goldbach's Conjecture",
+        text: "Every even number greater than 2 is the sum of two primes. Unproven since 1742.",
+        definition: "<strong>Define:</strong> nₖ = 1 if 2k is <em>not</em> the sum of two primes; nₖ = 0 otherwise.<br><strong>Then:</strong> x = Σ 2⁻ᵏ · nₖ"
+      },
+      twinprime: {
+        name: "Twin Prime Conjecture",
+        text: "There are infinitely many pairs of primes differing by 2. Still unproven.",
+        definition: "<strong>Define:</strong> nₖ = 0 if there exist twin primes > k; nₖ = 1 otherwise.<br><strong>Then:</strong> x = Σ 2⁻ᵏ · nₖ"
+      },
+      collatz: {
+        name: "Collatz Conjecture",
+        text: "Every positive integer eventually reaches 1 under the 3n+1 process. Open since 1937.",
+        definition: "<strong>Define:</strong> nₖ = 1 if k doesn't reach 1 in the Collatz sequence; nₖ = 0 otherwise.<br><strong>Then:</strong> x = Σ 2⁻ᵏ · nₖ"
+      },
+      custom: {
+        name: "Your Own Problem",
+        text: "Any open yes/no question in mathematics can define a fugitive sequence.",
+        definition: "<strong>Define:</strong> nₖ based on checking the problem for input k.<br><strong>Then:</strong> x = Σ 2⁻ᵏ · nₖ"
+      }
+    };
+
+    const fugitiveCanvas = document.getElementById('fugitiveCanvas');
+    const problemDescription = document.getElementById('problemDescription');
+    const fugitiveResult = document.getElementById('fugitiveResult');
+
+    let currentProblem = 'goldbach';
+    let currentScenario = 'unknown';
+
+    function updateProblemDescription() {
+      const prob = problems[currentProblem];
+      problemDescription.innerHTML = `
+        <h3 class="problem-name">${prob.name}</h3>
+        <p class="problem-text">${prob.text}</p>
+        <div class="sequence-definition">${prob.definition}</div>
+      `;
+    }
+
+    function drawFugitive() {
+      const { ctx, width, height } = setupCanvas(fugitiveCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const padding = { left: 50, right: 30, top: 30, bottom: 40 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      // Draw axes
+      ctx.strokeStyle = '#CCC';
+      ctx.lineWidth = 1;
+      
+      // Horizontal axis (zero line)
+      const zeroY = padding.top + plotHeight / 2;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, zeroY);
+      ctx.lineTo(width - padding.right, zeroY);
+      ctx.stroke();
+
+      // Generate sequence based on scenario
+      const numTerms = 15;
+      const terms = [];
+      
+      for (let k = 1; k <= numTerms; k++) {
+        let nk;
+        if (currentScenario === 'unknown') {
+          // Hover near zero with uncertainty
+          nk = 0; // We don't know!
+        } else if (currentScenario === 'proven') {
+          // Conjecture true: all nk = 0
+          nk = 0;
+        } else {
+          // Counterexample found at k = 7 (hypothetical)
+          nk = k >= 7 ? 1 : 0;
+        }
+        
+        // Compute partial sum
+        let sum = 0;
+        for (let j = 1; j <= k; j++) {
+          const njVal = (currentScenario === 'disproven' && j >= 7) ? 1 : 0;
+          sum += njVal * Math.pow(2, -j);
+        }
+        terms.push(sum);
+      }
+
+      // Calculate y range
+      const maxVal = Math.max(...terms, 0.1);
+      const minVal = Math.min(...terms, -0.1);
+      const yRange = Math.max(maxVal - minVal, 0.2);
+
+      const toScreenX = (k) => padding.left + ((k - 1) / (numTerms - 1)) * plotWidth;
+      const toScreenY = (v) => zeroY - (v / (yRange / 2)) * (plotHeight / 2 - 20);
+
+      // Draw uncertainty band for unknown scenario
+      if (currentScenario === 'unknown') {
+        ctx.fillStyle = 'rgba(107, 114, 128, 0.15)';
+        ctx.fillRect(padding.left, zeroY - 30, plotWidth, 60);
+        
+        // Question marks
+        ctx.fillStyle = 'rgba(107, 114, 128, 0.4)';
+        ctx.font = '16px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        for (let i = 0; i < 5; i++) {
+          ctx.fillText('?', padding.left + (i + 0.5) * plotWidth / 5, zeroY + 5);
+        }
+      }
+
+      // Draw sequence points
+      terms.forEach((val, i) => {
+        const x = toScreenX(i + 1);
+        const y = toScreenY(val);
+
+        let color;
+        if (currentScenario === 'unknown') {
+          color = '#6B7280';
+        } else if (currentScenario === 'proven') {
+          color = '#10B981';
+        } else {
+          color = val > 0 ? '#EF4444' : '#10B981';
+        }
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Connect with line
+        if (i > 0) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(toScreenX(i), toScreenY(terms[i - 1]));
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      });
+
+      // Labels
+      ctx.fillStyle = '#666';
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      for (let k = 1; k <= numTerms; k += 2) {
+        ctx.fillText(k.toString(), toScreenX(k), height - padding.bottom + 20);
+      }
+
+      ctx.textAlign = 'right';
+      ctx.fillText('0', padding.left - 10, zeroY + 4);
+
+      // Update result
+      if (currentScenario === 'unknown') {
+        fugitiveResult.className = 'fugitive-result undecidable';
+        fugitiveResult.innerHTML = `
+          <p class="result-title">Current Status</p>
+          <p class="result-text">We cannot determine if x > 0 or x = 0. The number exists in the undecidable zone—constructively, its sign is unknown.</p>
+        `;
+      } else if (currentScenario === 'proven') {
+        fugitiveResult.className = 'fugitive-result positive';
+        fugitiveResult.style.borderColor = '#10B981';
+        fugitiveResult.innerHTML = `
+          <p class="result-title" style="color: #10B981;">Conjecture Proven</p>
+          <p class="result-text">If the conjecture is true, then nₖ = 0 for all k, so x = 0. The number leaves the fog!</p>
+        `;
+      } else {
+        fugitiveResult.className = 'fugitive-result negative';
+        fugitiveResult.innerHTML = `
+          <p class="result-title" style="color: #EF4444;">Counterexample Found</p>
+          <p class="result-text">If a counterexample exists at k = 7, then n₇ = 1, making x ≥ 2⁻⁷ > 0. The sign is determined!</p>
+        `;
+      }
+    }
+
+    // Problem tabs
+    document.querySelectorAll('.problem-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.problem-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentProblem = tab.dataset.problem;
+        updateProblemDescription();
+        drawFugitive();
+      });
+    });
+
+    // Scenario buttons
+    document.querySelectorAll('.fugitive-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.fugitive-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentScenario = btn.dataset.scenario;
+        drawFugitive();
+      });
+    });
+
+    // ============================================
+    // CANTOR'S DIAGONAL
+    // ============================================
+    
+    const diagonalGrid = document.getElementById('diagonalGrid');
+    const newNumberEl = document.getElementById('newNumber');
+
+    function buildDiagonalGrid() {
+      // Generate some "listed" real numbers (decimal expansions)
+      const numbers = [];
+      for (let i = 0; i < 8; i++) {
+        const digits = [];
+        for (let j = 0; j < 10; j++) {
+          digits.push(Math.floor(Math.random() * 10));
+        }
+        numbers.push(digits);
+      }
+
+      // Build the new number by changing diagonal digits
+      const newDigits = [];
+      for (let i = 0; i < 8; i++) {
+        newDigits.push((numbers[i][i] + 1) % 10);
+      }
+
+      let html = '<div class="grid-cell header"></div>';
+      for (let j = 0; j < 10; j++) {
+        html += `<div class="grid-cell header">d${j + 1}</div>`;
+      }
+
+      for (let i = 0; i < 8; i++) {
+        html += `<div class="grid-cell row-label">a${i + 1}</div>`;
+        for (let j = 0; j < 10; j++) {
+          const isDiagonal = i === j;
+          html += `<div class="grid-cell ${isDiagonal ? 'diagonal' : ''}">${numbers[i][j]}</div>`;
+        }
+      }
+
+      diagonalGrid.innerHTML = html;
+
+      // Show new number
+      newNumberEl.textContent = `New number: 0.${newDigits.join('')}...`;
+    }
+
+    // ============================================
+    // INITIALIZE
+    // ============================================
+    
+    updateProblemDescription();
+    drawFugitive();
+    buildDiagonalGrid();
+
+    window.addEventListener('resize', () => {
+      drawTrichotomy();
+      drawFugitive();
+    });
+  </script>
+</body>
+</html>

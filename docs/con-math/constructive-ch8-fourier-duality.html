@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fourier Transform & Pontryagin Duality — Chapter 8</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --transform-blue: #3B82F6;
+      --inversion-green: #22C55E;
+      --duality-purple: #8B5CF6;
+      --convolution-amber: #F59E0B;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--transform-blue) 0%, #1D4ED8 100%);
+      color: var(--ink-light);
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      background: rgba(59, 130, 246, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: left;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--transform-blue);
+    }
+
+    .dark .math-display {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Transform Section */
+    .transform-section {
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .transform-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .transform-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .dual-canvas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .dual-canvas { grid-template-columns: 1fr; }
+    }
+
+    .canvas-box {
+      background: #FAFAFA;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .canvas-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .canvas-container {
+      height: 200px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .transform-formula {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 12px;
+      border: 2px solid var(--transform-blue);
+    }
+
+    .transform-formula h3 {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--transform-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .transform-formula p {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    /* Properties Section */
+    .props-section {
+      min-height: 70vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .props-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .props-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 600px) {
+      .props-grid { grid-template-columns: 1fr; }
+    }
+
+    .prop-card {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .prop-card h3 {
+      font-family: var(--display);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .prop-card.convolution h3 { color: var(--convolution-amber); }
+    .prop-card.convolution { border-color: var(--convolution-amber); }
+
+    .prop-card.translation h3 { color: var(--inversion-green); }
+    .prop-card.translation { border-color: var(--inversion-green); }
+
+    .prop-formula {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      color: #9CA3AF;
+      margin: 0.5rem 0;
+      padding: 0.8rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .prop-desc {
+      font-size: 0.85rem;
+      color: #6B7280;
+    }
+
+    /* Duality Section */
+    .duality-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .duality-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .duality-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .duality-theorem {
+      background: rgba(139, 92, 246, 0.1);
+      border: 2px solid var(--duality-purple);
+      padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .duality-theorem h3 {
+      font-family: var(--display);
+      font-size: 1.5rem;
+      color: var(--duality-purple);
+      margin-bottom: 1rem;
+    }
+
+    .duality-theorem p {
+      font-size: 1rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
+
+    .duality-formula {
+      font-family: var(--mono);
+      font-size: 1.3rem;
+      color: var(--duality-purple);
+      margin: 1.5rem 0;
+    }
+
+    .duality-chain {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .duality-box {
+      background: #FAFAFA;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+
+    .duality-arrow {
+      color: var(--duality-purple);
+      font-size: 1.2rem;
+    }
+
+    /* Navigation */
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--transform-blue) 0%, #1D4ED8 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 8: Locally Compact Abelian Groups</p>
+      <p class="section-label">Section 4: Duality and the Fourier Transform</p>
+      <h1 class="main-title">Fourier Transform & Pontryagin Duality</h1>
+      <p class="subtitle">The Fourier transform maps functions on G to functions on G*. Pontryagin duality: a group is the dual of its dual.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Fourier Transform -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>The <strong>Fourier transform</strong> decomposes functions into their frequency components:</p>
+      <div class="math-display">
+        <strong>Definition 3.11-3.12:</strong> The Fourier transform of f ∈ L₁(G) is<br><br>
+        f̂(α) = ∫ f(x) α(x) dμ(x) &nbsp;&nbsp;(α ∈ G*)<br><br>
+        This defines a map ℱ: L₁(G) → C₀(G*, ℂ).
+      </div>
+      <p>On G = ℝ, this is the classical Fourier transform f̂(ξ) = ∫ f(x) e^{iξx} dx.</p>
+    </div>
+  </section>
+
+  <!-- Transform Visualization -->
+  <section class="transform-section">
+    <div class="section-header">
+      <h2 class="section-title">Function & Transform</h2>
+      <p class="section-subtitle">A Gaussian and its Fourier transform</p>
+    </div>
+
+    <div class="transform-container">
+      <div class="transform-panel">
+        <div class="dual-canvas">
+          <div class="canvas-box">
+            <p class="canvas-label">f(x) on G = ℝ</p>
+            <div class="canvas-container">
+              <canvas id="funcCanvas"></canvas>
+            </div>
+          </div>
+          <div class="canvas-box">
+            <p class="canvas-label">f̂(ξ) on G* = ℝ</p>
+            <div class="canvas-container">
+              <canvas id="transformCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="transform-formula">
+          <h3>Norm-Decreasing</h3>
+          <p>‖f̂‖_∞ ≤ ‖f‖₁</p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem;">The Fourier transform maps L₁(G) into C₀(G*, ℂ).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Properties -->
+  <section class="props-section">
+    <div class="section-header" style="color: var(--ink-light);">
+      <h2 class="section-title">Key Properties</h2>
+      <p class="section-subtitle" style="color: #9CA3AF;">Convolution becomes multiplication, translation becomes phase shift</p>
+    </div>
+
+    <div class="props-container">
+      <div class="props-grid">
+        <div class="prop-card convolution">
+          <h3>Convolution Theorem</h3>
+          <div class="prop-formula">(f * g)^ = f̂ · ĝ</div>
+          <p class="prop-desc">Convolution in G becomes pointwise multiplication in G*.</p>
+        </div>
+
+        <div class="prop-card translation">
+          <h3>Translation Property</h3>
+          <div class="prop-formula">(T(x⁻¹)f)^(α) = α(x) · f̂(α)</div>
+          <p class="prop-desc">Translation by x⁻¹ multiplies the transform by the character α(x).</p>
+        </div>
+
+        <div class="prop-card convolution">
+          <h3>Conjugate Transform</h3>
+          <div class="prop-formula">f̂̃ = (f̂)*</div>
+          <p class="prop-desc">Where f̃(x) = f(x⁻¹)*.</p>
+        </div>
+
+        <div class="prop-card translation">
+          <h3>Inversion Formula</h3>
+          <div class="prop-formula">ℱ⁻¹(φ) * g = φ̌ * g</div>
+          <p class="prop-desc">The inverse transform reconstructs functions from their spectra.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pontryagin Duality -->
+  <section class="duality-section">
+    <div class="section-header">
+      <h2 class="section-title">Pontryagin Duality</h2>
+      <p class="section-subtitle">A group equals the dual of its dual</p>
+    </div>
+
+    <div class="duality-container">
+      <div class="duality-panel">
+        <div class="duality-theorem">
+          <h3>Pontryagin Duality Theorem</h3>
+          <p>For any locally compact abelian group G:</p>
+          <p class="duality-formula">G ≅ G**</p>
+          <p>The natural map x ↦ (α ↦ α(x)) is an isomorphism of topological groups.</p>
+
+          <div class="duality-chain">
+            <div class="duality-box">G</div>
+            <span class="duality-arrow">⟷</span>
+            <div class="duality-box">G*</div>
+            <span class="duality-arrow">⟷</span>
+            <div class="duality-box">G** ≅ G</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Narrative: Examples -->
+  <section class="narrative-section dark">
+    <div class="narrative-content" data-animate>
+      <p>The duality theorem is verified on familiar groups:</p>
+      <div class="math-display">
+        <strong>Examples:</strong><br><br>
+        • ℝ* ≅ ℝ ⟹ ℝ** ≅ ℝ* ≅ ℝ ✓<br>
+        • ℤ* ≅ 𝕋 ⟹ ℤ** ≅ 𝕋* ≅ ℤ ✓<br>
+        • 𝕋* ≅ ℤ ⟹ 𝕋** ≅ ℤ* ≅ 𝕋 ✓
+      </div>
+      <p>Duality exchanges compact groups with discrete groups: 𝕋 (compact) ↔ ℤ (discrete).</p>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Chapter 8 Complete</p>
+    <h3 class="next-title">Locally Compact Abelian Groups Mastered</h3>
+    <p class="next-description">From Haar measure through characters to Fourier analysis and Pontryagin duality.</p>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    // ============================================
+    // FUNCTION AND TRANSFORM VISUALIZATION
+    // ============================================
+    
+    const funcCanvas = document.getElementById('funcCanvas');
+    const transformCanvas = document.getElementById('transformCanvas');
+
+    function gaussian(x, sigma) {
+      return Math.exp(-x * x / (2 * sigma * sigma));
+    }
+
+    function gaussianFT(xi, sigma) {
+      // Fourier transform of Gaussian is Gaussian
+      return sigma * Math.sqrt(2 * Math.PI) * Math.exp(-sigma * sigma * xi * xi / 2);
+    }
+
+    function drawFunc() {
+      const { ctx, width, height } = setupCanvas(funcCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const marginX = 30, marginY = 20;
+      const plotW = width - 2 * marginX;
+      const plotH = height - 2 * marginY;
+
+      // Axes
+      ctx.strokeStyle = '#CCC';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(marginX, height - marginY);
+      ctx.lineTo(width - marginX, height - marginY);
+      ctx.stroke();
+
+      const xRange = [-4, 4];
+      const sigma = 1;
+
+      function toPixelX(x) {
+        return marginX + (x - xRange[0]) / (xRange[1] - xRange[0]) * plotW;
+      }
+      function toPixelY(y) {
+        return height - marginY - y * (plotH - 10);
+      }
+
+      // Gaussian
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x, sigma);
+        if (px === 0) ctx.moveTo(toPixelX(x), toPixelY(y));
+        else ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.stroke();
+
+      // Fill under curve
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(toPixelX(xRange[0]), toPixelY(0));
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x, sigma);
+        ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.lineTo(toPixelX(xRange[1]), toPixelY(0));
+      ctx.closePath();
+      ctx.fill();
+
+      // Label
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.fillStyle = '#3B82F6';
+      ctx.textAlign = 'left';
+      ctx.fillText('f(x) = e^(-x²/2)', marginX + 5, marginY + 15);
+    }
+
+    function drawTransform() {
+      const { ctx, width, height } = setupCanvas(transformCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const marginX = 30, marginY = 20;
+      const plotW = width - 2 * marginX;
+      const plotH = height - 2 * marginY;
+
+      // Axes
+      ctx.strokeStyle = '#CCC';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(marginX, height - marginY);
+      ctx.lineTo(width - marginX, height - marginY);
+      ctx.stroke();
+
+      const xRange = [-4, 4];
+      const sigma = 1;
+      const maxVal = sigma * Math.sqrt(2 * Math.PI);
+
+      function toPixelX(x) {
+        return marginX + (x - xRange[0]) / (xRange[1] - xRange[0]) * plotW;
+      }
+      function toPixelY(y) {
+        return height - marginY - (y / maxVal) * (plotH - 10);
+      }
+
+      // Fourier transform of Gaussian
+      ctx.strokeStyle = '#22C55E';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const xi = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussianFT(xi, sigma);
+        if (px === 0) ctx.moveTo(toPixelX(xi), toPixelY(y));
+        else ctx.lineTo(toPixelX(xi), toPixelY(y));
+      }
+      ctx.stroke();
+
+      // Fill under curve
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(toPixelX(xRange[0]), toPixelY(0));
+      for (let px = 0; px <= plotW; px++) {
+        const xi = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussianFT(xi, sigma);
+        ctx.lineTo(toPixelX(xi), toPixelY(y));
+      }
+      ctx.lineTo(toPixelX(xRange[1]), toPixelY(0));
+      ctx.closePath();
+      ctx.fill();
+
+      // Label
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.fillStyle = '#22C55E';
+      ctx.textAlign = 'left';
+      ctx.fillText('f̂(ξ) = √(2π)e^(-ξ²/2)', marginX + 5, marginY + 15);
+    }
+
+    // Initialize
+    drawFunc();
+    drawTransform();
+
+    window.addEventListener('resize', () => {
+      drawFunc();
+      drawTransform();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haar Measure & Convolution — Chapter 8</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --haar-purple: #8B5CF6;
+      --convolution-blue: #3B82F6;
+      --translation-green: #22C55E;
+      --invariant-amber: #F59E0B;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--haar-purple) 0%, #7C3AED 100%);
+      color: var(--ink-light);
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      background: rgba(139, 92, 246, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: left;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--haar-purple);
+    }
+
+    .dark .math-display {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Haar Measure Section */
+    .haar-section {
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .haar-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .haar-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .theorem-card {
+      background: rgba(139, 92, 246, 0.1);
+      border: 2px solid var(--haar-purple);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .theorem-card h3 {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--haar-purple);
+      margin-bottom: 0.5rem;
+    }
+
+    .theorem-card p {
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    .properties-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .properties-grid { grid-template-columns: 1fr; }
+    }
+
+    .property-card {
+      background: #FAFAFA;
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .property-card .label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .property-card .value {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+    }
+
+    /* Convolution Section */
+    .conv-section {
+      min-height: 80vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .conv-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .conv-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .conv-canvas-container {
+      height: 300px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    #convCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .conv-controls {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .control-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #9CA3AF;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    input[type="range"] {
+      width: 150px;
+      accent-color: var(--convolution-blue);
+    }
+
+    .slider-value {
+      font-family: var(--mono);
+      font-size: 1rem;
+      min-width: 50px;
+      color: var(--convolution-blue);
+    }
+
+    .conv-formula {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(59, 130, 246, 0.15);
+      border-radius: 12px;
+      border: 2px solid var(--convolution-blue);
+    }
+
+    .conv-formula h3 {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--convolution-blue);
+      margin-bottom: 0.5rem;
+    }
+
+    .conv-formula p {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      color: #9CA3AF;
+    }
+
+    /* Translation Section */
+    .trans-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .trans-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .trans-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .trans-canvas-container {
+      height: 280px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    #transCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .invariance-card {
+      background: rgba(34, 197, 94, 0.1);
+      border: 2px solid var(--translation-green);
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .invariance-card h3 {
+      font-family: var(--display);
+      font-size: 1.2rem;
+      color: var(--translation-green);
+      margin-bottom: 0.5rem;
+    }
+
+    .invariance-card p {
+      font-size: 0.95rem;
+      color: #666;
+    }
+
+    .invariance-formula {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      color: var(--translation-green);
+      margin: 1rem 0;
+    }
+
+    /* Navigation */
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--haar-purple) 0%, #7C3AED 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 8: Locally Compact Abelian Groups</p>
+      <p class="section-label">Section 1: Haar Measure</p>
+      <h1 class="main-title">Haar Measure & Convolution</h1>
+      <p class="subtitle">Every locally compact group admits a unique (up to scaling) left-invariant measure — Haar measure. Convolution gives L₁(G) an algebra structure.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Locally Compact Groups -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>A <strong>locally compact group</strong> combines group structure with topology: multiplication and inversion are continuous.</p>
+      <div class="math-display">
+        <strong>Definition 1.1:</strong> A <em>locally compact group</em> is a set G which is:<br><br>
+        • A group (with operation xy and inverse x⁻¹)<br>
+        • A locally compact metric space<br>
+        • Such that (x, y) ↦ x⁻¹y is continuous
+      </div>
+      <p>Examples: ℝ under addition, the circle 𝕋 = ℝ/ℤ, matrix groups like GL(n,ℝ).</p>
+    </div>
+  </section>
+
+  <!-- Haar Measure -->
+  <section class="haar-section">
+    <div class="section-header">
+      <h2 class="section-title">Haar Measure</h2>
+      <p class="section-subtitle">The unique left-invariant measure on G</p>
+    </div>
+
+    <div class="haar-container">
+      <div class="haar-panel">
+        <div class="theorem-card">
+          <h3>Theorem 1.19: Existence & Uniqueness</h3>
+          <p>There exists a positive left-invariant measure μ on G such that ∫f dμ > 0 for all f ∈ 𝒫 (positive test functions).</p>
+          <p style="margin-top: 0.5rem;">If ν is any positive left-invariant measure, then ν = cμ for some c ∈ ℝ⁺.</p>
+        </div>
+
+        <div class="properties-grid">
+          <div class="property-card">
+            <p class="label">Left-Invariance</p>
+            <p class="value" style="color: var(--translation-green);">∫T(s)f dμ = ∫f dμ</p>
+          </div>
+          <div class="property-card">
+            <p class="label">Positivity</p>
+            <p class="value" style="color: var(--haar-purple);">f ≥ 0 ⟹ ∫f dμ ≥ 0</p>
+          </div>
+          <div class="property-card">
+            <p class="label">Uniqueness</p>
+            <p class="value" style="color: var(--invariant-amber);">Up to scalar multiple</p>
+          </div>
+          <div class="property-card">
+            <p class="label">Unimodular</p>
+            <p class="value" style="color: var(--convolution-blue);">G abelian ⟹ right-inv.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Convolution -->
+  <section class="conv-section">
+    <div class="section-header" style="color: var(--ink-light);">
+      <h2 class="section-title">Convolution</h2>
+      <p class="section-subtitle" style="color: #9CA3AF;">Multiplication in the group algebra L₁(G)</p>
+    </div>
+
+    <div class="conv-container">
+      <div class="conv-panel">
+        <div class="conv-canvas-container">
+          <canvas id="convCanvas"></canvas>
+        </div>
+
+        <div class="conv-controls">
+          <div class="control-group">
+            <span class="control-label">Width σ</span>
+            <div class="slider-container">
+              <input type="range" id="sigmaSlider" min="0.1" max="1" step="0.05" value="0.3">
+              <span class="slider-value" id="sigmaValue">0.30</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="conv-formula">
+          <h3>Definition 1.22</h3>
+          <p>(f * g)(x) = ∫ f(y) g(y⁻¹x) dμ(y)</p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem;">Convolution is associative. For abelian G, it's also commutative.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Translation Invariance -->
+  <section class="trans-section">
+    <div class="section-header">
+      <h2 class="section-title">Left Translation</h2>
+      <p class="section-subtitle">T(s)f(x) = f(sx) — shifting the function</p>
+    </div>
+
+    <div class="trans-container">
+      <div class="trans-panel">
+        <div class="trans-canvas-container">
+          <canvas id="transCanvas"></canvas>
+        </div>
+
+        <div class="invariance-card">
+          <h3>Left-Invariance of Haar Measure</h3>
+          <p class="invariance-formula">∫ f(sx) dμ(x) = ∫ f(x) dμ(x)</p>
+          <p>The integral is unchanged when we translate the function. This is the defining property of Haar measure.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Young's Inequality -->
+  <section class="narrative-section dark">
+    <div class="narrative-content" data-animate>
+      <p>Convolution satisfies powerful <strong>Young's inequalities</strong> that bound norms:</p>
+      <div class="math-display">
+        <strong>Proposition 1.23:</strong> For p, q, r ≥ 1 with p⁻¹ + q⁻¹ = 1 + r⁻¹:<br><br>
+        ‖f * g‖ᵣ ≤ ‖f‖ₚ · ‖g‖_q
+      </div>
+      <p>In particular, ‖f * g‖₁ ≤ ‖f‖₁ · ‖g‖₁ makes L₁(G) a <strong>normed algebra</strong>.</p>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Coming Next</p>
+    <h3 class="next-title">Characters & The Dual Group</h3>
+    <p class="next-description">Characters are the "frequency components" — homomorphisms α: G → 𝕋. They form the dual group G*.</p>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    // ============================================
+    // CONVOLUTION VISUALIZATION
+    // ============================================
+    
+    const convCanvas = document.getElementById('convCanvas');
+    let sigma = 0.3;
+
+    function gaussian(x, mu, sig) {
+      return Math.exp(-0.5 * Math.pow((x - mu) / sig, 2)) / (sig * Math.sqrt(2 * Math.PI));
+    }
+
+    function drawConv() {
+      const { ctx, width, height } = setupCanvas(convCanvas);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(0, 0, width, height);
+
+      const marginX = 50, marginY = 30;
+      const plotW = width - 2 * marginX;
+      const plotH = height - 2 * marginY;
+
+      // Axes
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(marginX, height - marginY);
+      ctx.lineTo(width - marginX, height - marginY);
+      ctx.stroke();
+
+      const xRange = [-3, 3];
+      const yMax = 2;
+
+      function toPixelX(x) {
+        return marginX + (x - xRange[0]) / (xRange[1] - xRange[0]) * plotW;
+      }
+      function toPixelY(y) {
+        return height - marginY - (y / yMax) * plotH;
+      }
+
+      // Function f (Gaussian at -0.5)
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x, -0.5, sigma);
+        if (px === 0) ctx.moveTo(toPixelX(x), toPixelY(y));
+        else ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.stroke();
+
+      // Function g (Gaussian at 0.5)
+      ctx.strokeStyle = '#22C55E';
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x, 0.5, sigma);
+        if (px === 0) ctx.moveTo(toPixelX(x), toPixelY(y));
+        else ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.stroke();
+
+      // Convolution f * g (Gaussian at 0, wider)
+      const convSigma = sigma * Math.sqrt(2);
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x, 0, convSigma);
+        if (px === 0) ctx.moveTo(toPixelX(x), toPixelY(y));
+        else ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.stroke();
+
+      // Legend
+      ctx.font = '12px "JetBrains Mono"';
+      ctx.fillStyle = '#3B82F6';
+      ctx.textAlign = 'left';
+      ctx.fillText('f', marginX + 10, marginY + 20);
+
+      ctx.fillStyle = '#22C55E';
+      ctx.fillText('g', marginX + 40, marginY + 20);
+
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillText('f * g', marginX + 70, marginY + 20);
+
+      document.getElementById('sigmaValue').textContent = sigma.toFixed(2);
+    }
+
+    document.getElementById('sigmaSlider').addEventListener('input', (e) => {
+      sigma = parseFloat(e.target.value);
+      drawConv();
+    });
+
+    // ============================================
+    // TRANSLATION VISUALIZATION
+    // ============================================
+    
+    const transCanvas = document.getElementById('transCanvas');
+    let time = 0;
+
+    function drawTrans() {
+      const { ctx, width, height } = setupCanvas(transCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const marginX = 50, marginY = 30;
+      const plotW = width - 2 * marginX;
+      const plotH = height - 2 * marginY;
+
+      // Axes
+      ctx.strokeStyle = '#CCC';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(marginX, height - marginY);
+      ctx.lineTo(width - marginX, height - marginY);
+      ctx.stroke();
+
+      const xRange = [-3, 3];
+      const yMax = 1.2;
+      const shift = Math.sin(time * 0.02) * 1.5;
+
+      function toPixelX(x) {
+        return marginX + (x - xRange[0]) / (xRange[1] - xRange[0]) * plotW;
+      }
+      function toPixelY(y) {
+        return height - marginY - (y / yMax) * plotH;
+      }
+
+      // Original function f
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x, 0, 0.5);
+        if (px === 0) ctx.moveTo(toPixelX(x), toPixelY(y));
+        else ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Translated function T(s)f
+      ctx.strokeStyle = '#22C55E';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let px = 0; px <= plotW; px++) {
+        const x = xRange[0] + px / plotW * (xRange[1] - xRange[0]);
+        const y = gaussian(x - shift, 0, 0.5);
+        if (px === 0) ctx.moveTo(toPixelX(x), toPixelY(y));
+        else ctx.lineTo(toPixelX(x), toPixelY(y));
+      }
+      ctx.stroke();
+
+      // Shift arrow
+      if (Math.abs(shift) > 0.1) {
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(toPixelX(0), height - marginY + 15);
+        ctx.lineTo(toPixelX(shift), height - marginY + 15);
+        ctx.stroke();
+
+        // Arrow head
+        const dir = shift > 0 ? 1 : -1;
+        ctx.beginPath();
+        ctx.moveTo(toPixelX(shift), height - marginY + 15);
+        ctx.lineTo(toPixelX(shift) - dir * 8, height - marginY + 10);
+        ctx.lineTo(toPixelX(shift) - dir * 8, height - marginY + 20);
+        ctx.closePath();
+        ctx.fillStyle = '#F59E0B';
+        ctx.fill();
+      }
+
+      // Labels
+      ctx.font = '12px "JetBrains Mono"';
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+      ctx.textAlign = 'left';
+      ctx.fillText('f', marginX + 10, marginY + 20);
+
+      ctx.fillStyle = '#22C55E';
+      ctx.fillText('T(s)f', marginX + 40, marginY + 20);
+
+      ctx.fillStyle = '#666';
+      ctx.textAlign = 'center';
+      ctx.fillText(`s = ${shift.toFixed(2)}`, toPixelX(shift / 2), height - marginY + 35);
+
+      time++;
+      requestAnimationFrame(drawTrans);
+    }
+
+    // Initialize
+    drawConv();
+    drawTrans();
+
+    window.addEventListener('resize', () => {
+      drawConv();
+    });
+  </script>
+</body>
+</html>

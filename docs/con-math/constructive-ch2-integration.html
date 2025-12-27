@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integration as Riemann Sums — Constructive Analysis Chapter 2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --integration-color: #7C3AED;
+      --riemann-color: #06B6D4;
+      --mesh-color: #F59E0B;
+      --convergence-band: #10B981;
+      --regular-sequence: #2563EB;
+      --fog-light: #9CA3AF;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Opening */
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(180deg, var(--integration-color) 0%, #5B21B6 100%);
+      color: var(--ink-light);
+      position: relative;
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Narrative Sections */
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      background: rgba(124, 58, 237, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--integration-color);
+    }
+
+    .dark .math-display {
+      background: rgba(124, 58, 237, 0.15);
+    }
+
+    /* Riemann Sum Visualizer */
+    .riemann-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .riemann-container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .riemann-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--integration-color);
+      color: white;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .panel-title {
+      font-family: var(--display);
+      font-size: 1.3rem;
+    }
+
+    .panel-formula {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .panel-body {
+      padding: 2rem;
+    }
+
+    .riemann-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .riemann-grid { grid-template-columns: 1fr; }
+    }
+
+    .canvas-container {
+      height: 400px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      position: relative;
+    }
+
+    #riemannCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .control-card {
+      background: #FAFAFA;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+
+    .control-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fog-light);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .function-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .fn-btn {
+      padding: 0.4rem 0.6rem;
+      border: 2px solid #E0E0E0;
+      border-radius: 6px;
+      background: white;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .fn-btn:hover { border-color: var(--integration-color); }
+    .fn-btn.active {
+      border-color: var(--integration-color);
+      background: var(--integration-color);
+      color: white;
+    }
+
+    .sample-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .sample-btn {
+      padding: 0.4rem 0.6rem;
+      border: 2px solid #E0E0E0;
+      border-radius: 6px;
+      background: white;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .sample-btn:hover { border-color: var(--riemann-color); }
+    .sample-btn.active {
+      border-color: var(--riemann-color);
+      background: var(--riemann-color);
+      color: white;
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .control-slider {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #E0E0E0;
+      border-radius: 3px;
+    }
+
+    .control-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--integration-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .slider-values {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    .results-box {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 2px solid var(--convergence-band);
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .result-row:last-child { margin-bottom: 0; }
+
+    .result-label { color: var(--fog-light); }
+    .result-value { font-weight: 600; }
+    .result-value.sum { color: var(--riemann-color); }
+    .result-value.exact { color: var(--convergence-band); }
+    .result-value.error { color: var(--mesh-color); }
+
+    /* Mesh Convergence */
+    .convergence-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .convergence-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .convergence-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .convergence-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .convergence-subtitle {
+      color: var(--fog-light);
+      font-size: 1rem;
+    }
+
+    .convergence-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .convergence-canvas-container {
+      height: 300px;
+      margin-bottom: 1.5rem;
+    }
+
+    #convergenceCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: #0A0A0F;
+    }
+
+    .convergence-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .info-card {
+      background: rgba(20, 20, 30, 0.5);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .info-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fog-light);
+      margin-bottom: 0.3rem;
+    }
+
+    .info-value {
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+
+    /* FTC Section */
+    .ftc-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .ftc-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .ftc-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .ftc-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .ftc-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .ftc-canvas-container {
+      height: 300px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    #ftcCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .ftc-slider-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .ftc-slider-label {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--fog-light);
+    }
+
+    .ftc-slider {
+      width: 300px;
+      height: 8px;
+      -webkit-appearance: none;
+      background: #E0E0E0;
+      border-radius: 4px;
+    }
+
+    .ftc-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--integration-color);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .ftc-result {
+      padding: 1.5rem;
+      border-radius: 12px;
+      background: rgba(124, 58, 237, 0.1);
+      border: 2px solid var(--integration-color);
+      text-align: center;
+    }
+
+    .ftc-formula {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .ftc-explanation {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    /* Chapter Complete */
+    .complete-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, var(--integration-color) 0%, #5B21B6 100%);
+      color: var(--ink-light);
+      text-align: center;
+      min-height: 60vh;
+    }
+
+    .complete-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .complete-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .complete-text {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin-bottom: 2rem;
+    }
+
+    .chapter-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .chapter-link {
+      padding: 1rem 1.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .link-number {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.3rem;
+    }
+
+    .link-name {
+      font-family: var(--display);
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 2: Calculus and the Real Numbers</p>
+      <p class="section-label">Section 6: Integration</p>
+      <h1 class="main-title">Integration as Riemann Sums</h1>
+      <p class="subtitle">The integral is built from finite sums. As the mesh shrinks, the sums converge—with explicit error bounds.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Introduction -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>The integral is perhaps the most computational object in analysis. It's defined as a limit of finite sums—sums we can actually calculate.</p>
+      <p>Constructively, we don't just know the limit exists; we know exactly how fine our partition must be to achieve any desired precision.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: The Definition -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <div class="math-display">
+        For a partition P = (a₀, a₁, ..., aₙ) with mesh(P) = max(aᵢ₊₁ - aᵢ):<br><br>
+        S(f, P) = Σ f(xᵢ)(aᵢ₊₁ - aᵢ) &nbsp;&nbsp;where xᵢ ∈ [aᵢ, aᵢ₊₁]<br><br>
+        <strong>Theorem:</strong> |S(f, P) - ∫f| < ε(b - a) when mesh(P) < ω(ε)
+      </div>
+      <p>The modulus of continuity ω controls everything. If ω(ε) tells us how close inputs must be for outputs to stay within ε, then a partition with mesh < ω(ε) guarantees our Riemann sum is within ε(b-a) of the true integral.</p>
+    </div>
+  </section>
+
+  <!-- Riemann Sum Visualizer -->
+  <section class="riemann-section">
+    <div class="section-header">
+      <h2 class="section-title">Build a Riemann Sum</h2>
+      <p class="section-subtitle">Adjust the partition, choose sample points, watch convergence</p>
+    </div>
+
+    <div class="riemann-container">
+      <div class="riemann-panel">
+        <div class="panel-header">
+          <span class="panel-title">Riemann Sum Calculator</span>
+          <span class="panel-formula">∫ₐᵇ f(x) dx ≈ Σ f(xᵢ) Δxᵢ</span>
+        </div>
+
+        <div class="panel-body">
+          <div class="riemann-grid">
+            <div class="canvas-container">
+              <canvas id="riemannCanvas"></canvas>
+            </div>
+
+            <div class="controls-panel">
+              <div class="control-card">
+                <label class="control-label">Function</label>
+                <div class="function-selector">
+                  <button class="fn-btn active" data-fn="x2">x²</button>
+                  <button class="fn-btn" data-fn="sin">sin(x)</button>
+                  <button class="fn-btn" data-fn="exp">eˣ</button>
+                  <button class="fn-btn" data-fn="sqrt">√x</button>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <label class="control-label">Sample Point</label>
+                <div class="sample-selector">
+                  <button class="sample-btn active" data-sample="left">Left</button>
+                  <button class="sample-btn" data-sample="mid">Midpoint</button>
+                  <button class="sample-btn" data-sample="right">Right</button>
+                  <button class="sample-btn" data-sample="random">Random</button>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <label class="control-label">Number of Rectangles</label>
+                <div class="slider-container">
+                  <input type="range" class="control-slider" id="nSlider" 
+                         min="2" max="50" step="1" value="8">
+                  <div class="slider-values">
+                    <span>n =</span>
+                    <span id="nValue">8</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <label class="control-label">Interval</label>
+                <div class="slider-values" style="margin-bottom: 0.3rem;">
+                  <span>[a, b] =</span>
+                  <span id="intervalValue">[0, 2]</span>
+                </div>
+              </div>
+
+              <div class="results-box">
+                <div class="result-row">
+                  <span class="result-label">Riemann Sum:</span>
+                  <span class="result-value sum" id="sumValue">2.625</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">Exact Integral:</span>
+                  <span class="result-value exact" id="exactValue">2.667</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">Error:</span>
+                  <span class="result-value error" id="errorValue">0.042</span>
+                </div>
+                <div class="result-row">
+                  <span class="result-label">Mesh Size:</span>
+                  <span class="result-value" id="meshValue">0.250</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mesh Convergence -->
+  <section class="convergence-section">
+    <div class="convergence-container">
+      <div class="convergence-header">
+        <h2 class="convergence-title">Mesh Convergence</h2>
+        <p class="convergence-subtitle">Watch the error shrink as the partition refines</p>
+      </div>
+
+      <div class="convergence-panel">
+        <div class="convergence-canvas-container">
+          <canvas id="convergenceCanvas"></canvas>
+        </div>
+
+        <div class="convergence-info">
+          <div class="info-card">
+            <p class="info-label">Error Rate</p>
+            <p class="info-value" style="color: #F59E0B;">O(1/n)</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">For ε-accuracy</p>
+            <p class="info-value" style="color: #06B6D4;">n ≥ (b-a)M/ε</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">M = max|f|</p>
+            <p class="info-value" style="color: #10B981;">Lipschitz bound</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FTC -->
+  <section class="ftc-section">
+    <div class="ftc-container">
+      <div class="ftc-header">
+        <h2 class="ftc-title">The Fundamental Theorem of Calculus</h2>
+      </div>
+
+      <div class="ftc-panel">
+        <div class="ftc-canvas-container">
+          <canvas id="ftcCanvas"></canvas>
+        </div>
+
+        <div class="ftc-slider-container">
+          <span class="ftc-slider-label">x =</span>
+          <input type="range" class="ftc-slider" id="ftcSlider" 
+                 min="0" max="2" step="0.05" value="1">
+          <span class="ftc-slider-label" id="ftcX">1.00</span>
+        </div>
+
+        <div class="ftc-result">
+          <p class="ftc-formula">
+            F(x) = ∫₀ˣ t² dt = x³/3 &nbsp;&nbsp;⟹&nbsp;&nbsp; F'(x) = x²
+          </p>
+          <p class="ftc-explanation">
+            Differentiation and integration are inverse operations. The integral function F has derivative equal to the original function f.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter Complete -->
+  <section class="complete-section">
+    <p class="complete-label">Chapter 2 Complete</p>
+    <h2 class="complete-title">The Machine is Built</h2>
+    <p class="complete-text">
+      From regular sequences to integration, we've constructed the real number system and the calculus that lives on it—all with explicit computational content.
+    </p>
+    <div class="chapter-links">
+      <div class="chapter-link">
+        <p class="link-number">Chapter 3</p>
+        <p class="link-name">Set Theory</p>
+      </div>
+      <div class="chapter-link">
+        <p class="link-number">Chapter 4</p>
+        <p class="link-name">Metric Spaces</p>
+      </div>
+      <div class="chapter-link">
+        <p class="link-number">Chapter 5</p>
+        <p class="link-name">Complex Analysis</p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    // Functions
+    const functions = {
+      x2: { 
+        f: x => x*x, 
+        integral: (a, b) => (b*b*b - a*a*a) / 3,
+        name: 'x²' 
+      },
+      sin: { 
+        f: x => Math.sin(x), 
+        integral: (a, b) => -Math.cos(b) + Math.cos(a),
+        name: 'sin(x)' 
+      },
+      exp: { 
+        f: x => Math.exp(x), 
+        integral: (a, b) => Math.exp(b) - Math.exp(a),
+        name: 'eˣ' 
+      },
+      sqrt: { 
+        f: x => Math.sqrt(Math.max(0, x)), 
+        integral: (a, b) => (2/3) * (Math.pow(b, 1.5) - Math.pow(a, 1.5)),
+        name: '√x' 
+      }
+    };
+
+    let currentFn = 'x2';
+    let currentSample = 'left';
+    let numRects = 8;
+    const a = 0, b = 2;
+
+    // Riemann Sum Visualizer
+    const riemannCanvas = document.getElementById('riemannCanvas');
+
+    function getSamplePoint(left, right, sample) {
+      switch(sample) {
+        case 'left': return left;
+        case 'right': return right;
+        case 'mid': return (left + right) / 2;
+        case 'random': return left + Math.random() * (right - left);
+        default: return left;
+      }
+    }
+
+    function drawRiemann() {
+      const { ctx, width, height } = setupCanvas(riemannCanvas);
+      const fn = functions[currentFn];
+
+      const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      // Calculate y-range
+      const samples = [];
+      for (let i = 0; i <= 50; i++) {
+        samples.push(fn.f(a + (i / 50) * (b - a)));
+      }
+      let yMin = Math.min(0, ...samples);
+      let yMax = Math.max(...samples);
+      const yMargin = (yMax - yMin) * 0.1;
+      yMin -= yMargin; yMax += yMargin;
+
+      const toScreenX = x => padding.left + ((x - a) / (b - a)) * plotWidth;
+      const toScreenY = y => padding.top + ((yMax - y) / (yMax - yMin)) * plotHeight;
+
+      const dx = (b - a) / numRects;
+      let riemannSum = 0;
+
+      // Draw rectangles
+      for (let i = 0; i < numRects; i++) {
+        const left = a + i * dx;
+        const right = a + (i + 1) * dx;
+        const sampleX = getSamplePoint(left, right, currentSample);
+        const sampleY = fn.f(sampleX);
+        riemannSum += sampleY * dx;
+
+        const rectLeft = toScreenX(left);
+        const rectRight = toScreenX(right);
+        const rectTop = toScreenY(Math.max(0, sampleY));
+        const rectBottom = toScreenY(Math.min(0, sampleY));
+
+        ctx.fillStyle = 'rgba(6, 182, 212, 0.3)';
+        ctx.fillRect(rectLeft, rectTop, rectRight - rectLeft, rectBottom - rectTop);
+        
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(rectLeft, rectTop, rectRight - rectLeft, rectBottom - rectTop);
+
+        // Sample point
+        ctx.fillStyle = '#F59E0B';
+        ctx.beginPath();
+        ctx.arc(toScreenX(sampleX), toScreenY(sampleY), 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw zero line
+      if (yMin < 0 && yMax > 0) {
+        ctx.strokeStyle = '#CCC';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, toScreenY(0));
+        ctx.lineTo(width - padding.right, toScreenY(0));
+        ctx.stroke();
+      }
+
+      // Draw function
+      ctx.strokeStyle = '#7C3AED';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = a + (i / 100) * (b - a);
+        const y = fn.f(x);
+        if (i === 0) ctx.moveTo(toScreenX(x), toScreenY(y));
+        else ctx.lineTo(toScreenX(x), toScreenY(y));
+      }
+      ctx.stroke();
+
+      // Labels
+      ctx.fillStyle = '#666';
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText(a.toString(), toScreenX(a), height - padding.bottom + 18);
+      ctx.fillText(b.toString(), toScreenX(b), height - padding.bottom + 18);
+
+      // Update results
+      const exactValue = fn.integral(a, b);
+      const error = Math.abs(riemannSum - exactValue);
+      
+      document.getElementById('nValue').textContent = numRects;
+      document.getElementById('sumValue').textContent = riemannSum.toFixed(4);
+      document.getElementById('exactValue').textContent = exactValue.toFixed(4);
+      document.getElementById('errorValue').textContent = error.toFixed(4);
+      document.getElementById('meshValue').textContent = dx.toFixed(4);
+    }
+
+    document.getElementById('nSlider').addEventListener('input', (e) => {
+      numRects = parseInt(e.target.value);
+      drawRiemann();
+    });
+
+    document.querySelectorAll('.fn-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.fn-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFn = btn.dataset.fn;
+        drawRiemann();
+        drawConvergence();
+      });
+    });
+
+    document.querySelectorAll('.sample-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.sample-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSample = btn.dataset.sample;
+        drawRiemann();
+      });
+    });
+
+    // Convergence Chart
+    const convergenceCanvas = document.getElementById('convergenceCanvas');
+
+    function drawConvergence() {
+      const { ctx, width, height } = setupCanvas(convergenceCanvas);
+      const fn = functions[currentFn];
+
+      ctx.fillStyle = '#0A0A0F';
+      ctx.fillRect(0, 0, width, height);
+
+      const padding = { left: 60, right: 20, top: 30, bottom: 50 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      const exactValue = fn.integral(a, b);
+      const nValues = [];
+      const errors = [];
+
+      for (let n = 2; n <= 50; n++) {
+        const dx = (b - a) / n;
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+          const x = a + (i + 0.5) * dx; // midpoint
+          sum += fn.f(x) * dx;
+        }
+        nValues.push(n);
+        errors.push(Math.abs(sum - exactValue));
+      }
+
+      const maxError = Math.max(...errors);
+
+      const toScreenX = n => padding.left + ((n - 2) / 48) * plotWidth;
+      const toScreenY = e => padding.top + ((maxError - e) / maxError) * plotHeight;
+
+      // Grid
+      ctx.strokeStyle = 'rgba(107, 114, 128, 0.2)';
+      ctx.lineWidth = 1;
+      for (let n = 10; n <= 50; n += 10) {
+        const x = toScreenX(n);
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+      }
+
+      // Draw error curve
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i < nValues.length; i++) {
+        const x = toScreenX(nValues[i]);
+        const y = toScreenY(errors[i]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Points
+      ctx.fillStyle = '#F59E0B';
+      for (let i = 0; i < nValues.length; i += 5) {
+        ctx.beginPath();
+        ctx.arc(toScreenX(nValues[i]), toScreenY(errors[i]), 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Labels
+      ctx.fillStyle = '#9CA3AF';
+      ctx.font = '10px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      for (let n = 10; n <= 50; n += 10) {
+        ctx.fillText(n.toString(), toScreenX(n), height - padding.bottom + 18);
+      }
+      ctx.fillText('n', width - padding.right + 10, height - padding.bottom + 18);
+
+      ctx.textAlign = 'right';
+      ctx.fillText('Error', padding.left - 5, padding.top);
+      ctx.fillText('0', padding.left - 5, height - padding.bottom);
+    }
+
+    // FTC Visualization
+    const ftcCanvas = document.getElementById('ftcCanvas');
+    const ftcSlider = document.getElementById('ftcSlider');
+    let ftcX = 1;
+
+    function drawFtc() {
+      const { ctx, width, height } = setupCanvas(ftcCanvas);
+
+      const padding = { left: 50, right: 20, top: 20, bottom: 40 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const xMin = 0, xMax = 2;
+      const yMin = -0.5, yMax = 3;
+
+      const toScreenX = x => padding.left + ((x - xMin) / (xMax - xMin)) * plotWidth;
+      const toScreenY = y => padding.top + ((yMax - y) / (yMax - yMin)) * plotHeight;
+
+      // Shade area under curve up to x
+      ctx.fillStyle = 'rgba(124, 58, 237, 0.2)';
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(0), toScreenY(0));
+      for (let i = 0; i <= 50; i++) {
+        const t = (i / 50) * ftcX;
+        ctx.lineTo(toScreenX(t), toScreenY(t * t));
+      }
+      ctx.lineTo(toScreenX(ftcX), toScreenY(0));
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw f(t) = t²
+      ctx.strokeStyle = '#2563EB';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const t = (i / 100) * xMax;
+        if (i === 0) ctx.moveTo(toScreenX(t), toScreenY(t * t));
+        else ctx.lineTo(toScreenX(t), toScreenY(t * t));
+      }
+      ctx.stroke();
+
+      // Draw F(x) = x³/3
+      ctx.strokeStyle = '#10B981';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const t = (i / 100) * xMax;
+        const F = t * t * t / 3;
+        if (i === 0) ctx.moveTo(toScreenX(t), toScreenY(F));
+        else ctx.lineTo(toScreenX(t), toScreenY(F));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Vertical line at x
+      ctx.strokeStyle = 'rgba(124, 58, 237, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(ftcX), toScreenY(0));
+      ctx.lineTo(toScreenX(ftcX), toScreenY(ftcX * ftcX));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Points
+      ctx.fillStyle = '#7C3AED';
+      ctx.beginPath();
+      ctx.arc(toScreenX(ftcX), toScreenY(ftcX * ftcX), 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#10B981';
+      const Fx = ftcX * ftcX * ftcX / 3;
+      ctx.beginPath();
+      ctx.arc(toScreenX(ftcX), toScreenY(Fx), 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Labels
+      ctx.fillStyle = '#2563EB';
+      ctx.font = '12px "JetBrains Mono"';
+      ctx.textAlign = 'left';
+      ctx.fillText('f(t) = t²', toScreenX(1.6), toScreenY(2.8));
+
+      ctx.fillStyle = '#10B981';
+      ctx.fillText('F(x) = x³/3', toScreenX(1.4), toScreenY(0.8));
+
+      document.getElementById('ftcX').textContent = ftcX.toFixed(2);
+    }
+
+    ftcSlider.addEventListener('input', () => {
+      ftcX = parseFloat(ftcSlider.value);
+      drawFtc();
+    });
+
+    // Initialize
+    drawRiemann();
+    drawConvergence();
+    drawFtc();
+
+    window.addEventListener('resize', () => {
+      drawRiemann();
+      drawConvergence();
+      drawFtc();
+    });
+  </script>
+</body>
+</html>

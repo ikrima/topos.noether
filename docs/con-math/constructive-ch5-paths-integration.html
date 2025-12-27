@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paths & The Cauchy Integral Theorem — Chapter 5</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Source+Sans+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --path-purple: #8B5CF6;
+      --integral-cyan: #06B6D4;
+      --connected-green: #22C55E;
+      --hole-red: #EF4444;
+      --point-pink: #EC4899;
+      --background: #FAF8F5;
+      --background-dark: #0F0F12;
+      --ink: #1A1A1A;
+      --ink-light: #FAF8F5;
+      
+      --display: 'Crimson Text', serif;
+      --body: 'Source Sans Pro', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+      
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      background: var(--background);
+      color: var(--ink);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .opening {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--path-purple) 0%, #7C3AED 100%);
+      color: var(--ink-light);
+    }
+
+    .opening-content {
+      text-align: center;
+      max-width: 800px;
+    }
+
+    .chapter-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.2s forwards;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.3s forwards;
+    }
+
+    .main-title {
+      font-family: var(--display);
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.4s forwards;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      opacity: 0;
+      animation: fadeUp 0.8s var(--ease-out-expo) 0.6s forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .narrative-section {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .narrative-section.dark {
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .narrative-content {
+      max-width: 650px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+
+    .narrative-content.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .narrative-content p {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .math-display {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+      background: rgba(139, 92, 246, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      margin: 1.5rem 0;
+      border-left: 3px solid var(--path-purple);
+    }
+
+    .dark .math-display {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: var(--display);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+      color: #666;
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Path Section */
+    .path-section {
+      padding: 4rem 2rem;
+      background: linear-gradient(180deg, #F5F3F0 0%, var(--background) 100%);
+    }
+
+    .path-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .path-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .path-canvas-container {
+      height: 400px;
+      background: #FAFAFA;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      cursor: crosshair;
+    }
+
+    #pathCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .path-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .path-btn {
+      padding: 0.8rem 1.2rem;
+      border: 2px solid var(--path-purple);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--path-purple);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .path-btn:hover {
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    .path-btn.active {
+      background: var(--path-purple);
+      color: white;
+    }
+
+    .path-info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 700px) {
+      .path-info { grid-template-columns: 1fr; }
+    }
+
+    .info-card {
+      background: #FAFAFA;
+      padding: 1.2rem;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .info-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 0.3rem;
+    }
+
+    .info-value {
+      font-family: var(--mono);
+      font-size: 0.95rem;
+    }
+
+    /* Cauchy Theorem Section */
+    .cauchy-section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      background: var(--background-dark);
+      color: var(--ink-light);
+    }
+
+    .cauchy-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .cauchy-panel {
+      background: rgba(30, 30, 40, 0.5);
+      border: 1px solid rgba(107, 114, 128, 0.3);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .cauchy-canvas-container {
+      height: 350px;
+      margin-bottom: 1.5rem;
+    }
+
+    #cauchyCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background: #0A0A0F;
+    }
+
+    .cauchy-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .cauchy-btn {
+      padding: 0.8rem 1.5rem;
+      border: 2px solid var(--integral-cyan);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--integral-cyan);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .cauchy-btn:hover {
+      background: rgba(6, 182, 212, 0.2);
+    }
+
+    .cauchy-result {
+      text-align: center;
+      padding: 1.5rem;
+      background: rgba(6, 182, 212, 0.1);
+      border-radius: 12px;
+      border: 2px solid var(--integral-cyan);
+    }
+
+    .cauchy-formula {
+      font-family: var(--mono);
+      font-size: 1.3rem;
+      color: var(--integral-cyan);
+      margin-bottom: 0.5rem;
+    }
+
+    .cauchy-note {
+      font-size: 0.9rem;
+      color: #9CA3AF;
+    }
+
+    /* Simply Connected Section */
+    .simply-section {
+      padding: 4rem 2rem;
+      background: var(--background);
+    }
+
+    .simply-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .simply-panel {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
+    }
+
+    .simply-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 700px) {
+      .simply-grid { grid-template-columns: 1fr; }
+    }
+
+    .simply-card {
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .simply-card.yes {
+      background: rgba(34, 197, 94, 0.1);
+      border: 2px solid var(--connected-green);
+    }
+
+    .simply-card.no {
+      background: rgba(239, 68, 68, 0.1);
+      border: 2px solid var(--hole-red);
+    }
+
+    .simply-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .simply-title {
+      font-family: var(--display);
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .simply-desc {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    /* Navigation */
+    .next-section {
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--path-purple) 0%, #7C3AED 100%);
+      color: var(--ink-light);
+      text-align: center;
+    }
+
+    .next-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 1rem;
+    }
+
+    .next-title {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-description {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Opening -->
+  <section class="opening">
+    <div class="opening-content">
+      <p class="chapter-label">Chapter 5: Complex Analysis</p>
+      <p class="section-label">Section 3: Integration</p>
+      <h1 class="main-title">Paths & Cauchy's Theorem</h1>
+      <p class="subtitle">For analytic functions, the integral around any closed path is zero. The most powerful theorem in complex analysis.</p>
+    </div>
+  </section>
+
+  <!-- Narrative: Paths -->
+  <section class="narrative-section">
+    <div class="narrative-content" data-animate>
+      <p>A <strong>path</strong> γ: [a, b] → ℂ is a continuous, piecewise differentiable curve in the complex plane.</p>
+      <div class="math-display">
+        <strong>Definition 3.1:</strong><br><br>
+        γ(t) = x(t) + i·y(t) &nbsp;&nbsp; (t ∈ [a, b])<br><br>
+        γ is piecewise differentiable: γ' exists except at finitely many points
+      </div>
+      <p>The <strong>line integral</strong> of f along γ is:</p>
+      <div class="math-display">
+        ∫_γ f(z) dz = ∫_a^b f(γ(t)) · γ'(t) dt
+      </div>
+    </div>
+  </section>
+
+  <!-- Path Drawing -->
+  <section class="path-section">
+    <div class="section-header">
+      <h2 class="section-title">Drawing Paths</h2>
+      <p class="section-subtitle">Click to add points. The integral ∫_γ z dz is computed along the path.</p>
+    </div>
+
+    <div class="path-container">
+      <div class="path-panel">
+        <div class="path-canvas-container" id="pathCanvasContainer">
+          <canvas id="pathCanvas"></canvas>
+        </div>
+
+        <div class="path-controls">
+          <button class="path-btn" id="clearPath">Clear Path</button>
+          <button class="path-btn" id="closePath">Close Path</button>
+          <button class="path-btn" id="circlePath">Circle</button>
+        </div>
+
+        <div class="path-info">
+          <div class="info-card">
+            <p class="info-label">Function</p>
+            <p class="info-value" style="color: var(--path-purple);">f(z) = z</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">∫_γ f(z) dz</p>
+            <p class="info-value" id="integralValue" style="color: var(--integral-cyan);">0 + 0i</p>
+          </div>
+          <div class="info-card">
+            <p class="info-label">Path closed?</p>
+            <p class="info-value" id="closedStatus" style="color: var(--connected-green);">No</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cauchy's Theorem -->
+  <section class="cauchy-section">
+    <div class="section-header" style="color: var(--ink-light);">
+      <h2 class="section-title">Cauchy's Integral Theorem</h2>
+      <p class="section-subtitle" style="color: #9CA3AF;">For analytic functions, closed path integrals vanish</p>
+    </div>
+
+    <div class="cauchy-container">
+      <div class="cauchy-panel">
+        <div class="cauchy-canvas-container">
+          <canvas id="cauchyCanvas"></canvas>
+        </div>
+
+        <div class="cauchy-controls">
+          <button class="cauchy-btn" id="animateHomotopy">Animate Homotopy</button>
+          <button class="cauchy-btn" id="resetHomotopy">Reset</button>
+        </div>
+
+        <div class="cauchy-result">
+          <p class="cauchy-formula">∮_γ f(z) dz = 0</p>
+          <p class="cauchy-note">For any analytic f on a simply connected region U, and any closed path γ in U</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Simply Connected -->
+  <section class="simply-section">
+    <div class="section-header">
+      <h2 class="section-title">Simply Connected Regions</h2>
+      <p class="section-subtitle">Regions with no holes allow Cauchy's theorem to work</p>
+    </div>
+
+    <div class="simply-container">
+      <div class="simply-panel">
+        <div class="simply-grid">
+          <div class="simply-card yes">
+            <div class="simply-icon">○</div>
+            <h3 class="simply-title" style="color: var(--connected-green);">Simply Connected</h3>
+            <p class="simply-desc">
+              Every closed path can be continuously shrunk to a point.<br>
+              <strong>Examples:</strong> Disk, half-plane, ℂ itself
+            </p>
+          </div>
+          <div class="simply-card no">
+            <div class="simply-icon">◎</div>
+            <h3 class="simply-title" style="color: var(--hole-red);">Not Simply Connected</h3>
+            <p class="simply-desc">
+              Some paths cannot shrink without leaving the region.<br>
+              <strong>Examples:</strong> Punctured disk ℂ - {0}, annulus
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Narrative: Consequences -->
+  <section class="narrative-section dark">
+    <div class="narrative-content" data-animate>
+      <p>Cauchy's theorem has remarkable consequences:</p>
+      <div class="math-display">
+        <strong>Corollary 3.15:</strong><br>
+        If γ₁ and γ₂ have the same endpoints,<br>
+        then ∫_{γ₁} f dz = ∫_{γ₂} f dz<br><br>
+        <em>The integral depends only on endpoints, not the path!</em>
+      </div>
+      <p>This is path independence — the complex analogue of the fundamental theorem of calculus.</p>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <section class="next-section">
+    <p class="next-label">Coming Next</p>
+    <h3 class="next-title">Winding Numbers & Cauchy's Formula</h3>
+    <p class="next-description">The winding number counts how paths wrap around points. Cauchy's formula: boundary values determine interior.</p>
+  </section>
+
+  <script>
+    // Scroll animations
+    const observerOptions = { threshold: 0.3, rootMargin: '0px 0px -10% 0px' };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, observerOptions);
+    document.querySelectorAll('[data-animate], .narrative-content').forEach(el => observer.observe(el));
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      return { ctx, width: rect.width, height: rect.height };
+    }
+
+    function formatComplex(re, im) {
+      const reStr = re.toFixed(2);
+      const imAbs = Math.abs(im).toFixed(2);
+      const sign = im >= 0 ? '+' : '-';
+      return `${reStr} ${sign} ${imAbs}i`;
+    }
+
+    // ============================================
+    // PATH DRAWING
+    // ============================================
+    
+    const pathCanvas = document.getElementById('pathCanvas');
+    const pathContainer = document.getElementById('pathCanvasContainer');
+    let pathPoints = [];
+
+    function drawPath() {
+      const { ctx, width, height } = setupCanvas(pathCanvas);
+
+      ctx.fillStyle = '#FAFAFA';
+      ctx.fillRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const scale = Math.min(width, height) / 6;
+
+      // Grid
+      ctx.strokeStyle = '#E5E5E5';
+      ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + i * scale, 0);
+        ctx.lineTo(centerX + i * scale, height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, centerY - i * scale);
+        ctx.lineTo(width, centerY - i * scale);
+        ctx.stroke();
+      }
+
+      // Axes
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.moveTo(centerX, 0);
+      ctx.lineTo(centerX, height);
+      ctx.stroke();
+
+      if (pathPoints.length === 0) return;
+
+      // Draw path
+      ctx.strokeStyle = '#8B5CF6';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pathPoints[0].px, pathPoints[0].py);
+      for (let i = 1; i < pathPoints.length; i++) {
+        ctx.lineTo(pathPoints[i].px, pathPoints[i].py);
+      }
+      ctx.stroke();
+
+      // Draw direction arrows
+      if (pathPoints.length >= 2) {
+        for (let i = 0; i < pathPoints.length - 1; i++) {
+          const p1 = pathPoints[i];
+          const p2 = pathPoints[i + 1];
+          const midX = (p1.px + p2.px) / 2;
+          const midY = (p1.py + p2.py) / 2;
+          const angle = Math.atan2(p2.py - p1.py, p2.px - p1.px);
+
+          ctx.fillStyle = '#8B5CF6';
+          ctx.save();
+          ctx.translate(midX, midY);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.moveTo(8, 0);
+          ctx.lineTo(-4, 5);
+          ctx.lineTo(-4, -5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // Draw points
+      pathPoints.forEach((p, i) => {
+        ctx.fillStyle = i === 0 ? '#22C55E' : (i === pathPoints.length - 1 ? '#EC4899' : '#8B5CF6');
+        ctx.beginPath();
+        ctx.arc(p.px, p.py, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Compute integral ∫_γ z dz = ∫_γ (x + iy)(dx + i dy)
+      // For f(z) = z: ∫ z dz = z²/2 from start to end
+      let integralRe = 0, integralIm = 0;
+      
+      if (pathPoints.length >= 2) {
+        const start = pathPoints[0];
+        const end = pathPoints[pathPoints.length - 1];
+        
+        // For f(z) = z, the integral is (z_end² - z_start²)/2
+        const startZ2Re = start.x * start.x - start.y * start.y;
+        const startZ2Im = 2 * start.x * start.y;
+        const endZ2Re = end.x * end.x - end.y * end.y;
+        const endZ2Im = 2 * end.x * end.y;
+        
+        integralRe = (endZ2Re - startZ2Re) / 2;
+        integralIm = (endZ2Im - startZ2Im) / 2;
+      }
+
+      // Check if closed
+      const isClosed = pathPoints.length >= 3 && 
+        Math.sqrt((pathPoints[0].px - pathPoints[pathPoints.length-1].px)**2 + 
+                  (pathPoints[0].py - pathPoints[pathPoints.length-1].py)**2) < 20;
+
+      document.getElementById('integralValue').textContent = formatComplex(integralRe, integralIm);
+      document.getElementById('closedStatus').textContent = isClosed ? 'Yes' : 'No';
+      document.getElementById('closedStatus').style.color = isClosed ? '#22C55E' : '#EF4444';
+    }
+
+    pathContainer.addEventListener('click', (e) => {
+      const rect = pathCanvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const scale = Math.min(rect.width, rect.height) / 6;
+      
+      const x = (px - centerX) / scale;
+      const y = (centerY - py) / scale;
+      
+      pathPoints.push({ x, y, px, py });
+      drawPath();
+    });
+
+    document.getElementById('clearPath').addEventListener('click', () => {
+      pathPoints = [];
+      drawPath();
+    });
+
+    document.getElementById('closePath').addEventListener('click', () => {
+      if (pathPoints.length >= 2) {
+        pathPoints.push({ ...pathPoints[0] });
+        drawPath();
+      }
+    });
+
+    document.getElementById('circlePath').addEventListener('click', () => {
+      const rect = pathCanvas.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const scale = Math.min(rect.width, rect.height) / 6;
+      const r = 1.5;
+      
+      pathPoints = [];
+      for (let t = 0; t <= 2 * Math.PI + 0.1; t += Math.PI / 16) {
+        const x = r * Math.cos(t);
+        const y = r * Math.sin(t);
+        pathPoints.push({
+          x, y,
+          px: centerX + x * scale,
+          py: centerY - y * scale
+        });
+      }
+      drawPath();
+    });
+
+    // ============================================
+    // CAUCHY THEOREM VISUALIZATION
+    // ============================================
+    
+    const cauchyCanvas = document.getElementById('cauchyCanvas');
+    let homotopyT = 0;
+    let animating = false;
+
+    function drawCauchy() {
+      const { ctx, width, height } = setupCanvas(cauchyCanvas);
+
+      ctx.fillStyle = '#0A0A0F';
+      ctx.fillRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const scale = Math.min(width, height) / 5;
+
+      // Grid
+      ctx.strokeStyle = '#222';
+      ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + i * scale, 0);
+        ctx.lineTo(centerX + i * scale, height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, centerY - i * scale);
+        ctx.lineTo(width, centerY - i * scale);
+        ctx.stroke();
+      }
+
+      // Axes
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.moveTo(centerX, 0);
+      ctx.lineTo(centerX, height);
+      ctx.stroke();
+
+      // Draw shrinking path (homotopy from circle to point)
+      const r = 1.5 * (1 - homotopyT);
+      
+      if (r > 0.05) {
+        ctx.strokeStyle = '#8B5CF6';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let t = 0; t <= 2 * Math.PI + 0.1; t += 0.1) {
+          const x = centerX + r * Math.cos(t) * scale;
+          const y = centerY - r * Math.sin(t) * scale;
+          if (t === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Direction arrow
+        const arrowAngle = Math.PI / 2;
+        const arrowX = centerX + r * Math.cos(arrowAngle) * scale;
+        const arrowY = centerY - r * Math.sin(arrowAngle) * scale;
+        ctx.fillStyle = '#8B5CF6';
+        ctx.save();
+        ctx.translate(arrowX, arrowY);
+        ctx.rotate(-arrowAngle + Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, 6);
+        ctx.lineTo(-5, -6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      } else {
+        // Show point
+        ctx.fillStyle = '#8B5CF6';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Label
+      ctx.fillStyle = '#06B6D4';
+      ctx.font = '14px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      if (homotopyT < 1) {
+        ctx.fillText(`∮ f dz = 0 (any closed path)`, centerX, height - 30);
+      } else {
+        ctx.fillText('Path contracted to point!', centerX, height - 30);
+      }
+    }
+
+    function animateHomotopy() {
+      if (!animating) return;
+      
+      homotopyT += 0.02;
+      if (homotopyT > 1) homotopyT = 1;
+      
+      drawCauchy();
+      
+      if (homotopyT < 1) {
+        requestAnimationFrame(animateHomotopy);
+      } else {
+        animating = false;
+      }
+    }
+
+    document.getElementById('animateHomotopy').addEventListener('click', () => {
+      animating = true;
+      animateHomotopy();
+    });
+
+    document.getElementById('resetHomotopy').addEventListener('click', () => {
+      animating = false;
+      homotopyT = 0;
+      drawCauchy();
+    });
+
+    // Initialize
+    drawPath();
+    drawCauchy();
+
+    window.addEventListener('resize', () => {
+      // Recalculate pixel positions for path points
+      const rect = pathCanvas.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const scale = Math.min(rect.width, rect.height) / 6;
+      
+      pathPoints.forEach(p => {
+        p.px = centerX + p.x * scale;
+        p.py = centerY - p.y * scale;
+      });
+      
+      drawPath();
+      drawCauchy();
+    });
+  </script>
+</body>
+</html>
