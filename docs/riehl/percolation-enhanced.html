@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Percolation: The Geometry of Phase Transitions</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Libraries -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  
+  <style>
+    :root {
+      --pc-square: 0.592746;
+      --pc-triangular: 0.5;
+      --pc-honeycomb: 0.6970;
+      --subcritical: #4A6FA5;
+      --critical: #FFE66D;
+      --supercritical: #FF6B6B;
+      --spanning: #4ECDC4;
+      --bg-dark: #0a0a0f;
+      --bg-section: #0f0f18;
+      --bg-card: #161622;
+      --text-primary: #f0f0f5;
+      --text-secondary: #a0a0b8;
+      --text-muted: #606078;
+      --accent: #4ECDC4;
+      --accent-warm: #FFE66D;
+      --accent-purple: #C44DFF;
+      --border: rgba(255,255,255,0.08);
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+    
+    h1, h2, h3 {
+      font-family: 'Crimson Pro', Georgia, serif;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+    }
+    
+    h1 { font-size: clamp(2.5rem, 7vw, 5rem); line-height: 1.1; }
+    h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); margin-bottom: 1.5rem; color: var(--accent); }
+    h3 { font-size: 1.4rem; margin-bottom: 1rem; color: var(--text-secondary); }
+    
+    p {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 65ch;
+      margin-bottom: 1.5rem;
+    }
+    
+    em { color: var(--accent); font-style: italic; }
+    strong { color: var(--accent-warm); }
+    
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(78, 205, 196, 0.15);
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: var(--accent);
+    }
+    
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+    section { min-height: 100vh; padding: 8rem 0; position: relative; }
+    
+    /* Progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--subcritical), var(--critical), var(--supercritical));
+      z-index: 1000;
+      transform-origin: left;
+      transform: scaleX(0);
+    }
+    
+    /* Hero */
+    .hero {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hero-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.7;
+    }
+    
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      padding: 0 2rem;
+    }
+    
+    .hero h1 {
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, var(--subcritical) 0%, var(--critical) 50%, var(--supercritical) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .hero .subtitle {
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 2rem;
+    }
+    
+    .hero .teaser {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .scroll-indicator {
+      position: absolute;
+      bottom: 3rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      animation: float 2s ease-in-out infinite;
+      z-index: 1;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(10px); }
+    }
+    
+    .scroll-indicator svg { width: 24px; height: 24px; stroke: var(--text-muted); }
+    
+    /* Interactive panels */
+    .interactive-panel {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+      border: 1px solid var(--border);
+    }
+    
+    .visualization-container {
+      width: 100%;
+      aspect-ratio: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(0,0,0,0.4);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .lattice-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    
+    /* P indicator */
+    .p-indicator {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(0,0,0,0.85);
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      z-index: 10;
+    }
+    
+    .p-indicator .value {
+      font-size: 2rem;
+      font-weight: 500;
+    }
+    
+    .p-indicator .label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    
+    .p-indicator .pc-info {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    
+    .p-indicator.subcritical .value { color: var(--subcritical); }
+    .p-indicator.critical .value { color: var(--critical); }
+    .p-indicator.supercritical .value { color: var(--supercritical); }
+    
+    /* Stats display */
+    .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+      flex-wrap: wrap;
+    }
+    
+    .stat-item {
+      text-align: center;
+      padding: 1rem 1.25rem;
+      background: var(--bg-section);
+      border-radius: 10px;
+      min-width: 120px;
+    }
+    
+    .stat-item .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.6rem;
+      font-weight: 500;
+      color: var(--accent);
+    }
+    
+    .stat-item .label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    
+    .stat-item.spanning .value { color: var(--spanning); }
+    .stat-item.warning .value { color: var(--supercritical); }
+    
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    .control-group {
+      flex: 1;
+      min-width: 180px;
+    }
+    
+    .control-group.wide {
+      flex: 2;
+      min-width: 280px;
+    }
+    
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-group label span {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      background: linear-gradient(to right, var(--subcritical), var(--critical), var(--supercritical));
+      border-radius: 4px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.15s ease;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 0.6rem 1.2rem;
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+    
+    .btn.active, .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg-dark);
+    }
+    
+    .btn.sweep {
+      background: linear-gradient(90deg, var(--subcritical), var(--critical), var(--supercritical));
+      border: none;
+      color: white;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    /* Lattice type selector */
+    .lattice-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .lattice-btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: var(--bg-section);
+      border: 2px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      transition: all 0.25s ease;
+      text-align: center;
+    }
+    
+    .lattice-btn:hover {
+      border-color: var(--accent);
+    }
+    
+    .lattice-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg-dark);
+    }
+    
+    .lattice-btn .pc {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      opacity: 0.8;
+    }
+    
+    /* Math blocks */
+    .math-block {
+      text-align: center;
+      padding: 2rem;
+      margin: 2rem 0;
+      background: linear-gradient(135deg, rgba(78, 205, 196, 0.08) 0%, rgba(255, 230, 109, 0.08) 100%);
+      border-radius: 16px;
+      border-left: 3px solid var(--accent);
+    }
+    
+    .math-block .katex { font-size: 1.3rem; }
+    
+    .math-block.purple {
+      border-left-color: var(--accent-purple);
+      background: linear-gradient(135deg, rgba(196, 77, 255, 0.08) 0%, rgba(78, 205, 196, 0.08) 100%);
+    }
+    
+    /* Insight boxes */
+    .insight {
+      background: linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(255, 107, 107, 0.1) 100%);
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      border: 1px solid rgba(78, 205, 196, 0.2);
+    }
+    
+    .insight h4 {
+      color: var(--accent);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.5rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+    }
+    
+    .insight p { margin-bottom: 0; color: var(--text-primary); }
+    
+    .insight.purple {
+      background: linear-gradient(135deg, rgba(196, 77, 255, 0.1) 0%, rgba(78, 205, 196, 0.1) 100%);
+      border-color: rgba(196, 77, 255, 0.3);
+    }
+    
+    .insight.purple h4 { color: var(--accent-purple); }
+    
+    /* Two column */
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    
+    @media (max-width: 768px) {
+      .two-column { grid-template-columns: 1fr; }
+    }
+    
+    /* Quote block */
+    .quote-block {
+      padding: 2rem;
+      margin: 3rem 0;
+      border-left: 3px solid var(--accent-warm);
+      background: rgba(255, 230, 109, 0.05);
+      border-radius: 0 16px 16px 0;
+    }
+    
+    .quote-block p {
+      font-family: 'Crimson Pro', Georgia, serif;
+      font-size: 1.3rem;
+      font-style: italic;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+    
+    .quote-block .attribution {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-style: normal;
+    }
+    
+    /* Phase diagram */
+    .phase-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 2rem 0;
+      padding: 1rem;
+      background: var(--bg-section);
+      border-radius: 16px;
+    }
+    
+    .phase-region {
+      flex: 1;
+      padding: 2rem 1rem;
+      text-align: center;
+      position: relative;
+    }
+    
+    .phase-region.subcritical {
+      background: linear-gradient(90deg, var(--subcritical), transparent);
+      border-radius: 12px 0 0 12px;
+    }
+    
+    .phase-region.critical {
+      background: rgba(255, 230, 109, 0.2);
+      border-left: 2px dashed var(--critical);
+      border-right: 2px dashed var(--critical);
+    }
+    
+    .phase-region.supercritical {
+      background: linear-gradient(90deg, transparent, var(--supercritical));
+      border-radius: 0 12px 12px 0;
+    }
+    
+    .phase-region h4 { font-size: 1rem; margin-bottom: 0.5rem; }
+    .phase-region p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+    
+    .phase-region .pc-marker {
+      position: absolute;
+      top: -1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--critical);
+      font-size: 0.9rem;
+    }
+    
+    /* Comparison table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      font-size: 0.95rem;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .comparison-table th {
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    
+    .comparison-table td { color: var(--text-secondary); }
+    .comparison-table tr:hover td { background: rgba(78, 205, 196, 0.05); }
+    
+    .comparison-table .system { color: var(--text-primary); font-weight: 500; }
+    .comparison-table .exponent { font-family: 'JetBrains Mono', monospace; color: var(--accent); }
+    .comparison-table .exact { font-family: 'JetBrains Mono', monospace; color: var(--accent-purple); }
+    
+    /* Chart container */
+    .chart-container {
+      width: 100%;
+      height: 280px;
+      margin: 1rem 0;
+    }
+    
+    /* Examples grid */
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+    
+    .example-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+    
+    .example-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+    }
+    
+    .example-card .emoji { font-size: 2.5rem; margin-bottom: 1rem; }
+    .example-card h4 { color: var(--text-primary); margin-bottom: 0.5rem; }
+    .example-card p { font-size: 0.95rem; margin: 0; }
+    
+    /* Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    
+    /* Footer */
+    footer {
+      padding: 4rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    /* Spanning indicator */
+    .spanning-indicator {
+      text-align: center;
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+    
+    .spanning-indicator.yes {
+      background: rgba(78, 205, 196, 0.2);
+      color: var(--spanning);
+      border: 1px solid var(--spanning);
+    }
+    
+    .spanning-indicator.no {
+      background: rgba(255, 107, 107, 0.1);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    
+    /* Kac table */
+    .kac-table {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      margin: 2rem auto;
+      max-width: 500px;
+      background: var(--bg-section);
+      padding: 1rem;
+      border-radius: 12px;
+    }
+    
+    .kac-cell {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.25rem;
+      transition: all 0.3s ease;
+    }
+    
+    .kac-cell.highlight {
+      background: var(--accent);
+      color: var(--bg-dark);
+    }
+    
+    .kac-cell.highlight-purple {
+      background: var(--accent-purple);
+      color: white;
+    }
+    
+    .kac-cell .indices {
+      font-size: 0.6rem;
+      opacity: 0.6;
+    }
+    
+    .kac-header {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Exponent derivation */
+    .exponent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    
+    .exponent-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    
+    .exponent-card .symbol {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      color: var(--accent-purple);
+      margin-bottom: 0.5rem;
+    }
+    
+    .exponent-card .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      color: var(--accent);
+    }
+    
+    .exponent-card .name {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+    
+    .exponent-card .origin {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progressBar"></div>
+  
+  <!-- Hero Section -->
+  <section class="hero">
+    <canvas class="hero-canvas" id="heroCanvas"></canvas>
+    <div class="hero-content">
+      <h1>Percolation</h1>
+      <p class="subtitle">The Geometry of Phase Transitions</p>
+      <p class="teaser">At a single critical point, isolated clusters suddenly merge into an infinite network. This is the story of percolation—where probability meets geometry, and simple rules create profound universality.</p>
+    </div>
+    <div class="scroll-indicator">
+      <span>Scroll to explore</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12l7 7 7-7"/>
+      </svg>
+    </div>
+  </section>
+  
+  <!-- Section 1: What is Percolation? -->
+  <section id="what-is">
+    <div class="container">
+      <div class="reveal">
+        <h2>What is Percolation?</h2>
+        <p>Imagine pouring water through a porous rock, or a forest fire spreading between trees. At what density of pores—or trees—does connectivity emerge? This is the percolation problem: the study of how local randomness creates global structure.</p>
+      </div>
+      
+      <div class="examples-grid reveal">
+        <div class="example-card">
+          <div class="emoji">☕</div>
+          <h4>Coffee Brewing</h4>
+          <p>Water percolates through ground coffee. The connectivity of channels determines extraction quality.</p>
+        </div>
+        
+        <div class="example-card">
+          <div class="emoji">🔥</div>
+          <h4>Forest Fires</h4>
+          <p>Fire spreads between neighboring trees. Below a critical density, fires stay local. Above it, they span the forest.</p>
+        </div>
+        
+        <div class="example-card">
+          <div class="emoji">🦠</div>
+          <h4>Epidemics</h4>
+          <p>Disease spreads through social networks. The percolation threshold relates to herd immunity.</p>
+        </div>
+        
+        <div class="example-card">
+          <div class="emoji">🪨</div>
+          <h4>Porous Media</h4>
+          <p>Oil flows through rock via connected pores. Percolation determines reservoir productivity.</p>
+        </div>
+      </div>
+      
+      <div class="reveal">
+        <p>The mathematical model is elegant: place sites on a lattice, each occupied with probability p. The central question: <em>for what p does an infinite connected cluster exist?</em></p>
+      </div>
+      
+      <div class="insight reveal">
+        <h4>The Surprise</h4>
+        <p>There exists a sharp threshold p<sub>c</sub>. Below it, all clusters are finite. Above it, an infinite cluster appears. The transition is abrupt—a true phase transition in a purely geometric system, with no energy or temperature.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Section 2: The Lattice Playground -->
+  <section id="playground">
+    <div class="container">
+      <div class="reveal">
+        <h2>The Percolation Playground</h2>
+        <p>Explore percolation on different lattice types. Each site is occupied with probability p. Connected clusters share the same color. Watch for the <em>spanning cluster</em>—one that connects top to bottom.</p>
+      </div>
+      
+      <div class="interactive-panel reveal" x-data="percolationDemo()" x-init="init()">
+        <div class="lattice-selector">
+          <button class="lattice-btn" :class="{ active: latticeType === 'square' }" @click="setLattice('square')">
+            Square
+            <span class="pc">p<sub>c</sub> ≈ 0.5927</span>
+          </button>
+          <button class="lattice-btn" :class="{ active: latticeType === 'triangular' }" @click="setLattice('triangular')">
+            Triangular
+            <span class="pc">p<sub>c</sub> = 0.5 (exact)</span>
+          </button>
+          <button class="lattice-btn" :class="{ active: latticeType === 'honeycomb' }" @click="setLattice('honeycomb')">
+            Honeycomb
+            <span class="pc">p<sub>c</sub> ≈ 0.6970</span>
+          </button>
+        </div>
+        
+        <div class="visualization-container">
+          <canvas class="lattice-canvas" id="latticeCanvas"></canvas>
+          <div class="p-indicator" :class="getPhaseClass()">
+            <div class="label">Probability p</div>
+            <div class="value" x-text="parseFloat(p).toFixed(3)"></div>
+            <div class="pc-info" x-text="'p_c = ' + getPc().toFixed(4)"></div>
+          </div>
+        </div>
+        
+        <div class="spanning-indicator" :class="hasSpanning ? 'yes' : 'no'">
+          <span x-text="hasSpanning ? '✓ Spanning cluster exists!' : '✗ No spanning cluster'"></span>
+        </div>
+        
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="value" x-text="occupiedCount"></div>
+            <div class="label">Occupied Sites</div>
+          </div>
+          <div class="stat-item">
+            <div class="value" x-text="clusterCount"></div>
+            <div class="label">Clusters</div>
+          </div>
+          <div class="stat-item" :class="{ spanning: hasSpanning }">
+            <div class="value" x-text="largestClusterSize"></div>
+            <div class="label">Largest Cluster</div>
+          </div>
+          <div class="stat-item">
+            <div class="value" x-text="(largestClusterSize / Math.max(1, occupiedCount) * 100).toFixed(1) + '%'"></div>
+            <div class="label">P<sub>∞</sub></div>
+          </div>
+        </div>
+        
+        <div class="controls">
+          <div class="control-group wide">
+            <label>
+              Occupation Probability
+              <span x-text="'p = ' + parseFloat(p).toFixed(3)"></span>
+            </label>
+            <input type="range" x-model="p" min="0" max="1" step="0.005" @input="generate()">
+          </div>
+          
+          <div class="control-group">
+            <label>
+              Lattice Size
+              <span x-text="size + '×' + size"></span>
+            </label>
+            <input type="range" x-model="size" min="20" max="80" step="10" @input="generate()">
+          </div>
+        </div>
+        
+        <div class="controls" style="border-top: none; padding-top: 0;">
+          <div class="control-group">
+            <div class="btn-group">
+              <button class="btn" @click="generate()">🎲 Regenerate</button>
+              <button class="btn" @click="jumpToPc()">→ p<sub>c</sub></button>
+              <button class="btn sweep" :class="{ active: sweeping }" @click="toggleSweep()">
+                <span x-text="sweeping ? '⏹ Stop' : '▶ Sweep p'"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="reveal">
+        <p>Click <strong>Sweep p</strong> to watch the probability animate from 0 to 1. Notice the dramatic moment when the spanning cluster suddenly appears—this is the phase transition in action.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Section 3: Cluster Size Distribution -->
+  <section id="distribution">
+    <div class="container">
+      <div class="reveal">
+        <h2>The Cluster Size Distribution</h2>
+        <p>At criticality, the cluster sizes follow a <em>power law</em>: n<sub>s</sub> ~ s<sup>−τ</sup>, where τ = 187/91 ≈ 2.055. This is the signature of scale invariance—clusters of all sizes appear with fractal self-similarity.</p>
+      </div>
+      
+      <div class="interactive-panel reveal" x-data="distributionDemo()" x-init="init()">
+        <div class="two-column">
+          <div>
+            <h3 style="text-align: center; margin-bottom: 1rem;">Cluster Size Histogram</h3>
+            <div class="chart-container" id="histogramChart"></div>
+          </div>
+          <div>
+            <h3 style="text-align: center; margin-bottom: 1rem;">Log-Log Plot (Power Law)</h3>
+            <div class="chart-container" id="loglogChart"></div>
+          </div>
+        </div>
+        
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="value" x-text="parseFloat(currentP).toFixed(3)"></div>
+            <div class="label">Current p</div>
+          </div>
+          <div class="stat-item">
+            <div class="value" x-text="totalClusters"></div>
+            <div class="label">Total Clusters</div>
+          </div>
+          <div class="stat-item">
+            <div class="value" x-text="meanSize.toFixed(1)"></div>
+            <div class="label">Mean Size</div>
+          </div>
+        </div>
+        
+        <div class="controls">
+          <div class="control-group wide">
+            <label>
+              Probability p
+              <span x-text="parseFloat(currentP).toFixed(3)"></span>
+            </label>
+            <input type="range" x-model="currentP" min="0.3" max="0.8" step="0.01" @input="compute()">
+          </div>
+          
+          <div class="control-group">
+            <div class="btn-group">
+              <button class="btn" @click="currentP = 0.5927; compute()">→ p<sub>c</sub></button>
+              <button class="btn" @click="compute()">🔄 Resample</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="math-block reveal" id="clusterExponent"></div>
+      
+      <div class="insight reveal">
+        <h4>Power Laws & Scale Invariance</h4>
+        <p>At p = p<sub>c</sub>, the log-log plot becomes linear—the hallmark of a power law. This means clusters exist at <em>all scales</em>, from single sites to system-spanning giants. Away from criticality, an exponential cutoff truncates the distribution.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Section 4: The Order Parameter -->
+  <section id="order-parameter">
+    <div class="container">
+      <div class="reveal">
+        <h2>The Order Parameter</h2>
+        <p>In physics, a phase transition is characterized by an <em>order parameter</em>—a quantity that is zero in one phase and nonzero in another. For percolation, this is P<sub>∞</sub>: the probability that a random site belongs to the infinite cluster.</p>
+      </div>
+      
+      <div class="math-block reveal" id="orderParam"></div>
+      
+      <div class="interactive-panel reveal" x-data="orderParameterDemo()" x-init="init()">
+        <div class="chart-container" id="orderParamChart" style="height: 320px;"></div>
+        
+        <div class="controls">
+          <div class="control-group wide">
+            <label>
+              Current p
+              <span x-text="parseFloat(currentP).toFixed(3)"></span>
+            </label>
+            <input type="range" x-model="currentP" min="0" max="1" step="0.01" @input="updateMarker()">
+          </div>
+          
+          <div class="control-group">
+            <label>
+              Samples
+              <span x-text="samples"></span>
+            </label>
+            <input type="range" x-model="samples" min="10" max="50" step="5" @input="recompute()">
+          </div>
+        </div>
+      </div>
+      
+      <div class="reveal">
+        <p>The order parameter rises from zero at p<sub>c</sub> with a characteristic power law:</p>
+      </div>
+      
+      <div class="math-block reveal" id="betaExponent"></div>
+    </div>
+  </section>
+  
+  <!-- Section 5: Universality -->
+  <section id="universality">
+    <div class="container">
+      <div class="reveal">
+        <h2>Universality: The Deepest Pattern</h2>
+        <p>The most profound aspect of phase transitions is <em>universality</em>: systems that look completely different share the same critical exponents. The details don't matter—only the dimension and symmetry.</p>
+      </div>
+      
+      <table class="comparison-table reveal">
+        <thead>
+          <tr>
+            <th>System</th>
+            <th>Order Parameter</th>
+            <th>β</th>
+            <th>ν</th>
+            <th>τ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="system">Percolation (2D)</td>
+            <td>Infinite cluster density</td>
+            <td class="exact">5/36</td>
+            <td class="exact">4/3</td>
+            <td class="exact">187/91</td>
+          </tr>
+          <tr>
+            <td class="system">Potts Model (q→1)</td>
+            <td>Cluster density</td>
+            <td class="exact">5/36</td>
+            <td class="exact">4/3</td>
+            <td class="exact">187/91</td>
+          </tr>
+          <tr>
+            <td class="system">Ising Model (2D)</td>
+            <td>Magnetization</td>
+            <td class="exponent">1/8</td>
+            <td class="exponent">1</td>
+            <td class="exponent">—</td>
+          </tr>
+          <tr>
+            <td class="system">Self-Avoiding Walks</td>
+            <td>End-to-end distance</td>
+            <td class="exact">5/36</td>
+            <td class="exact">4/3</td>
+            <td class="exact">—</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div class="insight reveal">
+        <h4>Why Universality?</h4>
+        <p>At criticality, the correlation length diverges—fluctuations occur at all scales. The system becomes <em>scale invariant</em>, and only the most fundamental properties (dimension, symmetry) determine behavior. Microscopic details get "washed out" by the infinite correlation length.</p>
+      </div>
+      
+      <div class="math-block reveal" id="correlationLength"></div>
+    </div>
+  </section>
+  
+  <!-- Section 6: The Arithmetic of Critical Exponents -->
+  <section id="arithmetic">
+    <div class="container">
+      <div class="reveal">
+        <h2>The Arithmetic of Critical Exponents</h2>
+        <p>Here is a remarkable fact: the critical exponents of 2D percolation are <em>exact rational numbers</em>. This isn't coincidence—it's a profound clue about the underlying mathematical structure.</p>
+      </div>
+      
+      <div class="exponent-grid reveal">
+        <div class="exponent-card">
+          <div class="symbol">β</div>
+          <div class="value">5/36 ≈ 0.1389</div>
+          <div class="name">Order parameter</div>
+          <div class="origin">From h₁,₂ = 5/96</div>
+        </div>
+        <div class="exponent-card">
+          <div class="symbol">ν</div>
+          <div class="value">4/3 ≈ 1.333</div>
+          <div class="name">Correlation length</div>
+          <div class="origin">From h₂,₁ = 5/8</div>
+        </div>
+        <div class="exponent-card">
+          <div class="symbol">τ</div>
+          <div class="value">187/91 ≈ 2.055</div>
+          <div class="name">Cluster distribution</div>
+          <div class="origin">Scaling relation</div>
+        </div>
+        <div class="exponent-card">
+          <div class="symbol">d<sub>f</sub></div>
+          <div class="value">91/48 ≈ 1.896</div>
+          <div class="name">Fractal dimension</div>
+          <div class="origin">From β/ν</div>
+        </div>
+      </div>
+      
+      <div class="reveal">
+        <p>These numbers emerge from the <strong>Kac formula</strong>—a closed-form expression for conformal weights in minimal models of conformal field theory:</p>
+      </div>
+      
+      <div class="math-block purple reveal" id="kacFormula"></div>
+      
+      <div class="reveal">
+        <p>Percolation corresponds to the limit q → 1 of the Potts model, which is described by a conformal field theory with <strong>central charge c = 0</strong>. The parameter m = 2 (or equivalently, taking the c → 0 limit carefully) gives the percolation exponents.</p>
+      </div>
+      
+      <div class="insight purple reveal">
+        <h4>The Kac Table for c = 0</h4>
+        <p>The conformal weights h<sub>r,s</sub> organize into a table. The critical exponents of percolation come from specific entries: h₁,₂ controls the order parameter, h₂,₁ controls the correlation length. The fact that these are rational reflects the algebraic structure of the Virasoro algebra.</p>
+      </div>
+      
+      <div class="kac-table reveal">
+        <div class="kac-header">r\s</div>
+        <div class="kac-header">1</div>
+        <div class="kac-header">2</div>
+        <div class="kac-header">3</div>
+        <div class="kac-header">4</div>
+        
+        <div class="kac-header">1</div>
+        <div class="kac-cell">0<span class="indices">(1,1)</span></div>
+        <div class="kac-cell highlight">5/96<span class="indices">(1,2)</span></div>
+        <div class="kac-cell">1/3<span class="indices">(1,3)</span></div>
+        <div class="kac-cell">35/96<span class="indices">(1,4)</span></div>
+        
+        <div class="kac-header">2</div>
+        <div class="kac-cell highlight-purple">5/8<span class="indices">(2,1)</span></div>
+        <div class="kac-cell">0<span class="indices">(2,2)</span></div>
+        <div class="kac-cell">1/8<span class="indices">(2,3)</span></div>
+        <div class="kac-cell">1/3<span class="indices">(2,4)</span></div>
+        
+        <div class="kac-header">3</div>
+        <div class="kac-cell">2<span class="indices">(3,1)</span></div>
+        <div class="kac-cell">7/8<span class="indices">(3,2)</span></div>
+        <div class="kac-cell">1/3<span class="indices">(3,3)</span></div>
+        <div class="kac-cell">1/8<span class="indices">(3,4)</span></div>
+        
+        <div class="kac-header">4</div>
+        <div class="kac-cell">33/8<span class="indices">(4,1)</span></div>
+        <div class="kac-cell">5/3<span class="indices">(4,2)</span></div>
+        <div class="kac-cell">7/8<span class="indices">(4,3)</span></div>
+        <div class="kac-cell">0<span class="indices">(4,4)</span></div>
+      </div>
+      
+      <div class="reveal">
+        <p>The highlighted entries give the percolation exponents: <span style="color: var(--accent);">h₁,₂ = 5/96</span> determines β via β = 2h₁,₂/(2-2h₂,₁) = 5/36, and <span style="color: var(--accent-purple);">h₂,₁ = 5/8</span> determines ν via ν = 1/(2-2h₂,₁) = 4/3.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Section 7: Genus as Universal Obstruction -->
+  <section id="genus-connection">
+    <div class="container">
+      <div class="reveal">
+        <h2>The Genus Connection</h2>
+        <p>The rational exponents of percolation connect to a deeper theme: <em>genus as universal obstruction</em>. The same algebraic structures that produce exact exponents in CFT appear across mathematics wherever topological complexity constrains existence.</p>
+      </div>
+      
+      <div class="quote-block reveal">
+        <p>"The critical exponents are not arbitrary. They are determined by representation theory—the same representation theory that controls which meromorphic functions can exist on a Riemann surface of given genus."</p>
+        <span class="attribution">— The deep connection</span>
+      </div>
+      
+      <div class="two-column reveal" style="margin-top: 2rem;">
+        <div class="insight purple">
+          <h4>CFT & Moduli Spaces</h4>
+          <p>The partition function of a CFT on a torus involves the <strong>Dedekind eta function</strong> η(τ)—a modular form. The same modular structures that classify elliptic curves (genus 1 Riemann surfaces) organize the operator content of CFTs. The Kac determinant formula is essentially computing "which states exist," just as Riemann-Roch computes "which functions exist."</p>
+        </div>
+        
+        <div class="insight purple">
+          <h4>Rational = Algebraic Constraints</h4>
+          <p>The rationality of critical exponents reflects <strong>null vectors</strong> in Virasoro representations—algebraic constraints that force correlation functions to satisfy differential equations. This is the CFT analog of genus obstructing function existence: representation theory constrains what operators (states) can appear.</p>
+        </div>
+      </div>
+      
+      <div class="reveal" style="margin-top: 2rem;">
+        <h3>The Unified Pattern</h3>
+        <p>Consider the parallel structures:</p>
+      </div>
+      
+      <table class="comparison-table reveal">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th>Object</th>
+            <th>Obstruction</th>
+            <th>Invariant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="system">Riemann Surfaces</td>
+            <td>Meromorphic functions</td>
+            <td>Genus g obstructs existence</td>
+            <td class="exact">g ∈ ℤ≥0</td>
+          </tr>
+          <tr>
+            <td class="system">CFT (percolation)</td>
+            <td>Primary operators</td>
+            <td>Null vectors obstruct states</td>
+            <td class="exact">h ∈ ℚ</td>
+          </tr>
+          <tr>
+            <td class="system">Number Theory</td>
+            <td>Rational points</td>
+            <td>Genus g obstructs solutions</td>
+            <td class="exact">rank ∈ ℤ≥0</td>
+          </tr>
+          <tr>
+            <td class="system">String Theory</td>
+            <td>Worldsheet amplitudes</td>
+            <td>Genus g controls loop order</td>
+            <td class="exact">dim(M_g) = 3g-3</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div class="math-block purple reveal" id="schramm"></div>
+      
+      <div class="reveal">
+        <p>The SLE<sub>κ</sub> curves that describe percolation cluster boundaries (κ = 6) have fractal dimension d = 1 + κ/8 = 7/4. The fact that this is rational reflects the underlying CFT structure. Different κ values correspond to different universality classes—all with rational dimensions determined by representation theory.</p>
+      </div>
+      
+      <div class="insight purple reveal">
+        <h4>The Deep Unity</h4>
+        <p>Percolation, despite being a simple geometric model, sits at a remarkable crossroads. Its critical exponents are determined by the same algebraic structures (Virasoro algebra, modular forms) that control Riemann surface theory and string amplitudes. The "genus as obstruction" pattern—where topological complexity constrains existence—manifests here as "null vectors as obstruction," forcing the exponents to be exact rational numbers. This is not coincidence: it reflects a profound unity in how mathematics organizes constraints across seemingly disparate domains.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Section 8: Beyond -->
+  <section id="beyond">
+    <div class="container">
+      <div class="reveal">
+        <h2>Beyond Two Dimensions</h2>
+        <p>In higher dimensions, percolation loses its exact solvability—but not its universality. The critical exponents change, and at dimension 6 (the "upper critical dimension"), mean-field theory becomes exact.</p>
+      </div>
+      
+      <table class="comparison-table reveal">
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>β</th>
+            <th>ν</th>
+            <th>d<sub>f</sub></th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="system">d = 2</td>
+            <td class="exact">5/36</td>
+            <td class="exact">4/3</td>
+            <td class="exact">91/48</td>
+            <td>Exactly solvable via CFT</td>
+          </tr>
+          <tr>
+            <td class="system">d = 3</td>
+            <td class="exponent">≈ 0.41</td>
+            <td class="exponent">≈ 0.88</td>
+            <td class="exponent">≈ 2.52</td>
+            <td>Numerical only</td>
+          </tr>
+          <tr>
+            <td class="system">d = 4</td>
+            <td class="exponent">≈ 0.64</td>
+            <td class="exponent">≈ 0.68</td>
+            <td class="exponent">≈ 3.12</td>
+            <td>Numerical only</td>
+          </tr>
+          <tr>
+            <td class="system">d ≥ 6</td>
+            <td class="exponent">1</td>
+            <td class="exponent">1/2</td>
+            <td class="exponent">4</td>
+            <td>Mean-field (exact)</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div class="insight reveal">
+        <h4>Why d = 6?</h4>
+        <p>At the upper critical dimension, fluctuations become subdominant to mean-field behavior. The exponents become simple integers and half-integers. The geometric reason: in high dimensions, random walks are unlikely to self-intersect, simplifying the combinatorics dramatically.</p>
+      </div>
+      
+      <div class="reveal" style="margin-top: 3rem;">
+        <p>Percolation stands at a remarkable crossroads: simple enough to simulate on a laptop, yet deep enough to connect to conformal field theory, representation theory, and the frontiers of probability. The phase transition at p<sub>c</sub> is where randomness meets geometry—and both reveal their deepest algebraic structures.</p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>An interactive exploration of percolation theory, phase transitions, and the arithmetic of critical phenomena.</p>
+      <p style="margin-top: 0.5rem;">Built with D3.js, Alpine.js, GSAP, and KaTeX.</p>
+    </div>
+  </footer>
+  
+  <script>
+    // Wait for load
+    window.addEventListener('load', function() {
+      gsap.registerPlugin(ScrollTrigger);
+      initHero();
+      initScrollAnimations();
+      initKatex();
+    });
+    
+    // === HERO ANIMATION ===
+    function initHero() {
+      const canvas = document.getElementById('heroCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      function resize() {
+        canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+        canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+      resize();
+      window.addEventListener('resize', resize);
+      
+      const size = 100;
+      let p = 0.5927;
+      let direction = 0.0002;
+      
+      function generateAndDraw() {
+        const w = canvas.offsetWidth;
+        const h = canvas.offsetHeight;
+        const cellW = w / size;
+        const cellH = h / size;
+        
+        // Generate grid
+        const grid = [];
+        for (let y = 0; y < size; y++) {
+          grid[y] = [];
+          for (let x = 0; x < size; x++) {
+            grid[y][x] = Math.random() < p ? 1 : 0;
+          }
+        }
+        
+        // Find clusters
+        const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+        const clusters = Array(size).fill(null).map(() => Array(size).fill(-1));
+        const clusterColors = [];
+        let ci = 0;
+        
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            if (grid[y][x] === 1 && !visited[y][x]) {
+              const queue = [[y, x]];
+              visited[y][x] = true;
+              let minY = y, maxY = y;
+              
+              while (queue.length > 0) {
+                const [cy, cx] = queue.shift();
+                clusters[cy][cx] = ci;
+                minY = Math.min(minY, cy);
+                maxY = Math.max(maxY, cy);
+                
+                for (const [dy, dx] of [[-1,0], [1,0], [0,-1], [0,1]]) {
+                  const ny = cy + dy, nx = cx + dx;
+                  if (ny >= 0 && ny < size && nx >= 0 && nx < size &&
+                      !visited[ny][nx] && grid[ny][nx] === 1) {
+                    visited[ny][nx] = true;
+                    queue.push([ny, nx]);
+                  }
+                }
+              }
+              
+              const spanning = minY === 0 && maxY === size - 1;
+              const hue = spanning ? 170 : (ci * 137.5) % 360;
+              const sat = spanning ? 70 : 50;
+              const light = spanning ? 55 : 35;
+              clusterColors[ci] = `hsl(${hue}, ${sat}%, ${light}%)`;
+              ci++;
+            }
+          }
+        }
+        
+        // Draw
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, w, h);
+        
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            if (grid[y][x] === 1) {
+              ctx.fillStyle = clusterColors[clusters[y][x]] || '#333';
+              ctx.fillRect(x * cellW, y * cellH, cellW - 0.5, cellH - 0.5);
+            }
+          }
+        }
+      }
+      
+      function animate() {
+        p += direction;
+        if (p > 0.68 || p < 0.50) direction *= -1;
+        generateAndDraw();
+        requestAnimationFrame(animate);
+      }
+      
+      animate();
+    }
+    
+    // === PERCOLATION DEMO ===
+    function percolationDemo() {
+      return {
+        p: 0.5,
+        size: 50,
+        latticeType: 'square',
+        grid: [],
+        clusters: [],
+        clusterColors: [],
+        occupiedCount: 0,
+        clusterCount: 0,
+        largestClusterSize: 0,
+        hasSpanning: false,
+        sweeping: false,
+        sweepRAF: null,
+        canvas: null,
+        ctx: null,
+        
+        pcValues: {
+          square: 0.592746,
+          triangular: 0.5,
+          honeycomb: 0.6970
+        },
+        
+        init() {
+          this.canvas = document.getElementById('latticeCanvas');
+          this.ctx = this.canvas.getContext('2d');
+          this.resize();
+          window.addEventListener('resize', () => this.resize());
+          this.generate();
+        },
+        
+        resize() {
+          const container = this.canvas.parentElement;
+          this.canvas.width = container.offsetWidth * window.devicePixelRatio;
+          this.canvas.height = container.offsetHeight * window.devicePixelRatio;
+          this.canvas.style.width = container.offsetWidth + 'px';
+          this.canvas.style.height = container.offsetHeight + 'px';
+          this.draw();
+        },
+        
+        getPc() {
+          return this.pcValues[this.latticeType];
+        },
+        
+        setLattice(type) {
+          this.latticeType = type;
+          this.generate();
+        },
+        
+        jumpToPc() {
+          this.p = this.getPc();
+          this.generate();
+        },
+        
+        toggleSweep() {
+          if (this.sweeping) {
+            this.sweeping = false;
+            if (this.sweepRAF) cancelAnimationFrame(this.sweepRAF);
+          } else {
+            this.sweeping = true;
+            this.p = 0;
+            this.doSweep();
+          }
+        },
+        
+        doSweep() {
+          if (!this.sweeping) return;
+          
+          this.p = parseFloat(this.p) + 0.008;
+          if (this.p >= 1) {
+            this.p = 1;
+            this.sweeping = false;
+          }
+          
+          this.generate();
+          
+          if (this.sweeping) {
+            this.sweepRAF = requestAnimationFrame(() => this.doSweep());
+          }
+        },
+        
+        getNeighbors(y, x, size) {
+          if (this.latticeType === 'square') {
+            return [[y-1,x], [y+1,x], [y,x-1], [y,x+1]];
+          } else if (this.latticeType === 'triangular') {
+            // Triangular: 6 neighbors
+            const offset = y % 2;
+            return [
+              [y-1, x], [y+1, x], [y, x-1], [y, x+1],
+              [y-1, x + (offset ? 0 : -1)], [y+1, x + (offset ? 0 : -1)]
+            ];
+          } else {
+            // Honeycomb: 3 neighbors
+            const offset = y % 2;
+            if ((x + y) % 2 === 0) {
+              return [[y, x-1], [y, x+1], [y-1, x]];
+            } else {
+              return [[y, x-1], [y, x+1], [y+1, x]];
+            }
+          }
+        },
+        
+        generate() {
+          const size = parseInt(this.size);
+          this.grid = [];
+          this.occupiedCount = 0;
+          
+          for (let y = 0; y < size; y++) {
+            this.grid[y] = [];
+            for (let x = 0; x < size; x++) {
+              const occupied = Math.random() < this.p;
+              this.grid[y][x] = occupied ? 1 : 0;
+              if (occupied) this.occupiedCount++;
+            }
+          }
+          
+          this.findClusters();
+          this.draw();
+        },
+        
+        findClusters() {
+          const size = parseInt(this.size);
+          const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+          this.clusters = Array(size).fill(null).map(() => Array(size).fill(-1));
+          this.clusterColors = [];
+          
+          let clusterIndex = 0;
+          let clusterSizes = [];
+          let spanningClusterIndex = -1;
+          
+          const bfs = (startY, startX) => {
+            const queue = [[startY, startX]];
+            visited[startY][startX] = true;
+            this.clusters[startY][startX] = clusterIndex;
+            let clusterSize = 1;
+            let minY = startY, maxY = startY;
+            
+            while (queue.length > 0) {
+              const [y, x] = queue.shift();
+              minY = Math.min(minY, y);
+              maxY = Math.max(maxY, y);
+              
+              const neighbors = this.getNeighbors(y, x, size);
+              for (const [ny, nx] of neighbors) {
+                if (ny >= 0 && ny < size && nx >= 0 && nx < size &&
+                    !visited[ny][nx] && this.grid[ny][nx] === 1) {
+                  visited[ny][nx] = true;
+                  this.clusters[ny][nx] = clusterIndex;
+                  queue.push([ny, nx]);
+                  clusterSize++;
+                }
+              }
+            }
+            
+            return { size: clusterSize, spanning: minY === 0 && maxY === size - 1 };
+          };
+          
+          for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+              if (this.grid[y][x] === 1 && !visited[y][x]) {
+                const result = bfs(y, x);
+                clusterSizes.push(result.size);
+                
+                if (result.spanning) {
+                  spanningClusterIndex = clusterIndex;
+                }
+                
+                clusterIndex++;
+              }
+            }
+          }
+          
+          // Generate colors
+          const maxSize = Math.max(...clusterSizes, 1);
+          for (let i = 0; i < clusterIndex; i++) {
+            if (i === spanningClusterIndex) {
+              this.clusterColors[i] = '#4ECDC4';
+            } else {
+              const hue = (i * 137.5) % 360;
+              const lightness = 25 + (clusterSizes[i] / maxSize) * 35;
+              this.clusterColors[i] = `hsl(${hue}, 55%, ${lightness}%)`;
+            }
+          }
+          
+          this.clusterCount = clusterIndex;
+          this.largestClusterSize = clusterSizes.length > 0 ? Math.max(...clusterSizes) : 0;
+          this.hasSpanning = spanningClusterIndex >= 0;
+        },
+        
+        draw() {
+          if (!this.ctx) return;
+          
+          const size = parseInt(this.size);
+          const w = this.canvas.width / window.devicePixelRatio;
+          const h = this.canvas.height / window.devicePixelRatio;
+          const cellW = w / size;
+          const cellH = h / size;
+          
+          this.ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+          this.ctx.fillStyle = '#0a0a0f';
+          this.ctx.fillRect(0, 0, w, h);
+          
+          if (this.latticeType === 'honeycomb') {
+            // Draw hexagonal cells
+            const hexH = h / size;
+            const hexW = w / size;
+            
+            for (let y = 0; y < size; y++) {
+              for (let x = 0; x < size; x++) {
+                if (this.grid[y][x] === 1) {
+                  const ci = this.clusters[y][x];
+                  this.ctx.fillStyle = this.clusterColors[ci] || '#444';
+                  
+                  const px = x * hexW + (y % 2) * hexW * 0.5;
+                  const py = y * hexH * 0.85;
+                  
+                  this.ctx.beginPath();
+                  for (let i = 0; i < 6; i++) {
+                    const angle = Math.PI / 6 + i * Math.PI / 3;
+                    const hx = px + hexW * 0.45 * Math.cos(angle);
+                    const hy = py + hexH * 0.45 * Math.sin(angle);
+                    if (i === 0) this.ctx.moveTo(hx, hy);
+                    else this.ctx.lineTo(hx, hy);
+                  }
+                  this.ctx.closePath();
+                  this.ctx.fill();
+                }
+              }
+            }
+          } else {
+            // Square or triangular (draw as squares with offset for triangular)
+            for (let y = 0; y < size; y++) {
+              for (let x = 0; x < size; x++) {
+                if (this.grid[y][x] === 1) {
+                  const ci = this.clusters[y][x];
+                  this.ctx.fillStyle = this.clusterColors[ci] || '#444';
+                  
+                  let px = x * cellW;
+                  if (this.latticeType === 'triangular') {
+                    px += (y % 2) * cellW * 0.5;
+                  }
+                  
+                  this.ctx.fillRect(px + 0.5, y * cellH + 0.5, cellW - 1, cellH - 1);
+                }
+              }
+            }
+          }
+        },
+        
+        getPhaseClass() {
+          const pc = this.getPc();
+          const delta = 0.03;
+          if (this.p < pc - delta) return 'subcritical';
+          if (this.p > pc + delta) return 'supercritical';
+          return 'critical';
+        }
+      };
+    }
+    
+    // === DISTRIBUTION DEMO ===
+    function distributionDemo() {
+      return {
+        currentP: 0.5927,
+        clusterSizes: [],
+        totalClusters: 0,
+        meanSize: 0,
+        
+        init() {
+          this.compute();
+        },
+        
+        compute() {
+          const size = 60;
+          const numSamples = 5;
+          this.clusterSizes = [];
+          
+          for (let s = 0; s < numSamples; s++) {
+            const grid = [];
+            for (let y = 0; y < size; y++) {
+              grid[y] = [];
+              for (let x = 0; x < size; x++) {
+                grid[y][x] = Math.random() < this.currentP ? 1 : 0;
+              }
+            }
+            
+            const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+            
+            for (let y = 0; y < size; y++) {
+              for (let x = 0; x < size; x++) {
+                if (grid[y][x] === 1 && !visited[y][x]) {
+                  let clusterSize = 0;
+                  const queue = [[y, x]];
+                  visited[y][x] = true;
+                  
+                  while (queue.length > 0) {
+                    const [cy, cx] = queue.shift();
+                    clusterSize++;
+                    
+                    for (const [dy, dx] of [[-1,0], [1,0], [0,-1], [0,1]]) {
+                      const ny = cy + dy, nx = cx + dx;
+                      if (ny >= 0 && ny < size && nx >= 0 && nx < size &&
+                          !visited[ny][nx] && grid[ny][nx] === 1) {
+                        visited[ny][nx] = true;
+                        queue.push([ny, nx]);
+                      }
+                    }
+                  }
+                  
+                  this.clusterSizes.push(clusterSize);
+                }
+              }
+            }
+          }
+          
+          this.totalClusters = this.clusterSizes.length;
+          this.meanSize = this.clusterSizes.length > 0 
+            ? this.clusterSizes.reduce((a, b) => a + b, 0) / this.clusterSizes.length 
+            : 0;
+          
+          this.drawHistogram();
+          this.drawLogLog();
+        },
+        
+        drawHistogram() {
+          const container = document.getElementById('histogramChart');
+          if (!container) return;
+          container.innerHTML = '';
+          
+          const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+          const width = container.offsetWidth - margin.left - margin.right;
+          const height = 250 - margin.top - margin.bottom;
+          
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+          
+          const maxSize = Math.min(Math.max(...this.clusterSizes), 200);
+          const bins = d3.bin()
+            .domain([1, maxSize])
+            .thresholds(20)(this.clusterSizes.filter(s => s <= maxSize));
+          
+          const x = d3.scaleLinear().domain([0, maxSize]).range([0, width]);
+          const y = d3.scaleLinear().domain([0, d3.max(bins, d => d.length)]).range([height, 0]);
+          
+          svg.selectAll('rect')
+            .data(bins)
+            .enter()
+            .append('rect')
+            .attr('x', d => x(d.x0) + 1)
+            .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 2))
+            .attr('y', d => y(d.length))
+            .attr('height', d => height - y(d.length))
+            .attr('fill', '#4ECDC4')
+            .attr('opacity', 0.8);
+          
+          svg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).ticks(5))
+            .attr('color', '#606078');
+          
+          svg.append('g')
+            .call(d3.axisLeft(y).ticks(5))
+            .attr('color', '#606078');
+          
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + 35)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#a0a0b8')
+            .attr('font-size', '12px')
+            .text('Cluster Size');
+        },
+        
+        drawLogLog() {
+          const container = document.getElementById('loglogChart');
+          if (!container) return;
+          container.innerHTML = '';
+          
+          const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+          const width = container.offsetWidth - margin.left - margin.right;
+          const height = 250 - margin.top - margin.bottom;
+          
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+          
+          // Compute frequency distribution
+          const counts = {};
+          this.clusterSizes.forEach(s => {
+            if (s <= 500) counts[s] = (counts[s] || 0) + 1;
+          });
+          
+          const data = Object.entries(counts)
+            .map(([s, c]) => ({ s: +s, c: c / this.clusterSizes.length }))
+            .filter(d => d.s > 0 && d.c > 0);
+          
+          if (data.length === 0) return;
+          
+          const x = d3.scaleLog().domain([1, d3.max(data, d => d.s)]).range([0, width]);
+          const y = d3.scaleLog().domain([d3.min(data, d => d.c) * 0.5, d3.max(data, d => d.c)]).range([height, 0]);
+          
+          svg.selectAll('circle')
+            .data(data)
+            .enter()
+            .append('circle')
+            .attr('cx', d => x(d.s))
+            .attr('cy', d => y(d.c))
+            .attr('r', 4)
+            .attr('fill', '#FFE66D')
+            .attr('opacity', 0.8);
+          
+          // Power law reference line (τ ≈ 2.05)
+          if (Math.abs(this.currentP - 0.5927) < 0.05) {
+            const tau = 187/91;
+            const refData = data.filter(d => d.s > 1);
+            if (refData.length > 0) {
+              const C = refData[0].c * Math.pow(refData[0].s, tau);
+              const lineData = [
+                { s: 2, c: C * Math.pow(2, -tau) },
+                { s: Math.min(100, d3.max(data, d => d.s)), c: C * Math.pow(Math.min(100, d3.max(data, d => d.s)), -tau) }
+              ];
+              
+              svg.append('line')
+                .attr('x1', x(lineData[0].s))
+                .attr('y1', y(lineData[0].c))
+                .attr('x2', x(lineData[1].s))
+                .attr('y2', y(lineData[1].c))
+                .attr('stroke', '#FF6B6B')
+                .attr('stroke-width', 2)
+                .attr('stroke-dasharray', '5,3');
+            }
+          }
+          
+          svg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).ticks(3, '~s'))
+            .attr('color', '#606078');
+          
+          svg.append('g')
+            .call(d3.axisLeft(y).ticks(3, '.0e'))
+            .attr('color', '#606078');
+          
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + 35)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#a0a0b8')
+            .attr('font-size', '12px')
+            .text('log(Cluster Size)');
+        }
+      };
+    }
+    
+    // === ORDER PARAMETER DEMO ===
+    function orderParameterDemo() {
+      return {
+        currentP: 0.5,
+        samples: 20,
+        data: [],
+        
+        init() {
+          this.computeCurve();
+        },
+        
+        computeCurve() {
+          const size = 35;
+          const pValues = [];
+          for (let p = 0; p <= 1; p += 0.025) pValues.push(p);
+          
+          this.data = pValues.map(p => {
+            let totalLargest = 0;
+            let totalOccupied = 0;
+            
+            for (let s = 0; s < this.samples; s++) {
+              const grid = [];
+              let occupied = 0;
+              
+              for (let y = 0; y < size; y++) {
+                grid[y] = [];
+                for (let x = 0; x < size; x++) {
+                  grid[y][x] = Math.random() < p ? 1 : 0;
+                  if (grid[y][x]) occupied++;
+                }
+              }
+              
+              const visited = Array(size).fill(null).map(() => Array(size).fill(false));
+              let maxCluster = 0;
+              
+              for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                  if (grid[y][x] === 1 && !visited[y][x]) {
+                    let clusterSize = 0;
+                    const queue = [[y, x]];
+                    visited[y][x] = true;
+                    
+                    while (queue.length > 0) {
+                      const [cy, cx] = queue.shift();
+                      clusterSize++;
+                      
+                      for (const [dy, dx] of [[-1,0], [1,0], [0,-1], [0,1]]) {
+                        const ny = cy + dy, nx = cx + dx;
+                        if (ny >= 0 && ny < size && nx >= 0 && nx < size &&
+                            !visited[ny][nx] && grid[ny][nx] === 1) {
+                          visited[ny][nx] = true;
+                          queue.push([ny, nx]);
+                        }
+                      }
+                    }
+                    
+                    maxCluster = Math.max(maxCluster, clusterSize);
+                  }
+                }
+              }
+              
+              totalLargest += maxCluster;
+              totalOccupied += occupied;
+            }
+            
+            return { p, pInf: totalOccupied > 0 ? totalLargest / totalOccupied : 0 };
+          });
+          
+          this.drawChart();
+        },
+        
+        recompute() {
+          this.computeCurve();
+        },
+        
+        updateMarker() {
+          this.drawChart();
+        },
+        
+        drawChart() {
+          const container = document.getElementById('orderParamChart');
+          if (!container) return;
+          container.innerHTML = '';
+          
+          const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+          const width = container.offsetWidth - margin.left - margin.right;
+          const height = 300 - margin.top - margin.bottom;
+          
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+          
+          const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
+          const y = d3.scaleLinear().domain([0, 1]).range([height, 0]);
+          
+          // Critical line
+          svg.append('line')
+            .attr('x1', x(0.5927))
+            .attr('x2', x(0.5927))
+            .attr('y1', 0)
+            .attr('y2', height)
+            .attr('stroke', '#FFE66D')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '6,4');
+          
+          svg.append('text')
+            .attr('x', x(0.5927) + 5)
+            .attr('y', 15)
+            .attr('fill', '#FFE66D')
+            .attr('font-size', '11px')
+            .text('p_c');
+          
+          // Theoretical curve (β = 5/36)
+          const beta = 5/36;
+          const pc = 0.5927;
+          const theoryData = [];
+          for (let p = pc; p <= 1; p += 0.01) {
+            theoryData.push({ p, pInf: Math.pow(p - pc, beta) * 2.5 });
+          }
+          
+          const theoryLine = d3.line()
+            .x(d => x(d.p))
+            .y(d => y(Math.min(1, d.pInf)));
+          
+          svg.append('path')
+            .datum(theoryData)
+            .attr('fill', 'none')
+            .attr('stroke', '#C44DFF')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '4,2')
+            .attr('d', theoryLine);
+          
+          // Data curve
+          const line = d3.line()
+            .x(d => x(d.p))
+            .y(d => y(d.pInf))
+            .curve(d3.curveBasis);
+          
+          svg.append('path')
+            .datum(this.data)
+            .attr('fill', 'none')
+            .attr('stroke', '#4ECDC4')
+            .attr('stroke-width', 3)
+            .attr('d', line);
+          
+          // Current marker
+          const currentData = this.data.reduce((prev, curr) => 
+            Math.abs(curr.p - this.currentP) < Math.abs(prev.p - this.currentP) ? curr : prev
+          );
+          
+          svg.append('circle')
+            .attr('cx', x(this.currentP))
+            .attr('cy', y(currentData.pInf))
+            .attr('r', 8)
+            .attr('fill', '#FF6B6B');
+          
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).ticks(5))
+            .attr('color', '#606078');
+          
+          svg.append('g')
+            .call(d3.axisLeft(y).ticks(5))
+            .attr('color', '#606078');
+          
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + 40)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#a0a0b8')
+            .text('Probability p');
+          
+          svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -height / 2)
+            .attr('y', -45)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#a0a0b8')
+            .text('P∞ (order parameter)');
+          
+          // Legend
+          svg.append('line')
+            .attr('x1', width - 100)
+            .attr('x2', width - 80)
+            .attr('y1', 20)
+            .attr('y2', 20)
+            .attr('stroke', '#4ECDC4')
+            .attr('stroke-width', 3);
+          
+          svg.append('text')
+            .attr('x', width - 75)
+            .attr('y', 24)
+            .attr('fill', '#a0a0b8')
+            .attr('font-size', '10px')
+            .text('Data');
+          
+          svg.append('line')
+            .attr('x1', width - 100)
+            .attr('x2', width - 80)
+            .attr('y1', 38)
+            .attr('y2', 38)
+            .attr('stroke', '#C44DFF')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '4,2');
+          
+          svg.append('text')
+            .attr('x', width - 75)
+            .attr('y', 42)
+            .attr('fill', '#a0a0b8')
+            .attr('font-size', '10px')
+            .text('β=5/36');
+        }
+      };
+    }
+    
+    // === SCROLL ANIMATIONS ===
+    function initScrollAnimations() {
+      gsap.to('#progressBar', {
+        scaleX: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: 'body',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: true
+        }
+      });
+      
+      gsap.utils.toArray('.reveal').forEach(el => {
+        gsap.to(el, {
+          opacity: 1,
+          y: 0,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 85%',
+            toggleActions: 'play none none reverse'
+          }
+        });
+      });
+    }
+    
+    // === KATEX ===
+    function initKatex() {
+      const equations = {
+        clusterExponent: 'n_s \\sim s^{-\\tau}, \\quad \\tau = \\frac{187}{91} \\approx 2.055',
+        orderParam: 'P_\\infty(p) = \\begin{cases} 0 & p < p_c \\\\ (p - p_c)^\\beta & p \\geq p_c \\end{cases}',
+        betaExponent: 'P_\\infty \\sim (p - p_c)^\\beta, \\quad \\beta = \\frac{5}{36} \\approx 0.139',
+        correlationLength: '\\xi \\sim |p - p_c|^{-\\nu}, \\quad \\nu = \\frac{4}{3}',
+        kacFormula: 'h_{r,s} = \\frac{[(m+1)r - ms]^2 - 1}{4m(m+1)}',
+        schramm: 'd_{\\text{SLE}_\\kappa} = 1 + \\frac{\\kappa}{8}, \\quad \\kappa = 6 \\Rightarrow d = \\frac{7}{4}'
+      };
+      
+      for (const [id, eq] of Object.entries(equations)) {
+        const el = document.getElementById(id);
+        if (el) {
+          katex.render(eq, el, { displayMode: true });
+        }
+      }
+    }
+  </script>
+</body>
+</html>
