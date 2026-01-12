@@ -1,0 +1,2090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Measure Theory Explorer | An Infinitely Large Napkin</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- D3.js -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+  <style>
+    :root {
+      --color-measure: #2d6a4f;
+      --color-sigma: #1d3557;
+      --color-integral: #9d4edd;
+      --color-convergence: #e76f51;
+      --color-dual: #0077b6;
+
+      --bg-primary: #fefdfb;
+      --bg-secondary: #f8f6f0;
+      --bg-dark: #1a1a2e;
+
+      --text-primary: #1a1a2e;
+      --text-secondary: #4a4a6a;
+      --text-muted: #8a8aaa;
+
+      --accent-gold: #d4a373;
+      --accent-coral: #e07a5f;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Typography */
+    h1, h2, h3 {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    h1 { font-size: clamp(2.5rem, 6vw, 4rem); }
+    h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); }
+    h3 { font-size: clamp(1.3rem, 3vw, 1.6rem); }
+
+    p {
+      font-size: 1.1rem;
+      max-width: 65ch;
+    }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-measure), var(--color-integral), var(--color-dual));
+      width: 0%;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      display: flex;
+      gap: 8px;
+
+      & button {
+        background: white;
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          background: var(--bg-secondary);
+          transform: translateY(-2px);
+        }
+
+        &.active {
+          background: var(--text-primary);
+          color: white;
+        }
+      }
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      position: relative;
+      overflow: hidden;
+
+      & .hero-bg {
+        position: absolute;
+        inset: 0;
+        opacity: 0.1;
+      }
+
+      & .subtitle {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      & h1 {
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, var(--color-measure), var(--color-integral));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      & .tagline {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.4rem;
+        font-style: italic;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin-bottom: 2rem;
+      }
+
+      & .scroll-hint {
+        position: absolute;
+        bottom: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        animation: bounce 2s infinite;
+      }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(10px); }
+    }
+
+    /* Sections */
+    section {
+      padding: 6rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+
+      & .chapter-num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+      }
+
+      & p {
+        margin: 1rem auto 0;
+        color: var(--text-secondary);
+      }
+    }
+
+    /* Interactive Containers */
+    .interactive-container {
+      background: white;
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+      margin: 2rem 0;
+    }
+
+    .visualization {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      & label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      & input[type="range"] {
+        width: 200px;
+        accent-color: var(--color-measure);
+      }
+
+      & .value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+      }
+    }
+
+    .btn {
+      background: var(--text-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      }
+
+      &.secondary {
+        background: white;
+        color: var(--text-primary);
+        border: 1px solid rgba(0,0,0,0.2);
+      }
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+      transition: all 0.3s;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      }
+
+      & h4 {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      & p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+      }
+    }
+
+    /* Definition Boxes */
+    .definition {
+      background: linear-gradient(135deg, rgba(45, 106, 79, 0.08), rgba(45, 106, 79, 0.02));
+      border-left: 4px solid var(--color-measure);
+      border-radius: 0 12px 12px 0;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+
+      & .def-title {
+        font-family: 'Crimson Pro', serif;
+        font-weight: 600;
+        color: var(--color-measure);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .theorem {
+      background: linear-gradient(135deg, rgba(157, 78, 221, 0.08), rgba(157, 78, 221, 0.02));
+      border-left: 4px solid var(--color-integral);
+      border-radius: 0 12px 12px 0;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+
+      & .thm-title {
+        font-family: 'Crimson Pro', serif;
+        font-weight: 600;
+        color: var(--color-integral);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Quote Block */
+    .insight {
+      background: var(--bg-dark);
+      color: white;
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 3rem 0;
+      position: relative;
+
+      &::before {
+        content: '"';
+        position: absolute;
+        top: -20px;
+        left: 20px;
+        font-size: 6rem;
+        font-family: 'Crimson Pro', serif;
+        color: var(--accent-gold);
+        opacity: 0.3;
+      }
+
+      & p {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.4rem;
+        font-style: italic;
+        position: relative;
+        z-index: 1;
+      }
+    }
+
+    /* Pipeline Visualization */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 2rem;
+
+      & .step {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        text-align: center;
+        min-width: 150px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+        & .step-num {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          color: var(--text-muted);
+        }
+
+        & .step-name {
+          font-family: 'Crimson Pro', serif;
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+      }
+
+      & .arrow {
+        font-size: 1.5rem;
+        color: var(--text-muted);
+      }
+    }
+
+    /* SVG Styles */
+    svg text {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .axis-label {
+      font-size: 12px;
+      fill: var(--text-secondary);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-secondary);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+
+      & button {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &.active {
+          background: white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+      }
+    }
+
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+
+      & th, & td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+      }
+
+      & th {
+        font-family: 'Crimson Pro', serif;
+        font-weight: 600;
+        background: var(--bg-secondary);
+      }
+
+      & tr:hover td {
+        background: rgba(0,0,0,0.02);
+      }
+    }
+
+    /* Animations */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    /* Footer */
+    footer {
+      background: var(--bg-dark);
+      color: white;
+      padding: 4rem 2rem;
+      text-align: center;
+
+      & a {
+        color: var(--accent-gold);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      section { padding: 4rem 1rem; }
+      .interactive-container { padding: 1rem; }
+      .visualization { min-height: 300px; }
+      .control-group input[type="range"] { width: 150px; }
+    }
+  </style>
+</head>
+<body x-data="measureTheory()">
+  <!-- Progress Bar -->
+  <div class="progress-container">
+    <div class="progress-bar" :style="{ width: scrollProgress + '%' }"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <button @click="scrollTo('sigma')" :class="{ active: currentSection === 'sigma' }">$\sigma$-Algebras</button>
+    <button @click="scrollTo('construction')" :class="{ active: currentSection === 'construction' }">Construction</button>
+    <button @click="scrollTo('integration')" :class="{ active: currentSection === 'integration' }">Integration</button>
+    <button @click="scrollTo('convergence')" :class="{ active: currentSection === 'convergence' }">Convergence</button>
+  </nav>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-bg" id="hero-canvas"></div>
+    <p class="subtitle">Part X</p>
+    <h1>Measure Theory</h1>
+    <p class="tagline">
+      How do we assign "size" to sets when intuition fails?
+      The rigorous foundation for probability, integration, and analysis.
+    </p>
+    <div class="scroll-hint">
+      <span>Scroll to explore</span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12l7 7 7-7"/>
+      </svg>
+    </div>
+  </header>
+
+  <!-- Section 1: The Problem -->
+  <section id="motivation">
+    <div class="section-header reveal">
+      <p class="chapter-num">Chapter 35</p>
+      <h2>Why Measure Theory?</h2>
+      <p>Not all sets can be measured. This is not a failure of imagination—it's mathematics.</p>
+    </div>
+
+    <div class="insight reveal">
+      <p>
+        Our measure spaces $\Omega$ will be thought of as a space of entire worlds,
+        with each $\omega \in \Omega$ representing a world. Random variables are functions from worlds to $\mathbb{R}$.
+      </p>
+    </div>
+
+    <div class="cards-grid reveal">
+      <div class="card">
+        <h4>The Coin Flip</h4>
+        <p>Simple: 50% heads, 50% tails. But what happens when random variables interact?</p>
+      </div>
+      <div class="card">
+        <h4>Temperature & Rain</h4>
+        <p>High temperature tells you about rain probability. Variables "talk to" each other through conditional probability.</p>
+      </div>
+      <div class="card">
+        <h4>The Solution</h4>
+        <p>The space of "worlds" $\Omega$ handles all interdependence. We measure sets of worlds.</p>
+      </div>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>The Vitali Set: Why We Can't Measure Everything</h3>
+      <p>Consider the unit circle. Two points are equivalent if they differ by a rational multiple of $\pi$.
+         Pick one representative from each class...</p>
+
+      <div class="visualization" id="vitali-viz">
+        <svg width="100%" height="400" viewBox="-200 -200 400 400"></svg>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Equivalence Classes</label>
+          <input type="range" min="3" max="20" x-model="vitaliClasses" @input="updateVitali()">
+          <span class="value" x-text="vitaliClasses + ' classes shown'"></span>
+        </div>
+        <button class="btn" @click="animateVitaliRotation()">Rotate by $\pi/4$</button>
+      </div>
+
+      <div class="definition">
+        <p class="def-title">The Paradox</p>
+        <p>If we rotate set $X$ by each rational multiple of $\pi$, we cover $\Omega$ exactly.
+           Each rotation should have the same measure $m$. But $\mu(\Omega) = 1$, and there's no $m$ that works:
+           $m = 0$ gives $\mu(\Omega) = 0$, $m > 0$ gives $\mu(\Omega) = \infty$.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: σ-Algebras -->
+  <section id="sigma">
+    <div class="section-header reveal">
+      <p class="chapter-num">Chapter 35.4</p>
+      <h2>$\sigma$-Algebras: Just Enough Sets</h2>
+      <p>The solution: only measure "sufficiently nice" sets, closed under countable operations.</p>
+    </div>
+
+    <div class="definition reveal">
+      <p class="def-title">Definition: Measurable Space</p>
+      <p>A <strong>measurable space</strong> consists of a space $\Omega$ of points, and a <strong>$\sigma$-algebra</strong>
+         $\mathscr{A}$ of subsets of $\Omega$ satisfying:</p>
+      <ul style="margin: 1rem 0 0 1.5rem;">
+        <li>$\mathscr{A}$ contains $\emptyset$ and $\Omega$</li>
+        <li>$\mathscr{A}$ is closed under complements and countable unions/intersections</li>
+      </ul>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Building a $\sigma$-Algebra: "Shake Vigorously"</h3>
+      <p>Start with generators (like open sets), then close under countable operations.</p>
+
+      <div class="visualization" id="sigma-algebra-viz">
+        <svg width="100%" height="400" viewBox="0 0 800 400"></svg>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Generation Steps</label>
+          <input type="range" min="0" max="5" x-model="sigmaSteps" @input="updateSigmaAlgebra()">
+          <span class="value" x-text="['Generators', 'Add complements', 'Add unions', 'Add intersections', 'Repeat...', 'Borel σ-algebra'][sigmaSteps]"></span>
+        </div>
+        <button class="btn secondary" @click="resetSigmaAlgebra()">Reset</button>
+      </div>
+
+      <div class="insight" style="margin-top: 2rem;">
+        <p>
+          The Borel $\sigma$-algebra $\mathscr{B}(\Omega)$ is generated by open sets.
+          It's "basically impossible" to describe what it looks like—think of it as saying "we can measure open sets."
+        </p>
+      </div>
+    </div>
+
+    <div class="cards-grid reveal">
+      <div class="card" style="border-top: 4px solid var(--color-measure);">
+        <h4>Power Set $2^\Omega$</h4>
+        <p>Works for finite/countable $\Omega$, but too big for $\mathbb{R}^n$.</p>
+      </div>
+      <div class="card" style="border-top: 4px solid var(--color-sigma);">
+        <h4>Countable/Co-countable</h4>
+        <p>Very "coarse": sets are either countable or have countable complement.</p>
+      </div>
+      <div class="card" style="border-top: 4px solid var(--color-integral);">
+        <h4>Borel $\sigma$-Algebra</h4>
+        <p>Generated by open sets. The sweet spot for analysis on $\mathbb{R}^n$.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Measure Construction -->
+  <section id="construction">
+    <div class="section-header reveal">
+      <p class="chapter-num">Chapter 36</p>
+      <h2>Constructing the Lebesgue Measure</h2>
+      <p>From rectangles to the full measure, via a beautiful pipeline.</p>
+    </div>
+
+    <div class="pipeline reveal">
+      <div class="step" style="background: linear-gradient(135deg, #fff, #e8f5e9);">
+        <span class="step-num">Step 1</span>
+        <span class="step-name">Pre-measure $\mu_0$</span>
+        <small>on algebra $\mathscr{A}_0$</small>
+      </div>
+      <span class="arrow">→</span>
+      <div class="step" style="background: linear-gradient(135deg, #fff, #e3f2fd);">
+        <span class="step-num">Step 2</span>
+        <span class="step-name">Outer measure $\mu^*$</span>
+        <small>on $2^\Omega$</small>
+      </div>
+      <span class="arrow">→</span>
+      <div class="step" style="background: linear-gradient(135deg, #fff, #f3e5f5);">
+        <span class="step-num">Step 3</span>
+        <span class="step-name">Measure $\mu^{cm}$</span>
+        <small>on $\mathscr{A}^{cm}$</small>
+      </div>
+      <span class="arrow">→</span>
+      <div class="step" style="background: linear-gradient(135deg, #fff, #fff3e0);">
+        <span class="step-num">Step 4</span>
+        <span class="step-name">Borel measure $\mu$</span>
+        <small>on $\mathscr{B}(\mathbb{R}^n)$</small>
+      </div>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Outer Measure: Covering from Outside</h3>
+      <p>The outer measure $\mu^*(E)$ is the infimum of all coverings by rectangles.</p>
+
+      <div class="visualization" id="outer-measure-viz">
+        <svg width="100%" height="400" viewBox="0 0 600 400"></svg>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Number of Covering Rectangles</label>
+          <input type="range" min="4" max="50" x-model="coveringRects" @input="updateOuterMeasure()">
+          <span class="value" x-text="coveringRects + ' rectangles'"></span>
+        </div>
+        <div class="control-group">
+          <label>Set Shape</label>
+          <select x-model="coveringShape" @change="updateOuterMeasure()" style="padding: 8px; border-radius: 6px;">
+            <option value="disk">Unit Disk</option>
+            <option value="triangle">Triangle</option>
+            <option value="cantor">Cantor Set</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-family: 'JetBrains Mono', monospace;">
+        <div>True Area: <span x-text="trueArea.toFixed(4)"></span></div>
+        <div>Covering Area: <span x-text="coveringArea.toFixed(4)"></span></div>
+        <div>Error: <span x-text="(coveringArea - trueArea).toFixed(4)"></span></div>
+      </div>
+    </div>
+
+    <div class="theorem reveal">
+      <p class="thm-title">Carathéodory Extension Theorem</p>
+      <p>If $\mu^*$ is an outer measure, and $\mathscr{A}^{cm}$ is the set of $\mu^*$-measurable sets
+         (sets $A$ where $\mu^*(E) = \mu^*(E \cap A) + \mu^*(E \setminus A)$ for all $E$),
+         then $\mathscr{A}^{cm}$ is a $\sigma$-algebra and $\mu^{cm} = \mu^*|_{\mathscr{A}^{cm}}$ is a complete measure.</p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>The Cantor Set: Uncountable Yet Measure Zero</h3>
+      <p>Delete middle thirds iteratively. What remains is uncountable but has measure zero!</p>
+
+      <div class="visualization" id="cantor-viz">
+        <svg width="100%" height="300" viewBox="0 0 800 300"></svg>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Iteration</label>
+          <input type="range" min="0" max="8" x-model="cantorIteration" @input="updateCantor()">
+          <span class="value" x-text="'n = ' + cantorIteration"></span>
+        </div>
+        <div class="control-group">
+          <label>Remaining Measure</label>
+          <span class="value" x-text="'μ(C_n) = (2/3)^' + cantorIteration + ' = ' + Math.pow(2/3, cantorIteration).toFixed(6)"></span>
+        </div>
+      </div>
+
+      <p style="margin-top: 1rem; color: var(--text-secondary);">
+        As $n \to \infty$, measure $\to 0$, but the Cantor set $C$ is uncountable
+        (it consists of ternary expansions omitting the digit 1).
+      </p>
+    </div>
+  </section>
+
+  <!-- Section 4: Lebesgue Integration -->
+  <section id="integration">
+    <div class="section-header reveal">
+      <p class="chapter-num">Chapter 37</p>
+      <h2>Lebesgue Integration</h2>
+      <p>The integral is the area under the curve—approximated from below by simple functions.</p>
+    </div>
+
+    <div class="pipeline reveal" style="flex-direction: column; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div class="step" style="min-width: 200px;">
+          <span class="step-num">Step 1</span>
+          <span class="step-name">Indicator $\mathbf{1}_A$</span>
+          <small>$\int \mathbf{1}_A\, d\mu = \mu(A)$</small>
+        </div>
+        <span class="arrow">→</span>
+        <div class="step" style="min-width: 200px;">
+          <span class="step-num">Step 2</span>
+          <span class="step-name">Simple functions</span>
+          <small>$\sum c_i \mathbf{1}_{A_i}$</small>
+        </div>
+        <span class="arrow">→</span>
+        <div class="step" style="min-width: 200px;">
+          <span class="step-num">Step 3</span>
+          <span class="step-name">$f \geq 0$</span>
+          <small>$\sup_{s \leq f} \int s$</small>
+        </div>
+        <span class="arrow">→</span>
+        <div class="step" style="min-width: 200px;">
+          <span class="step-num">Step 4</span>
+          <span class="step-name">General $f$</span>
+          <small>$\int |f^+| - \int |f^-|$</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Approximating from Below</h3>
+      <p>The Lebesgue integral is defined as the supremum over all simple functions $s \leq f$.</p>
+
+      <div class="tabs" x-data="{ tab: 'simple' }">
+        <button :class="{ active: tab === 'simple' }" @click="tab = 'simple'; integralMode = 'simple'">Simple Functions</button>
+        <button :class="{ active: tab === 'riemann' }" @click="tab = 'riemann'; integralMode = 'riemann'">vs Riemann</button>
+        <button :class="{ active: tab === 'indicator' }" @click="tab = 'indicator'; integralMode = 'indicator'">Indicator of $\mathbb{Q}$</button>
+      </div>
+
+      <div class="visualization" id="lebesgue-integral-viz">
+        <svg width="100%" height="400" viewBox="0 0 700 400"></svg>
+      </div>
+
+      <div class="controls">
+        <template x-if="integralMode === 'simple'">
+          <div class="control-group">
+            <label>Number of Steps</label>
+            <input type="range" min="2" max="30" x-model="integralSteps" @input="updateIntegral()">
+            <span class="value" x-text="integralSteps + ' levels'"></span>
+          </div>
+        </template>
+        <template x-if="integralMode === 'riemann'">
+          <div class="control-group">
+            <label>Partition Size</label>
+            <input type="range" min="4" max="50" x-model="riemannPartition" @input="updateIntegral()">
+            <span class="value" x-text="riemannPartition + ' intervals'"></span>
+          </div>
+        </template>
+        <template x-if="integralMode === 'indicator'">
+          <div class="control-group">
+            <label>Denominator Bound</label>
+            <input type="range" min="2" max="20" x-model="indicatorBound" @input="updateIntegral()">
+            <span class="value" x-text="'q ≤ ' + indicatorBound"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <div class="insight reveal">
+      <p>
+        The integral $\int_\Omega f\, d\mu$ is just the volume of the region under the graph of $f$.
+        A function is measurable if and only if we can "measure" this region.
+      </p>
+    </div>
+
+    <div class="theorem reveal">
+      <p class="thm-title">Lebesgue Generalizes Riemann</p>
+      <p>If $f: [a,b] \to \mathbb{R}$ is Riemann integrable, then it is also Lebesgue integrable and
+         $$\int_a^b f(x)\, dx = \int_{[a,b]} f\, d\mu$$
+         But Lebesgue can integrate functions Riemann cannot—like $\mathbf{1}_\mathbb{Q}$.</p>
+    </div>
+  </section>
+
+  <!-- Section 5: Convergence Theorems -->
+  <section id="convergence">
+    <div class="section-header reveal">
+      <p class="chapter-num">Chapter 38</p>
+      <h2>Swapping Limits and Integrals</h2>
+      <p>When can we interchange $\lim$ and $\int$? The Lebesgue integral behaves much better than Riemann.</p>
+    </div>
+
+    <div class="insight reveal">
+      <p>
+        For nonnegative functions, if limit of integral $\neq$ integral of limit,
+        the former is always larger. Functions have "room to wiggle."
+      </p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>When Limits and Integrals Don't Commute</h3>
+
+      <div class="tabs">
+        <button :class="{ active: convergenceExample === 'witchhat' }" @click="convergenceExample = 'witchhat'; updateConvergence()">Witch's Hat</button>
+        <button :class="{ active: convergenceExample === 'escape' }" @click="convergenceExample = 'escape'; updateConvergence()">Escaping Mass</button>
+        <button :class="{ active: convergenceExample === 'dominated' }" @click="convergenceExample = 'dominated'; updateConvergence()">Dominated</button>
+      </div>
+
+      <div class="visualization" id="convergence-viz">
+        <svg width="100%" height="400" viewBox="0 0 700 400"></svg>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>$n$ (sequence index)</label>
+          <input type="range" min="1" max="20" x-model="convergenceN" @input="updateConvergence()">
+          <span class="value" x-text="'n = ' + convergenceN"></span>
+        </div>
+        <button class="btn" @click="animateConvergence()">Animate</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; text-align: center; font-family: 'JetBrains Mono', monospace;">
+        <div>
+          <small>$\int f_n\, d\mu$</small>
+          <div x-text="integralOfFn.toFixed(4)"></div>
+        </div>
+        <div>
+          <small>$\lim_{n\to\infty} \int f_n$</small>
+          <div x-text="limitOfIntegrals.toFixed(4)"></div>
+        </div>
+        <div>
+          <small>$\int \lim f_n\, d\mu$</small>
+          <div x-text="integralOfLimit.toFixed(4)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-grid reveal">
+      <div class="card" style="border-left: 4px solid var(--color-convergence);">
+        <h4>Fatou's Lemma</h4>
+        <p>For $f_n \geq 0$: $$\int \liminf f_n \leq \liminf \int f_n$$</p>
+        <small>Most general—no extra hypotheses needed.</small>
+      </div>
+      <div class="card" style="border-left: 4px solid var(--color-measure);">
+        <h4>Monotone Convergence</h4>
+        <p>If $f_n \nearrow f$: $$\lim \int f_n = \int f$$</p>
+        <small>Increasing limits "just work."</small>
+      </div>
+      <div class="card" style="border-left: 4px solid var(--color-integral);">
+        <h4>Dominated Convergence</h4>
+        <p>If $|f_n| \leq g$ integrable: $$\lim \int f_n = \int \lim f_n$$</p>
+        <small>The workhorse theorem.</small>
+      </div>
+    </div>
+
+    <div class="theorem reveal">
+      <p class="thm-title">Dominated Convergence Theorem</p>
+      <p>Let $f_n \to f$ pointwise with $|f_n(\omega)| \leq g(\omega)$ for some absolutely integrable $g$. Then:
+         $$\int_\Omega f\, d\mu = \lim_{n \to \infty} \int_\Omega f_n\, d\mu$$
+         If there's only finite "space" for functions to "wiggle around," no anomaly can happen.</p>
+    </div>
+  </section>
+
+  <!-- Section 6: Pontryagin Duality -->
+  <section id="duality">
+    <div class="section-header reveal">
+      <p class="chapter-num">Chapter 39</p>
+      <h2>Pontryagin Duality</h2>
+      <p>Generalizing Fourier analysis to locally compact abelian groups.</p>
+    </div>
+
+    <div class="definition reveal">
+      <p class="def-title">LCA Groups</p>
+      <p>A <strong>locally compact abelian (LCA) group</strong> $G$ is an abelian topological group that is locally compact.
+         Examples: $\mathbb{Z}$, $\mathbb{T}$ (circle), $\mathbb{R}$, $\mathbb{Z}/n\mathbb{Z}$.</p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Characters: Maps to the Circle</h3>
+      <p>The Pontryagin dual $\widehat{G}$ consists of continuous homomorphisms $\xi: G \to \mathbb{T}$.</p>
+
+      <div class="visualization" id="dual-viz">
+        <svg width="100%" height="400" viewBox="0 0 800 400"></svg>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Group $G$</label>
+          <select x-model="dualGroup" @change="updateDual()" style="padding: 8px; border-radius: 6px;">
+            <option value="Z">ℤ (integers)</option>
+            <option value="T">𝕋 (circle)</option>
+            <option value="Zn">ℤ/nℤ (cyclic)</option>
+          </select>
+        </div>
+        <template x-if="dualGroup === 'Zn'">
+          <div class="control-group">
+            <label>$n$</label>
+            <input type="range" min="2" max="12" x-model="cyclicN" @input="updateDual()">
+            <span class="value" x-text="'n = ' + cyclicN"></span>
+          </div>
+        </template>
+        <div class="control-group">
+          <label>Character $\xi$</label>
+          <input type="range" min="-5" max="5" x-model="characterIndex" @input="updateDual()">
+          <span class="value" x-text="'ξ = ' + characterIndex"></span>
+        </div>
+      </div>
+    </div>
+
+    <table class="comparison-table reveal">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Domain $G$</th>
+          <th>Dual $\widehat{G}$</th>
+          <th>Characters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Fourier Series</td>
+          <td>$\mathbb{T} \cong [-\pi, \pi]$</td>
+          <td>$n \in \mathbb{Z}$</td>
+          <td>$\exp(inx)$</td>
+        </tr>
+        <tr>
+          <td>Discrete Fourier Transform</td>
+          <td>$\mathbb{Z}/n\mathbb{Z}$</td>
+          <td>$\xi \in \mathbb{Z}/n\mathbb{Z}$</td>
+          <td>$e(\xi x / n)$</td>
+        </tr>
+        <tr>
+          <td>Continuous Fourier Transform</td>
+          <td>$\mathbb{R}$</td>
+          <td>$\xi \in \mathbb{R}$</td>
+          <td>$e(\xi x)$</td>
+        </tr>
+        <tr>
+          <td>Discrete Time Fourier</td>
+          <td>$\mathbb{Z}$</td>
+          <td>$\xi \in \mathbb{T}$</td>
+          <td>$\exp(i\xi n)$</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="theorem reveal">
+      <p class="thm-title">Pontryagin Duality</p>
+      <p>For any LCA group $G$: $$G \cong \widehat{\widehat{G}}$$ by $x \mapsto (\xi \mapsto \xi(x))$.</p>
+      <p style="margin-top: 0.5rem;">Moreover, $G$ is compact if and only if $\widehat{G}$ is discrete.</p>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary" style="background: var(--bg-secondary);">
+    <div class="section-header reveal">
+      <h2>The Big Picture</h2>
+    </div>
+
+    <div class="interactive-container reveal" style="background: white;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+        <div>
+          <h4 style="color: var(--color-sigma); margin-bottom: 0.5rem;">$\sigma$-Algebras</h4>
+          <p>Not all sets can be measured. We restrict to "nice" sets closed under countable operations.</p>
+        </div>
+        <div>
+          <h4 style="color: var(--color-measure); margin-bottom: 0.5rem;">Measure Construction</h4>
+          <p>Pre-measures → outer measures → Carathéodory extension gives us Lebesgue measure.</p>
+        </div>
+        <div>
+          <h4 style="color: var(--color-integral); margin-bottom: 0.5rem;">Lebesgue Integration</h4>
+          <p>Approximate from below with simple functions. Area under the curve, done right.</p>
+        </div>
+        <div>
+          <h4 style="color: var(--color-convergence); margin-bottom: 0.5rem;">Convergence Theorems</h4>
+          <p>MCT, DCT: the payoff. Lebesgue integrals behave well under limits.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p style="margin-bottom: 1rem;">
+      Based on <em>An Infinitely Large Napkin</em> by <a href="https://web.evanchen.cc/" target="_blank">Evan Chen</a>
+    </p>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+      Part X: Measure Theory | Chapters 35–39
+    </p>
+  </footer>
+
+  <script>
+    // Initialize KaTeX
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false }
+        ]
+      });
+    });
+
+    // Alpine.js app
+    function measureTheory() {
+      return {
+        scrollProgress: 0,
+        currentSection: 'sigma',
+
+        // Vitali set
+        vitaliClasses: 8,
+
+        // σ-algebra
+        sigmaSteps: 0,
+
+        // Outer measure
+        coveringRects: 16,
+        coveringShape: 'disk',
+        trueArea: Math.PI,
+        coveringArea: 4,
+
+        // Cantor set
+        cantorIteration: 0,
+
+        // Integration
+        integralMode: 'simple',
+        integralSteps: 10,
+        riemannPartition: 10,
+        indicatorBound: 5,
+
+        // Convergence
+        convergenceExample: 'witchhat',
+        convergenceN: 5,
+        integralOfFn: 1,
+        limitOfIntegrals: 1,
+        integralOfLimit: 0,
+        convergenceAnimating: false,
+
+        // Pontryagin dual
+        dualGroup: 'Z',
+        cyclicN: 6,
+        characterIndex: 2,
+
+        init() {
+          gsap.registerPlugin(ScrollTrigger);
+
+          // Progress bar
+          ScrollTrigger.create({
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            onUpdate: (self) => {
+              this.scrollProgress = self.progress * 100;
+            }
+          });
+
+          // Reveal animations
+          gsap.utils.toArray('.reveal').forEach(el => {
+            gsap.fromTo(el,
+              { opacity: 0, y: 40 },
+              {
+                opacity: 1,
+                y: 0,
+                duration: 0.8,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: el,
+                  start: 'top 85%',
+                  toggleActions: 'play none none reverse'
+                }
+              }
+            );
+          });
+
+          // Section tracking
+          ['sigma', 'construction', 'integration', 'convergence'].forEach(id => {
+            ScrollTrigger.create({
+              trigger: `#${id}`,
+              start: 'top center',
+              end: 'bottom center',
+              onEnter: () => this.currentSection = id,
+              onEnterBack: () => this.currentSection = id
+            });
+          });
+
+          // Initialize visualizations
+          this.initHeroBackground();
+          this.updateVitali();
+          this.updateSigmaAlgebra();
+          this.updateOuterMeasure();
+          this.updateCantor();
+          this.updateIntegral();
+          this.updateConvergence();
+          this.updateDual();
+        },
+
+        scrollTo(id) {
+          document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        },
+
+        initHeroBackground() {
+          const svg = d3.select('#hero-canvas')
+            .append('svg')
+            .attr('width', '100%')
+            .attr('height', '100%')
+            .attr('viewBox', '0 0 800 600');
+
+          // Draw some measure-theory inspired shapes
+          const g = svg.append('g').attr('transform', 'translate(400, 300)');
+
+          // Concentric circles (representing σ-algebra layers)
+          for (let i = 5; i >= 1; i--) {
+            g.append('circle')
+              .attr('r', i * 50)
+              .attr('fill', 'none')
+              .attr('stroke', '#2d6a4f')
+              .attr('stroke-width', 1)
+              .attr('opacity', 0.3);
+          }
+
+          // Some random measurable sets
+          for (let i = 0; i < 20; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 200;
+            g.append('circle')
+              .attr('cx', Math.cos(angle) * radius)
+              .attr('cy', Math.sin(angle) * radius)
+              .attr('r', 5 + Math.random() * 15)
+              .attr('fill', ['#2d6a4f', '#1d3557', '#9d4edd'][Math.floor(Math.random() * 3)])
+              .attr('opacity', 0.1 + Math.random() * 0.2);
+          }
+        },
+
+        updateVitali() {
+          const svg = d3.select('#vitali-viz svg');
+          svg.selectAll('*').remove();
+
+          const g = svg.append('g').attr('transform', 'translate(200, 200)');
+
+          // Draw circle
+          g.append('circle')
+            .attr('r', 150)
+            .attr('fill', 'none')
+            .attr('stroke', '#1d3557')
+            .attr('stroke-width', 2);
+
+          // Draw equivalence class representatives
+          const n = parseInt(this.vitaliClasses);
+          const colors = d3.schemeTableau10;
+
+          for (let i = 0; i < n; i++) {
+            // Each "class" represented by a point and its rotations
+            const baseAngle = (i / n) * Math.PI * 2 * (1 / Math.sqrt(2)); // Irrational multiplier
+
+            // Draw representative point
+            g.append('circle')
+              .attr('cx', Math.cos(baseAngle) * 150)
+              .attr('cy', Math.sin(baseAngle) * 150)
+              .attr('r', 8)
+              .attr('fill', colors[i % 10])
+              .attr('stroke', 'white')
+              .attr('stroke-width', 2);
+
+            // Draw some rotations (rational multiples of π)
+            for (let j = 1; j <= 3; j++) {
+              const rotatedAngle = baseAngle + (j / 4) * Math.PI;
+              g.append('circle')
+                .attr('cx', Math.cos(rotatedAngle) * 150)
+                .attr('cy', Math.sin(rotatedAngle) * 150)
+                .attr('r', 4)
+                .attr('fill', colors[i % 10])
+                .attr('opacity', 0.4);
+            }
+          }
+
+          // Labels
+          g.append('text')
+            .attr('y', 180)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#4a4a6a')
+            .attr('font-size', '14px')
+            .text('Unit circle Ω with equivalence classes');
+        },
+
+        animateVitaliRotation() {
+          const svg = d3.select('#vitali-viz svg g');
+          svg.transition()
+            .duration(1000)
+            .attrTween('transform', () => {
+              return t => `translate(200, 200) rotate(${t * 45})`;
+            })
+            .on('end', () => {
+              svg.attr('transform', 'translate(200, 200)');
+              this.updateVitali();
+            });
+        },
+
+        updateSigmaAlgebra() {
+          const svg = d3.select('#sigma-algebra-viz svg');
+          svg.selectAll('*').remove();
+
+          const width = 800, height = 400;
+          const step = parseInt(this.sigmaSteps);
+
+          // Draw a Venn-diagram style representation
+          const g = svg.append('g').attr('transform', 'translate(400, 200)');
+
+          // Base sets (generators)
+          const sets = [
+            { cx: -100, cy: 0, r: 80, label: 'A', color: '#2d6a4f' },
+            { cx: 100, cy: 0, r: 80, label: 'B', color: '#1d3557' },
+            { cx: 0, cy: -80, r: 60, label: 'C', color: '#9d4edd' }
+          ];
+
+          // Always show generators
+          sets.forEach(s => {
+            g.append('circle')
+              .attr('cx', s.cx)
+              .attr('cy', s.cy)
+              .attr('r', s.r)
+              .attr('fill', s.color)
+              .attr('opacity', 0.3)
+              .attr('stroke', s.color)
+              .attr('stroke-width', 2);
+
+            g.append('text')
+              .attr('x', s.cx)
+              .attr('y', s.cy + 5)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '20px')
+              .attr('fill', s.color)
+              .text(s.label);
+          });
+
+          // Universe
+          g.append('rect')
+            .attr('x', -250)
+            .attr('y', -170)
+            .attr('width', 500)
+            .attr('height', 340)
+            .attr('fill', 'none')
+            .attr('stroke', '#888')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,5');
+
+          g.append('text')
+            .attr('x', 230)
+            .attr('y', -150)
+            .attr('font-size', '16px')
+            .attr('fill', '#888')
+            .text('Ω');
+
+          // Show additional sets based on step
+          if (step >= 1) {
+            // Complements
+            g.append('text')
+              .attr('x', -200)
+              .attr('y', 150)
+              .attr('font-size', '14px')
+              .attr('fill', '#666')
+              .text('+ Aᶜ, Bᶜ, Cᶜ');
+          }
+
+          if (step >= 2) {
+            // Unions - highlight A ∪ B
+            g.append('path')
+              .attr('d', `M ${-100 - 80} 0
+                          A 80 80 0 1 1 ${-100 + 80} 0
+                          A 80 80 0 0 0 ${100 - 80} 0
+                          A 80 80 0 1 1 ${100 + 80} 0
+                          A 80 80 0 0 0 ${-100 - 80} 0`)
+              .attr('fill', 'none')
+              .attr('stroke', '#e07a5f')
+              .attr('stroke-width', 3)
+              .attr('stroke-dasharray', '8,4');
+
+            g.append('text')
+              .attr('x', -200)
+              .attr('y', 150)
+              .attr('font-size', '14px')
+              .attr('fill', '#666')
+              .text('+ A∪B, A∪C, B∪C, A∪B∪C...');
+          }
+
+          if (step >= 3) {
+            // Intersections - highlight A ∩ B
+            g.append('ellipse')
+              .attr('cx', 0)
+              .attr('cy', 0)
+              .attr('rx', 20)
+              .attr('ry', 35)
+              .attr('fill', '#d4a373')
+              .attr('opacity', 0.5);
+
+            g.append('text')
+              .attr('x', -200)
+              .attr('y', 150)
+              .attr('font-size', '14px')
+              .attr('fill', '#666')
+              .text('+ A∩B, A∩C, B∩C, (A∪B)∩C...');
+          }
+
+          if (step >= 4) {
+            g.append('text')
+              .attr('x', -200)
+              .attr('y', 150)
+              .attr('font-size', '14px')
+              .attr('fill', '#666')
+              .text('Apply countable ∪, ∩, ᶜ repeatedly...');
+          }
+
+          if (step >= 5) {
+            g.append('text')
+              .attr('x', 0)
+              .attr('y', 170)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '16px')
+              .attr('fill', '#2d6a4f')
+              .attr('font-weight', 'bold')
+              .text('→ Borel σ-algebra B(Ω)');
+          }
+        },
+
+        resetSigmaAlgebra() {
+          this.sigmaSteps = 0;
+          this.updateSigmaAlgebra();
+        },
+
+        updateOuterMeasure() {
+          const svg = d3.select('#outer-measure-viz svg');
+          svg.selectAll('*').remove();
+
+          const width = 600, height = 400;
+          const g = svg.append('g').attr('transform', 'translate(300, 200)');
+
+          const n = parseInt(this.coveringRects);
+          const shape = this.coveringShape;
+
+          // Draw the target shape
+          if (shape === 'disk') {
+            this.trueArea = Math.PI * 100 * 100 / 10000; // Normalized
+            g.append('circle')
+              .attr('r', 100)
+              .attr('fill', '#2d6a4f')
+              .attr('opacity', 0.3);
+          } else if (shape === 'triangle') {
+            this.trueArea = 0.5 * 200 * 173 / 10000;
+            g.append('polygon')
+              .attr('points', '0,-100 100,73 -100,73')
+              .attr('fill', '#1d3557')
+              .attr('opacity', 0.3);
+          } else if (shape === 'cantor') {
+            this.trueArea = 0;
+            // Draw approximation of Cantor set
+            this.drawCantorHorizontal(g, -120, 0, 240, 3);
+          }
+
+          // Generate covering rectangles
+          let totalArea = 0;
+          const rects = [];
+
+          if (shape === 'disk') {
+            // Cover disk with rectangles
+            const gridSize = Math.ceil(Math.sqrt(n));
+            const cellSize = 220 / gridSize;
+
+            for (let i = 0; i < gridSize; i++) {
+              for (let j = 0; j < gridSize; j++) {
+                const x = -110 + i * cellSize;
+                const y = -110 + j * cellSize;
+
+                // Check if rectangle intersects disk
+                const cx = x + cellSize / 2;
+                const cy = y + cellSize / 2;
+                const dist = Math.sqrt(cx * cx + cy * cy);
+
+                if (dist < 100 + cellSize * 0.7) {
+                  rects.push({ x, y, w: cellSize, h: cellSize });
+                  totalArea += cellSize * cellSize;
+                }
+              }
+            }
+          } else if (shape === 'triangle') {
+            // Simple bounding rectangles
+            const gridSize = Math.ceil(Math.sqrt(n));
+            const cellSize = 220 / gridSize;
+
+            for (let i = 0; i < gridSize; i++) {
+              for (let j = 0; j < gridSize; j++) {
+                const x = -110 + i * cellSize;
+                const y = -100 + j * cellSize;
+
+                // Check if overlaps triangle
+                const cy = y + cellSize / 2;
+                const halfWidth = (73 - cy) * 100 / 173;
+                const cx = x + cellSize / 2;
+
+                if (cy >= -100 && cy <= 73 && Math.abs(cx) < halfWidth + cellSize / 2) {
+                  rects.push({ x, y, w: cellSize, h: cellSize });
+                  totalArea += cellSize * cellSize;
+                }
+              }
+            }
+          } else {
+            // Cantor set - use very thin rectangles
+            this.getCantorIntervals(5).forEach((interval, i) => {
+              if (i < n) {
+                const x = -120 + interval[0] * 240;
+                const w = (interval[1] - interval[0]) * 240;
+                rects.push({ x, y: -10, w, h: 20 });
+                totalArea += w * 20;
+              }
+            });
+          }
+
+          this.coveringArea = totalArea / 10000;
+
+          // Draw rectangles
+          rects.forEach(r => {
+            g.append('rect')
+              .attr('x', r.x)
+              .attr('y', r.y)
+              .attr('width', r.w)
+              .attr('height', r.h)
+              .attr('fill', 'none')
+              .attr('stroke', '#e07a5f')
+              .attr('stroke-width', 1)
+              .attr('opacity', 0.7);
+          });
+        },
+
+        drawCantorHorizontal(g, x, y, width, depth) {
+          if (depth === 0) {
+            g.append('rect')
+              .attr('x', x)
+              .attr('y', y - 5)
+              .attr('width', width)
+              .attr('height', 10)
+              .attr('fill', '#9d4edd')
+              .attr('opacity', 0.5);
+            return;
+          }
+
+          const third = width / 3;
+          this.drawCantorHorizontal(g, x, y, third, depth - 1);
+          this.drawCantorHorizontal(g, x + 2 * third, y, third, depth - 1);
+        },
+
+        getCantorIntervals(depth) {
+          let intervals = [[0, 1]];
+          for (let d = 0; d < depth; d++) {
+            const newIntervals = [];
+            intervals.forEach(([a, b]) => {
+              const third = (b - a) / 3;
+              newIntervals.push([a, a + third]);
+              newIntervals.push([b - third, b]);
+            });
+            intervals = newIntervals;
+          }
+          return intervals;
+        },
+
+        updateCantor() {
+          const svg = d3.select('#cantor-viz svg');
+          svg.selectAll('*').remove();
+
+          const n = parseInt(this.cantorIteration);
+          const width = 800, height = 300;
+
+          // Draw each iteration
+          for (let i = 0; i <= Math.min(n, 7); i++) {
+            const y = 30 + i * 35;
+            const intervals = this.getCantorIntervalsForDraw(i);
+
+            // Label
+            svg.append('text')
+              .attr('x', 30)
+              .attr('y', y + 5)
+              .attr('font-size', '12px')
+              .attr('fill', '#666')
+              .text(`n=${i}`);
+
+            // Draw intervals
+            intervals.forEach(([a, b]) => {
+              svg.append('rect')
+                .attr('x', 80 + a * 680)
+                .attr('y', y - 8)
+                .attr('width', (b - a) * 680)
+                .attr('height', 16)
+                .attr('fill', i === n ? '#2d6a4f' : '#ccc')
+                .attr('rx', 2);
+            });
+          }
+        },
+
+        getCantorIntervalsForDraw(depth) {
+          let intervals = [[0, 1]];
+          for (let d = 0; d < depth; d++) {
+            const newIntervals = [];
+            intervals.forEach(([a, b]) => {
+              const third = (b - a) / 3;
+              newIntervals.push([a, a + third]);
+              newIntervals.push([b - third, b]);
+            });
+            intervals = newIntervals;
+          }
+          return intervals;
+        },
+
+        updateIntegral() {
+          const svg = d3.select('#lebesgue-integral-viz svg');
+          svg.selectAll('*').remove();
+
+          const width = 700, height = 400;
+          const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+          const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          const x = d3.scaleLinear().domain([0, 1]).range([0, innerWidth]);
+          const y = d3.scaleLinear().domain([0, 1.2]).range([innerHeight, 0]);
+
+          // Axes
+          g.append('g')
+            .attr('transform', `translate(0, ${innerHeight})`)
+            .call(d3.axisBottom(x).ticks(5));
+
+          g.append('g').call(d3.axisLeft(y).ticks(5));
+
+          if (this.integralMode === 'simple') {
+            // Function: f(x) = x^2
+            const f = x => x * x;
+            const steps = parseInt(this.integralSteps);
+
+            // Draw function
+            const line = d3.line()
+              .x(d => x(d))
+              .y(d => y(f(d)));
+
+            const points = d3.range(0, 1.01, 0.01);
+            g.append('path')
+              .datum(points)
+              .attr('d', line)
+              .attr('fill', 'none')
+              .attr('stroke', '#2d6a4f')
+              .attr('stroke-width', 3);
+
+            // Draw simple function approximation from below
+            for (let i = 0; i < steps; i++) {
+              const yLevel = i / steps;
+              const xLeft = Math.sqrt(yLevel);
+              const xRight = 1;
+
+              g.append('rect')
+                .attr('x', x(xLeft))
+                .attr('y', y((i + 1) / steps))
+                .attr('width', x(xRight) - x(xLeft))
+                .attr('height', y(i / steps) - y((i + 1) / steps))
+                .attr('fill', '#9d4edd')
+                .attr('opacity', 0.3)
+                .attr('stroke', '#9d4edd')
+                .attr('stroke-width', 0.5);
+            }
+
+            g.append('text')
+              .attr('x', innerWidth / 2)
+              .attr('y', -10)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '14px')
+              .text('Lebesgue: horizontal slices (level sets)');
+
+          } else if (this.integralMode === 'riemann') {
+            const f = x => x * x;
+            const n = parseInt(this.riemannPartition);
+
+            // Draw function
+            const line = d3.line()
+              .x(d => x(d))
+              .y(d => y(f(d)));
+
+            const points = d3.range(0, 1.01, 0.01);
+            g.append('path')
+              .datum(points)
+              .attr('d', line)
+              .attr('fill', 'none')
+              .attr('stroke', '#2d6a4f')
+              .attr('stroke-width', 3);
+
+            // Riemann rectangles
+            for (let i = 0; i < n; i++) {
+              const xLeft = i / n;
+              const xRight = (i + 1) / n;
+              const h = f(xLeft); // Left endpoint
+
+              g.append('rect')
+                .attr('x', x(xLeft))
+                .attr('y', y(h))
+                .attr('width', x(xRight) - x(xLeft))
+                .attr('height', innerHeight - y(h))
+                .attr('fill', '#1d3557')
+                .attr('opacity', 0.3)
+                .attr('stroke', '#1d3557')
+                .attr('stroke-width', 0.5);
+            }
+
+            g.append('text')
+              .attr('x', innerWidth / 2)
+              .attr('y', -10)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '14px')
+              .text('Riemann: vertical slices (partition domain)');
+
+          } else if (this.integralMode === 'indicator') {
+            // Indicator of rationals in [0,1]
+            const bound = parseInt(this.indicatorBound);
+            const rationals = [];
+
+            for (let q = 1; q <= bound; q++) {
+              for (let p = 0; p <= q; p++) {
+                if (this.gcd(p, q) === 1) {
+                  rationals.push(p / q);
+                }
+              }
+            }
+
+            // Draw dots at rationals
+            rationals.forEach(r => {
+              g.append('circle')
+                .attr('cx', x(r))
+                .attr('cy', y(1))
+                .attr('r', 3)
+                .attr('fill', '#e07a5f');
+            });
+
+            // Draw horizontal lines at y=0 and y=1
+            g.append('line')
+              .attr('x1', 0)
+              .attr('x2', innerWidth)
+              .attr('y1', y(0))
+              .attr('y2', y(0))
+              .attr('stroke', '#2d6a4f')
+              .attr('stroke-width', 2);
+
+            g.append('text')
+              .attr('x', innerWidth / 2)
+              .attr('y', -10)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '14px')
+              .text('1_ℚ: Not Riemann integrable, but ∫1_ℚ dμ = μ(ℚ∩[0,1]) = 0');
+          }
+        },
+
+        gcd(a, b) {
+          return b === 0 ? a : this.gcd(b, a % b);
+        },
+
+        updateConvergence() {
+          const svg = d3.select('#convergence-viz svg');
+          svg.selectAll('*').remove();
+
+          const width = 700, height = 400;
+          const margin = { top: 30, right: 30, bottom: 50, left: 50 };
+          const g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          const n = parseInt(this.convergenceN);
+          const example = this.convergenceExample;
+
+          let xDomain, yDomain, fn, fLimit;
+
+          if (example === 'witchhat') {
+            // f_n(x) = n * 1_{(0, 1/n)}(x)
+            xDomain = [0, 1];
+            yDomain = [0, Math.max(5, n + 1)];
+            fn = x => (x > 0 && x < 1 / n) ? n : 0;
+            fLimit = x => 0;
+            this.integralOfFn = 1;
+            this.limitOfIntegrals = 1;
+            this.integralOfLimit = 0;
+          } else if (example === 'escape') {
+            // f_n(x) = 1_{(n, n+1)}(x) - mass escapes to infinity
+            xDomain = [0, 25];
+            yDomain = [0, 1.5];
+            fn = x => (x > n && x < n + 1) ? 1 : 0;
+            fLimit = x => 0;
+            this.integralOfFn = 1;
+            this.limitOfIntegrals = 1;
+            this.integralOfLimit = 0;
+          } else if (example === 'dominated') {
+            // f_n(x) = x^n on [0,1] - dominated by 1
+            xDomain = [0, 1];
+            yDomain = [0, 1.2];
+            fn = x => Math.pow(x, n);
+            fLimit = x => (x === 1 ? 1 : 0);
+            this.integralOfFn = 1 / (n + 1);
+            this.limitOfIntegrals = 0;
+            this.integralOfLimit = 0;
+          }
+
+          const x = d3.scaleLinear().domain(xDomain).range([0, innerWidth]);
+          const y = d3.scaleLinear().domain(yDomain).range([innerHeight, 0]);
+
+          // Axes
+          g.append('g')
+            .attr('transform', `translate(0, ${innerHeight})`)
+            .call(d3.axisBottom(x).ticks(5));
+
+          g.append('g').call(d3.axisLeft(y).ticks(5));
+
+          // Draw limit function
+          const limitLine = d3.line()
+            .x(d => x(d))
+            .y(d => y(fLimit(d)));
+
+          const limitPoints = d3.range(xDomain[0], xDomain[1], (xDomain[1] - xDomain[0]) / 200);
+          g.append('path')
+            .datum(limitPoints)
+            .attr('d', limitLine)
+            .attr('fill', 'none')
+            .attr('stroke', '#888')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,5');
+
+          // Draw f_n
+          if (example === 'witchhat') {
+            // Draw as filled region
+            g.append('rect')
+              .attr('x', x(0))
+              .attr('y', y(n))
+              .attr('width', x(1/n) - x(0))
+              .attr('height', innerHeight - y(n))
+              .attr('fill', '#e07a5f')
+              .attr('opacity', 0.5);
+
+            g.append('rect')
+              .attr('x', x(0))
+              .attr('y', y(n))
+              .attr('width', x(1/n) - x(0))
+              .attr('height', innerHeight - y(n))
+              .attr('fill', 'none')
+              .attr('stroke', '#e07a5f')
+              .attr('stroke-width', 2);
+          } else if (example === 'escape') {
+            g.append('rect')
+              .attr('x', x(n))
+              .attr('y', y(1))
+              .attr('width', x(n+1) - x(n))
+              .attr('height', innerHeight - y(1))
+              .attr('fill', '#e07a5f')
+              .attr('opacity', 0.5)
+              .attr('stroke', '#e07a5f')
+              .attr('stroke-width', 2);
+          } else {
+            const fnLine = d3.line()
+              .x(d => x(d))
+              .y(d => y(fn(d)));
+
+            const fnPoints = d3.range(xDomain[0], xDomain[1], (xDomain[1] - xDomain[0]) / 200);
+
+            // Area under curve
+            const area = d3.area()
+              .x(d => x(d))
+              .y0(innerHeight)
+              .y1(d => y(fn(d)));
+
+            g.append('path')
+              .datum(fnPoints)
+              .attr('d', area)
+              .attr('fill', '#e07a5f')
+              .attr('opacity', 0.3);
+
+            g.append('path')
+              .datum(fnPoints)
+              .attr('d', fnLine)
+              .attr('fill', 'none')
+              .attr('stroke', '#e07a5f')
+              .attr('stroke-width', 2);
+
+            // Draw dominating function for dominated convergence
+            if (example === 'dominated') {
+              g.append('line')
+                .attr('x1', 0)
+                .attr('x2', innerWidth)
+                .attr('y1', y(1))
+                .attr('y2', y(1))
+                .attr('stroke', '#2d6a4f')
+                .attr('stroke-width', 1)
+                .attr('stroke-dasharray', '3,3');
+
+              g.append('text')
+                .attr('x', innerWidth - 10)
+                .attr('y', y(1) - 5)
+                .attr('text-anchor', 'end')
+                .attr('font-size', '12px')
+                .attr('fill', '#2d6a4f')
+                .text('g(x) = 1 (dominating)');
+            }
+          }
+
+          // Label
+          g.append('text')
+            .attr('x', innerWidth / 2)
+            .attr('y', -10)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px')
+            .attr('fill', '#e07a5f')
+            .text(`f_${n}(x)`);
+        },
+
+        async animateConvergence() {
+          if (this.convergenceAnimating) return;
+          this.convergenceAnimating = true;
+
+          for (let i = 1; i <= 20; i++) {
+            this.convergenceN = i;
+            this.updateConvergence();
+            await new Promise(r => setTimeout(r, 200));
+          }
+
+          this.convergenceAnimating = false;
+        },
+
+        updateDual() {
+          const svg = d3.select('#dual-viz svg');
+          svg.selectAll('*').remove();
+
+          const width = 800, height = 400;
+          const group = this.dualGroup;
+          const xi = parseInt(this.characterIndex);
+
+          // Left side: domain G
+          const gLeft = svg.append('g').attr('transform', 'translate(200, 200)');
+
+          // Right side: circle T
+          const gRight = svg.append('g').attr('transform', 'translate(600, 200)');
+
+          // Draw target circle T
+          gRight.append('circle')
+            .attr('r', 120)
+            .attr('fill', 'none')
+            .attr('stroke', '#1d3557')
+            .attr('stroke-width', 2);
+
+          gRight.append('text')
+            .attr('y', 150)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .attr('fill', '#1d3557')
+            .text('𝕋 (target)');
+
+          // Draw arrow
+          svg.append('line')
+            .attr('x1', 320)
+            .attr('x2', 450)
+            .attr('y1', 200)
+            .attr('y2', 200)
+            .attr('stroke', '#888')
+            .attr('stroke-width', 2)
+            .attr('marker-end', 'url(#arrow)');
+
+          svg.append('defs').append('marker')
+            .attr('id', 'arrow')
+            .attr('viewBox', '0 0 10 10')
+            .attr('refX', 10)
+            .attr('refY', 5)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+            .attr('fill', '#888');
+
+          svg.append('text')
+            .attr('x', 385)
+            .attr('y', 185)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px')
+            .attr('fill', '#888')
+            .text(`ξ = ${xi}`);
+
+          if (group === 'Z') {
+            // Draw integers
+            gLeft.append('line')
+              .attr('x1', -150)
+              .attr('x2', 150)
+              .attr('y1', 0)
+              .attr('y2', 0)
+              .attr('stroke', '#2d6a4f')
+              .attr('stroke-width', 2);
+
+            for (let i = -3; i <= 3; i++) {
+              gLeft.append('circle')
+                .attr('cx', i * 40)
+                .attr('cy', 0)
+                .attr('r', 8)
+                .attr('fill', '#2d6a4f');
+
+              gLeft.append('text')
+                .attr('x', i * 40)
+                .attr('y', 25)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .text(i);
+
+              // Map to circle: n → exp(2πi * ξ * n) = point at angle ξn on circle
+              const angle = 2 * Math.PI * xi * i;
+              const px = 120 * Math.cos(angle - Math.PI / 2);
+              const py = 120 * Math.sin(angle - Math.PI / 2);
+
+              gRight.append('circle')
+                .attr('cx', px)
+                .attr('cy', py)
+                .attr('r', 6)
+                .attr('fill', '#e07a5f')
+                .attr('opacity', 0.7);
+            }
+
+            gLeft.append('text')
+              .attr('y', 60)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '16px')
+              .attr('fill', '#2d6a4f')
+              .text('ℤ');
+
+          } else if (group === 'T') {
+            // Draw circle (domain)
+            gLeft.append('circle')
+              .attr('r', 100)
+              .attr('fill', 'none')
+              .attr('stroke', '#2d6a4f')
+              .attr('stroke-width', 2);
+
+            // Character maps θ → nθ
+            const nPoints = 12;
+            for (let i = 0; i < nPoints; i++) {
+              const theta = (i / nPoints) * 2 * Math.PI;
+              const px1 = 100 * Math.cos(theta - Math.PI / 2);
+              const py1 = 100 * Math.sin(theta - Math.PI / 2);
+
+              gLeft.append('circle')
+                .attr('cx', px1)
+                .attr('cy', py1)
+                .attr('r', 5)
+                .attr('fill', '#2d6a4f');
+
+              // Map θ → ξθ
+              const targetAngle = xi * theta;
+              const px2 = 120 * Math.cos(targetAngle - Math.PI / 2);
+              const py2 = 120 * Math.sin(targetAngle - Math.PI / 2);
+
+              gRight.append('circle')
+                .attr('cx', px2)
+                .attr('cy', py2)
+                .attr('r', 4)
+                .attr('fill', '#e07a5f')
+                .attr('opacity', 0.7);
+            }
+
+            gLeft.append('text')
+              .attr('y', 130)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '16px')
+              .attr('fill', '#2d6a4f')
+              .text('𝕋 ≅ [-π, π]');
+
+          } else if (group === 'Zn') {
+            const n = parseInt(this.cyclicN);
+
+            // Draw cyclic group as polygon
+            for (let i = 0; i < n; i++) {
+              const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
+              const px = 80 * Math.cos(angle);
+              const py = 80 * Math.sin(angle);
+
+              gLeft.append('circle')
+                .attr('cx', px)
+                .attr('cy', py)
+                .attr('r', 12)
+                .attr('fill', '#2d6a4f');
+
+              gLeft.append('text')
+                .attr('x', px)
+                .attr('y', py + 4)
+                .attr('text-anchor', 'middle')
+                .attr('fill', 'white')
+                .attr('font-size', '10px')
+                .text(i);
+
+              // Map k → exp(2πi ξk / n)
+              const targetAngle = 2 * Math.PI * xi * i / n - Math.PI / 2;
+              const px2 = 120 * Math.cos(targetAngle);
+              const py2 = 120 * Math.sin(targetAngle);
+
+              gRight.append('circle')
+                .attr('cx', px2)
+                .attr('cy', py2)
+                .attr('r', 8)
+                .attr('fill', '#e07a5f');
+            }
+
+            // Connect in order on left
+            for (let i = 0; i < n; i++) {
+              const a1 = (i / n) * 2 * Math.PI - Math.PI / 2;
+              const a2 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2;
+
+              gLeft.append('line')
+                .attr('x1', 80 * Math.cos(a1))
+                .attr('y1', 80 * Math.sin(a1))
+                .attr('x2', 80 * Math.cos(a2))
+                .attr('y2', 80 * Math.sin(a2))
+                .attr('stroke', '#2d6a4f')
+                .attr('stroke-width', 1)
+                .attr('opacity', 0.3);
+            }
+
+            gLeft.append('text')
+              .attr('y', 120)
+              .attr('text-anchor', 'middle')
+              .attr('font-size', '16px')
+              .attr('fill', '#2d6a4f')
+              .text(`ℤ/${n}ℤ`);
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

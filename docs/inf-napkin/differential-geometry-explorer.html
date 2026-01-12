@@ -1,0 +1,2474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Part XII: Differential Geometry — An Infinitely Large Napkin</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Libraries -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      --color-tangent: #f59e0b;
+      --color-normal: #3b82f6;
+      --color-form: #ec4899;
+      --color-wedge: #10b981;
+      --color-boundary: #ef4444;
+      --color-interior: #8b5cf6;
+      --color-manifold: #06b6d4;
+      --bg-primary: #0a0a12;
+      --bg-secondary: #12121f;
+      --bg-tertiary: #1a1a2e;
+      --bg-card: #1e1e32;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #2d2d44;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 17px;
+      overflow-x: hidden;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      font-family: 'Crimson Pro', Georgia, serif;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.4rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary);
+    }
+
+    .math-display {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-tertiary);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      border-left: 3px solid var(--color-tangent);
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-tertiary);
+      z-index: 1000;
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-tangent), var(--color-form), var(--color-manifold));
+        width: 0%;
+        transition: width 0.1s ease-out;
+      }
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      @media (max-width: 1200px) {
+        display: none;
+      }
+
+      a {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        transition: all 0.3s ease;
+
+        &:hover, &.active {
+          background: var(--color-tangent);
+          border-color: var(--color-tangent);
+          transform: scale(1.3);
+        }
+      }
+    }
+
+    /* Sections */
+    section {
+      min-height: 100vh;
+      padding: 6rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      min-height: 100vh;
+      position: relative;
+
+      .subtitle {
+        font-size: 1.2rem;
+        color: var(--color-tangent);
+        margin-bottom: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .description {
+        max-width: 700px;
+        margin: 2rem auto;
+        font-size: 1.1rem;
+      }
+
+      .hero-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        opacity: 0.6;
+      }
+    }
+
+    /* Interactive containers */
+    .interactive-container {
+      background: var(--bg-secondary);
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .visualization {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      min-height: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      width: 100%;
+      height: 450px;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-primary));
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    input[type="range"] {
+      width: 180px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--color-tangent);
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: scale(1.2);
+        }
+      }
+    }
+
+    button {
+      font-family: 'DM Sans', sans-serif;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.primary {
+        background: var(--color-tangent);
+        color: #000;
+
+        &:hover {
+          filter: brightness(1.1);
+          transform: translateY(-2px);
+        }
+      }
+
+      &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+
+        &:hover {
+          background: var(--bg-card);
+          border-color: var(--color-tangent);
+        }
+      }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+
+      button {
+        padding: 0.5rem 1rem;
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid transparent;
+
+        &.active {
+          color: var(--color-tangent);
+          background: var(--bg-tertiary);
+          border-color: var(--color-tangent);
+          border-radius: 6px;
+        }
+      }
+    }
+
+    /* Two column layout */
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+
+      @media (max-width: 1000px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prose {
+      max-width: 65ch;
+    }
+
+    /* Definition boxes */
+    .definition {
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      border-left: 4px solid var(--color-tangent);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+
+      .def-title {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-tangent);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .theorem {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+      border-left: 4px solid var(--color-interior);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+
+      .thm-title {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-interior);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Chapter headers */
+    .chapter-header {
+      margin-bottom: 3rem;
+
+      .chapter-number {
+        font-size: 0.9rem;
+        color: var(--color-tangent);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Annotation */
+    .annotation {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 1rem;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat {
+      background: var(--bg-tertiary);
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+
+      .stat-value {
+        font-size: 1.3rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.25rem;
+      }
+
+      &.tangent .stat-value { color: var(--color-tangent); }
+      &.normal .stat-value { color: var(--color-normal); }
+      &.form .stat-value { color: var(--color-form); }
+      &.wedge .stat-value { color: var(--color-wedge); }
+    }
+
+    /* SVG visualization container */
+    .svg-container {
+      width: 100%;
+      height: 400px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Vector display */
+    .vector-display {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+
+      .vector {
+        background: var(--bg-tertiary);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        border-left: 3px solid var(--color-tangent);
+
+        &.form {
+          border-left-color: var(--color-form);
+        }
+      }
+    }
+
+    /* Footer */
+    footer {
+      padding: 4rem 2rem;
+      text-align: center;
+      border-top: 1px solid var(--border-color);
+
+      p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      a {
+        color: var(--color-tangent);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    /* Reveal animation class */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    /* Color highlights in text */
+    .highlight-tangent { color: var(--color-tangent); }
+    .highlight-form { color: var(--color-form); }
+    .highlight-wedge { color: var(--color-wedge); }
+    .highlight-boundary { color: var(--color-boundary); }
+    .highlight-interior { color: var(--color-interior); }
+
+    /* Instruction text */
+    .instruction {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-tertiary);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .instruction::before {
+      content: '👆';
+    }
+  </style>
+</head>
+<body x-data="diffGeoExplorer()" x-init="init()">
+
+  <!-- Progress Bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" :style="{ width: scrollProgress + '%' }"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="#hero" :class="{ active: currentSection === 'hero' }"></a>
+    <a href="#derivatives" :class="{ active: currentSection === 'derivatives' }"></a>
+    <a href="#tangent-spaces" :class="{ active: currentSection === 'tangent-spaces' }"></a>
+    <a href="#differential-forms" :class="{ active: currentSection === 'differential-forms' }"></a>
+    <a href="#wedge-product" :class="{ active: currentSection === 'wedge-product' }"></a>
+    <a href="#integration" :class="{ active: currentSection === 'integration' }"></a>
+    <a href="#stokes" :class="{ active: currentSection === 'stokes' }"></a>
+    <a href="#manifolds" :class="{ active: currentSection === 'manifolds' }"></a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div id="hero-canvas" class="hero-canvas"></div>
+    <div class="subtitle">Part XII</div>
+    <h1>Differential Geometry</h1>
+    <p class="description">
+      Where calculus meets geometry. We'll see derivatives as linear maps, differential forms
+      as the natural objects to integrate, and glimpse the world of manifolds—spaces that
+      look locally like ℝⁿ but can have exotic global structure.
+    </p>
+  </section>
+
+  <!-- Chapter 43: Derivatives as Linear Maps -->
+  <section id="derivatives">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 43</div>
+      <h2>Multivariable Calculus Done Correctly</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          The derivative of $f: \mathbb{R}^n \to \mathbb{R}^m$ at a point $p$ is not a matrix—it's
+          a <strong>linear map</strong> $Df_p: \mathbb{R}^n \to \mathbb{R}^m$. The Jacobian matrix
+          is merely its representation in standard coordinates.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: The Derivative</div>
+          <p style="margin-bottom: 0;">
+            $f$ is <em>differentiable</em> at $p$ if there exists a linear map $L: \mathbb{R}^n \to \mathbb{R}^m$ such that:
+            $$\lim_{h \to 0} \frac{\|f(p + h) - f(p) - L(h)\|}{\|h\|} = 0$$
+            We write $Df_p = L$. This is the <strong>best linear approximation</strong> to $f$ near $p$.
+          </p>
+        </div>
+
+        <p>
+          The key insight: $Df_p$ tells us how $f$ transforms infinitesimal displacements near $p$.
+          If you move by a tiny vector $h$, then $f(p + h) \approx f(p) + Df_p(h)$.
+        </p>
+
+        <p>
+          The Jacobian matrix $J_f(p)$ has entries $\frac{\partial f_i}{\partial x_j}(p)$, and
+          $Df_p(h) = J_f(p) \cdot h$. But thinking in terms of linear maps is more geometric.
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>The Derivative as Local Linearization</h3>
+        <p class="instruction">Drag the point to see how the derivative changes</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Function</label>
+            <div class="tabs">
+              <button @click="derivativeFunc = 'quadratic'" :class="{ active: derivativeFunc === 'quadratic' }">$x^2 + y^2$</button>
+              <button @click="derivativeFunc = 'saddle'" :class="{ active: derivativeFunc === 'saddle' }">$x^2 - y^2$</button>
+              <button @click="derivativeFunc = 'wave'" :class="{ active: derivativeFunc === 'wave' }">$\sin(x)\cos(y)$</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-container" id="derivative-canvas"></div>
+
+        <div class="stats">
+          <div class="stat tangent">
+            <div class="stat-value" x-text="'(' + derivativePoint.x.toFixed(2) + ', ' + derivativePoint.y.toFixed(2) + ')'"></div>
+            <div class="stat-label">Point $p$</div>
+          </div>
+          <div class="stat normal">
+            <div class="stat-value" x-text="derivativeValue.toFixed(3)"></div>
+            <div class="stat-label">$f(p)$</div>
+          </div>
+          <div class="stat form">
+            <div class="stat-value" x-text="'(' + gradientValue.x.toFixed(2) + ', ' + gradientValue.y.toFixed(2) + ')'"></div>
+            <div class="stat-label">$\nabla f(p)$</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          The orange plane is the tangent plane at $p$. Notice how it approximates the surface better when the surface is less curved.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tangent Spaces -->
+  <section id="tangent-spaces">
+    <div class="chapter-header reveal">
+      <h2>Tangent Spaces</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        At each point $p$ of a surface, there's a <strong>tangent space</strong> $T_p S$—the
+        vector space of all directions you can move along the surface. For a surface in ℝ³,
+        this is a 2-dimensional plane.
+      </p>
+
+      <div class="definition">
+        <div class="def-title">Definition: Tangent Space</div>
+        <p style="margin-bottom: 0;">
+          For a surface $S \subseteq \mathbb{R}^3$ defined implicitly by $g(x,y,z) = 0$,
+          the tangent space at $p \in S$ is:
+          $$T_p S = \{v \in \mathbb{R}^3 : \nabla g(p) \cdot v = 0\}$$
+          These are exactly the directions perpendicular to the gradient (normal) vector.
+        </p>
+      </div>
+
+      <p>
+        The tangent space gives us a "linearized" view of the surface. Any smooth curve
+        on the surface passing through $p$ has its velocity vector lying in $T_p S$.
+      </p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Tangent Plane Explorer</h3>
+      <p class="instruction">Click on the surface to place a tangent plane</p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Surface</label>
+          <div class="tabs">
+            <button @click="tangentSurface = 'sphere'" :class="{ active: tangentSurface === 'sphere' }">Sphere</button>
+            <button @click="tangentSurface = 'torus'" :class="{ active: tangentSurface === 'torus' }">Torus</button>
+            <button @click="tangentSurface = 'paraboloid'" :class="{ active: tangentSurface === 'paraboloid' }">Paraboloid</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Show</label>
+          <div class="tabs">
+            <button @click="showNormal = !showNormal" :class="{ active: showNormal }">Normal</button>
+            <button @click="showTangentVectors = !showTangentVectors" :class="{ active: showTangentVectors }">Basis</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-container" id="tangent-canvas"></div>
+
+      <div class="stats">
+        <div class="stat tangent">
+          <div class="stat-value" x-text="tangentPoint.theta.toFixed(2) + '°'"></div>
+          <div class="stat-label">Latitude θ</div>
+        </div>
+        <div class="stat form">
+          <div class="stat-value" x-text="tangentPoint.phi.toFixed(2) + '°'"></div>
+          <div class="stat-label">Longitude φ</div>
+        </div>
+        <div class="stat normal">
+          <div class="stat-value">2D</div>
+          <div class="stat-label">dim($T_pS$)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 44: Differential Forms -->
+  <section id="differential-forms">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 44</div>
+      <h2>Differential Forms</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          A <strong>1-form</strong> at a point $p$ is a linear functional $\omega_p: T_p \mathbb{R}^n \to \mathbb{R}$.
+          While a vector points in a direction, a 1-form <em>measures</em> vectors—it's the dual concept.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: 1-Form</div>
+          <p style="margin-bottom: 0;">
+            If $f: \mathbb{R}^n \to \mathbb{R}$ is smooth, its <em>differential</em> $df$ is a 1-form:
+            $$df_p(v) = Df_p(v) = \nabla f(p) \cdot v$$
+            The basic 1-forms are $dx, dy, dz$, which extract components: $dx(\partial_x) = 1$, $dx(\partial_y) = 0$.
+          </p>
+        </div>
+
+        <p>
+          A general 1-form looks like $\omega = P\,dx + Q\,dy$ where $P, Q$ are functions.
+          Applied to a vector $v = (a, b)$, we get $\omega(v) = Pa + Qb$.
+        </p>
+
+        <p>
+          The key difference from vector fields: 1-forms are <em>covectors</em>. They live in the
+          <strong>cotangent space</strong> $T_p^* \mathbb{R}^n$, dual to the tangent space.
+        </p>
+
+        <div class="math-display">
+          $$\text{Vector field: } X = a\,\partial_x + b\,\partial_y$$
+          $$\text{1-form: } \omega = P\,dx + Q\,dy$$
+          $$\omega(X) = Pa + Qb$$
+        </div>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Vectors vs. 1-Forms</h3>
+        <p class="instruction">Drag the vector or adjust the 1-form to see evaluation</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>1-form $\omega$: <span x-text="formP.toFixed(1)"></span> dx + <span x-text="formQ.toFixed(1)"></span> dy</label>
+          </div>
+          <div class="control-group">
+            <label>P coefficient</label>
+            <input type="range" x-model="formP" min="-2" max="2" step="0.1">
+          </div>
+          <div class="control-group">
+            <label>Q coefficient</label>
+            <input type="range" x-model="formQ" min="-2" max="2" step="0.1">
+          </div>
+        </div>
+
+        <div class="svg-container" id="form-viz"></div>
+
+        <div class="vector-display">
+          <div class="vector">
+            Vector: $v$ = (<span x-text="formVector.x.toFixed(2)"></span>, <span x-text="formVector.y.toFixed(2)"></span>)
+          </div>
+          <div class="vector form">
+            $\omega(v)$ = <span x-text="formEvaluation.toFixed(3)"></span>
+          </div>
+        </div>
+
+        <p class="annotation">
+          The parallel lines represent level sets of the 1-form. Vectors crossing more lines have larger $\omega(v)$.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wedge Product -->
+  <section id="wedge-product">
+    <div class="chapter-header reveal">
+      <h2>The Wedge Product</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        The <strong>wedge product</strong> $\wedge$ combines 1-forms into higher-degree forms.
+        A 2-form $dx \wedge dy$ measures <em>oriented area</em>, just as a 1-form measures length.
+      </p>
+
+      <div class="definition">
+        <div class="def-title">Definition: Wedge Product</div>
+        <p style="margin-bottom: 0;">
+          For 1-forms $\alpha, \beta$, their wedge product $\alpha \wedge \beta$ is a 2-form defined by:
+          $$(\alpha \wedge \beta)(v, w) = \alpha(v)\beta(w) - \alpha(w)\beta(v)$$
+          Key property: $\alpha \wedge \beta = -\beta \wedge \alpha$ (antisymmetry).
+        </p>
+      </div>
+
+      <p>
+        The geometric meaning: $(dx \wedge dy)(v, w)$ gives the signed area of the parallelogram
+        spanned by $v$ and $w$. This is exactly the determinant!
+      </p>
+
+      <div class="math-display">
+        $$(dx \wedge dy)\left(\begin{pmatrix} a \\ b \end{pmatrix}, \begin{pmatrix} c \\ d \end{pmatrix}\right) = ad - bc = \det\begin{pmatrix} a & c \\ b & d \end{pmatrix}$$
+      </div>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Wedge Product as Oriented Area</h3>
+      <p class="instruction">Drag the vectors to see how the wedge product changes</p>
+
+      <div class="svg-container" id="wedge-viz"></div>
+
+      <div class="stats">
+        <div class="stat tangent">
+          <div class="stat-value" x-text="'(' + wedgeV.x.toFixed(1) + ', ' + wedgeV.y.toFixed(1) + ')'"></div>
+          <div class="stat-label">Vector $v$</div>
+        </div>
+        <div class="stat form">
+          <div class="stat-value" x-text="'(' + wedgeW.x.toFixed(1) + ', ' + wedgeW.y.toFixed(1) + ')'"></div>
+          <div class="stat-label">Vector $w$</div>
+        </div>
+        <div class="stat wedge">
+          <div class="stat-value" x-text="wedgeArea.toFixed(2)"></div>
+          <div class="stat-label">$(dx \wedge dy)(v,w)$</div>
+        </div>
+      </div>
+
+      <p class="annotation">
+        <span class="highlight-wedge">Green</span> = positive orientation (counterclockwise),
+        <span class="highlight-boundary">Red</span> = negative orientation (clockwise).
+        The area equals $|v_1 w_2 - v_2 w_1|$.
+      </p>
+    </div>
+
+    <!-- Exterior Derivative -->
+    <div class="interactive-container reveal" style="margin-top: 3rem;">
+      <h3>The Exterior Derivative</h3>
+
+      <div class="prose" style="margin-bottom: 2rem;">
+        <p>
+          The <strong>exterior derivative</strong> $d$ generalizes the gradient, curl, and divergence.
+          Applied to a 0-form (function) $f$, we get $df = \frac{\partial f}{\partial x}dx + \frac{\partial f}{\partial y}dy$.
+        </p>
+
+        <div class="theorem">
+          <div class="thm-title">Key Property: $d^2 = 0$</div>
+          <p style="margin-bottom: 0;">
+            Applying $d$ twice always gives zero. For a function $f$:
+            $$d(df) = d\left(\frac{\partial f}{\partial x}dx + \frac{\partial f}{\partial y}dy\right) = \left(\frac{\partial^2 f}{\partial y \partial x} - \frac{\partial^2 f}{\partial x \partial y}\right) dx \wedge dy = 0$$
+            This encodes "curl of gradient is zero" and "div of curl is zero"!
+          </p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Function $f$</label>
+          <div class="tabs">
+            <button @click="extDerivFunc = 'xy'" :class="{ active: extDerivFunc === 'xy' }">$xy$</button>
+            <button @click="extDerivFunc = 'x2y'" :class="{ active: extDerivFunc === 'x2y' }">$x^2y$</button>
+            <button @click="extDerivFunc = 'sincos'" :class="{ active: extDerivFunc === 'sincos' }">$\sin x \cos y$</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="svg-container" id="extderiv-viz"></div>
+
+      <p class="annotation">
+        The arrows show the 1-form $df$ (gradient). Level curves of $f$ are perpendicular to $df$.
+      </p>
+    </div>
+  </section>
+
+  <!-- Chapter 45: Integration -->
+  <section id="integration">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 45</div>
+      <h2>Integrating Differential Forms</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          Differential forms are <em>made</em> to be integrated. A 1-form integrates over a curve,
+          a 2-form over a surface, a 3-form over a volume. The form "knows" how to be integrated.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Line Integral of a 1-Form</div>
+          <p style="margin-bottom: 0;">
+            For a curve $\gamma: [a,b] \to \mathbb{R}^n$ and 1-form $\omega$:
+            $$\int_\gamma \omega = \int_a^b \omega_{\gamma(t)}(\gamma'(t))\, dt$$
+            If $\omega = P\,dx + Q\,dy$ and $\gamma(t) = (x(t), y(t))$:
+            $$\int_\gamma \omega = \int_a^b \left(P \frac{dx}{dt} + Q \frac{dy}{dt}\right) dt$$
+          </p>
+        </div>
+
+        <p>
+          Similarly, a 2-form $\omega = f\, dx \wedge dy$ integrates over a surface by computing
+          oriented area element by element. The form handles all the "Jacobian" bookkeeping automatically.
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Line Integral Visualization</h3>
+        <p class="instruction">Adjust the curve and see how the integral changes</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>1-Form</label>
+            <div class="tabs">
+              <button @click="lineIntegralForm = 'exact'" :class="{ active: lineIntegralForm === 'exact' }">$x\,dx + y\,dy$</button>
+              <button @click="lineIntegralForm = 'rotation'" :class="{ active: lineIntegralForm === 'rotation' }">$-y\,dx + x\,dy$</button>
+              <button @click="lineIntegralForm = 'other'" :class="{ active: lineIntegralForm === 'other' }">$y\,dx$</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Curve radius: <span x-text="curveRadius.toFixed(1)"></span></label>
+            <input type="range" x-model="curveRadius" min="0.5" max="2" step="0.1">
+          </div>
+        </div>
+
+        <div class="svg-container" id="line-integral-viz"></div>
+
+        <div class="stats">
+          <div class="stat form">
+            <div class="stat-value" x-text="lineIntegralValue.toFixed(3)"></div>
+            <div class="stat-label">$\oint_C \omega$</div>
+          </div>
+          <div class="stat tangent">
+            <div class="stat-value" x-text="(lineIntegralValue / (Math.PI * curveRadius * curveRadius)).toFixed(3)"></div>
+            <div class="stat-label">$\div$ Area</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          For the rotation form $-y\,dx + x\,dy$, the integral around a circle equals $2\pi r^2$ (twice the area)!
+          This foreshadows Stokes' theorem.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stokes' Theorem -->
+  <section id="stokes">
+    <div class="chapter-header reveal">
+      <h2>Stokes' Theorem</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        <strong>Stokes' theorem</strong> is the grand unification. It says: integrating a form's
+        exterior derivative over a region equals integrating the form over the boundary.
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Stokes' Theorem (General Form)</div>
+        <p style="margin-bottom: 0;">
+          For an oriented $k$-dimensional manifold $M$ with boundary $\partial M$, and $(k-1)$-form $\omega$:
+          $$\int_M d\omega = \int_{\partial M} \omega$$
+        </p>
+      </div>
+
+      <p>
+        This single equation contains:
+      </p>
+      <ul style="color: var(--text-secondary); margin-left: 1.5rem; margin-bottom: 1.5rem;">
+        <li><strong>Fundamental Theorem of Calculus</strong>: $\int_a^b f'(x)\,dx = f(b) - f(a)$</li>
+        <li><strong>Green's Theorem</strong>: $\iint_R \left(\frac{\partial Q}{\partial x} - \frac{\partial P}{\partial y}\right) dA = \oint_C P\,dx + Q\,dy$</li>
+        <li><strong>Divergence Theorem</strong>: $\iiint_V \nabla \cdot \mathbf{F}\, dV = \iint_S \mathbf{F} \cdot d\mathbf{S}$</li>
+        <li><strong>Classical Stokes</strong>: $\iint_S (\nabla \times \mathbf{F}) \cdot d\mathbf{S} = \oint_C \mathbf{F} \cdot d\mathbf{r}$</li>
+      </ul>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Stokes' Theorem in Action</h3>
+      <p class="instruction">Watch how boundary circulation relates to interior "curl"</p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Form ω</label>
+          <div class="tabs">
+            <button @click="stokesForm = 'rotation'" :class="{ active: stokesForm === 'rotation' }">$-y\,dx + x\,dy$</button>
+            <button @click="stokesForm = 'shear'" :class="{ active: stokesForm === 'shear' }">$y\,dx$</button>
+            <button @click="stokesForm = 'exact'" :class="{ active: stokesForm === 'exact' }">$x\,dx + y\,dy$ (exact)</button>
+          </div>
+        </div>
+        <button class="primary" @click="animateStokes()">Animate Flow</button>
+      </div>
+
+      <div class="svg-container" id="stokes-viz" style="height: 500px;"></div>
+
+      <div class="stats">
+        <div class="stat boundary">
+          <div class="stat-value" x-text="stokesBoundary.toFixed(3)"></div>
+          <div class="stat-label">$\oint_{\partial R} \omega$</div>
+        </div>
+        <div class="stat interior">
+          <div class="stat-value" x-text="stokesInterior.toFixed(3)"></div>
+          <div class="stat-label">$\iint_R d\omega$</div>
+        </div>
+        <div class="stat wedge">
+          <div class="stat-value" x-text="stokesCurl.toFixed(3)"></div>
+          <div class="stat-label">"Curl" ($\frac{\partial Q}{\partial x} - \frac{\partial P}{\partial y}$)</div>
+        </div>
+      </div>
+
+      <p class="annotation">
+        When $d\omega = 0$ (exact form), the boundary integral vanishes for closed curves. The interior has no "curl" to accumulate.
+      </p>
+    </div>
+  </section>
+
+  <!-- Chapter 46: Manifolds -->
+  <section id="manifolds">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 46</div>
+      <h2>A Bit of Manifolds</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          A <strong>manifold</strong> is a space that looks locally like $\mathbb{R}^n$. The sphere
+          isn't globally ℝ², but around each point, you can flatten a patch into a plane. These
+          local patches are called <em>charts</em>.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Chart and Atlas</div>
+          <p style="margin-bottom: 0;">
+            A <em>chart</em> on a topological space $M$ is a homeomorphism $\phi: U \to \mathbb{R}^n$
+            where $U \subseteq M$ is open. An <em>atlas</em> is a collection of charts covering $M$.
+            <br><br>
+            $M$ is a <em>smooth manifold</em> if the transition maps $\phi_\beta \circ \phi_\alpha^{-1}$
+            are smooth wherever defined.
+          </p>
+        </div>
+
+        <p>
+          The sphere $S^2$ famously needs at least two charts. One approach: <strong>stereographic projection</strong>
+          from north and south poles. Each chart covers everything except one point.
+        </p>
+
+        <p>
+          On a manifold, we can still do calculus. The <strong>tangent bundle</strong> $TM$ collects
+          all tangent spaces: $TM = \bigsqcup_{p \in M} T_p M$. This is itself a manifold of dimension $2n$!
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Stereographic Projection</h3>
+        <p class="instruction">Drag points on the sphere to see their projections</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Project from</label>
+            <div class="tabs">
+              <button @click="stereoFrom = 'north'" :class="{ active: stereoFrom === 'north' }">North Pole</button>
+              <button @click="stereoFrom = 'south'" :class="{ active: stereoFrom === 'south' }">South Pole</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Show</label>
+            <div class="tabs">
+              <button @click="showGrid = !showGrid" :class="{ active: showGrid }">Grid Lines</button>
+              <button @click="showProjectionLines = !showProjectionLines" :class="{ active: showProjectionLines }">Rays</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-container" id="manifold-canvas"></div>
+
+        <div class="stats">
+          <div class="stat tangent">
+            <div class="stat-value" x-text="'(' + stereoPointSphere.x.toFixed(2) + ', ' + stereoPointSphere.y.toFixed(2) + ', ' + stereoPointSphere.z.toFixed(2) + ')'"></div>
+            <div class="stat-label">Point on $S^2$</div>
+          </div>
+          <div class="stat form">
+            <div class="stat-value" x-text="'(' + stereoPointPlane.x.toFixed(2) + ', ' + stereoPointPlane.y.toFixed(2) + ')'"></div>
+            <div class="stat-label">Image in $\mathbb{R}^2$</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          Lines through the projection pole intersect the sphere at one point (other than the pole)
+          and the plane at one point. This defines the bijection—except at the pole itself.
+        </p>
+      </div>
+    </div>
+
+    <!-- Tangent Bundle -->
+    <div class="interactive-container reveal" style="margin-top: 3rem;">
+      <h3>The Tangent Bundle</h3>
+
+      <div class="prose" style="margin-bottom: 2rem;">
+        <p>
+          The <strong>tangent bundle</strong> $TS^1$ of the circle is a cylinder! At each point of the circle,
+          we attach a copy of the tangent line. As we move around the circle, these lines sweep out a cylinder.
+        </p>
+      </div>
+
+      <div class="canvas-container" id="tangent-bundle-canvas"></div>
+
+      <p class="annotation">
+        The tangent bundle $TS^2$ of the sphere is more exotic—it's a 4-dimensional manifold.
+        A remarkable fact: you cannot comb a hairy ball flat (there's no nowhere-vanishing vector field on $S^2$).
+      </p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      Part XII of <em>An Infinitely Large Napkin</em> by Evan Chen<br>
+      Interactive exploration created for deeper geometric understanding<br>
+      <a href="https://venhance.github.io/napkin/" target="_blank">Original source →</a>
+    </p>
+  </footer>
+
+  <script>
+    // Initialize KaTeX
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+
+    // Three.js scenes storage
+    const scenes = {};
+
+    function diffGeoExplorer() {
+      return {
+        scrollProgress: 0,
+        currentSection: 'hero',
+
+        // Derivative visualization
+        derivativeFunc: 'quadratic',
+        derivativePoint: { x: 0.5, y: 0.5 },
+        derivativeValue: 0.5,
+        gradientValue: { x: 1, y: 1 },
+
+        // Tangent space
+        tangentSurface: 'sphere',
+        tangentPoint: { theta: 45, phi: 45 },
+        showNormal: true,
+        showTangentVectors: false,
+
+        // Differential forms
+        formP: 1,
+        formQ: 0.5,
+        formVector: { x: 1, y: 0.5 },
+        formEvaluation: 1.25,
+
+        // Wedge product
+        wedgeV: { x: 1, y: 0 },
+        wedgeW: { x: 0.5, y: 1 },
+        wedgeArea: 1,
+
+        // Exterior derivative
+        extDerivFunc: 'xy',
+
+        // Line integral
+        lineIntegralForm: 'rotation',
+        curveRadius: 1,
+        lineIntegralValue: 6.28,
+
+        // Stokes
+        stokesForm: 'rotation',
+        stokesBoundary: 6.28,
+        stokesInterior: 6.28,
+        stokesCurl: 2,
+
+        // Manifolds
+        stereoFrom: 'north',
+        showGrid: true,
+        showProjectionLines: true,
+        stereoPointSphere: { x: 0.5, y: 0.5, z: 0.707 },
+        stereoPointPlane: { x: 1, y: 1 },
+
+        init() {
+          gsap.registerPlugin(ScrollTrigger);
+
+          // Scroll progress
+          ScrollTrigger.create({
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            onUpdate: self => this.scrollProgress = self.progress * 100
+          });
+
+          // Section tracking
+          const sections = ['hero', 'derivatives', 'tangent-spaces', 'differential-forms', 'wedge-product', 'integration', 'stokes', 'manifolds'];
+          sections.forEach(id => {
+            ScrollTrigger.create({
+              trigger: `#${id}`,
+              start: 'top center',
+              end: 'bottom center',
+              onEnter: () => this.currentSection = id,
+              onEnterBack: () => this.currentSection = id
+            });
+          });
+
+          // Reveal animations
+          gsap.utils.toArray('.reveal').forEach(el => {
+            gsap.from(el, {
+              y: 50,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse'
+              }
+            });
+          });
+
+          // Initialize visualizations
+          setTimeout(() => {
+            this.initHeroScene();
+            this.initDerivativeScene();
+            this.initTangentScene();
+            this.initFormViz();
+            this.initWedgeViz();
+            this.initExtDerivViz();
+            this.initLineIntegralViz();
+            this.initStokesViz();
+            this.initManifoldScene();
+            this.initTangentBundleScene();
+          }, 100);
+
+          // Watch for changes
+          this.$watch('derivativeFunc', () => this.updateDerivativeScene());
+          this.$watch('tangentSurface', () => this.updateTangentScene());
+          this.$watch('formP', () => this.updateFormViz());
+          this.$watch('formQ', () => this.updateFormViz());
+          this.$watch('extDerivFunc', () => this.initExtDerivViz());
+          this.$watch('lineIntegralForm', () => this.updateLineIntegral());
+          this.$watch('curveRadius', () => this.updateLineIntegral());
+          this.$watch('stokesForm', () => this.updateStokes());
+          this.$watch('stereoFrom', () => this.updateManifoldScene());
+          this.$watch('showGrid', () => this.updateManifoldScene());
+        },
+
+        initHeroScene() {
+          const container = document.getElementById('hero-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+          const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          // Create a flowing surface
+          const geometry = new THREE.PlaneGeometry(10, 10, 50, 50);
+          const material = new THREE.MeshBasicMaterial({
+            color: 0xf59e0b,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.3
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.rotation.x = -Math.PI / 3;
+          scene.add(mesh);
+
+          camera.position.z = 5;
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+
+            const positions = geometry.attributes.position.array;
+            const time = Date.now() * 0.001;
+
+            for (let i = 0; i < positions.length; i += 3) {
+              const x = positions[i];
+              const y = positions[i + 1];
+              positions[i + 2] = Math.sin(x * 0.5 + time) * Math.cos(y * 0.5 + time) * 0.5;
+            }
+            geometry.attributes.position.needsUpdate = true;
+
+            mesh.rotation.z += 0.001;
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        initDerivativeScene() {
+          const container = document.getElementById('derivative-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x12121f);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(3, 3, 3);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+          controls.dampingFactor = 0.05;
+
+          scenes.derivative = { scene, camera, renderer, controls, container };
+          this.updateDerivativeScene();
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        updateDerivativeScene() {
+          const { scene, camera, renderer, controls } = scenes.derivative || {};
+          if (!scene) return;
+
+          // Clear old meshes
+          while (scene.children.length > 0) {
+            scene.remove(scene.children[0]);
+          }
+
+          // Add lights
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+          scene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+          directionalLight.position.set(5, 5, 5);
+          scene.add(directionalLight);
+
+          // Function definitions
+          const funcs = {
+            quadratic: (x, y) => x * x + y * y,
+            saddle: (x, y) => x * x - y * y,
+            wave: (x, y) => Math.sin(x * 2) * Math.cos(y * 2)
+          };
+
+          const grads = {
+            quadratic: (x, y) => ({ x: 2 * x, y: 2 * y }),
+            saddle: (x, y) => ({ x: 2 * x, y: -2 * y }),
+            wave: (x, y) => ({ x: 2 * Math.cos(x * 2) * Math.cos(y * 2), y: -2 * Math.sin(x * 2) * Math.sin(y * 2) })
+          };
+
+          const f = funcs[this.derivativeFunc];
+          const grad = grads[this.derivativeFunc];
+
+          // Create surface
+          const geometry = new THREE.PlaneGeometry(4, 4, 60, 60);
+          const positions = geometry.attributes.position.array;
+
+          for (let i = 0; i < positions.length; i += 3) {
+            const x = positions[i];
+            const y = positions[i + 1];
+            positions[i + 2] = f(x, y);
+          }
+          geometry.computeVertexNormals();
+
+          const material = new THREE.MeshPhongMaterial({
+            color: 0x3b82f6,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.7,
+            flatShading: false
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.rotation.x = -Math.PI / 2;
+          scene.add(mesh);
+
+          // Tangent plane at the current point
+          const px = this.derivativePoint.x;
+          const py = this.derivativePoint.y;
+          const pz = f(px, py);
+          const g = grad(px, py);
+
+          this.derivativeValue = pz;
+          this.gradientValue = g;
+
+          // Tangent plane equation: z = pz + gx*(x-px) + gy*(y-py)
+          const planeGeo = new THREE.PlaneGeometry(1.5, 1.5);
+          const planeMat = new THREE.MeshBasicMaterial({
+            color: 0xf59e0b,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+          });
+          const plane = new THREE.Mesh(planeGeo, planeMat);
+
+          // Position and orient the plane
+          plane.position.set(px, pz, -py);
+
+          // Normal vector from gradient
+          const normal = new THREE.Vector3(-g.x, 1, g.y).normalize();
+          plane.lookAt(plane.position.clone().add(normal));
+
+          scene.add(plane);
+
+          // Point marker
+          const sphereGeo = new THREE.SphereGeometry(0.08);
+          const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+          sphere.position.set(px, pz, -py);
+          scene.add(sphere);
+
+          // Grid
+          const gridHelper = new THREE.GridHelper(4, 10, 0x444444, 0x333333);
+          gridHelper.position.y = -0.5;
+          scene.add(gridHelper);
+        },
+
+        initTangentScene() {
+          const container = document.getElementById('tangent-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x12121f);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(2.5, 2, 2.5);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          scenes.tangent = { scene, camera, renderer, controls, container };
+          this.updateTangentScene();
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        updateTangentScene() {
+          const { scene } = scenes.tangent || {};
+          if (!scene) return;
+
+          while (scene.children.length > 0) {
+            scene.remove(scene.children[0]);
+          }
+
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+          scene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+          directionalLight.position.set(5, 5, 5);
+          scene.add(directionalLight);
+
+          let geometry;
+          if (this.tangentSurface === 'sphere') {
+            geometry = new THREE.SphereGeometry(1, 32, 32);
+          } else if (this.tangentSurface === 'torus') {
+            geometry = new THREE.TorusGeometry(1, 0.4, 16, 50);
+          } else {
+            geometry = new THREE.PlaneGeometry(3, 3, 30, 30);
+            const positions = geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+              const x = positions[i];
+              const y = positions[i + 1];
+              positions[i + 2] = (x * x + y * y) * 0.2;
+            }
+            geometry.computeVertexNormals();
+          }
+
+          const material = new THREE.MeshPhongMaterial({
+            color: 0x06b6d4,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          if (this.tangentSurface === 'paraboloid') {
+            mesh.rotation.x = -Math.PI / 2;
+          }
+          scene.add(mesh);
+
+          // Tangent plane at a point
+          const theta = this.tangentPoint.theta * Math.PI / 180;
+          const phi = this.tangentPoint.phi * Math.PI / 180;
+
+          let point, normal;
+          if (this.tangentSurface === 'sphere') {
+            point = new THREE.Vector3(
+              Math.sin(theta) * Math.cos(phi),
+              Math.cos(theta),
+              Math.sin(theta) * Math.sin(phi)
+            );
+            normal = point.clone().normalize();
+          } else if (this.tangentSurface === 'torus') {
+            const R = 1, r = 0.4;
+            point = new THREE.Vector3(
+              (R + r * Math.cos(theta)) * Math.cos(phi),
+              r * Math.sin(theta),
+              (R + r * Math.cos(theta)) * Math.sin(phi)
+            );
+            normal = new THREE.Vector3(
+              Math.cos(theta) * Math.cos(phi),
+              Math.sin(theta),
+              Math.cos(theta) * Math.sin(phi)
+            ).normalize();
+          } else {
+            const x = (theta - 90) / 45;
+            const y = (phi - 90) / 45;
+            point = new THREE.Vector3(x, (x * x + y * y) * 0.2, -y);
+            normal = new THREE.Vector3(-0.4 * x, 1, 0.4 * y).normalize();
+          }
+
+          // Tangent plane
+          const planeGeo = new THREE.PlaneGeometry(0.8, 0.8);
+          const planeMat = new THREE.MeshBasicMaterial({
+            color: 0xf59e0b,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+          });
+          const plane = new THREE.Mesh(planeGeo, planeMat);
+          plane.position.copy(point);
+          plane.lookAt(point.clone().add(normal));
+          scene.add(plane);
+
+          // Normal vector
+          if (this.showNormal) {
+            const arrowHelper = new THREE.ArrowHelper(normal, point, 0.6, 0x3b82f6, 0.1, 0.05);
+            scene.add(arrowHelper);
+          }
+
+          // Tangent basis vectors
+          if (this.showTangentVectors) {
+            const up = new THREE.Vector3(0, 1, 0);
+            const t1 = new THREE.Vector3().crossVectors(up, normal).normalize();
+            if (t1.length() < 0.1) t1.set(1, 0, 0);
+            const t2 = new THREE.Vector3().crossVectors(normal, t1).normalize();
+
+            const arrow1 = new THREE.ArrowHelper(t1, point, 0.4, 0xec4899, 0.08, 0.04);
+            const arrow2 = new THREE.ArrowHelper(t2, point, 0.4, 0x10b981, 0.08, 0.04);
+            scene.add(arrow1);
+            scene.add(arrow2);
+          }
+
+          // Point marker
+          const sphereGeo = new THREE.SphereGeometry(0.05);
+          const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+          sphere.position.copy(point);
+          scene.add(sphere);
+        },
+
+        initFormViz() {
+          const container = document.getElementById('form-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 380;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          // Store reference
+          scenes.formSvg = svg;
+          scenes.formWidth = width;
+          scenes.formHeight = height;
+
+          this.updateFormViz();
+        },
+
+        updateFormViz() {
+          const svg = scenes.formSvg;
+          if (!svg) return;
+
+          const width = scenes.formWidth;
+          const height = scenes.formHeight;
+          const cx = width / 2;
+          const cy = height / 2;
+          const scale = 80;
+
+          svg.selectAll('*').remove();
+
+          // Draw level lines of the 1-form
+          const P = parseFloat(this.formP);
+          const Q = parseFloat(this.formQ);
+          const norm = Math.sqrt(P * P + Q * Q) || 1;
+
+          // Level lines perpendicular to (P, Q)
+          for (let k = -5; k <= 5; k++) {
+            const offset = k * 30;
+            // Line through origin + offset in direction of (P, Q)
+            const px = offset * P / norm;
+            const py = offset * Q / norm;
+
+            // Direction perpendicular to (P, Q)
+            const dx = -Q / norm * 200;
+            const dy = P / norm * 200;
+
+            svg.append('line')
+              .attr('x1', cx + px - dx)
+              .attr('y1', cy - py + dy)
+              .attr('x2', cx + px + dx)
+              .attr('y2', cy - py - dy)
+              .attr('stroke', '#ec4899')
+              .attr('stroke-width', 1)
+              .attr('opacity', 0.3);
+          }
+
+          // Axes
+          svg.append('line')
+            .attr('x1', cx - 150).attr('y1', cy)
+            .attr('x2', cx + 150).attr('y2', cy)
+            .attr('stroke', '#64748b').attr('stroke-width', 1);
+
+          svg.append('line')
+            .attr('x1', cx).attr('y1', cy + 150)
+            .attr('x2', cx).attr('y2', cy - 150)
+            .attr('stroke', '#64748b').attr('stroke-width', 1);
+
+          // Draw vector
+          const vx = this.formVector.x * scale;
+          const vy = this.formVector.y * scale;
+
+          svg.append('line')
+            .attr('x1', cx)
+            .attr('y1', cy)
+            .attr('x2', cx + vx)
+            .attr('y2', cy - vy)
+            .attr('stroke', '#f59e0b')
+            .attr('stroke-width', 3);
+
+          svg.append('circle')
+            .attr('cx', cx + vx)
+            .attr('cy', cy - vy)
+            .attr('r', 8)
+            .attr('fill', '#f59e0b')
+            .attr('cursor', 'grab')
+            .call(d3.drag()
+              .on('drag', (event) => {
+                this.formVector.x = (event.x - cx) / scale;
+                this.formVector.y = -(event.y - cy) / scale;
+                this.formEvaluation = P * this.formVector.x + Q * this.formVector.y;
+                this.updateFormViz();
+              }));
+
+          // Draw the covector (form) as an arrow
+          svg.append('line')
+            .attr('x1', cx)
+            .attr('y1', cy)
+            .attr('x2', cx + P * scale)
+            .attr('y2', cy - Q * scale)
+            .attr('stroke', '#ec4899')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '5,3');
+
+          svg.append('polygon')
+            .attr('points', `0,-6 12,0 0,6`)
+            .attr('fill', '#ec4899')
+            .attr('transform', `translate(${cx + P * scale}, ${cy - Q * scale}) rotate(${-Math.atan2(Q, P) * 180 / Math.PI})`);
+
+          // Labels
+          svg.append('text')
+            .attr('x', cx + vx + 15)
+            .attr('y', cy - vy)
+            .attr('fill', '#f59e0b')
+            .attr('font-size', '14px')
+            .text('v');
+
+          svg.append('text')
+            .attr('x', cx + P * scale + 15)
+            .attr('y', cy - Q * scale)
+            .attr('fill', '#ec4899')
+            .attr('font-size', '14px')
+            .text('ω');
+
+          this.formEvaluation = P * this.formVector.x + Q * this.formVector.y;
+        },
+
+        initWedgeViz() {
+          const container = document.getElementById('wedge-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 400;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          scenes.wedgeSvg = svg;
+          scenes.wedgeWidth = width;
+          scenes.wedgeHeight = height;
+
+          this.updateWedgeViz();
+        },
+
+        updateWedgeViz() {
+          const svg = scenes.wedgeSvg;
+          if (!svg) return;
+
+          const width = scenes.wedgeWidth;
+          const height = scenes.wedgeHeight;
+          const cx = width / 2;
+          const cy = height / 2;
+          const scale = 60;
+
+          svg.selectAll('*').remove();
+
+          const v = this.wedgeV;
+          const w = this.wedgeW;
+          this.wedgeArea = v.x * w.y - v.y * w.x;
+
+          // Grid
+          for (let i = -3; i <= 3; i++) {
+            svg.append('line')
+              .attr('x1', cx + i * scale).attr('y1', cy - 3 * scale)
+              .attr('x2', cx + i * scale).attr('y2', cy + 3 * scale)
+              .attr('stroke', '#333').attr('stroke-width', 0.5);
+            svg.append('line')
+              .attr('x1', cx - 3 * scale).attr('y1', cy + i * scale)
+              .attr('x2', cx + 3 * scale).attr('y2', cy + i * scale)
+              .attr('stroke', '#333').attr('stroke-width', 0.5);
+          }
+
+          // Parallelogram
+          const points = [
+            [cx, cy],
+            [cx + v.x * scale, cy - v.y * scale],
+            [cx + (v.x + w.x) * scale, cy - (v.y + w.y) * scale],
+            [cx + w.x * scale, cy - w.y * scale]
+          ];
+
+          svg.append('polygon')
+            .attr('points', points.map(p => p.join(',')).join(' '))
+            .attr('fill', this.wedgeArea >= 0 ? '#10b981' : '#ef4444')
+            .attr('opacity', 0.3)
+            .attr('stroke', this.wedgeArea >= 0 ? '#10b981' : '#ef4444')
+            .attr('stroke-width', 2);
+
+          // Vector v
+          svg.append('line')
+            .attr('x1', cx).attr('y1', cy)
+            .attr('x2', cx + v.x * scale).attr('y2', cy - v.y * scale)
+            .attr('stroke', '#f59e0b').attr('stroke-width', 3);
+
+          svg.append('circle')
+            .attr('cx', cx + v.x * scale)
+            .attr('cy', cy - v.y * scale)
+            .attr('r', 10)
+            .attr('fill', '#f59e0b')
+            .attr('cursor', 'grab')
+            .call(d3.drag()
+              .on('drag', (event) => {
+                this.wedgeV.x = (event.x - cx) / scale;
+                this.wedgeV.y = -(event.y - cy) / scale;
+                this.updateWedgeViz();
+              }));
+
+          // Vector w
+          svg.append('line')
+            .attr('x1', cx).attr('y1', cy)
+            .attr('x2', cx + w.x * scale).attr('y2', cy - w.y * scale)
+            .attr('stroke', '#ec4899').attr('stroke-width', 3);
+
+          svg.append('circle')
+            .attr('cx', cx + w.x * scale)
+            .attr('cy', cy - w.y * scale)
+            .attr('r', 10)
+            .attr('fill', '#ec4899')
+            .attr('cursor', 'grab')
+            .call(d3.drag()
+              .on('drag', (event) => {
+                this.wedgeW.x = (event.x - cx) / scale;
+                this.wedgeW.y = -(event.y - cy) / scale;
+                this.updateWedgeViz();
+              }));
+
+          // Labels
+          svg.append('text')
+            .attr('x', cx + v.x * scale / 2 - 15)
+            .attr('y', cy - v.y * scale / 2 - 10)
+            .attr('fill', '#f59e0b')
+            .attr('font-size', '16px')
+            .attr('font-weight', 'bold')
+            .text('v');
+
+          svg.append('text')
+            .attr('x', cx + w.x * scale / 2 + 10)
+            .attr('y', cy - w.y * scale / 2 - 10)
+            .attr('fill', '#ec4899')
+            .attr('font-size', '16px')
+            .attr('font-weight', 'bold')
+            .text('w');
+
+          // Area label
+          svg.append('text')
+            .attr('x', cx + (v.x + w.x) * scale / 2)
+            .attr('y', cy - (v.y + w.y) * scale / 2)
+            .attr('fill', '#fff')
+            .attr('font-size', '18px')
+            .attr('font-weight', 'bold')
+            .attr('text-anchor', 'middle')
+            .text(`Area: ${Math.abs(this.wedgeArea).toFixed(2)}`);
+        },
+
+        initExtDerivViz() {
+          const container = document.getElementById('extderiv-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 380;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const cx = width / 2;
+          const cy = height / 2;
+          const scale = 40;
+
+          const funcs = {
+            xy: { f: (x, y) => x * y, df: (x, y) => ({ dx: y, dy: x }) },
+            x2y: { f: (x, y) => x * x * y, df: (x, y) => ({ dx: 2 * x * y, dy: x * x }) },
+            sincos: { f: (x, y) => Math.sin(x) * Math.cos(y), df: (x, y) => ({ dx: Math.cos(x) * Math.cos(y), dy: -Math.sin(x) * Math.sin(y) }) }
+          };
+
+          const { f, df } = funcs[this.extDerivFunc];
+
+          // Level curves
+          const levels = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5];
+          const gridSize = 40;
+
+          for (const level of levels) {
+            const points = [];
+            for (let i = -gridSize; i <= gridSize; i++) {
+              for (let j = -gridSize; j <= gridSize; j++) {
+                const x = i / 10;
+                const y = j / 10;
+                const val = f(x, y);
+                if (Math.abs(val - level) < 0.1) {
+                  points.push([cx + x * scale, cy - y * scale]);
+                }
+              }
+            }
+
+            points.forEach(p => {
+              svg.append('circle')
+                .attr('cx', p[0])
+                .attr('cy', p[1])
+                .attr('r', 1.5)
+                .attr('fill', '#3b82f6')
+                .attr('opacity', 0.5);
+            });
+          }
+
+          // Gradient field
+          for (let i = -3; i <= 3; i++) {
+            for (let j = -3; j <= 3; j++) {
+              const x = i;
+              const y = j;
+              const g = df(x, y);
+              const len = Math.sqrt(g.dx * g.dx + g.dy * g.dy);
+              if (len < 0.01) continue;
+
+              const nx = g.dx / len * 20;
+              const ny = g.dy / len * 20;
+
+              svg.append('line')
+                .attr('x1', cx + x * scale)
+                .attr('y1', cy - y * scale)
+                .attr('x2', cx + x * scale + nx)
+                .attr('y2', cy - y * scale - ny)
+                .attr('stroke', '#f59e0b')
+                .attr('stroke-width', 2)
+                .attr('marker-end', 'url(#arrowhead)');
+            }
+          }
+
+          // Arrow marker
+          svg.append('defs').append('marker')
+            .attr('id', 'arrowhead')
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('refX', 5)
+            .attr('refY', 3)
+            .attr('orient', 'auto')
+            .append('polygon')
+            .attr('points', '0 0, 6 3, 0 6')
+            .attr('fill', '#f59e0b');
+
+          // Axes
+          svg.append('line')
+            .attr('x1', cx - 150).attr('y1', cy)
+            .attr('x2', cx + 150).attr('y2', cy)
+            .attr('stroke', '#64748b');
+
+          svg.append('line')
+            .attr('x1', cx).attr('y1', cy + 150)
+            .attr('x2', cx).attr('y2', cy - 150)
+            .attr('stroke', '#64748b');
+        },
+
+        initLineIntegralViz() {
+          const container = document.getElementById('line-integral-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 400;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          scenes.lineIntSvg = svg;
+          scenes.lineIntWidth = width;
+          scenes.lineIntHeight = height;
+
+          this.updateLineIntegral();
+        },
+
+        updateLineIntegral() {
+          const svg = scenes.lineIntSvg;
+          if (!svg) return;
+
+          const width = scenes.lineIntWidth;
+          const height = scenes.lineIntHeight;
+          const cx = width / 2;
+          const cy = height / 2;
+          const scale = 80;
+          const r = parseFloat(this.curveRadius);
+
+          svg.selectAll('*').remove();
+
+          const forms = {
+            exact: { P: (x, y) => x, Q: (x, y) => y, curl: 0 },
+            rotation: { P: (x, y) => -y, Q: (x, y) => x, curl: 2 },
+            other: { P: (x, y) => y, Q: (x, y) => 0, curl: -1 }
+          };
+
+          const form = forms[this.lineIntegralForm];
+
+          // Grid of vectors
+          for (let i = -2; i <= 2; i++) {
+            for (let j = -2; j <= 2; j++) {
+              const x = i * 0.8;
+              const y = j * 0.8;
+              const P = form.P(x, y);
+              const Q = form.Q(x, y);
+              const len = Math.sqrt(P * P + Q * Q);
+              if (len < 0.01) continue;
+
+              const nx = P / len * 15;
+              const ny = Q / len * 15;
+
+              svg.append('line')
+                .attr('x1', cx + x * scale)
+                .attr('y1', cy - y * scale)
+                .attr('x2', cx + x * scale + nx)
+                .attr('y2', cy - y * scale - ny)
+                .attr('stroke', '#64748b')
+                .attr('stroke-width', 1.5);
+            }
+          }
+
+          // Circle
+          svg.append('circle')
+            .attr('cx', cx)
+            .attr('cy', cy)
+            .attr('r', r * scale)
+            .attr('fill', 'rgba(139, 92, 246, 0.1)')
+            .attr('stroke', '#8b5cf6')
+            .attr('stroke-width', 3);
+
+          // Arrows along the curve showing tangent · form
+          const numArrows = 16;
+          for (let i = 0; i < numArrows; i++) {
+            const theta = (i / numArrows) * 2 * Math.PI;
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+
+            // Tangent vector (counterclockwise)
+            const tx = -Math.sin(theta);
+            const ty = Math.cos(theta);
+
+            // Form value
+            const P = form.P(x, y);
+            const Q = form.Q(x, y);
+            const dot = P * tx + Q * ty;
+
+            const arrowLen = Math.abs(dot) * 15;
+            const arrowDir = dot >= 0 ? 1 : -1;
+
+            svg.append('line')
+              .attr('x1', cx + x * scale)
+              .attr('y1', cy - y * scale)
+              .attr('x2', cx + x * scale + tx * arrowLen * arrowDir)
+              .attr('y2', cy - y * scale - ty * arrowLen * arrowDir)
+              .attr('stroke', dot >= 0 ? '#10b981' : '#ef4444')
+              .attr('stroke-width', 2);
+          }
+
+          // Calculate line integral (for circle: ∮ P dx + Q dy)
+          // Parameterize: x = r cos θ, y = r sin θ, dx = -r sin θ dθ, dy = r cos θ dθ
+          // ∮ = ∫₀²π [P(-r sin θ) + Q(r cos θ)] dθ
+          let integral = 0;
+          const steps = 100;
+          for (let i = 0; i < steps; i++) {
+            const theta = (i / steps) * 2 * Math.PI;
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+            const P = form.P(x, y);
+            const Q = form.Q(x, y);
+            const dx = -r * Math.sin(theta);
+            const dy = r * Math.cos(theta);
+            integral += (P * dx + Q * dy) * (2 * Math.PI / steps);
+          }
+
+          this.lineIntegralValue = integral;
+
+          // Direction indicator
+          svg.append('text')
+            .attr('x', cx + r * scale + 20)
+            .attr('y', cy)
+            .attr('fill', '#8b5cf6')
+            .attr('font-size', '20px')
+            .text('↺');
+        },
+
+        initStokesViz() {
+          const container = document.getElementById('stokes-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 480;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          scenes.stokesSvg = svg;
+          scenes.stokesWidth = width;
+          scenes.stokesHeight = height;
+
+          this.updateStokes();
+        },
+
+        updateStokes() {
+          const svg = scenes.stokesSvg;
+          if (!svg) return;
+
+          const width = scenes.stokesWidth;
+          const height = scenes.stokesHeight;
+
+          svg.selectAll('*').remove();
+
+          const forms = {
+            rotation: { P: (x, y) => -y, Q: (x, y) => x, curl: 2, name: 'ω = -y dx + x dy' },
+            shear: { P: (x, y) => y, Q: (x, y) => 0, curl: -1, name: 'ω = y dx' },
+            exact: { P: (x, y) => x, Q: (x, y) => y, curl: 0, name: 'ω = x dx + y dy (exact)' }
+          };
+
+          const form = forms[this.stokesForm];
+          this.stokesCurl = form.curl;
+
+          // Left side: Boundary integral
+          const leftCx = width * 0.25;
+          const rightCx = width * 0.75;
+          const cy = height / 2;
+          const scale = 60;
+          const r = 1.5;
+
+          // Title
+          svg.append('text')
+            .attr('x', leftCx)
+            .attr('y', 40)
+            .attr('fill', '#ef4444')
+            .attr('font-size', '16px')
+            .attr('text-anchor', 'middle')
+            .text('∮∂R ω (Boundary)');
+
+          svg.append('text')
+            .attr('x', rightCx)
+            .attr('y', 40)
+            .attr('fill', '#8b5cf6')
+            .attr('font-size', '16px')
+            .attr('text-anchor', 'middle')
+            .text('∬R dω (Interior)');
+
+          // Left: Curve with flow arrows
+          svg.append('circle')
+            .attr('cx', leftCx)
+            .attr('cy', cy)
+            .attr('r', r * scale)
+            .attr('fill', 'none')
+            .attr('stroke', '#ef4444')
+            .attr('stroke-width', 3);
+
+          // Flow arrows on boundary
+          const numArrows = 20;
+          for (let i = 0; i < numArrows; i++) {
+            const theta = (i / numArrows) * 2 * Math.PI;
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+
+            const tx = -Math.sin(theta);
+            const ty = Math.cos(theta);
+
+            const P = form.P(x, y);
+            const Q = form.Q(x, y);
+            const dot = P * tx + Q * ty;
+
+            if (Math.abs(dot) > 0.1) {
+              const arrowLen = 15;
+              const angle = Math.atan2(ty, tx) * (dot >= 0 ? 1 : -1);
+
+              svg.append('polygon')
+                .attr('points', '0,-4 10,0 0,4')
+                .attr('fill', dot >= 0 ? '#10b981' : '#f59e0b')
+                .attr('transform', `translate(${leftCx + x * scale}, ${cy - y * scale}) rotate(${-angle * 180 / Math.PI})`);
+            }
+          }
+
+          // Right: Interior with curl density
+          // Grid showing curl
+          const gridStep = 0.4;
+          for (let i = -4; i <= 4; i++) {
+            for (let j = -4; j <= 4; j++) {
+              const x = i * gridStep;
+              const y = j * gridStep;
+
+              if (x * x + y * y > r * r) continue;
+
+              const curlVal = form.curl;
+
+              if (Math.abs(curlVal) > 0.1) {
+                svg.append('circle')
+                  .attr('cx', rightCx + x * scale)
+                  .attr('cy', cy - y * scale)
+                  .attr('r', 3)
+                  .attr('fill', curlVal > 0 ? '#10b981' : '#f59e0b');
+
+                // Rotation indicator
+                const rotSymbol = curlVal > 0 ? '↺' : '↻';
+                svg.append('text')
+                  .attr('x', rightCx + x * scale)
+                  .attr('y', cy - y * scale + 4)
+                  .attr('fill', curlVal > 0 ? '#10b981' : '#f59e0b')
+                  .attr('font-size', '10px')
+                  .attr('text-anchor', 'middle')
+                  .text(rotSymbol);
+              }
+            }
+          }
+
+          svg.append('circle')
+            .attr('cx', rightCx)
+            .attr('cy', cy)
+            .attr('r', r * scale)
+            .attr('fill', 'rgba(139, 92, 246, 0.1)')
+            .attr('stroke', '#8b5cf6')
+            .attr('stroke-width', 2);
+
+          // Calculate integrals
+          // Boundary integral
+          let boundaryInt = 0;
+          const steps = 100;
+          for (let i = 0; i < steps; i++) {
+            const theta = (i / steps) * 2 * Math.PI;
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+            const P = form.P(x, y);
+            const Q = form.Q(x, y);
+            const dx = -r * Math.sin(theta);
+            const dy = r * Math.cos(theta);
+            boundaryInt += (P * dx + Q * dy) * (2 * Math.PI / steps);
+          }
+
+          // Interior integral = curl × area
+          const interiorInt = form.curl * Math.PI * r * r;
+
+          this.stokesBoundary = boundaryInt;
+          this.stokesInterior = interiorInt;
+
+          // Equals sign
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', cy)
+            .attr('fill', '#fff')
+            .attr('font-size', '32px')
+            .attr('text-anchor', 'middle')
+            .text('=');
+
+          // Form name
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height - 30)
+            .attr('fill', '#64748b')
+            .attr('font-size', '14px')
+            .attr('text-anchor', 'middle')
+            .text(form.name);
+        },
+
+        animateStokes() {
+          // Simple animation could be added here
+          this.updateStokes();
+        },
+
+        initManifoldScene() {
+          const container = document.getElementById('manifold-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x12121f);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(2, 1.5, 2);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          scenes.manifold = { scene, camera, renderer, controls, container };
+          this.updateManifoldScene();
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        updateManifoldScene() {
+          const { scene } = scenes.manifold || {};
+          if (!scene) return;
+
+          while (scene.children.length > 0) {
+            scene.remove(scene.children[0]);
+          }
+
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+          directionalLight.position.set(3, 3, 3);
+          scene.add(directionalLight);
+
+          // Sphere
+          const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+          const sphereMat = new THREE.MeshPhongMaterial({
+            color: 0x06b6d4,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide
+          });
+          const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+          scene.add(sphere);
+
+          // Grid on sphere
+          if (this.showGrid) {
+            const gridMat = new THREE.LineBasicMaterial({ color: 0x333333 });
+
+            // Latitude lines
+            for (let lat = -60; lat <= 60; lat += 30) {
+              const latRad = lat * Math.PI / 180;
+              const r = Math.cos(latRad);
+              const y = Math.sin(latRad);
+              const points = [];
+              for (let lon = 0; lon <= 360; lon += 5) {
+                const lonRad = lon * Math.PI / 180;
+                points.push(new THREE.Vector3(r * Math.cos(lonRad), y, r * Math.sin(lonRad)));
+              }
+              const geometry = new THREE.BufferGeometry().setFromPoints(points);
+              const line = new THREE.Line(geometry, gridMat);
+              scene.add(line);
+            }
+
+            // Longitude lines
+            for (let lon = 0; lon < 360; lon += 30) {
+              const lonRad = lon * Math.PI / 180;
+              const points = [];
+              for (let lat = -90; lat <= 90; lat += 5) {
+                const latRad = lat * Math.PI / 180;
+                const r = Math.cos(latRad);
+                const y = Math.sin(latRad);
+                points.push(new THREE.Vector3(r * Math.cos(lonRad), y, r * Math.sin(lonRad)));
+              }
+              const geometry = new THREE.BufferGeometry().setFromPoints(points);
+              const line = new THREE.Line(geometry, gridMat);
+              scene.add(line);
+            }
+          }
+
+          // Projection plane (at y = -1.5)
+          const planeGeo = new THREE.PlaneGeometry(4, 4);
+          const planeMat = new THREE.MeshBasicMaterial({
+            color: 0x3b82f6,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+          });
+          const plane = new THREE.Mesh(planeGeo, planeMat);
+          plane.rotation.x = -Math.PI / 2;
+          plane.position.y = -1.5;
+          scene.add(plane);
+
+          // Pole
+          const poleY = this.stereoFrom === 'north' ? 1 : -1;
+          const poleGeo = new THREE.SphereGeometry(0.08);
+          const poleMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const poleMesh = new THREE.Mesh(poleGeo, poleMat);
+          poleMesh.position.y = poleY;
+          scene.add(poleMesh);
+
+          // Sample points with projection lines
+          if (this.showProjectionLines) {
+            const samplePoints = [
+              { theta: 60, phi: 45 },
+              { theta: 45, phi: 135 },
+              { theta: 30, phi: 225 },
+              { theta: 75, phi: 315 }
+            ];
+
+            samplePoints.forEach(({ theta, phi }) => {
+              const thetaRad = theta * Math.PI / 180;
+              const phiRad = phi * Math.PI / 180;
+
+              const x = Math.sin(thetaRad) * Math.cos(phiRad);
+              const y = Math.cos(thetaRad);
+              const z = Math.sin(thetaRad) * Math.sin(phiRad);
+
+              // Project onto plane
+              const t = (poleY === 1) ? (-1.5 - 1) / (y - 1) : (-1.5 + 1) / (y + 1);
+              const projX = (poleY === 1) ? x * t : x * t;
+              const projZ = (poleY === 1) ? z * t : z * t;
+
+              // Line from pole through point to plane
+              const lineMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, opacity: 0.5, transparent: true });
+              const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, poleY, 0),
+                new THREE.Vector3(x, y, z),
+                new THREE.Vector3(projX, -1.5, projZ)
+              ]);
+              const line = new THREE.Line(lineGeo, lineMat);
+              scene.add(line);
+
+              // Point on sphere
+              const pointGeo = new THREE.SphereGeometry(0.05);
+              const pointMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+              const point = new THREE.Mesh(pointGeo, pointMat);
+              point.position.set(x, y, z);
+              scene.add(point);
+
+              // Projected point
+              const projGeo = new THREE.SphereGeometry(0.05);
+              const projMat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
+              const proj = new THREE.Mesh(projGeo, projMat);
+              proj.position.set(projX, -1.5, projZ);
+              scene.add(proj);
+            });
+          }
+
+          // Update displayed point
+          const theta = 45 * Math.PI / 180;
+          const phi = 45 * Math.PI / 180;
+          const x = Math.sin(theta) * Math.cos(phi);
+          const y = Math.cos(theta);
+          const z = Math.sin(theta) * Math.sin(phi);
+
+          this.stereoPointSphere = { x, y, z };
+
+          const poleYVal = this.stereoFrom === 'north' ? 1 : -1;
+          const t = (-1.5 - poleYVal) / (y - poleYVal);
+          this.stereoPointPlane = { x: x * t, y: z * t };
+        },
+
+        initTangentBundleScene() {
+          const container = document.getElementById('tangent-bundle-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x12121f);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(3, 2, 3);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          // Create cylinder (tangent bundle of circle)
+          const cylinderGeo = new THREE.CylinderGeometry(1, 1, 3, 32, 1, true);
+          const cylinderMat = new THREE.MeshPhongMaterial({
+            color: 0x8b5cf6,
+            transparent: true,
+            opacity: 0.4,
+            side: THREE.DoubleSide
+          });
+          const cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
+          scene.add(cylinder);
+
+          // Base circle
+          const circlePoints = [];
+          for (let i = 0; i <= 64; i++) {
+            const theta = (i / 64) * Math.PI * 2;
+            circlePoints.push(new THREE.Vector3(Math.cos(theta), 0, Math.sin(theta)));
+          }
+          const circleGeo = new THREE.BufferGeometry().setFromPoints(circlePoints);
+          const circleMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 2 });
+          const circle = new THREE.Line(circleGeo, circleMat);
+          scene.add(circle);
+
+          // Tangent lines at various points
+          for (let i = 0; i < 8; i++) {
+            const theta = (i / 8) * Math.PI * 2;
+            const x = Math.cos(theta);
+            const z = Math.sin(theta);
+
+            // Tangent direction at this point
+            const tx = -Math.sin(theta);
+            const tz = Math.cos(theta);
+
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x06b6d4 });
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([
+              new THREE.Vector3(x, -1.5, z),
+              new THREE.Vector3(x, 1.5, z)
+            ]);
+            const line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+
+            // Point on circle
+            const pointGeo = new THREE.SphereGeometry(0.06);
+            const pointMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+            const point = new THREE.Mesh(pointGeo, pointMat);
+            point.position.set(x, 0, z);
+            scene.add(point);
+          }
+
+          // Lights
+          const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+          directionalLight.position.set(3, 3, 3);
+          scene.add(directionalLight);
+
+          // Label
+          // Note: Three.js doesn't easily do text, so we leave it to annotations
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        }
+      };
+    }
+  </script>
+</body>
+</html>

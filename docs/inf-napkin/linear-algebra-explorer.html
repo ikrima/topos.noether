@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Algebra Explorer | The Napkin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0b0f;
+            --bg-surface: #12141a;
+            --bg-elevated: #1a1d26;
+            --bg-hover: #242833;
+            --border-subtle: #2a2e3a;
+            --border-active: #3d4255;
+            --text-primary: #e8e9ed;
+            --text-secondary: #9499a8;
+            --text-muted: #5c6274;
+            --accent-gold: #d4a853;
+            --accent-gold-dim: #8b7036;
+            --accent-cyan: #4ecdc4;
+            --accent-cyan-dim: #2a7a74;
+            --accent-coral: #ff6b6b;
+            --accent-coral-dim: #a34545;
+            --accent-violet: #a78bfa;
+            --accent-violet-dim: #6b5aa3;
+            --accent-lime: #a3e635;
+            --grid-line: rgba(255, 255, 255, 0.06);
+            --grid-axis: rgba(255, 255, 255, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            z-index: 10000;
+        }
+
+        /* Header */
+        header {
+            padding: 2rem 3rem;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-deep) 100%);
+        }
+
+        .logo {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+        }
+
+        .logo h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.8rem;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        .logo span {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        .part-badge {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Navigation Tabs */
+        nav {
+            display: flex;
+            gap: 0.25rem;
+            padding: 1rem 3rem;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-subtle);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 400;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .tab:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--bg-elevated);
+            color: var(--accent-gold);
+            font-weight: 500;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2rem;
+            height: 2px;
+            background: var(--accent-gold);
+            border-radius: 1px;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem 3rem;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+        }
+
+        .section-header h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+            max-width: 700px;
+            line-height: 1.6;
+        }
+
+        /* Canvas Container */
+        .canvas-container {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        /* Controls Panel */
+        .controls {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            min-width: 200px;
+        }
+
+        .control-group h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .control-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-row label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+
+        /* Matrix Input */
+        .matrix-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            position: relative;
+            padding: 0.5rem;
+        }
+
+        .matrix-input::before,
+        .matrix-input::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            border: 2px solid var(--border-active);
+        }
+
+        .matrix-input::before {
+            left: -4px;
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .matrix-input::after {
+            right: -4px;
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .matrix-input input {
+            width: 60px;
+            padding: 0.5rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 0.375rem;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+
+        .matrix-input input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.15);
+        }
+
+        .matrix-input input:hover {
+            border-color: var(--border-active);
+        }
+
+        /* Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 4px;
+            background: var(--bg-elevated);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            cursor: grab;
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            cursor: grabbing;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 0.5rem;
+            color: var(--text-secondary);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-active);
+            color: var(--text-primary);
+        }
+
+        .btn.primary {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-deep);
+            font-weight: 500;
+        }
+
+        .btn.primary:hover {
+            background: #e5b964;
+            border-color: #e5b964;
+        }
+
+        /* Info Cards */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .info-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        .info-card h5 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .info-card .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            color: var(--accent-gold);
+        }
+
+        .info-card .value.cyan { color: var(--accent-cyan); }
+        .info-card .value.coral { color: var(--accent-coral); }
+        .info-card .value.violet { color: var(--accent-violet); }
+
+        .info-card .detail {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.5;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border-radius: 0 0 1rem 1rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.gold { background: var(--accent-gold); }
+        .legend-dot.cyan { background: var(--accent-cyan); }
+        .legend-dot.coral { background: var(--accent-coral); }
+        .legend-dot.violet { background: var(--accent-violet); }
+        .legend-dot.lime { background: var(--accent-lime); }
+
+        /* Equation Display */
+        .equation {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            font-style: italic;
+            color: var(--text-primary);
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .equation .highlight {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        /* Split Layout */
+        .split-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1100px) {
+            .split-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Step Indicator */
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-elevated);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+
+        .step:hover {
+            border-color: var(--border-active);
+        }
+
+        .step.active {
+            border-color: var(--accent-gold);
+            background: rgba(212, 168, 83, 0.1);
+        }
+
+        .step.completed {
+            border-color: var(--accent-cyan);
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-hover);
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .step.active .step-number {
+            background: var(--accent-gold);
+            color: var(--bg-deep);
+        }
+
+        .step.completed .step-number {
+            background: var(--accent-cyan);
+            color: var(--bg-deep);
+        }
+
+        .step-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .step.active .step-text {
+            color: var(--text-primary);
+        }
+
+        /* Draggable hint */
+        .drag-hint {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-active);
+            border-radius: 0.375rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1.5rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav {
+                padding: 1rem;
+            }
+
+            main {
+                padding: 1.5rem;
+            }
+
+            .section-header h2 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .control-group {
+                width: 100%;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animating {
+            animation: pulse 1s ease infinite;
+        }
+
+        /* Checkbox styling */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.15s ease;
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--bg-deep);
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .checkbox-wrapper span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>Linear Algebra</h1>
+            <span>An Infinitely Large Napkin</span>
+        </div>
+        <div class="part-badge">Part IV · Chapters 9–15</div>
+    </header>
+
+    <nav>
+        <button class="tab active" data-section="vectors">Vector Spaces</button>
+        <button class="tab" data-section="transforms">Linear Maps</button>
+        <button class="tab" data-section="eigen">Eigenvectors</button>
+        <button class="tab" data-section="determinant">Determinant</button>
+        <button class="tab" data-section="inner">Inner Products</button>
+    </nav>
+
+    <main>
+        <!-- Section 1: Vector Spaces & Bases -->
+        <section id="vectors" class="section active">
+            <div class="section-header">
+                <h2>Vector Spaces & Bases</h2>
+                <p>A basis is a "maximal linearly independent set" or equivalently a "minimal spanning set." Drag the vectors to explore how they span the plane and when they become linearly dependent.</p>
+            </div>
+
+            <div class="split-layout">
+                <div class="canvas-container">
+                    <canvas id="vectorCanvas" width="800" height="600"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot gold"></div>Basis vector e₁</div>
+                        <div class="legend-item"><div class="legend-dot cyan"></div>Basis vector e₂</div>
+                        <div class="legend-item"><div class="legend-dot coral"></div>Linear combination</div>
+                    </div>
+                    <div class="drag-hint">Drag vectors to explore</div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="control-group">
+                        <h4>Basis Vectors</h4>
+                        <div class="control-row">
+                            <label style="color: var(--accent-gold)">e₁ =</label>
+                            <span class="value" id="e1Display">(1.0, 0.0)</span>
+                        </div>
+                        <div class="control-row">
+                            <label style="color: var(--accent-cyan)">e₂ =</label>
+                            <span class="value" id="e2Display">(0.0, 1.0)</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Linear Combination</h4>
+                        <div class="control-row">
+                            <label>α =</label>
+                            <input type="range" id="alphaSlider" min="-2" max="2" step="0.1" value="1">
+                            <span id="alphaValue" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">1.0</span>
+                        </div>
+                        <div class="control-row">
+                            <label>β =</label>
+                            <input type="range" id="betaSlider" min="-2" max="2" step="0.1" value="0.5">
+                            <span id="betaValue" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">0.5</span>
+                        </div>
+                    </div>
+
+                    <div class="equation">
+                        v = <span class="highlight">α</span>e₁ + <span class="highlight">β</span>e₂
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Linear Independence</h5>
+                        <div class="value" id="independenceStatus">Independent</div>
+                        <div class="detail" id="independenceDetail">The vectors span ℝ² because they are not parallel. Any point in the plane can be reached.</div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Actions</h4>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn" id="resetVectors">Reset</button>
+                            <button class="btn" id="makeParallel">Make Parallel</button>
+                            <button class="btn" id="makeOrthogonal">Make Orthogonal</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Linear Maps -->
+        <section id="transforms" class="section">
+            <div class="section-header">
+                <h2>Linear Maps & Matrices</h2>
+                <p>A linear map is completely determined by where it sends the basis vectors. The matrix is just "the laziest possible way to specify a linear map" — it records where e₁ and e₂ land.</p>
+            </div>
+
+            <div class="split-layout">
+                <div class="canvas-container">
+                    <canvas id="transformCanvas" width="800" height="600"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot gold"></div>T(e₁) — first column</div>
+                        <div class="legend-item"><div class="legend-dot cyan"></div>T(e₂) — second column</div>
+                        <div class="legend-item"><div class="legend-dot violet"></div>Grid transformation</div>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="control-group">
+                        <h4>Transformation Matrix</h4>
+                        <div class="matrix-input">
+                            <input type="number" id="m11" value="1" step="0.1">
+                            <input type="number" id="m12" value="0" step="0.1">
+                            <input type="number" id="m21" value="0" step="0.1">
+                            <input type="number" id="m22" value="1" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Presets</h4>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn preset" data-matrix="1,0,0,1">Identity</button>
+                            <button class="btn preset" data-matrix="2,0,0,2">Scale 2×</button>
+                            <button class="btn preset" data-matrix="0.707,-0.707,0.707,0.707">Rotate 45°</button>
+                            <button class="btn preset" data-matrix="1,0.5,0,1">Shear</button>
+                            <button class="btn preset" data-matrix="1,0,0,-1">Reflect Y</button>
+                            <button class="btn preset" data-matrix="0,1,1,0">Swap Axes</button>
+                        </div>
+                    </div>
+
+                    <div class="info-grid" style="grid-template-columns: 1fr;">
+                        <div class="info-card">
+                            <h5>Determinant</h5>
+                            <div class="value" id="transformDet">1.00</div>
+                            <div class="detail">Area scaling factor. Negative = orientation reversed.</div>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Visualization</h4>
+                        <label class="checkbox-wrapper">
+                            <input type="checkbox" id="showGrid" checked>
+                            <span>Show transformed grid</span>
+                        </label>
+                        <label class="checkbox-wrapper" style="margin-top: 0.5rem;">
+                            <input type="checkbox" id="showUnitCircle">
+                            <span>Show unit circle → ellipse</span>
+                        </label>
+                        <label class="checkbox-wrapper" style="margin-top: 0.5rem;">
+                            <input type="checkbox" id="animateTransform">
+                            <span>Animate transformation</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Eigenvectors -->
+        <section id="eigen" class="section">
+            <div class="section-header">
+                <h2>Eigenvectors & Eigenvalues</h2>
+                <p>Eigenvectors are the special directions that only get scaled, not rotated, by the transformation. An eigenvector v satisfies Tv = λv where λ is the eigenvalue.</p>
+            </div>
+
+            <div class="split-layout">
+                <div class="canvas-container">
+                    <canvas id="eigenCanvas" width="800" height="600"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot coral"></div>Eigenvector 1</div>
+                        <div class="legend-item"><div class="legend-dot lime"></div>Eigenvector 2</div>
+                        <div class="legend-item"><div class="legend-dot violet"></div>General vector (gets rotated)</div>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="control-group">
+                        <h4>Matrix</h4>
+                        <div class="matrix-input">
+                            <input type="number" id="e11" value="2" step="0.1">
+                            <input type="number" id="e12" value="1" step="0.1">
+                            <input type="number" id="e21" value="0" step="0.1">
+                            <input type="number" id="e22" value="1" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Interesting Matrices</h4>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn eigen-preset" data-matrix="2,0,0,3">Diagonal</button>
+                            <button class="btn eigen-preset" data-matrix="2,1,0,2">Jordan Block</button>
+                            <button class="btn eigen-preset" data-matrix="0,-1,1,0">Rotation (no real eigenvectors)</button>
+                            <button class="btn eigen-preset" data-matrix="1,2,2,1">Symmetric</button>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Eigenvalue 1</h5>
+                        <div class="value coral" id="eigenvalue1">λ₁ = 2.00</div>
+                        <div class="detail" id="eigenvector1">v₁ = (1.00, 0.00)</div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Eigenvalue 2</h5>
+                        <div class="value lime" id="eigenvalue2">λ₂ = 1.00</div>
+                        <div class="detail" id="eigenvector2">v₂ = (−1.00, 1.00)</div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Characteristic Polynomial</h5>
+                        <div class="detail" id="charPoly" style="font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-style: italic;">
+                            det(A − λI) = λ² − 3λ + 2
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Visualization</h4>
+                        <label class="checkbox-wrapper">
+                            <input type="checkbox" id="showEigenspaces" checked>
+                            <span>Show eigenspaces (lines)</span>
+                        </label>
+                        <label class="checkbox-wrapper" style="margin-top: 0.5rem;">
+                            <input type="checkbox" id="animateEigen">
+                            <span>Animate transformation</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Determinant -->
+        <section id="determinant" class="section">
+            <div class="section-header">
+                <h2>Determinant as Signed Area</h2>
+                <p>The determinant measures how the transformation scales areas. It's the factor by which areas (or volumes in higher dimensions) are multiplied. A negative determinant means orientation is reversed.</p>
+            </div>
+
+            <div class="split-layout">
+                <div class="canvas-container">
+                    <canvas id="detCanvas" width="800" height="600"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot gold"></div>Original unit square</div>
+                        <div class="legend-item"><div class="legend-dot cyan"></div>Transformed parallelogram</div>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="control-group">
+                        <h4>Matrix</h4>
+                        <div class="matrix-input">
+                            <input type="number" id="d11" value="2" step="0.1">
+                            <input type="number" id="d12" value="0.5" step="0.1">
+                            <input type="number" id="d21" value="0" step="0.1">
+                            <input type="number" id="d22" value="1.5" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="equation" id="detFormula">
+                        det = (2.0)(1.5) − (0.5)(0.0) = <span class="highlight">3.00</span>
+                    </div>
+
+                    <div class="info-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="info-card">
+                            <h5>Original Area</h5>
+                            <div class="value gold">1.00</div>
+                            <div class="detail">Unit square</div>
+                        </div>
+                        <div class="info-card">
+                            <h5>Transformed Area</h5>
+                            <div class="value cyan" id="transformedArea">3.00</div>
+                            <div class="detail" id="areaDetail">Scaled by |det|</div>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Orientation</h5>
+                        <div class="value" id="orientationStatus">Preserved</div>
+                        <div class="detail" id="orientationDetail">Positive determinant means counterclockwise orientation is preserved.</div>
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Explore</h4>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn det-preset" data-matrix="1,0,0,1">det = 1</button>
+                            <button class="btn det-preset" data-matrix="2,0,0,2">det = 4</button>
+                            <button class="btn det-preset" data-matrix="1,0,0,-1">det = −1</button>
+                            <button class="btn det-preset" data-matrix="1,1,2,2">det = 0</button>
+                        </div>
+                    </div>
+
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="animateDet" checked>
+                        <span>Animate transformation</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Inner Products -->
+        <section id="inner" class="section">
+            <div class="section-header">
+                <h2>Inner Products & Orthogonality</h2>
+                <p>The inner product ⟨v, w⟩ measures "how much v points in the direction of w." When it's zero, the vectors are orthogonal. Drag vectors to see the inner product and projection change.</p>
+            </div>
+
+            <div class="split-layout">
+                <div class="canvas-container">
+                    <canvas id="innerCanvas" width="800" height="600"></canvas>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-dot gold"></div>Vector v</div>
+                        <div class="legend-item"><div class="legend-dot cyan"></div>Vector w</div>
+                        <div class="legend-item"><div class="legend-dot coral"></div>Projection of v onto w</div>
+                    </div>
+                    <div class="drag-hint">Drag vectors to explore</div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="control-group">
+                        <h4>Vectors</h4>
+                        <div class="control-row">
+                            <label style="color: var(--accent-gold)">v =</label>
+                            <span class="value" id="vDisplay">(1.5, 1.0)</span>
+                        </div>
+                        <div class="control-row">
+                            <label style="color: var(--accent-cyan)">w =</label>
+                            <span class="value" id="wDisplay">(2.0, 0.5)</span>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Inner Product ⟨v, w⟩</h5>
+                        <div class="value gold" id="innerProduct">3.50</div>
+                        <div class="detail">= v₁w₁ + v₂w₂</div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Angle θ</h5>
+                        <div class="value cyan" id="angleDisplay">23.2°</div>
+                        <div class="detail">cos θ = ⟨v,w⟩ / (‖v‖·‖w‖)</div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Projection of v onto w</h5>
+                        <div class="value coral" id="projDisplay">(1.65, 0.41)</div>
+                        <div class="detail">proj_w(v) = (⟨v,w⟩/‖w‖²) · w</div>
+                    </div>
+
+                    <div class="equation">
+                        ⟨v, w⟩ = ‖v‖ · ‖w‖ · cos θ
+                    </div>
+
+                    <div class="control-group">
+                        <h4>Gram-Schmidt Demo</h4>
+                        <button class="btn primary" id="gramSchmidt">Run Gram-Schmidt</button>
+                        <div class="detail" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                            Orthogonalize v with respect to w
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h5>Cauchy-Schwarz</h5>
+                        <div class="detail" id="cauchySchwarz">
+                            |⟨v,w⟩| = 3.50 ≤ ‖v‖·‖w‖ = 3.71 ✓
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ============================================================
+        // Utility Functions
+        // ============================================================
+
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function formatNum(n, decimals = 2) {
+            return n.toFixed(decimals);
+        }
+
+        // ============================================================
+        // Tab Navigation
+        // ============================================================
+
+        const tabs = document.querySelectorAll('.tab');
+        const sections = document.querySelectorAll('.section');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const sectionId = tab.dataset.section;
+
+                tabs.forEach(t => t.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(sectionId).classList.add('active');
+            });
+        });
+
+        // ============================================================
+        // Section 1: Vector Spaces
+        // ============================================================
+
+        const vectorCanvas = document.getElementById('vectorCanvas');
+        const vectorCtx = vectorCanvas.getContext('2d');
+
+        let e1 = { x: 1, y: 0 };
+        let e2 = { x: 0, y: 1 };
+        let draggingVector = null;
+        let alpha = 1;
+        let beta = 0.5;
+
+        const SCALE = 100;
+        const ORIGIN_X = vectorCanvas.width / 2;
+        const ORIGIN_Y = vectorCanvas.height / 2;
+
+        function worldToScreen(x, y) {
+            return {
+                x: ORIGIN_X + x * SCALE,
+                y: ORIGIN_Y - y * SCALE
+            };
+        }
+
+        function screenToWorld(sx, sy) {
+            return {
+                x: (sx - ORIGIN_X) / SCALE,
+                y: (ORIGIN_Y - sy) / SCALE
+            };
+        }
+
+        function drawVectorGrid(ctx, width, height, originX, originY, scale) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.lineWidth = 1;
+
+            // Vertical lines
+            for (let x = originX % scale; x < width; x += scale) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = originY % scale; y < height; y += scale) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(0, originY);
+            ctx.lineTo(width, originY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(originX, 0);
+            ctx.lineTo(originX, height);
+            ctx.stroke();
+        }
+
+        function drawArrow(ctx, fromX, fromY, toX, toY, color, lineWidth = 3, headSize = 12) {
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(
+                toX - headSize * Math.cos(angle - Math.PI / 6),
+                toY - headSize * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                toX - headSize * Math.cos(angle + Math.PI / 6),
+                toY - headSize * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawVectorSpace() {
+            vectorCtx.fillStyle = '#12141a';
+            vectorCtx.fillRect(0, 0, vectorCanvas.width, vectorCanvas.height);
+
+            drawVectorGrid(vectorCtx, vectorCanvas.width, vectorCanvas.height, ORIGIN_X, ORIGIN_Y, SCALE);
+
+            // Draw span (shaded region if vectors are independent)
+            const cross = e1.x * e2.y - e1.y * e2.x;
+            if (Math.abs(cross) > 0.01) {
+                // Vectors are independent - they span ℝ²
+                vectorCtx.fillStyle = 'rgba(212, 168, 83, 0.05)';
+                vectorCtx.fillRect(0, 0, vectorCanvas.width, vectorCanvas.height);
+            } else {
+                // Vectors are dependent - they span a line
+                const len = Math.sqrt(e1.x * e1.x + e1.y * e1.y);
+                if (len > 0.01) {
+                    const dir = { x: e1.x / len, y: e1.y / len };
+                    vectorCtx.strokeStyle = 'rgba(212, 168, 83, 0.2)';
+                    vectorCtx.lineWidth = 4;
+                    vectorCtx.setLineDash([10, 10]);
+                    vectorCtx.beginPath();
+                    const start = worldToScreen(-5 * dir.x, -5 * dir.y);
+                    const end = worldToScreen(5 * dir.x, 5 * dir.y);
+                    vectorCtx.moveTo(start.x, start.y);
+                    vectorCtx.lineTo(end.x, end.y);
+                    vectorCtx.stroke();
+                    vectorCtx.setLineDash([]);
+                }
+            }
+
+            // Draw basis vectors
+            const e1Screen = worldToScreen(e1.x, e1.y);
+            const e2Screen = worldToScreen(e2.x, e2.y);
+            const origin = worldToScreen(0, 0);
+
+            drawArrow(vectorCtx, origin.x, origin.y, e1Screen.x, e1Screen.y, '#d4a853', 4, 14);
+            drawArrow(vectorCtx, origin.x, origin.y, e2Screen.x, e2Screen.y, '#4ecdc4', 4, 14);
+
+            // Draw linear combination
+            const combo = { x: alpha * e1.x + beta * e2.x, y: alpha * e1.y + beta * e2.y };
+            const comboScreen = worldToScreen(combo.x, combo.y);
+
+            // Draw component parallelogram
+            vectorCtx.strokeStyle = 'rgba(255, 107, 107, 0.3)';
+            vectorCtx.lineWidth = 1;
+            vectorCtx.setLineDash([5, 5]);
+
+            const ae1Screen = worldToScreen(alpha * e1.x, alpha * e1.y);
+            const be2Screen = worldToScreen(beta * e2.x, beta * e2.y);
+
+            vectorCtx.beginPath();
+            vectorCtx.moveTo(ae1Screen.x, ae1Screen.y);
+            vectorCtx.lineTo(comboScreen.x, comboScreen.y);
+            vectorCtx.moveTo(be2Screen.x, be2Screen.y);
+            vectorCtx.lineTo(comboScreen.x, comboScreen.y);
+            vectorCtx.stroke();
+            vectorCtx.setLineDash([]);
+
+            drawArrow(vectorCtx, origin.x, origin.y, comboScreen.x, comboScreen.y, '#ff6b6b', 3, 12);
+
+            // Draw labels
+            vectorCtx.font = '500 14px "JetBrains Mono", monospace';
+            vectorCtx.fillStyle = '#d4a853';
+            vectorCtx.fillText('e₁', e1Screen.x + 10, e1Screen.y - 10);
+
+            vectorCtx.fillStyle = '#4ecdc4';
+            vectorCtx.fillText('e₂', e2Screen.x + 10, e2Screen.y - 10);
+
+            vectorCtx.fillStyle = '#ff6b6b';
+            vectorCtx.fillText('v', comboScreen.x + 10, comboScreen.y - 10);
+
+            // Draw draggable handles
+            vectorCtx.fillStyle = '#d4a853';
+            vectorCtx.beginPath();
+            vectorCtx.arc(e1Screen.x, e1Screen.y, 8, 0, Math.PI * 2);
+            vectorCtx.fill();
+
+            vectorCtx.fillStyle = '#4ecdc4';
+            vectorCtx.beginPath();
+            vectorCtx.arc(e2Screen.x, e2Screen.y, 8, 0, Math.PI * 2);
+            vectorCtx.fill();
+
+            // Update displays
+            document.getElementById('e1Display').textContent = `(${formatNum(e1.x)}, ${formatNum(e1.y)})`;
+            document.getElementById('e2Display').textContent = `(${formatNum(e2.x)}, ${formatNum(e2.y)})`;
+
+            // Check linear independence
+            const det = e1.x * e2.y - e1.y * e2.x;
+            const statusEl = document.getElementById('independenceStatus');
+            const detailEl = document.getElementById('independenceDetail');
+
+            if (Math.abs(det) < 0.01) {
+                statusEl.textContent = 'Dependent';
+                statusEl.style.color = '#ff6b6b';
+                detailEl.textContent = 'The vectors are parallel (or one is zero). They only span a line, not the full plane.';
+            } else {
+                statusEl.textContent = 'Independent';
+                statusEl.style.color = '#4ecdc4';
+                detailEl.textContent = `The vectors span ℝ² because they are not parallel. det = ${formatNum(det)}`;
+            }
+        }
+
+        function getVectorAtPoint(x, y) {
+            const e1Screen = worldToScreen(e1.x, e1.y);
+            const e2Screen = worldToScreen(e2.x, e2.y);
+
+            const d1 = Math.sqrt((x - e1Screen.x) ** 2 + (y - e1Screen.y) ** 2);
+            const d2 = Math.sqrt((x - e2Screen.x) ** 2 + (y - e2Screen.y) ** 2);
+
+            if (d1 < 20) return 'e1';
+            if (d2 < 20) return 'e2';
+            return null;
+        }
+
+        vectorCanvas.addEventListener('mousedown', (e) => {
+            const rect = vectorCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            draggingVector = getVectorAtPoint(x, y);
+        });
+
+        vectorCanvas.addEventListener('mousemove', (e) => {
+            const rect = vectorCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (draggingVector) {
+                const world = screenToWorld(x, y);
+                if (draggingVector === 'e1') {
+                    e1.x = clamp(world.x, -3, 3);
+                    e1.y = clamp(world.y, -3, 3);
+                } else if (draggingVector === 'e2') {
+                    e2.x = clamp(world.x, -3, 3);
+                    e2.y = clamp(world.y, -3, 3);
+                }
+                drawVectorSpace();
+            } else {
+                const hovering = getVectorAtPoint(x, y);
+                vectorCanvas.style.cursor = hovering ? 'grab' : 'crosshair';
+            }
+        });
+
+        vectorCanvas.addEventListener('mouseup', () => {
+            draggingVector = null;
+        });
+
+        vectorCanvas.addEventListener('mouseleave', () => {
+            draggingVector = null;
+        });
+
+        // Sliders
+        document.getElementById('alphaSlider').addEventListener('input', (e) => {
+            alpha = parseFloat(e.target.value);
+            document.getElementById('alphaValue').textContent = formatNum(alpha, 1);
+            drawVectorSpace();
+        });
+
+        document.getElementById('betaSlider').addEventListener('input', (e) => {
+            beta = parseFloat(e.target.value);
+            document.getElementById('betaValue').textContent = formatNum(beta, 1);
+            drawVectorSpace();
+        });
+
+        // Buttons
+        document.getElementById('resetVectors').addEventListener('click', () => {
+            e1 = { x: 1, y: 0 };
+            e2 = { x: 0, y: 1 };
+            drawVectorSpace();
+        });
+
+        document.getElementById('makeParallel').addEventListener('click', () => {
+            e2 = { x: e1.x * 1.5, y: e1.y * 1.5 };
+            drawVectorSpace();
+        });
+
+        document.getElementById('makeOrthogonal').addEventListener('click', () => {
+            e2 = { x: -e1.y, y: e1.x };
+            drawVectorSpace();
+        });
+
+        // ============================================================
+        // Section 2: Linear Transformations
+        // ============================================================
+
+        const transformCanvas = document.getElementById('transformCanvas');
+        const transformCtx = transformCanvas.getContext('2d');
+
+        let matrix = { a: 1, b: 0, c: 0, d: 1 };
+        let targetMatrix = { a: 1, b: 0, c: 0, d: 1 };
+        let animatingTransform = false;
+        let transformT = 1;
+
+        const T_ORIGIN_X = transformCanvas.width / 2;
+        const T_ORIGIN_Y = transformCanvas.height / 2;
+        const T_SCALE = 80;
+
+        function tWorldToScreen(x, y) {
+            return {
+                x: T_ORIGIN_X + x * T_SCALE,
+                y: T_ORIGIN_Y - y * T_SCALE
+            };
+        }
+
+        function applyMatrix(m, v) {
+            return {
+                x: m.a * v.x + m.b * v.y,
+                y: m.c * v.x + m.d * v.y
+            };
+        }
+
+        function lerpMatrix(m1, m2, t) {
+            return {
+                a: lerp(m1.a, m2.a, t),
+                b: lerp(m1.b, m2.b, t),
+                c: lerp(m1.c, m2.c, t),
+                d: lerp(m1.d, m2.d, t)
+            };
+        }
+
+        function drawTransformGrid() {
+            transformCtx.fillStyle = '#12141a';
+            transformCtx.fillRect(0, 0, transformCanvas.width, transformCanvas.height);
+
+            const showGrid = document.getElementById('showGrid').checked;
+            const showCircle = document.getElementById('showUnitCircle').checked;
+
+            // Draw original axes
+            transformCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            transformCtx.lineWidth = 1;
+            transformCtx.beginPath();
+            transformCtx.moveTo(0, T_ORIGIN_Y);
+            transformCtx.lineTo(transformCanvas.width, T_ORIGIN_Y);
+            transformCtx.moveTo(T_ORIGIN_X, 0);
+            transformCtx.lineTo(T_ORIGIN_X, transformCanvas.height);
+            transformCtx.stroke();
+
+            const currentMatrix = animatingTransform ? lerpMatrix({ a: 1, b: 0, c: 0, d: 1 }, targetMatrix, transformT) : matrix;
+
+            // Draw transformed grid
+            if (showGrid) {
+                transformCtx.strokeStyle = 'rgba(167, 139, 250, 0.15)';
+                transformCtx.lineWidth = 1;
+
+                for (let i = -5; i <= 5; i++) {
+                    // Vertical lines (parallel to e2)
+                    const start1 = applyMatrix(currentMatrix, { x: i, y: -5 });
+                    const end1 = applyMatrix(currentMatrix, { x: i, y: 5 });
+                    const s1 = tWorldToScreen(start1.x, start1.y);
+                    const e1 = tWorldToScreen(end1.x, end1.y);
+
+                    transformCtx.beginPath();
+                    transformCtx.moveTo(s1.x, s1.y);
+                    transformCtx.lineTo(e1.x, e1.y);
+                    transformCtx.stroke();
+
+                    // Horizontal lines (parallel to e1)
+                    const start2 = applyMatrix(currentMatrix, { x: -5, y: i });
+                    const end2 = applyMatrix(currentMatrix, { x: 5, y: i });
+                    const s2 = tWorldToScreen(start2.x, start2.y);
+                    const e2 = tWorldToScreen(end2.x, end2.y);
+
+                    transformCtx.beginPath();
+                    transformCtx.moveTo(s2.x, s2.y);
+                    transformCtx.lineTo(e2.x, e2.y);
+                    transformCtx.stroke();
+                }
+            }
+
+            // Draw unit circle -> ellipse
+            if (showCircle) {
+                transformCtx.strokeStyle = 'rgba(78, 205, 196, 0.4)';
+                transformCtx.lineWidth = 2;
+                transformCtx.beginPath();
+
+                for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+                    const point = { x: Math.cos(angle), y: Math.sin(angle) };
+                    const transformed = applyMatrix(currentMatrix, point);
+                    const screen = tWorldToScreen(transformed.x, transformed.y);
+
+                    if (angle === 0) {
+                        transformCtx.moveTo(screen.x, screen.y);
+                    } else {
+                        transformCtx.lineTo(screen.x, screen.y);
+                    }
+                }
+                transformCtx.closePath();
+                transformCtx.stroke();
+            }
+
+            // Draw transformed basis vectors
+            const origin = tWorldToScreen(0, 0);
+            const te1 = applyMatrix(currentMatrix, { x: 1, y: 0 });
+            const te2 = applyMatrix(currentMatrix, { x: 0, y: 1 });
+            const te1Screen = tWorldToScreen(te1.x, te1.y);
+            const te2Screen = tWorldToScreen(te2.x, te2.y);
+
+            drawArrow(transformCtx, origin.x, origin.y, te1Screen.x, te1Screen.y, '#d4a853', 4, 14);
+            drawArrow(transformCtx, origin.x, origin.y, te2Screen.x, te2Screen.y, '#4ecdc4', 4, 14);
+
+            // Labels
+            transformCtx.font = '500 14px "JetBrains Mono", monospace';
+            transformCtx.fillStyle = '#d4a853';
+            transformCtx.fillText('T(e₁)', te1Screen.x + 10, te1Screen.y - 10);
+
+            transformCtx.fillStyle = '#4ecdc4';
+            transformCtx.fillText('T(e₂)', te2Screen.x + 10, te2Screen.y - 10);
+
+            // Update determinant display
+            const det = currentMatrix.a * currentMatrix.d - currentMatrix.b * currentMatrix.c;
+            document.getElementById('transformDet').textContent = formatNum(det);
+            document.getElementById('transformDet').style.color = det < 0 ? '#ff6b6b' : '#4ecdc4';
+        }
+
+        function updateMatrixFromInputs() {
+            matrix.a = parseFloat(document.getElementById('m11').value) || 0;
+            matrix.b = parseFloat(document.getElementById('m12').value) || 0;
+            matrix.c = parseFloat(document.getElementById('m21').value) || 0;
+            matrix.d = parseFloat(document.getElementById('m22').value) || 0;
+
+            if (document.getElementById('animateTransform').checked) {
+                targetMatrix = { ...matrix };
+                animatingTransform = true;
+                transformT = 0;
+                animateTransformLoop();
+            } else {
+                drawTransformGrid();
+            }
+        }
+
+        function animateTransformLoop() {
+            if (transformT < 1) {
+                transformT = Math.min(1, transformT + 0.03);
+                drawTransformGrid();
+                requestAnimationFrame(animateTransformLoop);
+            } else {
+                animatingTransform = false;
+                matrix = { ...targetMatrix };
+            }
+        }
+
+        ['m11', 'm12', 'm21', 'm22'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateMatrixFromInputs);
+        });
+
+        document.querySelectorAll('.preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const vals = btn.dataset.matrix.split(',').map(Number);
+                document.getElementById('m11').value = vals[0];
+                document.getElementById('m12').value = vals[1];
+                document.getElementById('m21').value = vals[2];
+                document.getElementById('m22').value = vals[3];
+                updateMatrixFromInputs();
+            });
+        });
+
+        ['showGrid', 'showUnitCircle'].forEach(id => {
+            document.getElementById(id).addEventListener('change', drawTransformGrid);
+        });
+
+        // ============================================================
+        // Section 3: Eigenvectors
+        // ============================================================
+
+        const eigenCanvas = document.getElementById('eigenCanvas');
+        const eigenCtx = eigenCanvas.getContext('2d');
+
+        let eigenMatrix = { a: 2, b: 1, c: 0, d: 1 };
+        let eigenAnimating = false;
+        let eigenT = 0;
+
+        const E_ORIGIN_X = eigenCanvas.width / 2;
+        const E_ORIGIN_Y = eigenCanvas.height / 2;
+        const E_SCALE = 80;
+
+        function eWorldToScreen(x, y) {
+            return {
+                x: E_ORIGIN_X + x * E_SCALE,
+                y: E_ORIGIN_Y - y * E_SCALE
+            };
+        }
+
+        function computeEigenvalues(m) {
+            // For 2x2 matrix: eigenvalues are roots of λ² - (a+d)λ + (ad-bc) = 0
+            const trace = m.a + m.d;
+            const det = m.a * m.d - m.b * m.c;
+            const discriminant = trace * trace - 4 * det;
+
+            if (discriminant < 0) {
+                // Complex eigenvalues
+                const realPart = trace / 2;
+                const imagPart = Math.sqrt(-discriminant) / 2;
+                return {
+                    complex: true,
+                    lambda1: { real: realPart, imag: imagPart },
+                    lambda2: { real: realPart, imag: -imagPart }
+                };
+            } else {
+                const sqrtDisc = Math.sqrt(discriminant);
+                return {
+                    complex: false,
+                    lambda1: (trace + sqrtDisc) / 2,
+                    lambda2: (trace - sqrtDisc) / 2
+                };
+            }
+        }
+
+        function computeEigenvector(m, lambda) {
+            // (A - λI)v = 0
+            // [a-λ  b ] [x]   [0]
+            // [c    d-λ] [y] = [0]
+
+            const a = m.a - lambda;
+            const b = m.b;
+            const c = m.c;
+            const d = m.d - lambda;
+
+            // If first row is non-zero, use it
+            if (Math.abs(a) > 0.0001 || Math.abs(b) > 0.0001) {
+                // ax + by = 0 => v = (-b, a) or (b, -a)
+                if (Math.abs(b) > 0.0001) {
+                    return normalize({ x: 1, y: -a / b });
+                } else {
+                    return normalize({ x: 0, y: 1 });
+                }
+            } else if (Math.abs(c) > 0.0001 || Math.abs(d) > 0.0001) {
+                // cx + dy = 0
+                if (Math.abs(d) > 0.0001) {
+                    return normalize({ x: 1, y: -c / d });
+                } else {
+                    return normalize({ x: 0, y: 1 });
+                }
+            }
+
+            return { x: 1, y: 0 }; // Default
+        }
+
+        function normalize(v) {
+            const len = Math.sqrt(v.x * v.x + v.y * v.y);
+            if (len < 0.0001) return { x: 1, y: 0 };
+            return { x: v.x / len, y: v.y / len };
+        }
+
+        function drawEigen() {
+            eigenCtx.fillStyle = '#12141a';
+            eigenCtx.fillRect(0, 0, eigenCanvas.width, eigenCanvas.height);
+
+            // Draw grid
+            drawVectorGrid(eigenCtx, eigenCanvas.width, eigenCanvas.height, E_ORIGIN_X, E_ORIGIN_Y, E_SCALE);
+
+            const eigenvalues = computeEigenvalues(eigenMatrix);
+
+            // Update displays
+            const poly = `det(A − λI) = λ² − ${formatNum(eigenMatrix.a + eigenMatrix.d)}λ + ${formatNum(eigenMatrix.a * eigenMatrix.d - eigenMatrix.b * eigenMatrix.c)}`;
+            document.getElementById('charPoly').textContent = poly;
+
+            if (eigenvalues.complex) {
+                document.getElementById('eigenvalue1').textContent = `λ₁ = ${formatNum(eigenvalues.lambda1.real)} + ${formatNum(eigenvalues.lambda1.imag)}i`;
+                document.getElementById('eigenvector1').textContent = 'Complex eigenvector';
+                document.getElementById('eigenvalue2').textContent = `λ₂ = ${formatNum(eigenvalues.lambda2.real)} − ${formatNum(Math.abs(eigenvalues.lambda2.imag))}i`;
+                document.getElementById('eigenvector2').textContent = 'Complex eigenvector';
+
+                // Draw rotation visualization
+                eigenCtx.font = '16px "Cormorant Garamond", serif';
+                eigenCtx.fillStyle = '#9499a8';
+                eigenCtx.textAlign = 'center';
+                eigenCtx.fillText('No real eigenvectors — this is a rotation/spiral', eigenCanvas.width / 2, 40);
+
+                // Draw a sample vector and its transformation
+                const origin = eWorldToScreen(0, 0);
+
+                for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 6) {
+                    const v = { x: Math.cos(angle) * 1.5, y: Math.sin(angle) * 1.5 };
+                    const tv = applyMatrix(eigenMatrix, v);
+
+                    const vScreen = eWorldToScreen(v.x, v.y);
+                    const tvScreen = eWorldToScreen(tv.x, tv.y);
+
+                    eigenCtx.strokeStyle = 'rgba(167, 139, 250, 0.3)';
+                    eigenCtx.lineWidth = 2;
+                    eigenCtx.beginPath();
+                    eigenCtx.moveTo(vScreen.x, vScreen.y);
+                    eigenCtx.lineTo(tvScreen.x, tvScreen.y);
+                    eigenCtx.stroke();
+
+                    eigenCtx.fillStyle = 'rgba(167, 139, 250, 0.5)';
+                    eigenCtx.beginPath();
+                    eigenCtx.arc(vScreen.x, vScreen.y, 4, 0, Math.PI * 2);
+                    eigenCtx.fill();
+
+                    eigenCtx.fillStyle = '#a78bfa';
+                    eigenCtx.beginPath();
+                    eigenCtx.arc(tvScreen.x, tvScreen.y, 4, 0, Math.PI * 2);
+                    eigenCtx.fill();
+                }
+            } else {
+                const v1 = computeEigenvector(eigenMatrix, eigenvalues.lambda1);
+                const v2 = computeEigenvector(eigenMatrix, eigenvalues.lambda2);
+
+                document.getElementById('eigenvalue1').textContent = `λ₁ = ${formatNum(eigenvalues.lambda1)}`;
+                document.getElementById('eigenvector1').textContent = `v₁ = (${formatNum(v1.x)}, ${formatNum(v1.y)})`;
+                document.getElementById('eigenvalue2').textContent = `λ₂ = ${formatNum(eigenvalues.lambda2)}`;
+                document.getElementById('eigenvector2').textContent = `v₂ = (${formatNum(v2.x)}, ${formatNum(v2.y)})`;
+
+                const origin = eWorldToScreen(0, 0);
+
+                // Draw eigenspaces (infinite lines)
+                if (document.getElementById('showEigenspaces').checked) {
+                    eigenCtx.setLineDash([8, 8]);
+                    eigenCtx.lineWidth = 2;
+
+                    eigenCtx.strokeStyle = 'rgba(255, 107, 107, 0.3)';
+                    const e1Start = eWorldToScreen(-4 * v1.x, -4 * v1.y);
+                    const e1End = eWorldToScreen(4 * v1.x, 4 * v1.y);
+                    eigenCtx.beginPath();
+                    eigenCtx.moveTo(e1Start.x, e1Start.y);
+                    eigenCtx.lineTo(e1End.x, e1End.y);
+                    eigenCtx.stroke();
+
+                    eigenCtx.strokeStyle = 'rgba(163, 230, 53, 0.3)';
+                    const e2Start = eWorldToScreen(-4 * v2.x, -4 * v2.y);
+                    const e2End = eWorldToScreen(4 * v2.x, 4 * v2.y);
+                    eigenCtx.beginPath();
+                    eigenCtx.moveTo(e2Start.x, e2Start.y);
+                    eigenCtx.lineTo(e2End.x, e2End.y);
+                    eigenCtx.stroke();
+
+                    eigenCtx.setLineDash([]);
+                }
+
+                // Draw eigenvectors
+                const scale = 2;
+                const ev1Screen = eWorldToScreen(v1.x * scale, v1.y * scale);
+                const ev2Screen = eWorldToScreen(v2.x * scale, v2.y * scale);
+
+                drawArrow(eigenCtx, origin.x, origin.y, ev1Screen.x, ev1Screen.y, '#ff6b6b', 4, 14);
+                drawArrow(eigenCtx, origin.x, origin.y, ev2Screen.x, ev2Screen.y, '#a3e635', 4, 14);
+
+                // Show transformed eigenvectors (should be parallel!)
+                const tv1 = applyMatrix(eigenMatrix, { x: v1.x * scale, y: v1.y * scale });
+                const tv2 = applyMatrix(eigenMatrix, { x: v2.x * scale, y: v2.y * scale });
+                const tv1Screen = eWorldToScreen(tv1.x, tv1.y);
+                const tv2Screen = eWorldToScreen(tv2.x, tv2.y);
+
+                eigenCtx.setLineDash([4, 4]);
+                drawArrow(eigenCtx, origin.x, origin.y, tv1Screen.x, tv1Screen.y, 'rgba(255, 107, 107, 0.5)', 2, 10);
+                drawArrow(eigenCtx, origin.x, origin.y, tv2Screen.x, tv2Screen.y, 'rgba(163, 230, 53, 0.5)', 2, 10);
+                eigenCtx.setLineDash([]);
+
+                // Labels
+                eigenCtx.font = '500 14px "JetBrains Mono", monospace';
+                eigenCtx.fillStyle = '#ff6b6b';
+                eigenCtx.fillText(`v₁ (λ=${formatNum(eigenvalues.lambda1)})`, ev1Screen.x + 10, ev1Screen.y - 10);
+
+                eigenCtx.fillStyle = '#a3e635';
+                eigenCtx.fillText(`v₂ (λ=${formatNum(eigenvalues.lambda2)})`, ev2Screen.x + 10, ev2Screen.y - 10);
+
+                // Draw a general vector that does get rotated
+                const generalV = { x: 1, y: 1.5 };
+                const generalVScreen = eWorldToScreen(generalV.x, generalV.y);
+                const transformedV = applyMatrix(eigenMatrix, generalV);
+                const transformedVScreen = eWorldToScreen(transformedV.x, transformedV.y);
+
+                drawArrow(eigenCtx, origin.x, origin.y, generalVScreen.x, generalVScreen.y, '#a78bfa', 3, 12);
+                eigenCtx.setLineDash([4, 4]);
+                drawArrow(eigenCtx, origin.x, origin.y, transformedVScreen.x, transformedVScreen.y, 'rgba(167, 139, 250, 0.5)', 2, 10);
+                eigenCtx.setLineDash([]);
+
+                eigenCtx.fillStyle = '#a78bfa';
+                eigenCtx.fillText('general v', generalVScreen.x + 10, generalVScreen.y - 10);
+            }
+        }
+
+        function updateEigenFromInputs() {
+            eigenMatrix.a = parseFloat(document.getElementById('e11').value) || 0;
+            eigenMatrix.b = parseFloat(document.getElementById('e12').value) || 0;
+            eigenMatrix.c = parseFloat(document.getElementById('e21').value) || 0;
+            eigenMatrix.d = parseFloat(document.getElementById('e22').value) || 0;
+            drawEigen();
+        }
+
+        ['e11', 'e12', 'e21', 'e22'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateEigenFromInputs);
+        });
+
+        document.querySelectorAll('.eigen-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const vals = btn.dataset.matrix.split(',').map(Number);
+                document.getElementById('e11').value = vals[0];
+                document.getElementById('e12').value = vals[1];
+                document.getElementById('e21').value = vals[2];
+                document.getElementById('e22').value = vals[3];
+                updateEigenFromInputs();
+            });
+        });
+
+        document.getElementById('showEigenspaces').addEventListener('change', drawEigen);
+
+        // ============================================================
+        // Section 4: Determinant
+        // ============================================================
+
+        const detCanvas = document.getElementById('detCanvas');
+        const detCtx = detCanvas.getContext('2d');
+
+        let detMatrix = { a: 2, b: 0.5, c: 0, d: 1.5 };
+        let detAnimT = 0;
+        let detAnimating = false;
+
+        const D_ORIGIN_X = detCanvas.width / 2;
+        const D_ORIGIN_Y = detCanvas.height / 2;
+        const D_SCALE = 100;
+
+        function dWorldToScreen(x, y) {
+            return {
+                x: D_ORIGIN_X + x * D_SCALE,
+                y: D_ORIGIN_Y - y * D_SCALE
+            };
+        }
+
+        function drawDeterminant() {
+            detCtx.fillStyle = '#12141a';
+            detCtx.fillRect(0, 0, detCanvas.width, detCanvas.height);
+
+            drawVectorGrid(detCtx, detCanvas.width, detCanvas.height, D_ORIGIN_X, D_ORIGIN_Y, D_SCALE);
+
+            const t = document.getElementById('animateDet').checked ? detAnimT : 1;
+            const currentMatrix = lerpMatrix({ a: 1, b: 0, c: 0, d: 1 }, detMatrix, t);
+
+            // Draw original unit square
+            const corners = [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 1, y: 1 },
+                { x: 0, y: 1 }
+            ];
+
+            detCtx.fillStyle = 'rgba(212, 168, 83, 0.15)';
+            detCtx.strokeStyle = '#d4a853';
+            detCtx.lineWidth = 2;
+            detCtx.beginPath();
+            corners.forEach((c, i) => {
+                const screen = dWorldToScreen(c.x, c.y);
+                if (i === 0) detCtx.moveTo(screen.x, screen.y);
+                else detCtx.lineTo(screen.x, screen.y);
+            });
+            detCtx.closePath();
+            detCtx.fill();
+            detCtx.stroke();
+
+            // Draw transformed parallelogram
+            const transformedCorners = corners.map(c => applyMatrix(currentMatrix, c));
+
+            const det = currentMatrix.a * currentMatrix.d - currentMatrix.b * currentMatrix.c;
+            detCtx.fillStyle = det >= 0 ? 'rgba(78, 205, 196, 0.2)' : 'rgba(255, 107, 107, 0.2)';
+            detCtx.strokeStyle = det >= 0 ? '#4ecdc4' : '#ff6b6b';
+            detCtx.lineWidth = 3;
+            detCtx.beginPath();
+            transformedCorners.forEach((c, i) => {
+                const screen = dWorldToScreen(c.x, c.y);
+                if (i === 0) detCtx.moveTo(screen.x, screen.y);
+                else detCtx.lineTo(screen.x, screen.y);
+            });
+            detCtx.closePath();
+            detCtx.fill();
+            detCtx.stroke();
+
+            // Draw basis vectors
+            const origin = dWorldToScreen(0, 0);
+            const te1 = applyMatrix(currentMatrix, { x: 1, y: 0 });
+            const te2 = applyMatrix(currentMatrix, { x: 0, y: 1 });
+            const te1Screen = dWorldToScreen(te1.x, te1.y);
+            const te2Screen = dWorldToScreen(te2.x, te2.y);
+
+            drawArrow(detCtx, origin.x, origin.y, te1Screen.x, te1Screen.y, '#d4a853', 3, 12);
+            drawArrow(detCtx, origin.x, origin.y, te2Screen.x, te2Screen.y, '#4ecdc4', 3, 12);
+
+            // Labels
+            detCtx.font = '500 14px "JetBrains Mono", monospace';
+            detCtx.fillStyle = '#d4a853';
+            detCtx.fillText('e₁', te1Screen.x + 10, te1Screen.y + 5);
+            detCtx.fillStyle = '#4ecdc4';
+            detCtx.fillText('e₂', te2Screen.x + 10, te2Screen.y - 10);
+
+            // Update info
+            const fullDet = detMatrix.a * detMatrix.d - detMatrix.b * detMatrix.c;
+            document.getElementById('detFormula').innerHTML =
+                `det = (${formatNum(detMatrix.a)})(${formatNum(detMatrix.d)}) − (${formatNum(detMatrix.b)})(${formatNum(detMatrix.c)}) = <span class="highlight">${formatNum(fullDet)}</span>`;
+
+            document.getElementById('transformedArea').textContent = formatNum(Math.abs(fullDet));
+            document.getElementById('areaDetail').textContent = `|det| = ${formatNum(Math.abs(fullDet))}`;
+
+            const orientEl = document.getElementById('orientationStatus');
+            const orientDetailEl = document.getElementById('orientationDetail');
+
+            if (Math.abs(fullDet) < 0.01) {
+                orientEl.textContent = 'Collapsed';
+                orientEl.style.color = '#9499a8';
+                orientDetailEl.textContent = 'Zero determinant means the transformation collapses space to a lower dimension.';
+            } else if (fullDet > 0) {
+                orientEl.textContent = 'Preserved';
+                orientEl.style.color = '#4ecdc4';
+                orientDetailEl.textContent = 'Positive determinant means counterclockwise orientation is preserved.';
+            } else {
+                orientEl.textContent = 'Reversed';
+                orientEl.style.color = '#ff6b6b';
+                orientDetailEl.textContent = 'Negative determinant means orientation is flipped (reflection).';
+            }
+        }
+
+        function animateDet() {
+            if (document.getElementById('animateDet').checked) {
+                detAnimT = 0;
+                detAnimating = true;
+                animateDetLoop();
+            } else {
+                detAnimT = 1;
+                drawDeterminant();
+            }
+        }
+
+        function animateDetLoop() {
+            if (detAnimT < 1 && detAnimating) {
+                detAnimT = Math.min(1, detAnimT + 0.02);
+                drawDeterminant();
+                requestAnimationFrame(animateDetLoop);
+            }
+        }
+
+        function updateDetFromInputs() {
+            detMatrix.a = parseFloat(document.getElementById('d11').value) || 0;
+            detMatrix.b = parseFloat(document.getElementById('d12').value) || 0;
+            detMatrix.c = parseFloat(document.getElementById('d21').value) || 0;
+            detMatrix.d = parseFloat(document.getElementById('d22').value) || 0;
+            animateDet();
+        }
+
+        ['d11', 'd12', 'd21', 'd22'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateDetFromInputs);
+        });
+
+        document.querySelectorAll('.det-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const vals = btn.dataset.matrix.split(',').map(Number);
+                document.getElementById('d11').value = vals[0];
+                document.getElementById('d12').value = vals[1];
+                document.getElementById('d21').value = vals[2];
+                document.getElementById('d22').value = vals[3];
+                updateDetFromInputs();
+            });
+        });
+
+        document.getElementById('animateDet').addEventListener('change', animateDet);
+
+        // ============================================================
+        // Section 5: Inner Products
+        // ============================================================
+
+        const innerCanvas = document.getElementById('innerCanvas');
+        const innerCtx = innerCanvas.getContext('2d');
+
+        let vecV = { x: 1.5, y: 1 };
+        let vecW = { x: 2, y: 0.5 };
+        let draggingInner = null;
+
+        const I_ORIGIN_X = innerCanvas.width / 2;
+        const I_ORIGIN_Y = innerCanvas.height / 2;
+        const I_SCALE = 100;
+
+        function iWorldToScreen(x, y) {
+            return {
+                x: I_ORIGIN_X + x * I_SCALE,
+                y: I_ORIGIN_Y - y * I_SCALE
+            };
+        }
+
+        function iScreenToWorld(sx, sy) {
+            return {
+                x: (sx - I_ORIGIN_X) / I_SCALE,
+                y: (I_ORIGIN_Y - sy) / I_SCALE
+            };
+        }
+
+        function dot(a, b) {
+            return a.x * b.x + a.y * b.y;
+        }
+
+        function norm(v) {
+            return Math.sqrt(v.x * v.x + v.y * v.y);
+        }
+
+        function drawInnerProducts() {
+            innerCtx.fillStyle = '#12141a';
+            innerCtx.fillRect(0, 0, innerCanvas.width, innerCanvas.height);
+
+            drawVectorGrid(innerCtx, innerCanvas.width, innerCanvas.height, I_ORIGIN_X, I_ORIGIN_Y, I_SCALE);
+
+            const origin = iWorldToScreen(0, 0);
+            const vScreen = iWorldToScreen(vecV.x, vecV.y);
+            const wScreen = iWorldToScreen(vecW.x, vecW.y);
+
+            // Compute projection
+            const wNormSq = dot(vecW, vecW);
+            const projScalar = wNormSq > 0.0001 ? dot(vecV, vecW) / wNormSq : 0;
+            const proj = { x: projScalar * vecW.x, y: projScalar * vecW.y };
+            const projScreen = iWorldToScreen(proj.x, proj.y);
+
+            // Draw projection line (dashed)
+            innerCtx.strokeStyle = 'rgba(255, 107, 107, 0.4)';
+            innerCtx.lineWidth = 2;
+            innerCtx.setLineDash([5, 5]);
+            innerCtx.beginPath();
+            innerCtx.moveTo(vScreen.x, vScreen.y);
+            innerCtx.lineTo(projScreen.x, projScreen.y);
+            innerCtx.stroke();
+            innerCtx.setLineDash([]);
+
+            // Draw right angle marker
+            if (Math.abs(projScalar) > 0.1) {
+                const perpDir = { x: vecV.x - proj.x, y: vecV.y - proj.y };
+                const perpLen = norm(perpDir);
+                if (perpLen > 0.1) {
+                    const unitPerp = { x: perpDir.x / perpLen, y: perpDir.y / perpLen };
+                    const wLen = norm(vecW);
+                    const unitW = { x: vecW.x / wLen, y: vecW.y / wLen };
+
+                    const markerSize = 0.15;
+                    const p1 = iWorldToScreen(proj.x + unitPerp.x * markerSize, proj.y + unitPerp.y * markerSize);
+                    const p2 = iWorldToScreen(proj.x + unitPerp.x * markerSize + unitW.x * markerSize * Math.sign(projScalar),
+                                               proj.y + unitPerp.y * markerSize + unitW.y * markerSize * Math.sign(projScalar));
+                    const p3 = iWorldToScreen(proj.x + unitW.x * markerSize * Math.sign(projScalar),
+                                               proj.y + unitW.y * markerSize * Math.sign(projScalar));
+
+                    innerCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    innerCtx.lineWidth = 1;
+                    innerCtx.beginPath();
+                    innerCtx.moveTo(p1.x, p1.y);
+                    innerCtx.lineTo(p2.x, p2.y);
+                    innerCtx.lineTo(p3.x, p3.y);
+                    innerCtx.stroke();
+                }
+            }
+
+            // Draw vectors
+            drawArrow(innerCtx, origin.x, origin.y, wScreen.x, wScreen.y, '#4ecdc4', 4, 14);
+            drawArrow(innerCtx, origin.x, origin.y, vScreen.x, vScreen.y, '#d4a853', 4, 14);
+            drawArrow(innerCtx, origin.x, origin.y, projScreen.x, projScreen.y, '#ff6b6b', 3, 12);
+
+            // Draw handles
+            innerCtx.fillStyle = '#d4a853';
+            innerCtx.beginPath();
+            innerCtx.arc(vScreen.x, vScreen.y, 8, 0, Math.PI * 2);
+            innerCtx.fill();
+
+            innerCtx.fillStyle = '#4ecdc4';
+            innerCtx.beginPath();
+            innerCtx.arc(wScreen.x, wScreen.y, 8, 0, Math.PI * 2);
+            innerCtx.fill();
+
+            // Labels
+            innerCtx.font = '500 14px "JetBrains Mono", monospace';
+            innerCtx.fillStyle = '#d4a853';
+            innerCtx.fillText('v', vScreen.x + 12, vScreen.y - 12);
+            innerCtx.fillStyle = '#4ecdc4';
+            innerCtx.fillText('w', wScreen.x + 12, wScreen.y - 12);
+            innerCtx.fillStyle = '#ff6b6b';
+            innerCtx.fillText('proj', projScreen.x + 12, projScreen.y + 5);
+
+            // Update displays
+            document.getElementById('vDisplay').textContent = `(${formatNum(vecV.x)}, ${formatNum(vecV.y)})`;
+            document.getElementById('wDisplay').textContent = `(${formatNum(vecW.x)}, ${formatNum(vecW.y)})`;
+
+            const innerProd = dot(vecV, vecW);
+            document.getElementById('innerProduct').textContent = formatNum(innerProd);
+
+            const normV = norm(vecV);
+            const normW = norm(vecW);
+            const cosTheta = (normV > 0.01 && normW > 0.01) ? innerProd / (normV * normW) : 0;
+            const theta = Math.acos(clamp(cosTheta, -1, 1)) * 180 / Math.PI;
+            document.getElementById('angleDisplay').textContent = `${formatNum(theta, 1)}°`;
+
+            document.getElementById('projDisplay').textContent = `(${formatNum(proj.x)}, ${formatNum(proj.y)})`;
+
+            // Cauchy-Schwarz
+            const leftSide = Math.abs(innerProd);
+            const rightSide = normV * normW;
+            document.getElementById('cauchySchwarz').innerHTML =
+                `|⟨v,w⟩| = ${formatNum(leftSide)} ≤ ‖v‖·‖w‖ = ${formatNum(rightSide)} ${leftSide <= rightSide + 0.01 ? '✓' : '✗'}`;
+        }
+
+        function getInnerVectorAtPoint(x, y) {
+            const vScreen = iWorldToScreen(vecV.x, vecV.y);
+            const wScreen = iWorldToScreen(vecW.x, vecW.y);
+
+            const dv = Math.sqrt((x - vScreen.x) ** 2 + (y - vScreen.y) ** 2);
+            const dw = Math.sqrt((x - wScreen.x) ** 2 + (y - wScreen.y) ** 2);
+
+            if (dv < 20) return 'v';
+            if (dw < 20) return 'w';
+            return null;
+        }
+
+        innerCanvas.addEventListener('mousedown', (e) => {
+            const rect = innerCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            draggingInner = getInnerVectorAtPoint(x, y);
+        });
+
+        innerCanvas.addEventListener('mousemove', (e) => {
+            const rect = innerCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (draggingInner) {
+                const world = iScreenToWorld(x, y);
+                if (draggingInner === 'v') {
+                    vecV.x = clamp(world.x, -3, 3);
+                    vecV.y = clamp(world.y, -3, 3);
+                } else if (draggingInner === 'w') {
+                    vecW.x = clamp(world.x, -3, 3);
+                    vecW.y = clamp(world.y, -3, 3);
+                }
+                drawInnerProducts();
+            } else {
+                const hovering = getInnerVectorAtPoint(x, y);
+                innerCanvas.style.cursor = hovering ? 'grab' : 'crosshair';
+            }
+        });
+
+        innerCanvas.addEventListener('mouseup', () => {
+            draggingInner = null;
+        });
+
+        innerCanvas.addEventListener('mouseleave', () => {
+            draggingInner = null;
+        });
+
+        // Gram-Schmidt button
+        document.getElementById('gramSchmidt').addEventListener('click', () => {
+            // Orthogonalize v with respect to w
+            const projScalar = dot(vecV, vecW) / dot(vecW, vecW);
+            const proj = { x: projScalar * vecW.x, y: projScalar * vecW.y };
+
+            // Animate to orthogonal position
+            const targetV = { x: vecV.x - proj.x, y: vecV.y - proj.y };
+            const startV = { ...vecV };
+
+            let t = 0;
+            function animateGS() {
+                t += 0.03;
+                if (t < 1) {
+                    vecV.x = lerp(startV.x, targetV.x, t);
+                    vecV.y = lerp(startV.y, targetV.y, t);
+                    drawInnerProducts();
+                    requestAnimationFrame(animateGS);
+                } else {
+                    vecV = { ...targetV };
+                    drawInnerProducts();
+                }
+            }
+            animateGS();
+        });
+
+        // ============================================================
+        // Initialize all canvases
+        // ============================================================
+
+        drawVectorSpace();
+        drawTransformGrid();
+        drawEigen();
+        drawDeterminant();
+        drawInnerProducts();
+
+        // Handle window resize
+        function handleResize() {
+            // For now, we keep fixed canvas sizes for simplicity
+            // Could implement responsive canvas resizing here
+        }
+
+        window.addEventListener('resize', handleResize);
+    </script>
+</body>
+</html>

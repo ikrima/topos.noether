@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Part XI: Probability — An Infinitely Large Napkin</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Libraries -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+  <style>
+    :root {
+      --color-probability: #6366f1;
+      --color-expectation: #f59e0b;
+      --color-variance: #10b981;
+      --color-gaussian: #3b82f6;
+      --color-martingale: #ec4899;
+      --color-stopping: #ef4444;
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-tertiary: #252542;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #334155;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 17px;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      font-family: 'Crimson Pro', Georgia, serif;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary);
+    }
+
+    .math-display {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-tertiary);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      border-left: 3px solid var(--color-probability);
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-tertiary);
+      z-index: 1000;
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-probability), var(--color-gaussian), var(--color-martingale));
+        width: 0%;
+        transition: width 0.1s ease-out;
+      }
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      @media (max-width: 1200px) {
+        display: none;
+      }
+
+      a {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        transition: all 0.3s ease;
+
+        &:hover, &.active {
+          background: var(--color-probability);
+          border-color: var(--color-probability);
+          transform: scale(1.3);
+        }
+      }
+    }
+
+    /* Sections */
+    section {
+      min-height: 100vh;
+      padding: 6rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+
+      .subtitle {
+        font-size: 1.2rem;
+        color: var(--color-probability);
+        margin-bottom: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .description {
+        max-width: 700px;
+        margin: 2rem auto;
+        font-size: 1.1rem;
+      }
+
+      .hero-visual {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        z-index: -1;
+        opacity: 0.3;
+      }
+    }
+
+    /* Interactive containers */
+    .interactive-container {
+      background: var(--bg-secondary);
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .visualization {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 400px;
+      position: relative;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    input[type="range"] {
+      width: 200px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--color-probability);
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: scale(1.2);
+        }
+      }
+    }
+
+    button {
+      font-family: 'DM Sans', sans-serif;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.primary {
+        background: var(--color-probability);
+        color: white;
+
+        &:hover {
+          background: #4f46e5;
+          transform: translateY(-2px);
+        }
+      }
+
+      &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+
+        &:hover {
+          background: var(--bg-secondary);
+          border-color: var(--color-probability);
+        }
+      }
+    }
+
+    /* Stats display */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat {
+      background: var(--bg-tertiary);
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      &.expectation .stat-value { color: var(--color-expectation); }
+      &.variance .stat-value { color: var(--color-variance); }
+      &.probability .stat-value { color: var(--color-probability); }
+      &.gaussian .stat-value { color: var(--color-gaussian); }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+
+      button {
+        padding: 0.5rem 1rem;
+        background: transparent;
+        color: var(--text-muted);
+        border: none;
+
+        &.active {
+          color: var(--color-probability);
+          background: var(--bg-tertiary);
+          border-radius: 6px 6px 0 0;
+        }
+      }
+    }
+
+    /* Two column layout */
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+
+      @media (max-width: 900px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prose {
+      max-width: 65ch;
+    }
+
+    /* Definition boxes */
+    .definition {
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      border-left: 4px solid var(--color-probability);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+
+      .def-title {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-probability);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .theorem {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+      border-left: 4px solid var(--color-gaussian);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+
+      .thm-title {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-gaussian);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Chapter headers */
+    .chapter-header {
+      margin-bottom: 3rem;
+
+      .chapter-number {
+        font-size: 0.9rem;
+        color: var(--color-probability);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Annotations */
+    .annotation {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 1rem;
+    }
+
+    /* Sample paths canvas */
+    .paths-container {
+      position: relative;
+      width: 100%;
+      height: 500px;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    /* Footer */
+    footer {
+      padding: 4rem 2rem;
+      text-align: center;
+      border-top: 1px solid var(--border-color);
+
+      p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      a {
+        color: var(--color-probability);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    /* Reveal animation */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    /* Mode indicator */
+    .mode-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+
+      &.measure { background: rgba(99, 102, 241, 0.2); color: var(--color-probability); }
+      &.intuition { background: rgba(245, 158, 11, 0.2); color: var(--color-expectation); }
+    }
+  </style>
+</head>
+<body x-data="probabilityExplorer()" x-init="init()">
+
+  <!-- Progress Bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" :style="{ width: scrollProgress + '%' }"></div>
+  </div>
+
+  <!-- Navigation dots -->
+  <nav class="nav">
+    <a href="#hero" :class="{ active: currentSection === 'hero' }"></a>
+    <a href="#random-variables" :class="{ active: currentSection === 'random-variables' }"></a>
+    <a href="#distributions" :class="{ active: currentSection === 'distributions' }"></a>
+    <a href="#lln" :class="{ active: currentSection === 'lln' }"></a>
+    <a href="#clt" :class="{ active: currentSection === 'clt' }"></a>
+    <a href="#martingales" :class="{ active: currentSection === 'martingales' }"></a>
+    <a href="#stopping" :class="{ active: currentSection === 'stopping' }"></a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <canvas id="hero-canvas" class="hero-visual"></canvas>
+    <div class="subtitle">Part XI</div>
+    <h1>Probability</h1>
+    <p class="description">
+      Where measure theory meets the random. We'll see how abstract integration
+      illuminates convergence phenomena—from the Law of Large Numbers to the
+      Central Limit Theorem—and discover the elegant theory of martingales.
+    </p>
+    <div style="margin-top: 2rem;">
+      <span class="mode-badge measure">Measure-Theoretic Foundation</span>
+    </div>
+  </section>
+
+  <!-- Chapter 40: Random Variables -->
+  <section id="random-variables">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 40</div>
+      <h2>Random Variables</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          Having built measure theory in Part X, we now harvest its fruit. A <strong>random variable</strong>
+          is simply a measurable function—but this simple definition unlocks profound structure.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Random Variable</div>
+          <p style="margin-bottom: 0;">
+            Let $(\Omega, \mathcal{F}, \mathbb{P})$ be a probability space. A <em>random variable</em>
+            is a measurable function $X: \Omega \to \mathbb{R}$. That is, for every Borel set $B \subseteq \mathbb{R}$,
+            we have $X^{-1}(B) \in \mathcal{F}$.
+          </p>
+        </div>
+
+        <p>
+          The magic is that we rarely care about the underlying $\Omega$. What matters is the
+          <strong>push-forward measure</strong> $\mu_X = \mathbb{P} \circ X^{-1}$, called the
+          <em>distribution</em> or <em>law</em> of $X$.
+        </p>
+
+        <p>
+          Expectation is just Lebesgue integration in disguise:
+        </p>
+
+        <div class="math-display">
+          $$\mathbb{E}[X] = \int_\Omega X \, d\mathbb{P} = \int_{\mathbb{R}} x \, d\mu_X(x)$$
+        </div>
+
+        <p>
+          The second equality is the <em>change of variables formula</em>—we can integrate over
+          the probability space or over $\mathbb{R}$ with the push-forward measure.
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>The Push-Forward in Action</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">
+          Watch how a random variable transforms probability mass from $\Omega$ to $\mathbb{R}$.
+        </p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Distribution Type</label>
+            <div class="tabs">
+              <button @click="rvDistType = 'uniform'" :class="{ active: rvDistType === 'uniform' }">Uniform</button>
+              <button @click="rvDistType = 'normal'" :class="{ active: rvDistType === 'normal' }">Normal</button>
+              <button @click="rvDistType = 'exponential'" :class="{ active: rvDistType === 'exponential' }">Exp</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="visualization" id="pushforward-viz"></div>
+
+        <div class="stats">
+          <div class="stat expectation">
+            <div class="stat-value" x-text="rvExpectation.toFixed(3)"></div>
+            <div class="stat-label">$\mathbb{E}[X]$</div>
+          </div>
+          <div class="stat variance">
+            <div class="stat-value" x-text="rvVariance.toFixed(3)"></div>
+            <div class="stat-label">$\text{Var}(X)$</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          The histogram shows the empirical distribution converging to the true density as samples accumulate.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Distributions and Independence -->
+  <section id="distributions">
+    <div class="chapter-header reveal">
+      <h2>Distributions & Independence</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        Two random variables $X$ and $Y$ are <strong>independent</strong> if knowing $X$ tells us
+        nothing about $Y$. Formally: for all Borel sets $A, B$,
+      </p>
+
+      <div class="math-display">
+        $$\mathbb{P}(X \in A, Y \in B) = \mathbb{P}(X \in A) \cdot \mathbb{P}(Y \in B)$$
+      </div>
+
+      <p>
+        Independence is the engine that powers limit theorems. It ensures that fluctuations cancel
+        rather than reinforce—a crucial property we'll exploit for the Law of Large Numbers.
+      </p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Transformations of Random Variables</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Apply transformations to see how distributions morph. If $X \sim \mathcal{N}(0,1)$, what's the distribution of $X^2$?
+      </p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Base Distribution</label>
+          <select x-model="transformBase" style="padding: 0.5rem; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+            <option value="normal">Standard Normal</option>
+            <option value="uniform">Uniform [0,1]</option>
+            <option value="exponential">Exponential(1)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Transformation $g(x)$</label>
+          <select x-model="transformFunc" style="padding: 0.5rem; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+            <option value="identity">$x$ (identity)</option>
+            <option value="square">$x^2$</option>
+            <option value="abs">$|x|$</option>
+            <option value="exp">$e^x$</option>
+            <option value="sin">$\sin(x)$</option>
+          </select>
+        </div>
+        <button class="primary" @click="generateTransformSamples()">Generate 1000 Samples</button>
+      </div>
+
+      <div class="two-column" style="gap: 1rem;">
+        <div class="visualization" id="transform-before" style="min-height: 300px;">
+          <div style="text-align: center; padding-top: 1rem; color: var(--text-muted); font-size: 0.9rem;">Original $X$</div>
+        </div>
+        <div class="visualization" id="transform-after" style="min-height: 300px;">
+          <div style="text-align: center; padding-top: 1rem; color: var(--text-muted); font-size: 0.9rem;">Transformed $g(X)$</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat expectation">
+          <div class="stat-value" x-text="transformStats.beforeMean.toFixed(3)"></div>
+          <div class="stat-label">$\mathbb{E}[X]$</div>
+        </div>
+        <div class="stat variance">
+          <div class="stat-value" x-text="transformStats.beforeVar.toFixed(3)"></div>
+          <div class="stat-label">$\text{Var}(X)$</div>
+        </div>
+        <div class="stat expectation">
+          <div class="stat-value" x-text="transformStats.afterMean.toFixed(3)"></div>
+          <div class="stat-label">$\mathbb{E}[g(X)]$</div>
+        </div>
+        <div class="stat variance">
+          <div class="stat-value" x-text="transformStats.afterVar.toFixed(3)"></div>
+          <div class="stat-label">$\text{Var}(g(X))$</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 41: Law of Large Numbers -->
+  <section id="lln">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 41</div>
+      <h2>Large Number Laws</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          The <strong>Law of Large Numbers</strong> makes precise our intuition that "averages stabilize."
+          There are two versions, differing in the strength of convergence.
+        </p>
+
+        <div class="theorem">
+          <div class="thm-title">Weak Law of Large Numbers</div>
+          <p style="margin-bottom: 0;">
+            Let $X_1, X_2, \ldots$ be i.i.d. with $\mathbb{E}[X_i] = \mu$ and $\text{Var}(X_i) = \sigma^2 < \infty$.
+            Then $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ converges to $\mu$ <em>in probability</em>:
+            $$\forall \varepsilon > 0: \quad \lim_{n \to \infty} \mathbb{P}(|\bar{X}_n - \mu| > \varepsilon) = 0$$
+          </p>
+        </div>
+
+        <div class="theorem">
+          <div class="thm-title">Strong Law of Large Numbers</div>
+          <p style="margin-bottom: 0;">
+            Under the same conditions, convergence holds <em>almost surely</em>:
+            $$\mathbb{P}\left(\lim_{n \to \infty} \bar{X}_n = \mu\right) = 1$$
+          </p>
+        </div>
+
+        <p>
+          The difference is subtle but important. The weak law says "for any fixed $\varepsilon$, large deviations
+          become unlikely." The strong law says "with probability 1, the sample mean eventually stays close to $\mu$
+          forever."
+        </p>
+
+        <p>
+          Chebyshev's inequality gives a quick proof of the weak law:
+        </p>
+
+        <div class="math-display">
+          $$\mathbb{P}(|\bar{X}_n - \mu| > \varepsilon) \leq \frac{\text{Var}(\bar{X}_n)}{\varepsilon^2} = \frac{\sigma^2}{n\varepsilon^2} \to 0$$
+        </div>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Convergence in Action</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">
+          Watch sample means converge to the true expectation as $n$ grows. Each path is one sequence of samples.
+        </p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Distribution (μ = 0.5)</label>
+            <div class="tabs">
+              <button @click="llnDist = 'bernoulli'" :class="{ active: llnDist === 'bernoulli' }">Bernoulli</button>
+              <button @click="llnDist = 'uniform'" :class="{ active: llnDist === 'uniform' }">Uniform</button>
+              <button @click="llnDist = 'heavy'" :class="{ active: llnDist === 'heavy' }">Heavy-tail</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Number of paths: <span x-text="llnPaths"></span></label>
+            <input type="range" x-model="llnPaths" min="1" max="50" @input="updateLLN()">
+          </div>
+        </div>
+
+        <div class="visualization" id="lln-viz" style="min-height: 450px;"></div>
+
+        <div class="controls" style="margin-top: 1rem;">
+          <button class="primary" @click="runLLN()">Run New Simulation</button>
+          <button class="secondary" @click="stepLLN()">Step Forward</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat expectation">
+            <div class="stat-value" x-text="llnStats.currentN"></div>
+            <div class="stat-label">Samples $n$</div>
+          </div>
+          <div class="stat probability">
+            <div class="stat-value" x-text="llnStats.avgMean.toFixed(4)"></div>
+            <div class="stat-label">Mean of $\bar{X}_n$</div>
+          </div>
+          <div class="stat variance">
+            <div class="stat-value" x-text="llnStats.spread.toFixed(4)"></div>
+            <div class="stat-label">Spread (Std Dev)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Central Limit Theorem -->
+  <section id="clt">
+    <div class="chapter-header reveal">
+      <h2>The Central Limit Theorem</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        The LLN tells us <em>where</em> the sample mean goes. The <strong>Central Limit Theorem</strong>
+        tells us <em>how</em> it gets there—and the answer is always the same: via the Gaussian.
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Central Limit Theorem</div>
+        <p style="margin-bottom: 0.5rem;">
+          Let $X_1, X_2, \ldots$ be i.i.d. with $\mathbb{E}[X_i] = \mu$ and $\text{Var}(X_i) = \sigma^2 < \infty$.
+          The standardized sum converges <em>in distribution</em> to the standard normal:
+        </p>
+        <div class="math-display" style="margin: 1rem 0;">
+          $$\frac{\sqrt{n}(\bar{X}_n - \mu)}{\sigma} \xrightarrow{d} \mathcal{N}(0, 1)$$
+        </div>
+        <p style="margin-bottom: 0;">
+          Equivalently: $\bar{X}_n$ is approximately $\mathcal{N}(\mu, \sigma^2/n)$ for large $n$.
+        </p>
+      </div>
+
+      <p>
+        This is remarkable: <em>regardless of the original distribution</em>, properly normalized sums become
+        Gaussian. The bell curve is not an assumption—it's a theorem.
+      </p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Watch the Gaussian Emerge</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Sum i.i.d. random variables and watch the distribution transform.
+        Start with wildly non-Gaussian distributions—they all converge to the bell curve.
+      </p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Base Distribution</label>
+          <div class="tabs">
+            <button @click="cltDist = 'uniform'" :class="{ active: cltDist === 'uniform' }">Uniform</button>
+            <button @click="cltDist = 'bernoulli'" :class="{ active: cltDist === 'bernoulli' }">Bernoulli</button>
+            <button @click="cltDist = 'exponential'" :class="{ active: cltDist === 'exponential' }">Exponential</button>
+            <button @click="cltDist = 'bimodal'" :class="{ active: cltDist === 'bimodal' }">Bimodal</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>Sum of $n$ variables: <strong x-text="cltN"></strong></label>
+          <input type="range" x-model="cltN" min="1" max="100" @input="updateCLT()">
+        </div>
+      </div>
+
+      <div class="visualization" id="clt-viz" style="min-height: 450px;"></div>
+
+      <div class="controls" style="margin-top: 1rem; justify-content: center;">
+        <button class="secondary" @click="cltN = 1; updateCLT()">n = 1</button>
+        <button class="secondary" @click="cltN = 2; updateCLT()">n = 2</button>
+        <button class="secondary" @click="cltN = 5; updateCLT()">n = 5</button>
+        <button class="secondary" @click="cltN = 10; updateCLT()">n = 10</button>
+        <button class="secondary" @click="cltN = 30; updateCLT()">n = 30</button>
+        <button class="primary" @click="animateCLT()">Animate</button>
+      </div>
+
+      <p class="annotation">
+        The red curve shows the theoretical Gaussian with matching mean and variance.
+        As $n$ increases, the histogram hugs the curve ever more tightly.
+      </p>
+    </div>
+  </section>
+
+  <!-- Chapter 42: Martingales -->
+  <section id="martingales">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 42</div>
+      <h2>Stopped Martingales</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          A <strong>martingale</strong> is a sequence of random variables where, at each step,
+          our best prediction of the future is the present. This captures the notion of a "fair game."
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Martingale</div>
+          <p style="margin-bottom: 0;">
+            Let $(\Omega, \mathcal{F}, \mathbb{P})$ be a probability space with filtration
+            $\mathcal{F}_0 \subseteq \mathcal{F}_1 \subseteq \mathcal{F}_2 \subseteq \cdots$
+            A sequence $(M_n)$ is a <em>martingale</em> with respect to $(\mathcal{F}_n)$ if:
+            <br><br>
+            1. $M_n$ is $\mathcal{F}_n$-measurable (adapted)<br>
+            2. $\mathbb{E}[|M_n|] < \infty$ (integrable)<br>
+            3. $\mathbb{E}[M_{n+1} \mid \mathcal{F}_n] = M_n$ (fair game property)
+          </p>
+        </div>
+
+        <p>
+          The prototypical example: a <strong>random walk</strong>. Let $X_i$ be fair coin flips
+          ($\pm 1$ with equal probability), and set $M_n = \sum_{i=1}^n X_i$. Then:
+        </p>
+
+        <div class="math-display">
+          $$\mathbb{E}[M_{n+1} \mid \mathcal{F}_n] = \mathbb{E}[M_n + X_{n+1} \mid \mathcal{F}_n] = M_n + \mathbb{E}[X_{n+1}] = M_n$$
+        </div>
+
+        <p>
+          The key insight: on average, a martingale neither grows nor shrinks. This has profound
+          implications for gambling strategies.
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Random Walk Martingale</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">
+          Each path is a fair random walk. Despite the wild fluctuations, the expected value
+          at any time is exactly 0 (the starting point).
+        </p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Number of paths: <span x-text="martingalePaths"></span></label>
+            <input type="range" x-model="martingalePaths" min="1" max="30" @input="updateMartingale()">
+          </div>
+          <div class="control-group">
+            <label>Steps: <span x-text="martingaleSteps"></span></label>
+            <input type="range" x-model="martingaleSteps" min="10" max="500" @input="updateMartingale()">
+          </div>
+        </div>
+
+        <div class="visualization" id="martingale-viz" style="min-height: 400px;"></div>
+
+        <button class="primary" @click="updateMartingale()" style="margin-top: 1rem;">Generate New Paths</button>
+
+        <div class="stats">
+          <div class="stat probability">
+            <div class="stat-value" x-text="martingaleStats.meanFinal.toFixed(2)"></div>
+            <div class="stat-label">Mean Final Value</div>
+          </div>
+          <div class="stat variance">
+            <div class="stat-value" x-text="martingaleStats.stdFinal.toFixed(2)"></div>
+            <div class="stat-label">Std Dev (≈√n)</div>
+          </div>
+          <div class="stat expectation">
+            <div class="stat-value" x-text="'√' + martingaleSteps + ' = ' + Math.sqrt(martingaleSteps).toFixed(1)"></div>
+            <div class="stat-label">Theoretical √n</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stopping Times -->
+  <section id="stopping">
+    <div class="chapter-header reveal">
+      <h2>Stopping Times & Optional Stopping</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        A <strong>stopping time</strong> is a random time $\tau$ where the decision to stop depends
+        only on information available at that time. Formally: $\{\tau = n\} \in \mathcal{F}_n$ for all $n$.
+      </p>
+
+      <div class="definition">
+        <div class="def-title">Examples of Stopping Times</div>
+        <p style="margin-bottom: 0;">
+          • <strong>First passage time</strong>: $\tau = \min\{n : M_n \geq a\}$ — stop when you first reach level $a$<br>
+          • <strong>First return</strong>: $\tau = \min\{n > 0 : M_n = 0\}$ — stop when you return to the origin<br>
+          • <strong>Fixed time</strong>: $\tau = N$ — always stop at time $N$ (trivial but valid)
+        </p>
+      </div>
+
+      <p>
+        Can a clever gambler beat a fair game by choosing when to stop? The
+        <strong>Optional Stopping Theorem</strong> says: not if you play by the rules.
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Optional Stopping Theorem</div>
+        <p style="margin-bottom: 0;">
+          If $(M_n)$ is a martingale, $\tau$ is a stopping time, and certain regularity conditions hold
+          (e.g., $\tau$ is bounded, or $(M_n)$ is uniformly integrable), then:
+          $$\mathbb{E}[M_\tau] = \mathbb{E}[M_0]$$
+        </p>
+      </div>
+
+      <p>
+        This crushes dreams of gambling systems. No matter how cleverly you choose when to stop,
+        your expected winnings are zero in a fair game. The martingale property propagates through stopping.
+      </p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Interactive Stopping Time</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Drag the threshold line to set a stopping rule: "stop when the walk first crosses the threshold."
+        Watch how $\mathbb{E}[M_\tau]$ changes (spoiler: it doesn't... if $\tau < \infty$).
+      </p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Upper threshold: <span x-text="stoppingThreshold"></span></label>
+          <input type="range" x-model="stoppingThreshold" min="1" max="30" @input="updateStopping()">
+        </div>
+        <div class="control-group">
+          <label>Max steps: <span x-text="stoppingMaxSteps"></span></label>
+          <input type="range" x-model="stoppingMaxSteps" min="50" max="1000" @input="updateStopping()">
+        </div>
+        <div class="control-group">
+          <label>Simulations: <span x-text="stoppingTrials"></span></label>
+          <input type="range" x-model="stoppingTrials" min="100" max="5000" @input="updateStopping()">
+        </div>
+      </div>
+
+      <div class="visualization" id="stopping-viz" style="min-height: 400px;"></div>
+
+      <button class="primary" @click="updateStopping()" style="margin-top: 1rem;">Run Simulation</button>
+
+      <div class="stats">
+        <div class="stat probability">
+          <div class="stat-value" x-text="stoppingStats.meanStopped.toFixed(3)"></div>
+          <div class="stat-label">$\mathbb{E}[M_\tau]$</div>
+        </div>
+        <div class="stat expectation">
+          <div class="stat-value" x-text="stoppingStats.probHit.toFixed(1) + '%'"></div>
+          <div class="stat-label">$\mathbb{P}(\tau < \infty)$</div>
+        </div>
+        <div class="stat variance">
+          <div class="stat-value" x-text="stoppingStats.avgTime.toFixed(1)"></div>
+          <div class="stat-label">$\mathbb{E}[\tau]$</div>
+        </div>
+      </div>
+
+      <p class="annotation">
+        <strong>Subtlety</strong>: When $\tau$ might be infinite (walks that never hit the threshold),
+        we must truncate—and then $\mathbb{E}[M_\tau]$ can differ from $\mathbb{E}[M_0]$.
+        Try a high threshold with few steps to see paths that don't stop.
+      </p>
+    </div>
+
+    <!-- Gambler's Ruin -->
+    <div class="interactive-container reveal" style="margin-top: 3rem;">
+      <h3>Gambler's Ruin</h3>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Classic application: starting with fortune $a$, what's the probability of reaching $N$ before going broke?
+        Martingale theory gives the exact answer: $\mathbb{P}(\text{reach } N) = a/N$.
+      </p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Starting fortune $a$: <span x-text="gamblerStart"></span></label>
+          <input type="range" x-model="gamblerStart" min="1" max="49" @input="updateGambler()">
+        </div>
+        <div class="control-group">
+          <label>Target $N$: <span x-text="gamblerTarget"></span></label>
+          <input type="range" x-model="gamblerTarget" min="10" max="100" @input="updateGambler()">
+        </div>
+      </div>
+
+      <div class="visualization" id="gambler-viz" style="min-height: 350px;"></div>
+
+      <button class="primary" @click="runGamblerSim()" style="margin-top: 1rem;">Run 100 Trials</button>
+
+      <div class="stats">
+        <div class="stat gaussian">
+          <div class="stat-value" x-text="((gamblerStart / gamblerTarget) * 100).toFixed(1) + '%'"></div>
+          <div class="stat-label">Theory: $a/N$</div>
+        </div>
+        <div class="stat probability">
+          <div class="stat-value" x-text="gamblerStats.empiricalProb.toFixed(1) + '%'"></div>
+          <div class="stat-label">Empirical Win Rate</div>
+        </div>
+        <div class="stat expectation">
+          <div class="stat-value" x-text="gamblerStats.avgDuration.toFixed(0)"></div>
+          <div class="stat-label">Avg Game Length</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      Part XI of <em>An Infinitely Large Napkin</em> by Evan Chen<br>
+      Interactive exploration created for deeper mathematical understanding<br>
+      <a href="https://venhance.github.io/napkin/" target="_blank">Original source →</a>
+    </p>
+  </footer>
+
+  <script>
+    // Initialize KaTeX
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+
+    // Random number generators
+    const RNG = {
+      uniform: () => Math.random(),
+      normal: () => {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      },
+      exponential: (lambda = 1) => -Math.log(1 - Math.random()) / lambda,
+      bernoulli: (p = 0.5) => Math.random() < p ? 1 : 0,
+      bimodal: () => Math.random() < 0.5 ? RNG.normal() - 2 : RNG.normal() + 2,
+      heavyTail: () => {
+        // Pareto-ish with finite mean
+        const u = Math.random();
+        return Math.pow(1 - u, -0.4) - 1;
+      }
+    };
+
+    // Statistics helpers
+    const Stats = {
+      mean: arr => arr.reduce((a, b) => a + b, 0) / arr.length,
+      variance: arr => {
+        const m = Stats.mean(arr);
+        return arr.reduce((acc, x) => acc + (x - m) ** 2, 0) / arr.length;
+      },
+      std: arr => Math.sqrt(Stats.variance(arr))
+    };
+
+    // Main Alpine component
+    function probabilityExplorer() {
+      return {
+        scrollProgress: 0,
+        currentSection: 'hero',
+
+        // Random Variables
+        rvDistType: 'uniform',
+        rvExpectation: 0.5,
+        rvVariance: 0.083,
+        rvSamples: [],
+
+        // Transformations
+        transformBase: 'normal',
+        transformFunc: 'identity',
+        transformStats: { beforeMean: 0, beforeVar: 1, afterMean: 0, afterVar: 1 },
+
+        // LLN
+        llnDist: 'bernoulli',
+        llnPaths: 10,
+        llnData: [],
+        llnStats: { currentN: 0, avgMean: 0, spread: 0 },
+
+        // CLT
+        cltDist: 'uniform',
+        cltN: 1,
+        cltSamples: [],
+
+        // Martingales
+        martingalePaths: 10,
+        martingaleSteps: 100,
+        martingaleData: [],
+        martingaleStats: { meanFinal: 0, stdFinal: 0 },
+
+        // Stopping times
+        stoppingThreshold: 10,
+        stoppingMaxSteps: 200,
+        stoppingTrials: 1000,
+        stoppingStats: { meanStopped: 0, probHit: 0, avgTime: 0 },
+
+        // Gambler's ruin
+        gamblerStart: 20,
+        gamblerTarget: 50,
+        gamblerData: [],
+        gamblerStats: { empiricalProb: 40, avgDuration: 0 },
+
+        init() {
+          gsap.registerPlugin(ScrollTrigger);
+
+          // Track scroll progress
+          ScrollTrigger.create({
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            onUpdate: self => this.scrollProgress = self.progress * 100
+          });
+
+          // Section tracking
+          const sections = ['hero', 'random-variables', 'distributions', 'lln', 'clt', 'martingales', 'stopping'];
+          sections.forEach(id => {
+            ScrollTrigger.create({
+              trigger: `#${id}`,
+              start: 'top center',
+              end: 'bottom center',
+              onEnter: () => this.currentSection = id,
+              onEnterBack: () => this.currentSection = id
+            });
+          });
+
+          // Reveal animations
+          gsap.utils.toArray('.reveal').forEach(el => {
+            gsap.from(el, {
+              y: 50,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse'
+              }
+            });
+          });
+
+          // Hero background
+          this.initHeroCanvas();
+
+          // Initialize visualizations after a tick
+          setTimeout(() => {
+            this.initPushforwardViz();
+            this.generateTransformSamples();
+            this.runLLN();
+            this.updateCLT();
+            this.updateMartingale();
+            this.updateStopping();
+            this.updateGambler();
+          }, 100);
+
+          // Watch for distribution changes
+          this.$watch('rvDistType', () => this.initPushforwardViz());
+          this.$watch('llnDist', () => this.runLLN());
+          this.$watch('cltDist', () => this.updateCLT());
+          this.$watch('transformBase', () => this.generateTransformSamples());
+          this.$watch('transformFunc', () => this.generateTransformSamples());
+        },
+
+        initHeroCanvas() {
+          const canvas = document.getElementById('hero-canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+
+          const particles = [];
+          for (let i = 0; i < 100; i++) {
+            particles.push({
+              x: Math.random() * canvas.width,
+              y: Math.random() * canvas.height,
+              vx: (Math.random() - 0.5) * 0.5,
+              vy: (Math.random() - 0.5) * 0.5,
+              r: Math.random() * 3 + 1
+            });
+          }
+
+          const animate = () => {
+            ctx.fillStyle = 'rgba(15, 15, 26, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+              p.x += p.vx;
+              p.y += p.vy;
+
+              if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+              if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(99, 102, 241, ${0.3 + Math.random() * 0.2})`;
+              ctx.fill();
+            });
+
+            requestAnimationFrame(animate);
+          };
+          animate();
+        },
+
+        initPushforwardViz() {
+          const container = document.getElementById('pushforward-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 350;
+          const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const distributions = {
+            uniform: { sample: RNG.uniform, domain: [0, 1], mean: 0.5, variance: 1/12 },
+            normal: { sample: RNG.normal, domain: [-4, 4], mean: 0, variance: 1 },
+            exponential: { sample: () => RNG.exponential(1), domain: [0, 6], mean: 1, variance: 1 }
+          };
+
+          const dist = distributions[this.rvDistType];
+          this.rvExpectation = dist.mean;
+          this.rvVariance = dist.variance;
+
+          const x = d3.scaleLinear()
+            .domain(dist.domain)
+            .range([margin.left, width - margin.right]);
+
+          const numBins = 40;
+          const samples = [];
+
+          // Generate initial samples
+          for (let i = 0; i < 500; i++) {
+            samples.push(dist.sample());
+          }
+
+          const histogram = d3.histogram()
+            .domain(dist.domain)
+            .thresholds(x.ticks(numBins));
+
+          const bins = histogram(samples);
+
+          const y = d3.scaleLinear()
+            .domain([0, d3.max(bins, d => d.length)])
+            .range([height - margin.bottom, margin.top]);
+
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x).ticks(8))
+            .attr('color', '#64748b');
+
+          svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(5))
+            .attr('color', '#64748b');
+
+          // Bars
+          const bars = svg.selectAll('rect')
+            .data(bins)
+            .join('rect')
+            .attr('x', d => x(d.x0) + 1)
+            .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 2))
+            .attr('y', height - margin.bottom)
+            .attr('height', 0)
+            .attr('fill', '#6366f1')
+            .attr('opacity', 0.7);
+
+          bars.transition()
+            .duration(800)
+            .delay((d, i) => i * 15)
+            .attr('y', d => y(d.length))
+            .attr('height', d => y(0) - y(d.length));
+
+          // Mean line
+          svg.append('line')
+            .attr('x1', x(dist.mean))
+            .attr('x2', x(dist.mean))
+            .attr('y1', margin.top)
+            .attr('y2', height - margin.bottom)
+            .attr('stroke', '#f59e0b')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '5,5');
+
+          svg.append('text')
+            .attr('x', x(dist.mean) + 5)
+            .attr('y', margin.top + 15)
+            .attr('fill', '#f59e0b')
+            .attr('font-size', '12px')
+            .text('μ = ' + dist.mean.toFixed(2));
+
+          // Continuously add samples
+          let sampleCount = samples.length;
+          const addSamples = () => {
+            if (sampleCount > 2000) return;
+
+            for (let i = 0; i < 20; i++) {
+              samples.push(dist.sample());
+            }
+            sampleCount = samples.length;
+
+            const newBins = histogram(samples);
+            y.domain([0, d3.max(newBins, d => d.length)]);
+
+            svg.selectAll('rect')
+              .data(newBins)
+              .transition()
+              .duration(100)
+              .attr('y', d => y(d.length))
+              .attr('height', d => y(0) - y(d.length));
+
+            setTimeout(addSamples, 100);
+          };
+
+          setTimeout(addSamples, 1000);
+        },
+
+        generateTransformSamples() {
+          const container1 = document.getElementById('transform-before');
+          const container2 = document.getElementById('transform-after');
+          if (!container1 || !container2) return;
+
+          const distributions = {
+            normal: { sample: RNG.normal, domain: [-4, 4] },
+            uniform: { sample: RNG.uniform, domain: [0, 1] },
+            exponential: { sample: () => RNG.exponential(1), domain: [0, 5] }
+          };
+
+          const transforms = {
+            identity: x => x,
+            square: x => x * x,
+            abs: x => Math.abs(x),
+            exp: x => Math.exp(x),
+            sin: x => Math.sin(x)
+          };
+
+          const dist = distributions[this.transformBase];
+          const transform = transforms[this.transformFunc];
+
+          const samples = [];
+          for (let i = 0; i < 1000; i++) {
+            samples.push(dist.sample());
+          }
+
+          const transformed = samples.map(transform);
+
+          this.transformStats = {
+            beforeMean: Stats.mean(samples),
+            beforeVar: Stats.variance(samples),
+            afterMean: Stats.mean(transformed),
+            afterVar: Stats.variance(transformed)
+          };
+
+          // Draw histograms
+          const drawHist = (container, data, title, domain = null) => {
+            container.innerHTML = `<div style="text-align: center; padding-top: 1rem; color: var(--text-muted); font-size: 0.9rem;">${title}</div>`;
+
+            const width = container.clientWidth;
+            const height = 250;
+            const margin = { top: 40, right: 20, bottom: 30, left: 40 };
+
+            const svg = d3.select(container)
+              .append('svg')
+              .attr('viewBox', `0 0 ${width} ${height}`)
+              .attr('width', '100%');
+
+            const extent = domain || d3.extent(data);
+            const padding = (extent[1] - extent[0]) * 0.1;
+
+            const x = d3.scaleLinear()
+              .domain([extent[0] - padding, extent[1] + padding])
+              .range([margin.left, width - margin.right]);
+
+            const histogram = d3.histogram()
+              .domain(x.domain())
+              .thresholds(x.ticks(30));
+
+            const bins = histogram(data);
+
+            const y = d3.scaleLinear()
+              .domain([0, d3.max(bins, d => d.length)])
+              .range([height - margin.bottom, margin.top]);
+
+            svg.append('g')
+              .attr('transform', `translate(0,${height - margin.bottom})`)
+              .call(d3.axisBottom(x).ticks(5))
+              .attr('color', '#64748b');
+
+            svg.selectAll('rect')
+              .data(bins)
+              .join('rect')
+              .attr('x', d => x(d.x0) + 1)
+              .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 2))
+              .attr('y', d => y(d.length))
+              .attr('height', d => y(0) - y(d.length))
+              .attr('fill', '#6366f1')
+              .attr('opacity', 0.7);
+          };
+
+          drawHist(container1, samples, 'Original X', dist.domain);
+          drawHist(container2, transformed, 'Transformed g(X)');
+        },
+
+        runLLN() {
+          const container = document.getElementById('lln-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 400;
+          const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+          const maxN = 500;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const distributions = {
+            bernoulli: { sample: () => RNG.bernoulli(0.5), mean: 0.5 },
+            uniform: { sample: RNG.uniform, mean: 0.5 },
+            heavy: { sample: () => RNG.heavyTail() * 0.2, mean: 0.5 }  // Scaled for visualization
+          };
+
+          const dist = distributions[this.llnDist];
+
+          // Generate paths
+          this.llnData = [];
+          for (let p = 0; p < this.llnPaths; p++) {
+            const path = [];
+            let sum = 0;
+            for (let n = 1; n <= maxN; n++) {
+              sum += dist.sample();
+              path.push({ n, mean: sum / n });
+            }
+            this.llnData.push(path);
+          }
+
+          const x = d3.scaleLinear()
+            .domain([1, maxN])
+            .range([margin.left, width - margin.right]);
+
+          const y = d3.scaleLinear()
+            .domain([0, 1])
+            .range([height - margin.bottom, margin.top]);
+
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x).ticks(10))
+            .attr('color', '#64748b');
+
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height - 5)
+            .attr('fill', '#64748b')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '12px')
+            .text('n (sample size)');
+
+          svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(5))
+            .attr('color', '#64748b');
+
+          // True mean line
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(dist.mean))
+            .attr('y2', y(dist.mean))
+            .attr('stroke', '#f59e0b')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '8,4');
+
+          svg.append('text')
+            .attr('x', width - margin.right - 5)
+            .attr('y', y(dist.mean) - 8)
+            .attr('fill', '#f59e0b')
+            .attr('text-anchor', 'end')
+            .attr('font-size', '12px')
+            .text('μ = ' + dist.mean);
+
+          // Draw paths
+          const line = d3.line()
+            .x(d => x(d.n))
+            .y(d => y(d.mean))
+            .curve(d3.curveLinear);
+
+          const colors = d3.scaleSequential(d3.interpolateViridis)
+            .domain([0, this.llnPaths]);
+
+          this.llnData.forEach((path, i) => {
+            const pathEl = svg.append('path')
+              .datum(path)
+              .attr('fill', 'none')
+              .attr('stroke', colors(i))
+              .attr('stroke-width', 1.5)
+              .attr('opacity', 0.6)
+              .attr('d', line);
+
+            // Animate path drawing
+            const totalLength = pathEl.node().getTotalLength();
+            pathEl
+              .attr('stroke-dasharray', totalLength)
+              .attr('stroke-dashoffset', totalLength)
+              .transition()
+              .duration(2000)
+              .ease(d3.easeLinear)
+              .attr('stroke-dashoffset', 0);
+          });
+
+          // Update stats
+          const finalMeans = this.llnData.map(p => p[maxN - 1].mean);
+          this.llnStats = {
+            currentN: maxN,
+            avgMean: Stats.mean(finalMeans),
+            spread: Stats.std(finalMeans)
+          };
+        },
+
+        updateLLN() {
+          this.runLLN();
+        },
+
+        stepLLN() {
+          // Step animation - not implemented yet
+          this.runLLN();
+        },
+
+        updateCLT() {
+          const container = document.getElementById('clt-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 400;
+          const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const distributions = {
+            uniform: { sample: () => RNG.uniform() - 0.5, mean: 0, variance: 1/12 },
+            bernoulli: { sample: () => RNG.bernoulli(0.5) - 0.5, mean: 0, variance: 0.25 },
+            exponential: { sample: () => RNG.exponential(1) - 1, mean: 0, variance: 1 },
+            bimodal: { sample: () => (Math.random() < 0.5 ? -1 : 1) + RNG.normal() * 0.3, mean: 0, variance: 1.09 }
+          };
+
+          const dist = distributions[this.cltDist];
+          const n = parseInt(this.cltN);
+
+          // Generate standardized sums
+          const numSamples = 5000;
+          this.cltSamples = [];
+
+          for (let i = 0; i < numSamples; i++) {
+            let sum = 0;
+            for (let j = 0; j < n; j++) {
+              sum += dist.sample();
+            }
+            // Standardize
+            const standardized = sum / Math.sqrt(n * dist.variance);
+            this.cltSamples.push(standardized);
+          }
+
+          const x = d3.scaleLinear()
+            .domain([-4, 4])
+            .range([margin.left, width - margin.right]);
+
+          const histogram = d3.histogram()
+            .domain([-4, 4])
+            .thresholds(x.ticks(50));
+
+          const bins = histogram(this.cltSamples);
+
+          // Normalize to density
+          const binWidth = bins[0].x1 - bins[0].x0;
+          bins.forEach(b => b.density = b.length / (numSamples * binWidth));
+
+          const y = d3.scaleLinear()
+            .domain([0, Math.max(0.5, d3.max(bins, d => d.density))])
+            .range([height - margin.bottom, margin.top]);
+
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x).ticks(8))
+            .attr('color', '#64748b');
+
+          svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(5))
+            .attr('color', '#64748b');
+
+          // Histogram bars
+          svg.selectAll('rect')
+            .data(bins)
+            .join('rect')
+            .attr('x', d => x(d.x0) + 1)
+            .attr('width', d => Math.max(0, x(d.x1) - x(d.x0) - 2))
+            .attr('y', d => y(d.density))
+            .attr('height', d => y(0) - y(d.density))
+            .attr('fill', '#6366f1')
+            .attr('opacity', 0.7);
+
+          // Standard normal curve
+          const normalPDF = x => Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
+          const curveData = d3.range(-4, 4.01, 0.05).map(v => ({ x: v, y: normalPDF(v) }));
+
+          const line = d3.line()
+            .x(d => x(d.x))
+            .y(d => y(d.y))
+            .curve(d3.curveNatural);
+
+          svg.append('path')
+            .datum(curveData)
+            .attr('fill', 'none')
+            .attr('stroke', '#ef4444')
+            .attr('stroke-width', 2.5)
+            .attr('d', line);
+
+          // Label
+          svg.append('text')
+            .attr('x', width - margin.right - 10)
+            .attr('y', margin.top + 20)
+            .attr('fill', '#ef4444')
+            .attr('text-anchor', 'end')
+            .attr('font-size', '14px')
+            .text('N(0,1)');
+
+          svg.append('text')
+            .attr('x', margin.left + 10)
+            .attr('y', margin.top + 20)
+            .attr('fill', '#6366f1')
+            .attr('font-size', '14px')
+            .text(`n = ${n}`);
+        },
+
+        animateCLT() {
+          let n = 1;
+          const animate = () => {
+            if (n > 50) return;
+            this.cltN = n;
+            this.updateCLT();
+            n++;
+            setTimeout(animate, 150);
+          };
+          animate();
+        },
+
+        updateMartingale() {
+          const container = document.getElementById('martingale-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 350;
+          const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const steps = parseInt(this.martingaleSteps);
+          const numPaths = parseInt(this.martingalePaths);
+
+          // Generate random walks
+          this.martingaleData = [];
+          for (let p = 0; p < numPaths; p++) {
+            const path = [{ step: 0, value: 0 }];
+            let value = 0;
+            for (let i = 1; i <= steps; i++) {
+              value += Math.random() < 0.5 ? 1 : -1;
+              path.push({ step: i, value });
+            }
+            this.martingaleData.push(path);
+          }
+
+          const finalValues = this.martingaleData.map(p => p[steps].value);
+          this.martingaleStats = {
+            meanFinal: Stats.mean(finalValues),
+            stdFinal: Stats.std(finalValues)
+          };
+
+          const allValues = this.martingaleData.flat().map(d => d.value);
+          const yExtent = d3.extent(allValues);
+          const yPadding = Math.max(10, (yExtent[1] - yExtent[0]) * 0.1);
+
+          const x = d3.scaleLinear()
+            .domain([0, steps])
+            .range([margin.left, width - margin.right]);
+
+          const y = d3.scaleLinear()
+            .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
+            .range([height - margin.bottom, margin.top]);
+
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x).ticks(10))
+            .attr('color', '#64748b');
+
+          svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(8))
+            .attr('color', '#64748b');
+
+          // Zero line
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(0))
+            .attr('y2', y(0))
+            .attr('stroke', '#f59e0b')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '5,5');
+
+          // Draw paths
+          const line = d3.line()
+            .x(d => x(d.step))
+            .y(d => y(d.value))
+            .curve(d3.curveLinear);
+
+          const colors = d3.scaleSequential(d3.interpolatePlasma)
+            .domain([0, numPaths]);
+
+          this.martingaleData.forEach((path, i) => {
+            svg.append('path')
+              .datum(path)
+              .attr('fill', 'none')
+              .attr('stroke', colors(i))
+              .attr('stroke-width', 1.5)
+              .attr('opacity', 0.6)
+              .attr('d', line);
+          });
+        },
+
+        updateStopping() {
+          const container = document.getElementById('stopping-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 350;
+          const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const threshold = parseInt(this.stoppingThreshold);
+          const maxSteps = parseInt(this.stoppingMaxSteps);
+          const trials = parseInt(this.stoppingTrials);
+
+          // Run simulations
+          const results = [];
+          let hitCount = 0;
+          let totalTime = 0;
+          let totalStopped = 0;
+
+          for (let t = 0; t < trials; t++) {
+            let value = 0;
+            let stopped = false;
+            let stopTime = maxSteps;
+            let stoppedValue = 0;
+
+            for (let i = 1; i <= maxSteps; i++) {
+              value += Math.random() < 0.5 ? 1 : -1;
+              if (value >= threshold && !stopped) {
+                stopped = true;
+                stopTime = i;
+                stoppedValue = value;
+                break;
+              }
+            }
+
+            if (!stopped) {
+              stoppedValue = value;  // Forced stop at maxSteps
+            }
+
+            results.push({ stopped, stopTime, stoppedValue });
+            if (stopped) {
+              hitCount++;
+              totalTime += stopTime;
+              totalStopped += stoppedValue;
+            } else {
+              totalTime += maxSteps;
+              totalStopped += stoppedValue;
+            }
+          }
+
+          this.stoppingStats = {
+            meanStopped: totalStopped / trials,
+            probHit: (hitCount / trials) * 100,
+            avgTime: totalTime / trials
+          };
+
+          // Draw a few sample paths
+          const samplePaths = [];
+          for (let i = 0; i < Math.min(20, trials); i++) {
+            const path = [{ step: 0, value: 0 }];
+            let value = 0;
+            let stopped = false;
+
+            for (let j = 1; j <= maxSteps; j++) {
+              value += Math.random() < 0.5 ? 1 : -1;
+              path.push({ step: j, value, stopped: value >= threshold });
+              if (value >= threshold && !stopped) {
+                stopped = true;
+                break;
+              }
+            }
+            samplePaths.push({ path, hit: stopped });
+          }
+
+          const x = d3.scaleLinear()
+            .domain([0, maxSteps])
+            .range([margin.left, width - margin.right]);
+
+          const y = d3.scaleLinear()
+            .domain([-threshold * 1.5, threshold * 1.5])
+            .range([height - margin.bottom, margin.top]);
+
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x).ticks(10))
+            .attr('color', '#64748b');
+
+          svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(8))
+            .attr('color', '#64748b');
+
+          // Threshold line
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(threshold))
+            .attr('y2', y(threshold))
+            .attr('stroke', '#ef4444')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '8,4');
+
+          svg.append('text')
+            .attr('x', width - margin.right - 5)
+            .attr('y', y(threshold) - 8)
+            .attr('fill', '#ef4444')
+            .attr('text-anchor', 'end')
+            .attr('font-size', '12px')
+            .text('τ threshold = ' + threshold);
+
+          // Zero line
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(0))
+            .attr('y2', y(0))
+            .attr('stroke', '#64748b')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '3,3');
+
+          // Draw paths
+          const line = d3.line()
+            .x(d => x(d.step))
+            .y(d => y(d.value))
+            .curve(d3.curveLinear);
+
+          samplePaths.forEach((p, i) => {
+            svg.append('path')
+              .datum(p.path)
+              .attr('fill', 'none')
+              .attr('stroke', p.hit ? '#10b981' : '#ec4899')
+              .attr('stroke-width', 1.5)
+              .attr('opacity', 0.5)
+              .attr('d', line);
+
+            // Mark stopping point
+            const lastPoint = p.path[p.path.length - 1];
+            svg.append('circle')
+              .attr('cx', x(lastPoint.step))
+              .attr('cy', y(lastPoint.value))
+              .attr('r', 4)
+              .attr('fill', p.hit ? '#10b981' : '#ec4899');
+          });
+        },
+
+        updateGambler() {
+          const container = document.getElementById('gambler-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 300;
+          const margin = { top: 30, right: 30, bottom: 40, left: 50 };
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const start = parseInt(this.gamblerStart);
+          const target = parseInt(this.gamblerTarget);
+
+          const x = d3.scaleLinear()
+            .domain([0, 500])
+            .range([margin.left, width - margin.right]);
+
+          const y = d3.scaleLinear()
+            .domain([0, target])
+            .range([height - margin.bottom, margin.top]);
+
+          // Axes
+          svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x).ticks(10))
+            .attr('color', '#64748b');
+
+          svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y).ticks(8))
+            .attr('color', '#64748b');
+
+          // Target and ruin lines
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(target))
+            .attr('y2', y(target))
+            .attr('stroke', '#10b981')
+            .attr('stroke-width', 2);
+
+          svg.append('text')
+            .attr('x', width - margin.right - 5)
+            .attr('y', y(target) + 15)
+            .attr('fill', '#10b981')
+            .attr('text-anchor', 'end')
+            .attr('font-size', '12px')
+            .text('Win: N = ' + target);
+
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(0))
+            .attr('y2', y(0))
+            .attr('stroke', '#ef4444')
+            .attr('stroke-width', 2);
+
+          svg.append('text')
+            .attr('x', width - margin.right - 5)
+            .attr('y', y(0) - 5)
+            .attr('fill', '#ef4444')
+            .attr('text-anchor', 'end')
+            .attr('font-size', '12px')
+            .text('Ruin: 0');
+
+          // Starting line
+          svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', y(start))
+            .attr('y2', y(start))
+            .attr('stroke', '#f59e0b')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,5');
+
+          // Store reference to svg for animation
+          this.gamblerSvg = svg;
+          this.gamblerX = x;
+          this.gamblerY = y;
+        },
+
+        runGamblerSim() {
+          const svg = this.gamblerSvg;
+          const x = this.gamblerX;
+          const y = this.gamblerY;
+
+          if (!svg) {
+            this.updateGambler();
+            return;
+          }
+
+          const start = parseInt(this.gamblerStart);
+          const target = parseInt(this.gamblerTarget);
+
+          // Clear old paths
+          svg.selectAll('.gambler-path').remove();
+
+          const trials = 100;
+          let wins = 0;
+          let totalDuration = 0;
+
+          const paths = [];
+
+          for (let t = 0; t < trials; t++) {
+            const path = [{ step: 0, value: start }];
+            let value = start;
+            let step = 0;
+
+            while (value > 0 && value < target && step < 10000) {
+              step++;
+              value += Math.random() < 0.5 ? 1 : -1;
+              if (step <= 500) {
+                path.push({ step, value });
+              }
+            }
+
+            if (value >= target) wins++;
+            totalDuration += step;
+
+            paths.push({ path, won: value >= target });
+          }
+
+          this.gamblerStats = {
+            empiricalProb: (wins / trials) * 100,
+            avgDuration: totalDuration / trials
+          };
+
+          // Draw paths
+          const line = d3.line()
+            .x(d => x(d.step))
+            .y(d => y(d.value))
+            .curve(d3.curveLinear);
+
+          paths.forEach((p, i) => {
+            svg.append('path')
+              .attr('class', 'gambler-path')
+              .datum(p.path)
+              .attr('fill', 'none')
+              .attr('stroke', p.won ? '#10b981' : '#ef4444')
+              .attr('stroke-width', 1)
+              .attr('opacity', 0.4)
+              .attr('d', line);
+          });
+        }
+      };
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galois & Ramification Theory | An Interactive Exploration</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for math -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- D3 for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+  <!-- GSAP for animations -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+  <!-- Alpine.js for reactive UI -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+  <style>
+    :root {
+      --bg-deep: #0a0a0f;
+      --bg-card: #12121a;
+      --bg-elevated: #1a1a25;
+      --text-primary: #e8e6e3;
+      --text-secondary: #a0a0b0;
+      --text-muted: #606070;
+      --accent-gold: #d4a855;
+      --accent-gold-dim: #8b7235;
+      --accent-cyan: #4ecdc4;
+      --accent-cyan-dim: #2a7a74;
+      --accent-magenta: #c97bdb;
+      --accent-red: #e85d75;
+      --accent-green: #7dce82;
+      --accent-blue: #5b8def;
+      --border-subtle: rgba(255,255,255,0.08);
+      --glow-gold: rgba(212,168,85,0.3);
+      --glow-cyan: rgba(78,205,196,0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Crimson Pro', Georgia, serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-size: 1.2rem;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      margin-bottom: 1.5rem;
+      color: var(--accent-gold);
+    }
+
+    h3 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+      background: var(--bg-elevated);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+
+    a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    /* Layout */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .wide-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section {
+      padding: 6rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      opacity: 0.15;
+      background:
+        radial-gradient(ellipse at 30% 20%, var(--accent-gold) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, var(--accent-cyan) 0%, transparent 50%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero .subtitle {
+      font-size: 1.4rem;
+      color: var(--text-secondary);
+      margin-bottom: 3rem;
+      max-width: 600px;
+    }
+
+    .chapter-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent-gold);
+      border: 1px solid var(--accent-gold-dim);
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    /* Interactive Containers */
+    .interactive-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 2rem 0;
+    }
+
+    .interactive-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-subtle);
+
+      h3 {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+
+    .interactive-body {
+      padding: 1.5rem;
+    }
+
+    .viz-container {
+      background: var(--bg-deep);
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem 0;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      label {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+      }
+    }
+
+    button {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: var(--bg-card);
+        border-color: var(--accent-gold-dim);
+      }
+
+      &.active {
+        background: var(--accent-gold);
+        color: var(--bg-deep);
+        border-color: var(--accent-gold);
+      }
+
+      &.primary {
+        background: var(--accent-gold);
+        color: var(--bg-deep);
+        border-color: var(--accent-gold);
+
+        &:hover {
+          background: var(--accent-gold-dim);
+          border-color: var(--accent-gold-dim);
+        }
+      }
+    }
+
+    select, input[type="number"] {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+
+      &:focus {
+        outline: none;
+        border-color: var(--accent-gold);
+      }
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        background: var(--accent-gold);
+        border-radius: 50%;
+        cursor: pointer;
+      }
+    }
+
+    /* Definition blocks */
+    .definition {
+      background: linear-gradient(135deg, rgba(212,168,85,0.1) 0%, rgba(212,168,85,0.02) 100%);
+      border-left: 4px solid var(--accent-gold);
+      padding: 1.5rem;
+      margin: 2rem 0;
+      border-radius: 0 12px 12px 0;
+
+      .def-title {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: var(--accent-gold);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .theorem {
+      background: linear-gradient(135deg, rgba(78,205,196,0.1) 0%, rgba(78,205,196,0.02) 100%);
+      border-left: 4px solid var(--accent-cyan);
+      padding: 1.5rem;
+      margin: 2rem 0;
+      border-radius: 0 12px 12px 0;
+
+      .thm-title {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: var(--accent-cyan);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .example {
+      background: linear-gradient(135deg, rgba(201,123,219,0.1) 0%, rgba(201,123,219,0.02) 100%);
+      border-left: 4px solid var(--accent-magenta);
+      padding: 1.5rem;
+      margin: 2rem 0;
+      border-radius: 0 12px 12px 0;
+
+      .ex-title {
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: var(--accent-magenta);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Key insight callouts */
+    .insight {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--accent-gold-dim);
+      border-radius: 12px;
+      margin: 2rem 0;
+
+      .insight-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+    }
+
+    /* Math display */
+    .math-display {
+      overflow-x: auto;
+      padding: 1rem 0;
+      text-align: center;
+
+      .katex-display {
+        margin: 0;
+      }
+    }
+
+    /* Table of contents */
+    .toc {
+      position: fixed;
+      left: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: none;
+
+      @media (min-width: 1400px) {
+        display: block;
+      }
+    }
+
+    .toc-item {
+      display: block;
+      width: 8px;
+      height: 8px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      margin: 1rem 0;
+      transition: all 0.3s;
+
+      &:hover, &.active {
+        background: var(--accent-gold);
+        transform: scale(1.5);
+      }
+    }
+
+    /* Visualization specific styles */
+    .complex-plane {
+      position: relative;
+    }
+
+    .complex-plane svg {
+      width: 100%;
+      height: 400px;
+    }
+
+    .point-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      fill: var(--text-primary);
+    }
+
+    .axis-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      fill: var(--text-muted);
+    }
+
+    .root-point {
+      cursor: pointer;
+      transition: r 0.2s;
+
+      &:hover {
+        r: 10;
+      }
+    }
+
+    .orbit-path {
+      fill: none;
+      stroke-dasharray: 5,5;
+      opacity: 0.6;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-top: 1rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+    }
+
+    /* Lattice diagram */
+    .lattice-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .lattice-level {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+    }
+
+    .lattice-node {
+      background: var(--bg-elevated);
+      border: 2px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      min-width: 120px;
+
+      &:hover {
+        border-color: var(--accent-gold);
+        transform: translateY(-2px);
+      }
+
+      &.active {
+        border-color: var(--accent-gold);
+        background: rgba(212,168,85,0.1);
+        box-shadow: 0 0 20px var(--glow-gold);
+      }
+
+      .node-field {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+      }
+
+      .node-group {
+        font-size: 0.8rem;
+        color: var(--accent-cyan);
+      }
+    }
+
+    .lattice-line {
+      stroke: var(--text-muted);
+      stroke-width: 1;
+
+      &.highlighted {
+        stroke: var(--accent-gold);
+        stroke-width: 2;
+      }
+    }
+
+    /* Factorization display */
+    .factorization-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      text-align: center;
+      padding: 1.5rem;
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      margin: 1rem 0;
+    }
+
+    .prime-badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      margin: 0.2rem;
+
+      &.ramified {
+        background: rgba(232,93,117,0.2);
+        color: var(--accent-red);
+        border: 1px solid var(--accent-red);
+      }
+
+      &.inert {
+        background: rgba(91,141,239,0.2);
+        color: var(--accent-blue);
+        border: 1px solid var(--accent-blue);
+      }
+
+      &.split {
+        background: rgba(125,206,130,0.2);
+        color: var(--accent-green);
+        border: 1px solid var(--accent-green);
+      }
+    }
+
+    /* Grid display for finite fields */
+    .finite-field-grid {
+      display: grid;
+      gap: 4px;
+      justify-content: center;
+      margin: 1rem 0;
+    }
+
+    .field-element {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+
+      &:hover {
+        background: var(--bg-card);
+      }
+
+      &.orbit-1 { border-color: var(--accent-gold); }
+      &.orbit-2 { border-color: var(--accent-cyan); }
+      &.orbit-3 { border-color: var(--accent-magenta); }
+      &.orbit-4 { border-color: var(--accent-green); }
+      &.fixed { border-color: var(--accent-red); background: rgba(232,93,117,0.1); }
+      &.zero { opacity: 0.5; }
+    }
+
+    /* Density chart */
+    .density-bars {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+      height: 200px;
+      margin: 1rem 0;
+    }
+
+    .density-bar {
+      flex: 1;
+      background: var(--accent-cyan);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.3s;
+      min-width: 40px;
+      position: relative;
+
+      .bar-label {
+        position: absolute;
+        bottom: -2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+
+      .bar-value {
+        position: absolute;
+        top: -1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: var(--text-primary);
+      }
+    }
+
+    /* Proof steps */
+    .proof-steps {
+      counter-reset: step;
+    }
+
+    .proof-step {
+      position: relative;
+      padding-left: 3rem;
+      margin: 1.5rem 0;
+
+      &::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 2rem;
+        height: 2rem;
+        background: var(--accent-gold);
+        color: var(--bg-deep);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Progress indicator */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--accent-gold);
+      z-index: 1000;
+      transition: width 0.1s;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        font-size: 1.1rem;
+      }
+
+      section {
+        padding: 4rem 0;
+      }
+
+      .container {
+        padding: 0 1.5rem;
+      }
+
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .lattice-level {
+        flex-wrap: wrap;
+      }
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+  </style>
+</head>
+<body x-data="essayData()">
+  <!-- Progress bar -->
+  <div class="progress-bar" :style="{ width: scrollProgress + '%' }"></div>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <div class="chapter-badge">Part XV · Chapters 59-63</div>
+      <h1>Galois &<br>Ramification Theory</h1>
+      <p class="subtitle">
+        How primes factor in number fields, and the beautiful bridge that connects
+        abstract field theory to concrete arithmetic: the <em>Frobenius element</em>.
+      </p>
+      <div style="margin-top: 2rem;">
+        <button class="primary" @click="scrollToSection('intro')">Begin Exploration ↓</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Introduction -->
+  <section id="intro" class="reveal">
+    <div class="container">
+      <h2>The Central Mystery</h2>
+      <p>
+        Consider a simple question: how does a prime number $p$ factor when we move
+        from $\mathbb{Z}$ to a bigger ring of integers?
+      </p>
+
+      <div class="example">
+        <div class="ex-title">The Gaussian Integers $\mathbb{Z}[i]$</div>
+        <p>In the Gaussian integers $\mathbb{Z}[i] = \{a + bi : a, b \in \mathbb{Z}\}$:</p>
+        <ul style="margin: 1rem 0 1rem 1.5rem;">
+          <li>$5 = (2+i)(2-i)$ — the prime 5 <strong>splits</strong></li>
+          <li>$3 = 3$ — the prime 3 stays <strong>inert</strong></li>
+          <li>$2 = (1+i)^2$ — the prime 2 <strong>ramifies</strong></li>
+        </ul>
+        <p>What determines this behavior? The answer involves <em>Galois theory</em>.</p>
+      </div>
+
+      <p>
+        The key insight of algebraic number theory is that <strong>the factorization
+        behavior of primes is controlled by symmetry</strong> — specifically, by the
+        Galois group of the field extension. The <em>Frobenius element</em> encodes
+        this relationship precisely.
+      </p>
+
+      <div class="insight">
+        <span class="insight-icon">💡</span>
+        <div>
+          <strong>Core Theme:</strong> In a Galois extension $K/\mathbb{Q}$, every
+          unramified prime $p$ determines (up to conjugation) a unique element
+          $\text{Frob}_p \in \text{Gal}(K/\mathbb{Q})$ whose order equals the
+          "inertial degree" — how much the prime grows when lifted.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 59: Embeddings and Galois Extensions -->
+  <section id="embeddings" class="reveal">
+    <div class="container">
+      <div class="chapter-badge">Chapter 59</div>
+      <h2>Embeddings & Galois Extensions</h2>
+
+      <p>
+        The heart of Galois theory lies in understanding <em>embeddings</em>:
+        ways to map a number field $K$ into $\mathbb{C}$ while preserving arithmetic.
+      </p>
+
+      <div class="definition">
+        <div class="def-title">Definition: Embedding</div>
+        <p>
+          An <strong>embedding</strong> $\sigma: K \hookrightarrow \mathbb{C}$ is an
+          injective field homomorphism. It must fix $\mathbb{Q}$ (since $\sigma(1) = 1$).
+        </p>
+      </div>
+
+      <p>
+        The crucial observation: if $\alpha \in K$ has minimal polynomial $p(x)$ over
+        $\mathbb{Q}$, then $\sigma(\alpha)$ must be another root of $p(x)$.
+        <strong>Embeddings shuffle conjugates!</strong>
+      </p>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Embeddings Explorer: Roots of Unity & Cube Roots</h3>
+          <div class="controls">
+            <button :class="{ active: embeddingField === 'sqrt2' }" @click="embeddingField = 'sqrt2'">$\mathbb{Q}(\sqrt{2})$</button>
+            <button :class="{ active: embeddingField === 'cbrt2' }" @click="embeddingField = 'cbrt2'">$\mathbb{Q}(\sqrt[3]{2})$</button>
+            <button :class="{ active: embeddingField === 'cbrt2omega' }" @click="embeddingField = 'cbrt2omega'">$\mathbb{Q}(\sqrt[3]{2}, \omega)$</button>
+          </div>
+        </div>
+        <div class="interactive-body">
+          <div class="viz-container">
+            <svg id="embedding-viz" width="100%" height="400" viewBox="-200 -200 400 400"></svg>
+          </div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-gold)"></div>
+              <span>Real root (in field)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-cyan)"></div>
+              <span>Complex conjugates</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-magenta)"></div>
+              <span>Embedding orbit</span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 1.5rem;">
+            <template x-if="embeddingField === 'sqrt2'">
+              <div>
+                <h3>$K = \mathbb{Q}(\sqrt{2})$ — A Galois Extension</h3>
+                <p>The minimal polynomial $x^2 - 2$ has roots $\pm\sqrt{2}$, both real.</p>
+                <p><strong>Both conjugates are in $K$!</strong> This makes $K/\mathbb{Q}$ a Galois extension.</p>
+                <p>$\text{Gal}(K/\mathbb{Q}) = \{id, \sigma\}$ where $\sigma: \sqrt{2} \mapsto -\sqrt{2}$.</p>
+              </div>
+            </template>
+            <template x-if="embeddingField === 'cbrt2'">
+              <div>
+                <h3>$K = \mathbb{Q}(\sqrt[3]{2})$ — NOT Galois!</h3>
+                <p>The minimal polynomial $x^3 - 2$ has roots $\sqrt[3]{2}, \omega\sqrt[3]{2}, \omega^2\sqrt[3]{2}$.</p>
+                <p><strong>Problem:</strong> $K \subset \mathbb{R}$, but $\omega\sqrt[3]{2}$ is complex!</p>
+                <p>Only one conjugate is in $K$, so $|\text{Aut}(K/\mathbb{Q})| = 1 < 3 = [K:\mathbb{Q}]$.</p>
+              </div>
+            </template>
+            <template x-if="embeddingField === 'cbrt2omega'">
+              <div>
+                <h3>$K = \mathbb{Q}(\sqrt[3]{2}, \omega)$ — The Galois Closure</h3>
+                <p>By adding $\omega$ (a primitive cube root of unity), we include all conjugates!</p>
+                <p>Now $[K:\mathbb{Q}] = 6$ and $\text{Gal}(K/\mathbb{Q}) \cong S_3$ (permutations of 3 roots).</p>
+                <p><strong>Key insight:</strong> A Galois extension contains all conjugates of its generators.</p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="theorem">
+        <div class="thm-title">Theorem: The $n$ Embeddings</div>
+        <p>
+          Let $K$ be a number field of degree $n$ over $\mathbb{Q}$. Then there are
+          exactly $n$ embeddings $\sigma_1, \ldots, \sigma_n: K \hookrightarrow \mathbb{C}$.
+        </p>
+      </div>
+
+      <div class="definition">
+        <div class="def-title">Definition: Galois Extension</div>
+        <p>
+          An extension $K/F$ is <strong>Galois</strong> if $|\text{Aut}(K/F)| = [K:F]$.
+          Equivalently, $K$ is the splitting field of some separable polynomial over $F$.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fundamental Theorem -->
+  <section id="fundamental-theorem" class="reveal">
+    <div class="container">
+      <h2>The Fundamental Theorem</h2>
+
+      <p>
+        The crown jewel of Galois theory: a perfect dictionary between
+        <strong>subgroups</strong> and <strong>intermediate fields</strong>.
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Fundamental Theorem of Galois Theory</div>
+        <p>Let $K/F$ be Galois with $G = \text{Gal}(K/F)$. Then:</p>
+        <ol style="margin: 1rem 0 0 1.5rem;">
+          <li>Subgroups $H \subseteq G$ correspond bijectively to intermediate fields $F \subseteq E \subseteq K$</li>
+          <li>$H$ corresponds to the <strong>fixed field</strong> $K^H = \{x \in K : \sigma(x) = x \;\forall \sigma \in H\}$</li>
+          <li>$[K:E] = |H|$ and $[E:F] = |G/H|$</li>
+          <li>$E/F$ is Galois iff $H \trianglelefteq G$, and then $\text{Gal}(E/F) \cong G/H$</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Galois Correspondence: $\mathbb{Q}(\sqrt{2}, \sqrt{3})/\mathbb{Q}$</h3>
+        </div>
+        <div class="interactive-body">
+          <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+            Click on a field or subgroup to see the correspondence. The Galois group
+            is the Klein 4-group $V_4 = \{1, \sigma, \tau, \sigma\tau\}$.
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Field Lattice -->
+            <div>
+              <h4 style="text-align: center; color: var(--accent-gold); margin-bottom: 1rem;">Fields</h4>
+              <div class="lattice-container">
+                <div class="lattice-level">
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'top' }"
+                       @click="selectedCorrespondence = 'top'">
+                    <div class="node-field">$\mathbb{Q}(\sqrt{2}, \sqrt{3})$</div>
+                    <div class="node-group">degree 4</div>
+                  </div>
+                </div>
+                <div class="lattice-level">
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'sqrt2' }"
+                       @click="selectedCorrespondence = 'sqrt2'">
+                    <div class="node-field">$\mathbb{Q}(\sqrt{2})$</div>
+                    <div class="node-group">degree 2</div>
+                  </div>
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'sqrt6' }"
+                       @click="selectedCorrespondence = 'sqrt6'">
+                    <div class="node-field">$\mathbb{Q}(\sqrt{6})$</div>
+                    <div class="node-group">degree 2</div>
+                  </div>
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'sqrt3' }"
+                       @click="selectedCorrespondence = 'sqrt3'">
+                    <div class="node-field">$\mathbb{Q}(\sqrt{3})$</div>
+                    <div class="node-group">degree 2</div>
+                  </div>
+                </div>
+                <div class="lattice-level">
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'bottom' }"
+                       @click="selectedCorrespondence = 'bottom'">
+                    <div class="node-field">$\mathbb{Q}$</div>
+                    <div class="node-group">degree 1</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group Lattice -->
+            <div>
+              <h4 style="text-align: center; color: var(--accent-cyan); margin-bottom: 1rem;">Subgroups</h4>
+              <div class="lattice-container">
+                <div class="lattice-level">
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'bottom' }"
+                       @click="selectedCorrespondence = 'bottom'">
+                    <div class="node-field">$V_4$</div>
+                    <div class="node-group">order 4</div>
+                  </div>
+                </div>
+                <div class="lattice-level">
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'sqrt3' }"
+                       @click="selectedCorrespondence = 'sqrt3'">
+                    <div class="node-field">$\{1, \sigma\}$</div>
+                    <div class="node-group">fixes $\sqrt{3}$</div>
+                  </div>
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'sqrt6' }"
+                       @click="selectedCorrespondence = 'sqrt6'">
+                    <div class="node-field">$\{1, \sigma\tau\}$</div>
+                    <div class="node-group">fixes $\sqrt{6}$</div>
+                  </div>
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'sqrt2' }"
+                       @click="selectedCorrespondence = 'sqrt2'">
+                    <div class="node-field">$\{1, \tau\}$</div>
+                    <div class="node-group">fixes $\sqrt{2}$</div>
+                  </div>
+                </div>
+                <div class="lattice-level">
+                  <div class="lattice-node"
+                       :class="{ active: selectedCorrespondence === 'top' }"
+                       @click="selectedCorrespondence = 'top'">
+                    <div class="node-field">$\{1\}$</div>
+                    <div class="node-group">order 1</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 2rem;">
+            <p style="color: var(--text-secondary);">
+              <strong>Key:</strong> $\sigma: \sqrt{2} \mapsto -\sqrt{2}, \sqrt{3} \mapsto \sqrt{3}$ &nbsp;|&nbsp;
+              $\tau: \sqrt{2} \mapsto \sqrt{2}, \sqrt{3} \mapsto -\sqrt{3}$
+            </p>
+            <p style="margin-top: 0.5rem;">
+              Notice the <strong>inclusion reversal</strong>: bigger subgroups correspond to smaller fields!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 60: Finite Fields -->
+  <section id="finite-fields" class="reveal">
+    <div class="container">
+      <div class="chapter-badge">Chapter 60</div>
+      <h2>Finite Fields & the Frobenius</h2>
+
+      <p>
+        Finite fields give us the simplest, most concrete examples of Galois extensions.
+        Everything is cyclic, and the Frobenius automorphism is explicit.
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Classification of Finite Fields</div>
+        <p>
+          A field $F$ with finitely many elements must have $|F| = p^n$ for some
+          prime $p$ and positive integer $n$. Moreover, there is a unique such
+          field up to isomorphism, denoted $\mathbb{F}_{p^n}$.
+        </p>
+      </div>
+
+      <div class="theorem">
+        <div class="thm-title">Fermat's Little Theorem (Finite Field Version)</div>
+        <p>
+          Every element $x \in \mathbb{F}_{p^n}$ satisfies $x^{p^n} = x$.
+        </p>
+      </div>
+
+      <p>
+        The key player is the <strong>Frobenius automorphism</strong>:
+      </p>
+
+      <div class="math-display">
+        $$\sigma_p: \mathbb{F}_{p^n} \to \mathbb{F}_{p^n}, \quad x \mapsto x^p$$
+      </div>
+
+      <p>
+        This is indeed an automorphism (the "Freshman's Dream" $(a+b)^p = a^p + b^p$
+        in characteristic $p$ makes it a homomorphism), and it generates the entire
+        Galois group: $\text{Gal}(\mathbb{F}_{p^n}/\mathbb{F}_p) = \langle \sigma_p \rangle \cong \mathbb{Z}/n\mathbb{Z}$.
+      </p>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Frobenius Action on $\mathbb{F}_9 = \mathbb{F}_3[i]$</h3>
+        </div>
+        <div class="interactive-body">
+          <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+            The field $\mathbb{F}_9 = \mathbb{Z}[i]/(3) \cong \{a + bi : a, b \in \mathbb{F}_3\}$.
+            The Frobenius $\sigma_3: x \mapsto x^3$ partitions elements into orbits.
+          </p>
+
+          <div class="controls" style="margin-bottom: 1.5rem;">
+            <button @click="animateFrobenius = !animateFrobenius" :class="{ active: animateFrobenius }">
+              <span x-text="animateFrobenius ? 'Pause Animation' : 'Animate Frobenius'"></span>
+            </button>
+            <button @click="showFrobeniusOrbits = !showFrobeniusOrbits" :class="{ active: showFrobeniusOrbits }">
+              Show Orbits
+            </button>
+          </div>
+
+          <div class="finite-field-grid" style="grid-template-columns: repeat(3, 60px);">
+            <template x-for="elem in f9Elements" :key="elem.label">
+              <div class="field-element"
+                   :class="[
+                     'orbit-' + elem.orbit,
+                     elem.label === '0' ? 'zero' : '',
+                     elem.fixed ? 'fixed' : ''
+                   ]"
+                   :title="'σ₃(' + elem.label + ') = ' + elem.image">
+                <span x-text="elem.label"></span>
+              </div>
+            </template>
+          </div>
+
+          <div class="legend" style="margin-top: 1.5rem;">
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-red)"></div>
+              <span>Fixed by $\sigma_3$ (in $\mathbb{F}_3$)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-gold)"></div>
+              <span>Orbit $\{i, -i\}$</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-cyan)"></div>
+              <span>Orbit $\{1+i, 1-i\}$</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-magenta)"></div>
+              <span>Orbit $\{2+i, 2-i\}$</span>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 1.5rem;">
+            <p>
+              <strong>Computation:</strong> $i^3 = i^2 \cdot i = (-1) \cdot i = -i$, so
+              $\sigma_3(i) = -i$. Similarly, $(1+i)^3 = 1 + 3i + 3i^2 + i^3 = 1 + 0 - 3 - i = -2 - i = 1 - i$ (mod 3).
+            </p>
+            <p style="margin-top: 0.5rem;">
+              The Galois group $\text{Gal}(\mathbb{F}_9/\mathbb{F}_3) = \{id, \sigma_3\} \cong \mathbb{Z}/2\mathbb{Z}$.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 61: Ramification Theory -->
+  <section id="ramification" class="reveal">
+    <div class="container">
+      <div class="chapter-badge">Chapter 61</div>
+      <h2>Ramification Theory</h2>
+
+      <p>
+        When we lift a rational prime $p$ to the ring of integers $\mathcal{O}_K$ of a
+        number field $K$, three things can happen:
+      </p>
+
+      <div class="card-grid">
+        <div class="card" style="border-color: var(--accent-green);">
+          <h3 style="color: var(--accent-green);">Split</h3>
+          <p>$p\mathcal{O}_K = \mathfrak{p}_1 \cdots \mathfrak{p}_g$ with $g > 1$</p>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">
+            The prime breaks into multiple distinct pieces.
+          </p>
+        </div>
+        <div class="card" style="border-color: var(--accent-blue);">
+          <h3 style="color: var(--accent-blue);">Inert</h3>
+          <p>$p\mathcal{O}_K = \mathfrak{p}$ remains prime</p>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">
+            The prime stays irreducible.
+          </p>
+        </div>
+        <div class="card" style="border-color: var(--accent-red);">
+          <h3 style="color: var(--accent-red);">Ramified</h3>
+          <p>$p\mathcal{O}_K = \mathfrak{p}_1^{e_1} \cdots \mathfrak{p}_g^{e_g}$ with some $e_i > 1$</p>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">
+            At least one prime factor appears with multiplicity.
+          </p>
+        </div>
+      </div>
+
+      <div class="theorem">
+        <div class="thm-title">The $n = efg$ Formula</div>
+        <p>
+          Let $p\mathcal{O}_K = \mathfrak{p}_1^{e_1} \cdots \mathfrak{p}_g^{e_g}$ and
+          let $f_i$ be the <strong>inertial degree</strong> of $\mathfrak{p}_i$
+          (meaning $N(\mathfrak{p}_i) = p^{f_i}$). Then:
+        </p>
+        <div class="math-display">
+          $$n = [K:\mathbb{Q}] = \sum_{i=1}^{g} e_i f_i$$
+        </div>
+        <p>
+          In a <strong>Galois extension</strong>, all $e_i$ are equal and all $f_i$
+          are equal, so $n = efg$.
+        </p>
+      </div>
+
+      <div class="theorem">
+        <div class="thm-title">Discriminant Detects Ramification</div>
+        <p>
+          A prime $p$ ramifies in $K$ if and only if $p$ divides the discriminant $\Delta_K$.
+        </p>
+      </div>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Prime Factorization in $\mathbb{Z}[i]$</h3>
+          <div class="controls">
+            <label>Prime $p$:</label>
+            <select x-model="selectedPrime" style="min-width: 80px;">
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="5">5</option>
+              <option value="7">7</option>
+              <option value="11">11</option>
+              <option value="13">13</option>
+              <option value="17">17</option>
+              <option value="19">19</option>
+              <option value="23">23</option>
+              <option value="29">29</option>
+            </select>
+          </div>
+        </div>
+        <div class="interactive-body">
+          <div class="factorization-display">
+            <span x-text="'(' + selectedPrime + ')'"></span> =
+            <span x-html="getPrimeFactorization(selectedPrime)"></span>
+          </div>
+
+          <div class="card" style="margin-top: 1.5rem;">
+            <template x-if="getPrimeType(selectedPrime) === 'ramified'">
+              <div>
+                <h3><span class="prime-badge ramified">Ramified</span></h3>
+                <p>$2 = -i(1+i)^2$ — the only ramified prime in $\mathbb{Z}[i]$ (divides $\Delta_K = -4$)</p>
+                <p>Here $e = 2$, $f = 1$, $g = 1$, and $n = 2 = efg$.</p>
+              </div>
+            </template>
+            <template x-if="getPrimeType(selectedPrime) === 'inert'">
+              <div>
+                <h3><span class="prime-badge inert">Inert</span></h3>
+                <p><span x-text="selectedPrime"></span> $\equiv 3 \pmod{4}$, so it remains prime in $\mathbb{Z}[i]$.</p>
+                <p>Here $e = 1$, $f = 2$, $g = 1$, and $n = 2 = efg$.</p>
+                <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                  The residue field $\mathbb{Z}[i]/(<span x-text="selectedPrime"></span>)$ has $<span x-text="selectedPrime"></span>^2 = <span x-text="selectedPrime * selectedPrime"></span>$ elements.
+                </p>
+              </div>
+            </template>
+            <template x-if="getPrimeType(selectedPrime) === 'split'">
+              <div>
+                <h3><span class="prime-badge split">Split</span></h3>
+                <p><span x-text="selectedPrime"></span> $\equiv 1 \pmod{4}$, so it factors as a product of two primes.</p>
+                <p>Here $e = 1$, $f = 1$, $g = 2$, and $n = 2 = efg$.</p>
+                <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                  Each factor has norm <span x-text="selectedPrime"></span>, so the residue fields are $\mathbb{F}_{<span x-text="selectedPrime"></span>}$.
+                </p>
+              </div>
+            </template>
+          </div>
+
+          <div class="viz-container" style="margin-top: 1.5rem;">
+            <svg id="gaussian-lattice" width="100%" height="350" viewBox="-175 -175 350 350"></svg>
+          </div>
+
+          <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
+            Gaussian integers with norm ≤ <span x-text="selectedPrime"></span>. Gold points lie on the circle of norm <span x-text="selectedPrime"></span>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="insight">
+        <span class="insight-icon">🔑</span>
+        <div>
+          <strong>Why does $p \equiv 1 \pmod 4$ split?</strong> Because $-1$ is a
+          quadratic residue mod $p$, so $x^2 + 1$ has roots in $\mathbb{F}_p$.
+          By Hensel's lemma (or direct calculation), $(p) = (a+bi)(a-bi)$ where $a^2 + b^2 = p$.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 62: The Frobenius Element -->
+  <section id="frobenius" class="reveal">
+    <div class="container">
+      <div class="chapter-badge">Chapter 62</div>
+      <h2>The Frobenius Element</h2>
+
+      <p>
+        Now we arrive at the central object connecting Galois theory to arithmetic:
+        the <strong>Frobenius element</strong>.
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Theorem: Existence and Uniqueness of Frobenius</div>
+        <p>
+          Let $K/\mathbb{Q}$ be Galois with group $G$. For any unramified prime $p$
+          and prime $\mathfrak{p}$ above it in $K$, there exists a <strong>unique</strong>
+          element $\text{Frob}_\mathfrak{p} \in G$ such that:
+        </p>
+        <div class="math-display">
+          $$\text{Frob}_\mathfrak{p}(\alpha) \equiv \alpha^p \pmod{\mathfrak{p}} \quad \forall \alpha \in \mathcal{O}_K$$
+        </div>
+        <p style="margin-top: 1rem;">
+          The order of $\text{Frob}_\mathfrak{p}$ equals the inertial degree $f$.
+        </p>
+      </div>
+
+      <p>
+        Different primes $\mathfrak{p}$ above $p$ give conjugate Frobenius elements.
+        So <strong>the rational prime $p$ determines $\text{Frob}$ up to conjugation</strong>.
+      </p>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Frobenius Calculator: $\mathbb{Q}(i)/\mathbb{Q}$</h3>
+        </div>
+        <div class="interactive-body">
+          <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+            For $K = \mathbb{Q}(i)$, we have $\text{Gal}(K/\mathbb{Q}) = \{id, \sigma\}$
+            where $\sigma: i \mapsto -i$ (complex conjugation).
+          </p>
+
+          <div class="controls" style="margin-bottom: 1.5rem;">
+            <label>Choose odd prime $p$:</label>
+            <input type="number" x-model.number="frobPrime" min="3" step="2" style="width: 80px;">
+            <button @click="computeFrobenius" class="primary">Compute Frob<sub>p</sub></button>
+          </div>
+
+          <div class="card" x-show="frobResult !== null">
+            <template x-if="!isPrime(frobPrime)">
+              <p style="color: var(--accent-red);">Please enter an odd prime.</p>
+            </template>
+            <template x-if="isPrime(frobPrime) && frobPrime === 2">
+              <p style="color: var(--accent-red);">$p = 2$ ramifies in $\mathbb{Q}(i)$, so Frobenius is undefined.</p>
+            </template>
+            <template x-if="isPrime(frobPrime) && frobPrime > 2">
+              <div>
+                <p>
+                  $p = $ <span x-text="frobPrime"></span> $\equiv$ <span x-text="frobPrime % 4"></span> $\pmod 4$
+                </p>
+                <div class="math-display" style="font-size: 1.3rem; margin: 1.5rem 0;">
+                  $$\text{Frob}_p = <span x-text="frobPrime % 4 === 1 ? 'id' : '\\sigma'"></span>$$
+                </div>
+                <p x-show="frobPrime % 4 === 1" style="color: var(--accent-green);">
+                  Since $p \equiv 1 \pmod 4$, we have $i^p = i^{4k+1} = i$, so $\text{Frob}_p$ fixes $i$. Thus $\text{Frob}_p = id$.
+                </p>
+                <p x-show="frobPrime % 4 === 3" style="color: var(--accent-cyan);">
+                  Since $p \equiv 3 \pmod 4$, we have $i^p = i^{4k+3} = i^3 = -i$, so $\text{Frob}_p(i) = -i$. Thus $\text{Frob}_p = \sigma$.
+                </p>
+                <p style="margin-top: 1rem; color: var(--text-secondary);">
+                  <strong>Consequence:</strong> $p$ <span x-text="frobPrime % 4 === 1 ? 'splits' : 'is inert'"></span> in $\mathbb{Z}[i]$
+                  (since $\text{ord}(\text{Frob}_p) = f = $ <span x-text="frobPrime % 4 === 1 ? 1 : 2"></span>).
+                </p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <h3>Chebotarev Density Theorem</h3>
+
+      <p>
+        A remarkable theorem states that Frobenius elements are <em>equidistributed</em>
+        among conjugacy classes:
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Chebotarev Density Theorem</div>
+        <p>
+          Let $C$ be a conjugacy class in $G = \text{Gal}(K/\mathbb{Q})$. The density
+          of primes $p$ such that $\text{Frob}_p \in C$ is exactly $|C|/|G|$.
+        </p>
+      </div>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Chebotarev Density Simulation</h3>
+          <div class="controls">
+            <button @click="runChebotarev" class="primary">
+              Sample More Primes
+            </button>
+            <button @click="resetChebotarev">Reset</button>
+            <span style="color: var(--text-secondary); font-size: 0.85rem;">
+              Primes sampled: <span x-text="chebotarevPrimes.length"></span>
+            </span>
+          </div>
+        </div>
+        <div class="interactive-body">
+          <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+            For $K = \mathbb{Q}(i)/\mathbb{Q}$, the Galois group has two elements.
+            Chebotarev predicts each appears with density $1/2$.
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+            <div class="card" style="text-align: center;">
+              <div style="font-size: 2.5rem; color: var(--accent-green);" x-text="chebotarevCounts.id"></div>
+              <div style="color: var(--text-secondary);">$\text{Frob}_p = id$</div>
+              <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                (<span x-text="chebotarevPrimes.length > 0 ? (100 * chebotarevCounts.id / chebotarevPrimes.length).toFixed(1) : 0"></span>%)
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">$p \equiv 1 \pmod 4$</div>
+            </div>
+            <div class="card" style="text-align: center;">
+              <div style="font-size: 2.5rem; color: var(--accent-cyan);" x-text="chebotarevCounts.sigma"></div>
+              <div style="color: var(--text-secondary);">$\text{Frob}_p = \sigma$</div>
+              <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                (<span x-text="chebotarevPrimes.length > 0 ? (100 * chebotarevCounts.sigma / chebotarevPrimes.length).toFixed(1) : 0"></span>%)
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">$p \equiv 3 \pmod 4$</div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-elevated); border-radius: 8px; padding: 1rem; max-height: 100px; overflow-y: auto;">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-secondary);">
+              <template x-for="p in chebotarevPrimes.slice(-50)" :key="p">
+                <span :style="{ color: p % 4 === 1 ? 'var(--accent-green)' : 'var(--accent-cyan)' }" x-text="p + ' '"></span>
+              </template>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quadratic Reciprocity -->
+  <section id="quadratic-reciprocity" class="reveal">
+    <div class="container">
+      <h2>Quadratic Reciprocity via Frobenius</h2>
+
+      <p>
+        One of the most beautiful applications of Frobenius elements is a proof of
+        <strong>quadratic reciprocity</strong>. The key insight: the Legendre symbol
+        is secretly a Frobenius element!
+      </p>
+
+      <div class="theorem">
+        <div class="thm-title">Quadratic Reciprocity</div>
+        <p>For distinct odd primes $p$ and $q$:</p>
+        <div class="math-display">
+          $$\left(\frac{p}{q}\right)\left(\frac{q}{p}\right) = (-1)^{\frac{p-1}{2} \cdot \frac{q-1}{2}}$$
+        </div>
+      </div>
+
+      <h3 style="margin-top: 3rem;">The Proof Strategy</h3>
+
+      <div class="proof-steps">
+        <div class="proof-step">
+          <strong>Setup the tower.</strong> Let $L = \mathbb{Q}(\zeta_q)$ be the cyclotomic field.
+          Inside $L$ sits a unique quadratic subfield $K = \mathbb{Q}(\sqrt{q^*})$ where
+          $q^* = \pm q$ with $q^* \equiv 1 \pmod 4$.
+        </div>
+
+        <div class="proof-step">
+          <strong>Identify the Galois groups.</strong> We have $\text{Gal}(L/\mathbb{Q}) \cong (\mathbb{Z}/q\mathbb{Z})^\times$,
+          and the unique index-2 subgroup $H$ corresponds to quadratic residues mod $q$.
+        </div>
+
+        <div class="proof-step">
+          <strong>Compute Frobenius.</strong> For $L = \mathbb{Q}(\zeta_q)$, the Frobenius is
+          $\text{Frob}_p: \zeta_q \mapsto \zeta_q^p$, which corresponds to $p \in (\mathbb{Z}/q\mathbb{Z})^\times$.
+        </div>
+
+        <div class="proof-step">
+          <strong>Connect to splitting.</strong> Now $\text{Frob}_p \in H$ iff $p$ is a quadratic
+          residue mod $q$ iff $\left(\frac{p}{q}\right) = 1$.
+        </div>
+
+        <div class="proof-step">
+          <strong>Use restriction.</strong> By the fundamental theorem, $\text{Frob}_p|_K = id$
+          iff $\text{Frob}_p \in H$. But $\text{Frob}_p|_K = id$ also means $p$ splits in $K$.
+        </div>
+
+        <div class="proof-step">
+          <strong>Conclude.</strong> So $\left(\frac{p}{q}\right) = 1$ iff $p$ splits in
+          $\mathbb{Q}(\sqrt{q^*})$ iff $\left(\frac{q^*}{p}\right) = 1$.
+        </div>
+      </div>
+    </div>
+
+    <div class="wide-container">
+      <div class="interactive-container">
+        <div class="interactive-header">
+          <h3>Quadratic Reciprocity Verifier</h3>
+        </div>
+        <div class="interactive-body">
+          <div class="controls" style="margin-bottom: 1.5rem;">
+            <div class="control-group">
+              <label>$p$:</label>
+              <input type="number" x-model.number="qrP" min="3" step="2" style="width: 70px;">
+            </div>
+            <div class="control-group">
+              <label>$q$:</label>
+              <input type="number" x-model.number="qrQ" min="3" step="2" style="width: 70px;">
+            </div>
+            <button @click="verifyQR" class="primary">Verify</button>
+          </div>
+
+          <div class="card" x-show="qrResult !== null">
+            <template x-if="!isPrime(qrP) || !isPrime(qrQ) || qrP === 2 || qrQ === 2 || qrP === qrQ">
+              <p style="color: var(--accent-red);">Please enter two distinct odd primes.</p>
+            </template>
+            <template x-if="isPrime(qrP) && isPrime(qrQ) && qrP !== 2 && qrQ !== 2 && qrP !== qrQ">
+              <div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; text-align: center; margin: 1.5rem 0;">
+                  <div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">$\left(\frac{p}{q}\right)$</div>
+                    <div style="font-size: 2rem; color: var(--accent-gold);" x-text="legendreSymbol(qrP, qrQ)"></div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">$\left(\frac{q}{p}\right)$</div>
+                    <div style="font-size: 2rem; color: var(--accent-cyan);" x-text="legendreSymbol(qrQ, qrP)"></div>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">$(-1)^{\frac{p-1}{2}\frac{q-1}{2}}$</div>
+                    <div style="font-size: 2rem; color: var(--accent-magenta);" x-text="qrSign(qrP, qrQ)"></div>
+                  </div>
+                </div>
+                <p style="text-align: center;">
+                  $\left(\frac{<span x-text="qrP"></span>}{<span x-text="qrQ"></span>}\right) \cdot
+                   \left(\frac{<span x-text="qrQ"></span>}{<span x-text="qrP"></span>}\right) =
+                   <span x-text="legendreSymbol(qrP, qrQ) * legendreSymbol(qrQ, qrP)"></span>
+                   = (-1)^{<span x-text="((qrP-1)/2) * ((qrQ-1)/2)"></span>}$
+                  <span style="color: var(--accent-green);">✓</span>
+                </p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 63: Artin Reciprocity -->
+  <section id="artin" class="reveal">
+    <div class="container">
+      <div class="chapter-badge">Chapter 63 (Bonus)</div>
+      <h2>Artin Reciprocity</h2>
+
+      <p>
+        Quadratic reciprocity is just the beginning. <strong>Artin reciprocity</strong>
+        vastly generalizes this, showing that for any abelian extension $L/K$, the
+        Frobenius elements follow a predictable pattern.
+      </p>
+
+      <div class="definition">
+        <div class="def-title">The Artin Symbol</div>
+        <p>
+          For an abelian extension $L/K$ and unramified prime $\mathfrak{p}$, define
+          the <strong>Artin symbol</strong>:
+        </p>
+        <div class="math-display">
+          $$\left(\frac{L/K}{\mathfrak{p}}\right) := \text{Frob}_\mathfrak{p} \in \text{Gal}(L/K)$$
+        </div>
+        <p>
+          This generalizes the Legendre symbol $\left(\frac{a}{p}\right)$!
+        </p>
+      </div>
+
+      <div class="theorem">
+        <div class="thm-title">Artin Reciprocity (Informal)</div>
+        <p>
+          For an abelian extension $L/K$, there exists a <strong>conductor</strong>
+          $\mathfrak{f}$ such that $\left(\frac{L/K}{\mathfrak{p}}\right)$ depends
+          only on $\mathfrak{p} \pmod{\mathfrak{f}}$.
+        </p>
+      </div>
+
+      <div class="example">
+        <div class="ex-title">Example: Cyclotomic Fields</div>
+        <p>
+          For $L = \mathbb{Q}(\zeta_m)$, the conductor is $\mathfrak{f} = m\infty$.
+          We have $\left(\frac{L/\mathbb{Q}}{p}\right) = \sigma_p$ where $\sigma_p: \zeta \mapsto \zeta^p$.
+        </p>
+        <p style="margin-top: 0.5rem;">
+          The Artin map $p \mapsto \sigma_p$ gives an isomorphism
+          $(\mathbb{Z}/m\mathbb{Z})^\times \cong \text{Gal}(\mathbb{Q}(\zeta_m)/\mathbb{Q})$.
+        </p>
+      </div>
+
+      <h3 style="margin-top: 3rem;">Infinite Primes</h3>
+
+      <p>
+        To state Artin reciprocity properly, we need <strong>infinite primes</strong>:
+      </p>
+
+      <ul style="margin: 1rem 0 1rem 1.5rem;">
+        <li><strong>Real infinite primes:</strong> embeddings $\sigma: K \hookrightarrow \mathbb{R}$</li>
+        <li><strong>Complex infinite primes:</strong> pairs of complex conjugate embeddings</li>
+      </ul>
+
+      <p>
+        A real prime <em>ramifies</em> in $L/K$ if it extends to a complex prime.
+        For example, $\infty$ ramifies in $\mathbb{Q}(i)/\mathbb{Q}$ but not in $\mathbb{Q}(\sqrt{5})/\mathbb{Q}$.
+      </p>
+
+      <div class="insight" style="margin-top: 2rem;">
+        <span class="insight-icon">🎯</span>
+        <div>
+          <strong>The Big Picture:</strong> Artin reciprocity, together with the
+          Takagi existence theorem, gives a complete classification of all abelian
+          extensions of a number field $K$ in terms of "ray class groups" — purely
+          intrinsic data from $K$ itself!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Conclusion -->
+  <section id="conclusion" class="reveal">
+    <div class="container">
+      <h2>The Bridge</h2>
+
+      <p>
+        We've seen how Galois theory and algebraic number theory intertwine through
+        the Frobenius element. Let's summarize the key connections:
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3 style="color: var(--accent-gold);">Galois Side</h3>
+          <ul style="margin: 1rem 0 0 1.2rem; color: var(--text-secondary);">
+            <li>Field extensions $K/\mathbb{Q}$</li>
+            <li>Automorphisms $\sigma \in \text{Gal}(K/\mathbb{Q})$</li>
+            <li>Subgroup lattice</li>
+            <li>Conjugacy classes</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="color: var(--accent-cyan);">Arithmetic Side</h3>
+          <ul style="margin: 1rem 0 0 1.2rem; color: var(--text-secondary);">
+            <li>Rings of integers $\mathcal{O}_K$</li>
+            <li>Prime factorization</li>
+            <li>Ramified / inert / split</li>
+            <li>Density of primes</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="math-display" style="margin: 3rem 0;">
+        $$\boxed{\text{Frob}_p \text{ encodes how } p \text{ factors in } \mathcal{O}_K}$$
+      </div>
+
+      <p>
+        The Frobenius element transforms questions about prime factorization into
+        questions about group theory. Chebotarev tells us these group elements are
+        equidistributed, and Artin reciprocity tells us they follow congruence patterns.
+      </p>
+
+      <p style="margin-top: 2rem; text-align: center; color: var(--text-secondary); font-style: italic;">
+        "The prime numbers are the atoms of arithmetic, and Galois theory reveals
+        the symmetries that govern their behavior in algebraic extensions."
+      </p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="padding: 4rem 2rem; text-align: center; color: var(--text-muted);">
+    <p>
+      Based on Part XV of <em>An Infinitely Large Napkin</em> by Evan Chen
+    </p>
+    <p style="margin-top: 0.5rem;">
+      <a href="https://venhance.github.io/napkin/" target="_blank">Original source</a>
+    </p>
+  </footer>
+
+  <script>
+    // Initialize KaTeX auto-render after page load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    });
+
+    // Alpine.js data and methods
+    function essayData() {
+      return {
+        scrollProgress: 0,
+
+        // Embedding explorer
+        embeddingField: 'sqrt2',
+
+        // Galois correspondence
+        selectedCorrespondence: null,
+
+        // Finite field
+        animateFrobenius: false,
+        showFrobeniusOrbits: true,
+        f9Elements: [
+          { label: '0', image: '0', orbit: 0, fixed: false },
+          { label: '1', image: '1', orbit: 0, fixed: true },
+          { label: '2', image: '2', orbit: 0, fixed: true },
+          { label: 'i', image: '-i', orbit: 1, fixed: false },
+          { label: '1+i', image: '1-i', orbit: 2, fixed: false },
+          { label: '2+i', image: '2-i', orbit: 3, fixed: false },
+          { label: '-i', image: 'i', orbit: 1, fixed: false },
+          { label: '1-i', image: '1+i', orbit: 2, fixed: false },
+          { label: '2-i', image: '2+i', orbit: 3, fixed: false },
+        ],
+
+        // Prime factorization
+        selectedPrime: '5',
+
+        // Frobenius calculator
+        frobPrime: 7,
+        frobResult: null,
+
+        // Chebotarev
+        chebotarevPrimes: [],
+        chebotarevCounts: { id: 0, sigma: 0 },
+
+        // Quadratic reciprocity
+        qrP: 5,
+        qrQ: 7,
+        qrResult: null,
+
+        init() {
+          // Initialize scroll progress tracking
+          gsap.registerPlugin(ScrollTrigger);
+
+          ScrollTrigger.create({
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            onUpdate: (self) => {
+              this.scrollProgress = self.progress * 100;
+            }
+          });
+
+          // Reveal animations
+          gsap.utils.toArray('.reveal').forEach(elem => {
+            ScrollTrigger.create({
+              trigger: elem,
+              start: 'top 85%',
+              onEnter: () => elem.classList.add('active')
+            });
+          });
+
+          // Initialize visualizations
+          this.$nextTick(() => {
+            this.initEmbeddingViz();
+            this.initGaussianLattice();
+          });
+
+          // Watch for changes
+          this.$watch('embeddingField', () => this.initEmbeddingViz());
+          this.$watch('selectedPrime', () => this.initGaussianLattice());
+        },
+
+        scrollToSection(id) {
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+        },
+
+        initEmbeddingViz() {
+          const svg = d3.select('#embedding-viz');
+          svg.selectAll('*').remove();
+
+          const width = 400, height = 400;
+          const cx = 0, cy = 0;
+          const scale = 70;
+
+          // Draw axes
+          svg.append('line')
+            .attr('x1', -180).attr('y1', 0)
+            .attr('x2', 180).attr('y2', 0)
+            .attr('stroke', 'rgba(255,255,255,0.2)')
+            .attr('stroke-width', 1);
+
+          svg.append('line')
+            .attr('x1', 0).attr('y1', -180)
+            .attr('x2', 0).attr('y2', 180)
+            .attr('stroke', 'rgba(255,255,255,0.2)')
+            .attr('stroke-width', 1);
+
+          // Labels
+          svg.append('text')
+            .attr('x', 170).attr('y', 15)
+            .attr('class', 'axis-label')
+            .text('Re');
+
+          svg.append('text')
+            .attr('x', 10).attr('y', -165)
+            .attr('class', 'axis-label')
+            .text('Im');
+
+          let roots = [];
+          let title = '';
+
+          if (this.embeddingField === 'sqrt2') {
+            // Roots of x^2 - 2
+            roots = [
+              { x: Math.sqrt(2), y: 0, label: '√2', inField: true },
+              { x: -Math.sqrt(2), y: 0, label: '-√2', inField: true }
+            ];
+            title = 'Roots of x² - 2';
+          } else if (this.embeddingField === 'cbrt2') {
+            // Roots of x^3 - 2
+            const cbrt2 = Math.cbrt(2);
+            const omega = { re: -0.5, im: Math.sqrt(3)/2 };
+            roots = [
+              { x: cbrt2, y: 0, label: '∛2', inField: true },
+              { x: cbrt2 * omega.re, y: cbrt2 * omega.im, label: 'ω∛2', inField: false },
+              { x: cbrt2 * omega.re, y: -cbrt2 * omega.im, label: 'ω²∛2', inField: false }
+            ];
+            title = 'Roots of x³ - 2';
+          } else {
+            // Full splitting field
+            const cbrt2 = Math.cbrt(2);
+            const omega = { re: -0.5, im: Math.sqrt(3)/2 };
+            roots = [
+              { x: cbrt2, y: 0, label: '∛2', inField: true },
+              { x: cbrt2 * omega.re, y: cbrt2 * omega.im, label: 'ω∛2', inField: true },
+              { x: cbrt2 * omega.re, y: -cbrt2 * omega.im, label: 'ω²∛2', inField: true },
+              { x: omega.re, y: omega.im, label: 'ω', inField: true },
+              { x: omega.re, y: -omega.im, label: 'ω²', inField: true }
+            ];
+            title = 'Splitting field of x³ - 2';
+          }
+
+          // Draw orbit paths for cbrt2 case
+          if (this.embeddingField === 'cbrt2' || this.embeddingField === 'cbrt2omega') {
+            const cbrt2 = Math.cbrt(2);
+            svg.append('circle')
+              .attr('cx', 0).attr('cy', 0)
+              .attr('r', cbrt2 * scale)
+              .attr('class', 'orbit-path')
+              .attr('stroke', 'var(--accent-magenta)');
+          }
+
+          // Draw unit circle for omega
+          if (this.embeddingField === 'cbrt2omega') {
+            svg.append('circle')
+              .attr('cx', 0).attr('cy', 0)
+              .attr('r', scale)
+              .attr('class', 'orbit-path')
+              .attr('stroke', 'var(--accent-cyan)')
+              .attr('stroke-dasharray', '3,3');
+          }
+
+          // Draw roots
+          roots.forEach(root => {
+            const px = root.x * scale;
+            const py = -root.y * scale; // Flip y for SVG
+
+            svg.append('circle')
+              .attr('cx', px).attr('cy', py)
+              .attr('r', 8)
+              .attr('class', 'root-point')
+              .attr('fill', root.inField ? 'var(--accent-gold)' : 'var(--accent-cyan)')
+              .attr('stroke', 'white')
+              .attr('stroke-width', 2);
+
+            svg.append('text')
+              .attr('x', px + 12)
+              .attr('y', py + 5)
+              .attr('class', 'point-label')
+              .attr('fill', root.inField ? 'var(--accent-gold)' : 'var(--accent-cyan)')
+              .text(root.label);
+          });
+
+          // Title
+          svg.append('text')
+            .attr('x', 0).attr('y', -170)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'var(--text-secondary)')
+            .attr('font-size', '14px')
+            .text(title);
+        },
+
+        initGaussianLattice() {
+          const svg = d3.select('#gaussian-lattice');
+          svg.selectAll('*').remove();
+
+          const p = parseInt(this.selectedPrime);
+          const scale = 20;
+          const maxCoord = 8;
+
+          // Draw grid
+          for (let i = -maxCoord; i <= maxCoord; i++) {
+            svg.append('line')
+              .attr('x1', i * scale).attr('y1', -maxCoord * scale)
+              .attr('x2', i * scale).attr('y2', maxCoord * scale)
+              .attr('stroke', 'rgba(255,255,255,0.05)');
+
+            svg.append('line')
+              .attr('x1', -maxCoord * scale).attr('y1', i * scale)
+              .attr('x2', maxCoord * scale).attr('y2', i * scale)
+              .attr('stroke', 'rgba(255,255,255,0.05)');
+          }
+
+          // Draw axes
+          svg.append('line')
+            .attr('x1', -maxCoord * scale).attr('y1', 0)
+            .attr('x2', maxCoord * scale).attr('y2', 0)
+            .attr('stroke', 'rgba(255,255,255,0.3)');
+
+          svg.append('line')
+            .attr('x1', 0).attr('y1', -maxCoord * scale)
+            .attr('x2', 0).attr('y2', maxCoord * scale)
+            .attr('stroke', 'rgba(255,255,255,0.3)');
+
+          // Draw circle of norm p
+          svg.append('circle')
+            .attr('cx', 0).attr('cy', 0)
+            .attr('r', Math.sqrt(p) * scale)
+            .attr('fill', 'none')
+            .attr('stroke', 'var(--accent-gold)')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,5')
+            .attr('opacity', 0.5);
+
+          // Draw lattice points
+          for (let a = -maxCoord; a <= maxCoord; a++) {
+            for (let b = -maxCoord; b <= maxCoord; b++) {
+              const norm = a * a + b * b;
+              if (norm > maxCoord * maxCoord) continue;
+
+              let color = 'var(--text-muted)';
+              let r = 3;
+
+              if (norm === p) {
+                color = 'var(--accent-gold)';
+                r = 6;
+              } else if (norm === 0) {
+                color = 'var(--accent-red)';
+                r = 4;
+              } else if (norm <= p) {
+                color = 'var(--text-secondary)';
+                r = 3;
+              }
+
+              svg.append('circle')
+                .attr('cx', a * scale)
+                .attr('cy', -b * scale)
+                .attr('r', r)
+                .attr('fill', color);
+            }
+          }
+        },
+
+        getPrimeFactorization(p) {
+          p = parseInt(p);
+          if (p === 2) {
+            return '<span class="prime-badge ramified">(1+i)²</span>';
+          }
+          if (p % 4 === 3) {
+            return '<span class="prime-badge inert">(' + p + ')</span>';
+          }
+          // Find a, b with a² + b² = p
+          for (let a = 1; a * a < p; a++) {
+            const b2 = p - a * a;
+            const b = Math.sqrt(b2);
+            if (b === Math.floor(b)) {
+              return '<span class="prime-badge split">(' + a + '+' + b + 'i)(' + a + '-' + b + 'i)</span>';
+            }
+          }
+          return '(error)';
+        },
+
+        getPrimeType(p) {
+          p = parseInt(p);
+          if (p === 2) return 'ramified';
+          if (p % 4 === 3) return 'inert';
+          return 'split';
+        },
+
+        isPrime(n) {
+          if (n < 2) return false;
+          if (n === 2) return true;
+          if (n % 2 === 0) return false;
+          for (let i = 3; i * i <= n; i += 2) {
+            if (n % i === 0) return false;
+          }
+          return true;
+        },
+
+        computeFrobenius() {
+          this.frobResult = true;
+        },
+
+        runChebotarev() {
+          // Find next 20 primes
+          let p = this.chebotarevPrimes.length > 0
+            ? this.chebotarevPrimes[this.chebotarevPrimes.length - 1] + 2
+            : 3;
+
+          let added = 0;
+          while (added < 20) {
+            if (this.isPrime(p)) {
+              this.chebotarevPrimes.push(p);
+              if (p % 4 === 1) {
+                this.chebotarevCounts.id++;
+              } else {
+                this.chebotarevCounts.sigma++;
+              }
+              added++;
+            }
+            p += 2;
+          }
+        },
+
+        resetChebotarev() {
+          this.chebotarevPrimes = [];
+          this.chebotarevCounts = { id: 0, sigma: 0 };
+        },
+
+        verifyQR() {
+          this.qrResult = true;
+        },
+
+        legendreSymbol(a, p) {
+          // Compute (a/p) using Euler's criterion
+          a = ((a % p) + p) % p;
+          if (a === 0) return 0;
+          const exp = (p - 1) / 2;
+          let result = this.modPow(a, exp, p);
+          return result === 1 ? 1 : -1;
+        },
+
+        modPow(base, exp, mod) {
+          let result = 1;
+          base = base % mod;
+          while (exp > 0) {
+            if (exp % 2 === 1) {
+              result = (result * base) % mod;
+            }
+            exp = Math.floor(exp / 2);
+            base = (base * base) % mod;
+          }
+          return result;
+        },
+
+        qrSign(p, q) {
+          const exp = ((p - 1) / 2) * ((q - 1) / 2);
+          return exp % 2 === 0 ? 1 : -1;
+        }
+      };
+    }
+  </script>
+</body>
+</html>

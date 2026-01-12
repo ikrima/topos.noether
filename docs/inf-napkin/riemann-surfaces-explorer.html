@@ -1,0 +1,2403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Part XIII: Riemann Surfaces — An Infinitely Large Napkin</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Libraries -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    :root {
+      --color-sheet1: #3b82f6;
+      --color-sheet2: #f59e0b;
+      --color-branch: #ef4444;
+      --color-holomorphic: #10b981;
+      --color-meromorphic: #8b5cf6;
+      --color-genus: #ec4899;
+      --color-lattice: #06b6d4;
+      --bg-primary: #050510;
+      --bg-secondary: #0a0a1a;
+      --bg-tertiary: #12122a;
+      --bg-card: #1a1a3a;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: #2a2a4a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 17px;
+      overflow-x: hidden;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      font-family: 'Crimson Pro', Georgia, serif;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: 1.4rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary);
+    }
+
+    .math-display {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-tertiary);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      border-left: 3px solid var(--color-sheet1);
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-tertiary);
+      z-index: 1000;
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-sheet1), var(--color-sheet2), var(--color-genus));
+        width: 0%;
+        transition: width 0.1s ease-out;
+      }
+    }
+
+    /* Navigation */
+    .nav {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      @media (max-width: 1200px) {
+        display: none;
+      }
+
+      a {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 2px solid var(--border-color);
+        transition: all 0.3s ease;
+
+        &:hover, &.active {
+          background: var(--color-sheet1);
+          border-color: var(--color-sheet1);
+          transform: scale(1.3);
+        }
+      }
+    }
+
+    /* Sections */
+    section {
+      min-height: 100vh;
+      padding: 6rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      min-height: 100vh;
+      position: relative;
+
+      .subtitle {
+        font-size: 1.2rem;
+        color: var(--color-sheet1);
+        margin-bottom: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .description {
+        max-width: 700px;
+        margin: 2rem auto;
+        font-size: 1.1rem;
+      }
+
+      .hero-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        opacity: 0.7;
+      }
+    }
+
+    /* Interactive containers */
+    .interactive-container {
+      background: var(--bg-secondary);
+      border-radius: 20px;
+      padding: 2rem;
+      margin: 2rem 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .visualization {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      min-height: 400px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-container {
+      width: 100%;
+      height: 500px;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-primary));
+    }
+
+    .domain-color-canvas {
+      width: 100%;
+      height: 400px;
+      border-radius: 12px;
+      image-rendering: pixelated;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    input[type="range"] {
+      width: 180px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      outline: none;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--color-sheet1);
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: scale(1.2);
+        }
+      }
+    }
+
+    button {
+      font-family: 'DM Sans', sans-serif;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.primary {
+        background: var(--color-sheet1);
+        color: white;
+
+        &:hover {
+          filter: brightness(1.1);
+          transform: translateY(-2px);
+        }
+      }
+
+      &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+
+        &:hover {
+          background: var(--bg-card);
+          border-color: var(--color-sheet1);
+        }
+      }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+
+      button {
+        padding: 0.5rem 1rem;
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid transparent;
+
+        &.active {
+          color: var(--color-sheet1);
+          background: var(--bg-tertiary);
+          border-color: var(--color-sheet1);
+          border-radius: 6px;
+        }
+      }
+    }
+
+    /* Two column layout */
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+
+      @media (max-width: 1000px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prose {
+      max-width: 65ch;
+    }
+
+    /* Definition boxes */
+    .definition {
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+      border-left: 4px solid var(--color-sheet1);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+
+      .def-title {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-sheet1);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .theorem {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+      border-left: 4px solid var(--color-meromorphic);
+      padding: 1.5rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1.5rem 0;
+
+      .thm-title {
+        font-family: 'Crimson Pro', serif;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--color-meromorphic);
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Chapter headers */
+    .chapter-header {
+      margin-bottom: 3rem;
+
+      .chapter-number {
+        font-size: 0.9rem;
+        color: var(--color-sheet1);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    /* Annotation */
+    .annotation {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 1rem;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat {
+      background: var(--bg-tertiary);
+      padding: 1rem;
+      border-radius: 10px;
+      text-align: center;
+
+      .stat-value {
+        font-size: 1.3rem;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 0.25rem;
+      }
+
+      &.sheet1 .stat-value { color: var(--color-sheet1); }
+      &.sheet2 .stat-value { color: var(--color-sheet2); }
+      &.branch .stat-value { color: var(--color-branch); }
+      &.genus .stat-value { color: var(--color-genus); }
+      &.holomorphic .stat-value { color: var(--color-holomorphic); }
+    }
+
+    /* SVG container */
+    .svg-container {
+      width: 100%;
+      height: 400px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Footer */
+    footer {
+      padding: 4rem 2rem;
+      text-align: center;
+      border-top: 1px solid var(--border-color);
+
+      p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+      }
+
+      a {
+        color: var(--color-sheet1);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    /* Reveal animation */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    /* Color legend */
+    .color-legend {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .swatch {
+          width: 16px;
+          height: 16px;
+          border-radius: 4px;
+        }
+      }
+    }
+
+    /* Instruction */
+    .instruction {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-tertiary);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .instruction::before {
+      content: '🖱️';
+    }
+
+    /* Genus gallery */
+    .genus-gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+
+      @media (max-width: 800px) {
+        grid-template-columns: 1fr;
+      }
+
+      .genus-item {
+        background: var(--bg-tertiary);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+
+        .genus-canvas {
+          height: 200px;
+          border-radius: 8px;
+          margin-bottom: 0.5rem;
+        }
+
+        .genus-label {
+          font-family: 'JetBrains Mono', monospace;
+          color: var(--color-genus);
+        }
+      }
+    }
+
+    /* Complex plane grid */
+    .complex-plane {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      position: relative;
+    }
+  </style>
+</head>
+<body x-data="riemannExplorer()" x-init="init()">
+
+  <!-- Progress Bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" :style="{ width: scrollProgress + '%' }"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="#hero" :class="{ active: currentSection === 'hero' }"></a>
+    <a href="#multi-valued" :class="{ active: currentSection === 'multi-valued' }"></a>
+    <a href="#riemann-sphere" :class="{ active: currentSection === 'riemann-sphere' }"></a>
+    <a href="#morphisms" :class="{ active: currentSection === 'morphisms' }"></a>
+    <a href="#algebraic-curves" :class="{ active: currentSection === 'algebraic-curves' }"></a>
+    <a href="#torus" :class="{ active: currentSection === 'torus' }"></a>
+    <a href="#genus" :class="{ active: currentSection === 'genus' }"></a>
+    <a href="#riemann-roch" :class="{ active: currentSection === 'riemann-roch' }"></a>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div id="hero-canvas" class="hero-canvas"></div>
+    <div class="subtitle">Part XIII</div>
+    <h1>Riemann Surfaces</h1>
+    <p class="description">
+      Where complex analysis meets topology. Riemann surfaces resolve the paradox of
+      multi-valued functions like $\sqrt{z}$ and $\log z$, transforming them into
+      single-valued functions on elegantly twisted surfaces.
+    </p>
+  </section>
+
+  <!-- Chapter 47: Multi-valued Functions -->
+  <section id="multi-valued">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 47</div>
+      <h2>Multi-valued Functions & Riemann Surfaces</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          Consider $f(z) = \sqrt{z}$. For $z = 1$, we have two square roots: $+1$ and $-1$.
+          As a function, this is problematic—functions should be single-valued! Riemann's
+          brilliant insight: make the <em>domain</em> larger.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Riemann Surface</div>
+          <p style="margin-bottom: 0;">
+            A <em>Riemann surface</em> is a connected 1-dimensional complex manifold. Equivalently,
+            it's a surface where every point has a neighborhood biholomorphic to an open subset of $\mathbb{C}$.
+          </p>
+        </div>
+
+        <p>
+          For $\sqrt{z}$, we construct a <strong>2-sheeted surface</strong>: two copies of the plane,
+          glued along a <em>branch cut</em> from 0 to ∞. Walking around the origin once takes you
+          from one sheet to the other—and the sign of $\sqrt{z}$ flips!
+        </p>
+
+        <p>
+          The point $z = 0$ is a <strong>branch point</strong>: the two sheets meet there.
+          On this surface, $\sqrt{z}$ becomes single-valued and holomorphic (except at 0).
+        </p>
+
+        <div class="math-display">
+          $$\sqrt{z} = \sqrt{r} e^{i\theta/2} \quad \text{where } z = re^{i\theta}$$
+          $$\text{After one loop: } \theta \to \theta + 2\pi \implies \sqrt{z} \to -\sqrt{z}$$
+        </div>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>The Square Root Surface</h3>
+        <p class="instruction">Drag to rotate. Watch how the two sheets connect at the origin.</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>View</label>
+            <div class="tabs">
+              <button @click="sqrtView = 'surface'" :class="{ active: sqrtView === 'surface' }">3D Surface</button>
+              <button @click="sqrtView = 'domain'" :class="{ active: sqrtView === 'domain' }">Domain Coloring</button>
+            </div>
+          </div>
+          <div class="control-group" x-show="sqrtView === 'surface'">
+            <label>Separation: <span x-text="sheetSeparation.toFixed(1)"></span></label>
+            <input type="range" x-model="sheetSeparation" min="0" max="2" step="0.1" @input="updateSqrtSurface()">
+          </div>
+        </div>
+
+        <div class="canvas-container" id="sqrt-canvas" x-show="sqrtView === 'surface'"></div>
+        <canvas id="sqrt-domain-canvas" class="domain-color-canvas" x-show="sqrtView === 'domain'"></canvas>
+
+        <div class="stats">
+          <div class="stat sheet1">
+            <div class="stat-value">2</div>
+            <div class="stat-label">Sheets</div>
+          </div>
+          <div class="stat branch">
+            <div class="stat-value">1</div>
+            <div class="stat-label">Branch Points</div>
+          </div>
+          <div class="stat genus">
+            <div class="stat-value">0</div>
+            <div class="stat-label">Genus</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          The two sheets (blue and orange) meet at the branch point z=0. Domain coloring shows
+          argument as hue, magnitude as brightness.
+        </p>
+      </div>
+    </div>
+
+    <!-- Log function -->
+    <div class="interactive-container reveal" style="margin-top: 3rem;">
+      <h3>The Logarithm Surface</h3>
+
+      <div class="prose" style="margin-bottom: 2rem;">
+        <p>
+          The logarithm $\log z$ is even more multi-valued: for each $z \neq 0$, there are
+          <em>infinitely many</em> values differing by $2\pi i$. The Riemann surface has
+          infinitely many sheets spiraling around the origin!
+        </p>
+
+        <div class="math-display">
+          $$\log z = \ln|z| + i(\arg z + 2\pi k), \quad k \in \mathbb{Z}$$
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Sheets visible: <span x-text="logSheets"></span></label>
+          <input type="range" x-model="logSheets" min="2" max="8" step="1" @input="updateLogSurface()">
+        </div>
+        <div class="control-group">
+          <label>Spiral tightness: <span x-text="logSpiral.toFixed(1)"></span></label>
+          <input type="range" x-model="logSpiral" min="0.5" max="2" step="0.1" @input="updateLogSurface()">
+        </div>
+      </div>
+
+      <div class="canvas-container" id="log-canvas"></div>
+
+      <p class="annotation">
+        Each sheet represents a different branch of log z. The surface spirals infinitely in both directions.
+      </p>
+    </div>
+  </section>
+
+  <!-- The Riemann Sphere -->
+  <section id="riemann-sphere">
+    <div class="chapter-header reveal">
+      <h2>The Riemann Sphere</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          The <strong>Riemann sphere</strong> $\hat{\mathbb{C}} = \mathbb{C} \cup \{\infty\}$ is the
+          simplest compact Riemann surface. It's topologically a sphere, with complex structure
+          given by two charts: one centered at 0, one at ∞.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Riemann Sphere</div>
+          <p style="margin-bottom: 0;">
+            $\hat{\mathbb{C}}$ is covered by two charts:
+            <br>• $U_0 = \mathbb{C}$ with coordinate $z$
+            <br>• $U_\infty = (\mathbb{C} \setminus \{0\}) \cup \{\infty\}$ with coordinate $w = 1/z$
+            <br>
+            On the overlap, the transition map $w = 1/z$ is holomorphic.
+          </p>
+        </div>
+
+        <p>
+          Geometrically, this is <strong>stereographic projection</strong>: place a unit sphere
+          on the complex plane, and project from the north pole. Every point in $\mathbb{C}$
+          corresponds to a point on the sphere; the north pole is $\infty$.
+        </p>
+
+        <p>
+          Meromorphic functions on $\hat{\mathbb{C}}$ are precisely the <strong>rational functions</strong>—quotients
+          of polynomials. The poles become regular points when viewed in the $w = 1/z$ chart!
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Stereographic Projection</h3>
+        <p class="instruction">Click on the plane or sphere to see corresponding points</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Show</label>
+            <div class="tabs">
+              <button @click="showStereoGrid = !showStereoGrid" :class="{ active: showStereoGrid }">Grid</button>
+              <button @click="showStereoCircles = !showStereoCircles" :class="{ active: showStereoCircles }">Circles</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-container" id="sphere-canvas"></div>
+
+        <div class="stats">
+          <div class="stat sheet1">
+            <div class="stat-value" x-text="'(' + stereoPoint.x.toFixed(2) + ', ' + stereoPoint.y.toFixed(2) + ')'"></div>
+            <div class="stat-label">z ∈ ℂ</div>
+          </div>
+          <div class="stat sheet2">
+            <div class="stat-value" x-text="stereoPoint.spherePos"></div>
+            <div class="stat-label">Point on S²</div>
+          </div>
+          <div class="stat genus">
+            <div class="stat-value">0</div>
+            <div class="stat-label">Genus</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          Lines and circles in ℂ map to circles on the sphere. The "point at infinity" is the north pole.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 48: Morphisms -->
+  <section id="morphisms">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 48</div>
+      <h2>Morphisms & Ramification</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          A <strong>morphism</strong> between Riemann surfaces is a holomorphic map. The key concept
+          is <strong>ramification</strong>: where does the map fail to be a local isomorphism?
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Ramification</div>
+          <p style="margin-bottom: 0;">
+            Let $f: X \to Y$ be a non-constant morphism. At a point $p \in X$, choose local
+            coordinates so $f$ looks like $z \mapsto z^n$ for some $n \geq 1$.
+            <br><br>
+            • If $n = 1$: $f$ is a local isomorphism (unramified)
+            <br>• If $n > 1$: $p$ is a <em>ramification point</em> with <em>ramification index</em> $e_p = n$
+          </p>
+        </div>
+
+        <p>
+          Think of ramification like a book's pages meeting at the spine. Near a ramification
+          point of index $n$, the map wraps around $n$ times—like $n$ pages glued together.
+        </p>
+
+        <div class="theorem">
+          <div class="thm-title">Riemann-Hurwitz Formula</div>
+          <p style="margin-bottom: 0;">
+            For a degree $d$ map $f: X \to Y$ between compact Riemann surfaces:
+            $$2g_X - 2 = d(2g_Y - 2) + \sum_{p \in X}(e_p - 1)$$
+            The ramification "costs" genus on the source!
+          </p>
+        </div>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Visualizing $z \mapsto z^n$</h3>
+        <p class="instruction">Adjust n to see how the map wraps around the origin</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Exponent n: <span x-text="ramificationN"></span></label>
+            <input type="range" x-model="ramificationN" min="1" max="6" step="1" @input="updateRamification()">
+          </div>
+        </div>
+
+        <div class="svg-container" id="ramification-viz"></div>
+
+        <div class="stats">
+          <div class="stat sheet1">
+            <div class="stat-value" x-text="ramificationN"></div>
+            <div class="stat-label">Degree</div>
+          </div>
+          <div class="stat branch">
+            <div class="stat-value" x-text="ramificationN > 1 ? '1' : '0'"></div>
+            <div class="stat-label">Branch Points</div>
+          </div>
+          <div class="stat sheet2">
+            <div class="stat-value" x-text="ramificationN - 1"></div>
+            <div class="stat-label">Ramification Index - 1</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          One loop in the source (left) becomes <span x-text="ramificationN"></span> loops in the target (right).
+          The origin is a branch point when n > 1.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 49: Algebraic Curves -->
+  <section id="algebraic-curves">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapter 49</div>
+      <h2>Algebraic Curves</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        Every compact Riemann surface arises from an algebraic curve—the zero set of a polynomial.
+        The simplest non-trivial examples are <strong>elliptic curves</strong>: curves of the form
+        $y^2 = x^3 + ax + b$ (assuming no repeated roots).
+      </p>
+
+      <div class="definition">
+        <div class="def-title">Definition: Elliptic Curve</div>
+        <p style="margin-bottom: 0;">
+          An <em>elliptic curve</em> over $\mathbb{C}$ is a smooth projective curve of genus 1.
+          In affine form: $E: y^2 = x^3 + ax + b$ where $\Delta = -16(4a^3 + 27b^2) \neq 0$.
+          <br><br>
+          The condition $\Delta \neq 0$ ensures the cubic has distinct roots (smoothness).
+        </p>
+      </div>
+
+      <p>
+        What makes elliptic curves special? They're the only curves that are simultaneously:
+        <br>• <strong>Abelian groups</strong>: you can "add" points on the curve
+        <br>• <strong>Complex tori</strong>: topologically $S^1 \times S^1$ (a donut)
+        <br>• <strong>Genus 1</strong>: exactly one "hole"
+      </p>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Elliptic Curve Explorer</h3>
+      <p class="instruction">Adjust parameters to see different elliptic curves</p>
+
+      <div class="controls">
+        <div class="control-group">
+          <label>Parameter a: <span x-text="ellipticA.toFixed(1)"></span></label>
+          <input type="range" x-model="ellipticA" min="-3" max="3" step="0.1" @input="updateElliptic()">
+        </div>
+        <div class="control-group">
+          <label>Parameter b: <span x-text="ellipticB.toFixed(1)"></span></label>
+          <input type="range" x-model="ellipticB" min="-3" max="3" step="0.1" @input="updateElliptic()">
+        </div>
+        <div class="control-group">
+          <label>Discriminant Δ: <span x-text="ellipticDelta.toFixed(2)" :style="{ color: ellipticDelta === 0 ? '#ef4444' : '#10b981' }"></span></label>
+        </div>
+      </div>
+
+      <div class="svg-container" id="elliptic-viz" style="height: 450px;"></div>
+
+      <div class="stats">
+        <div class="stat genus">
+          <div class="stat-value">1</div>
+          <div class="stat-label">Genus</div>
+        </div>
+        <div class="stat holomorphic">
+          <div class="stat-value" x-text="ellipticDelta !== 0 ? 'Smooth' : 'Singular'"></div>
+          <div class="stat-label">Type</div>
+        </div>
+        <div class="stat sheet1">
+          <div class="stat-value" x-text="'y² = x³' + (ellipticA >= 0 ? '+' : '') + ellipticA.toFixed(1) + 'x' + (ellipticB >= 0 ? '+' : '') + ellipticB.toFixed(1)"></div>
+          <div class="stat-label">Equation</div>
+        </div>
+      </div>
+
+      <p class="annotation">
+        When Δ = 0, the curve becomes singular (has a cusp or node). Only smooth curves are elliptic curves.
+      </p>
+    </div>
+  </section>
+
+  <!-- Torus as Riemann Surface -->
+  <section id="torus">
+    <div class="chapter-header reveal">
+      <h2>The Torus as ℂ/Λ</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          Here's the remarkable connection: every elliptic curve is isomorphic to a <strong>complex torus</strong>
+          $\mathbb{C}/\Lambda$, where $\Lambda = \mathbb{Z} \oplus \tau\mathbb{Z}$ is a lattice in $\mathbb{C}$.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Complex Torus</div>
+          <p style="margin-bottom: 0;">
+            For $\tau \in \mathbb{C}$ with $\text{Im}(\tau) > 0$, the <em>complex torus</em> is:
+            $$\mathbb{C}/\Lambda_\tau \quad \text{where } \Lambda_\tau = \{m + n\tau : m, n \in \mathbb{Z}\}$$
+            Points differing by a lattice vector are identified.
+          </p>
+        </div>
+
+        <p>
+          Geometrically: take a parallelogram with vertices $0, 1, \tau, 1+\tau$, and glue opposite
+          edges. The result is a torus! The complex structure varies with $\tau$—different shapes
+          of parallelograms give different complex structures.
+        </p>
+
+        <p>
+          The <strong>Weierstrass ℘-function</strong> provides the isomorphism: it's a doubly-periodic
+          meromorphic function satisfying $(℘')^2 = 4℘^3 - g_2℘ - g_3$, which is an elliptic curve!
+        </p>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Lattice and Fundamental Domain</h3>
+        <p class="instruction">Drag τ to change the lattice shape</p>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>τ = <span x-text="latticeT.re.toFixed(2) + ' + ' + latticeT.im.toFixed(2) + 'i'"></span></label>
+          </div>
+          <div class="control-group">
+            <label>Show</label>
+            <div class="tabs">
+              <button @click="showLatticePoints = !showLatticePoints" :class="{ active: showLatticePoints }">Lattice</button>
+              <button @click="showFundDomain = !showFundDomain" :class="{ active: showFundDomain }">Domain</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="svg-container" id="lattice-viz" style="height: 450px;"></div>
+
+        <div class="stats">
+          <div class="stat sheet1">
+            <div class="stat-value" x-text="'(' + latticeT.re.toFixed(2) + ', ' + latticeT.im.toFixed(2) + ')'"></div>
+            <div class="stat-label">τ</div>
+          </div>
+          <div class="stat sheet2">
+            <div class="stat-value" x-text="latticeT.im.toFixed(3)"></div>
+            <div class="stat-label">Im(τ) (Area)</div>
+          </div>
+          <div class="stat genus">
+            <div class="stat-value">1</div>
+            <div class="stat-label">Genus</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          The shaded parallelogram is the fundamental domain. Opposite edges are identified to form a torus.
+        </p>
+      </div>
+    </div>
+
+    <!-- 3D Torus -->
+    <div class="interactive-container reveal" style="margin-top: 3rem;">
+      <h3>The Torus in 3D</h3>
+
+      <div class="canvas-container" id="torus-canvas"></div>
+
+      <p class="annotation">
+        A torus embedded in 3D. The "hole" corresponds to genus 1. The two circles (meridian and longitude)
+        generate the fundamental group π₁ ≅ ℤ × ℤ.
+      </p>
+    </div>
+  </section>
+
+  <!-- Genus -->
+  <section id="genus">
+    <div class="chapter-header reveal">
+      <h2>Genus: The Master Invariant</h2>
+    </div>
+
+    <div class="prose reveal" style="max-width: 800px; margin: 0 auto 3rem;">
+      <p>
+        The <strong>genus</strong> $g$ of a Riemann surface counts the number of "handles" or "holes."
+        It's the most important topological invariant, controlling everything from the dimension of
+        spaces of holomorphic forms to the structure of the fundamental group.
+      </p>
+
+      <div class="definition">
+        <div class="def-title">Key Facts About Genus</div>
+        <p style="margin-bottom: 0;">
+          For a compact Riemann surface $X$ of genus $g$:
+          <br>• $\chi(X) = 2 - 2g$ (Euler characteristic)
+          <br>• $\dim H^0(X, \Omega^1) = g$ (holomorphic 1-forms)
+          <br>• $\pi_1(X) = \langle a_1, b_1, \ldots, a_g, b_g \mid \prod [a_i, b_i] = 1 \rangle$
+          <br>• $H_1(X, \mathbb{Z}) \cong \mathbb{Z}^{2g}$
+        </p>
+      </div>
+    </div>
+
+    <div class="interactive-container reveal">
+      <h3>Gallery of Genera</h3>
+
+      <div class="genus-gallery">
+        <div class="genus-item">
+          <div class="genus-canvas" id="genus0-canvas"></div>
+          <div class="genus-label">g = 0 (Sphere)</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+            No holes. Only rational functions.
+          </p>
+        </div>
+        <div class="genus-item">
+          <div class="genus-canvas" id="genus1-canvas"></div>
+          <div class="genus-label">g = 1 (Torus)</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+            One hole. Elliptic curves live here.
+          </p>
+        </div>
+        <div class="genus-item">
+          <div class="genus-canvas" id="genus2-canvas"></div>
+          <div class="genus-label">g = 2 (Double Torus)</div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+            Two holes. Hyperelliptic curves.
+          </p>
+        </div>
+      </div>
+
+      <div class="stats" style="margin-top: 2rem;">
+        <div class="stat holomorphic">
+          <div class="stat-value">0, 1, 2</div>
+          <div class="stat-label">dim Ω¹</div>
+        </div>
+        <div class="stat sheet1">
+          <div class="stat-value">2, 0, -2</div>
+          <div class="stat-label">Euler χ</div>
+        </div>
+        <div class="stat genus">
+          <div class="stat-value">0, 2, 4</div>
+          <div class="stat-label">dim H₁</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chapter 51: Riemann-Roch -->
+  <section id="riemann-roch">
+    <div class="chapter-header reveal">
+      <div class="chapter-number">Chapters 50-52</div>
+      <h2>The Riemann-Roch Theorem</h2>
+    </div>
+
+    <div class="two-column">
+      <div class="prose reveal">
+        <p>
+          The <strong>Riemann-Roch theorem</strong> is the crown jewel of Riemann surface theory.
+          It relates the dimension of spaces of meromorphic functions to topology.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Definition: Divisors</div>
+          <p style="margin-bottom: 0;">
+            A <em>divisor</em> on $X$ is a formal sum $D = \sum n_p \cdot p$ of points with integer coefficients.
+            <br>• $\deg(D) = \sum n_p$
+            <br>• $L(D) = \{f \text{ meromorphic} : (f) + D \geq 0\}$
+            <br>The condition $(f) + D \geq 0$ means $f$ can have poles only where $D$ is positive, with bounded order.
+          </p>
+        </div>
+
+        <div class="theorem">
+          <div class="thm-title">Riemann-Roch Theorem</div>
+          <p style="margin-bottom: 0;">
+            For a divisor $D$ on a compact Riemann surface $X$ of genus $g$:
+            $$\ell(D) - \ell(K - D) = \deg(D) - g + 1$$
+            where $K$ is the canonical divisor and $\ell(D) = \dim L(D)$.
+          </p>
+        </div>
+
+        <p>
+          The magic: given where you allow poles, Riemann-Roch tells you how many linearly independent
+          meromorphic functions exist! The correction term $\ell(K - D)$ involves holomorphic differentials.
+        </p>
+
+        <p>
+          When $\deg(D) > 2g - 2$, we have $\ell(K - D) = 0$, so:
+        </p>
+
+        <div class="math-display">
+          $$\ell(D) = \deg(D) - g + 1 \quad \text{for } \deg(D) \gg 0$$
+        </div>
+      </div>
+
+      <div class="interactive-container reveal">
+        <h3>Riemann-Roch Calculator</h3>
+
+        <div class="controls">
+          <div class="control-group">
+            <label>Genus g: <span x-text="rrGenus"></span></label>
+            <input type="range" x-model="rrGenus" min="0" max="5" step="1" @input="updateRR()">
+          </div>
+          <div class="control-group">
+            <label>deg(D): <span x-text="rrDegree"></span></label>
+            <input type="range" x-model="rrDegree" min="-3" max="10" step="1" @input="updateRR()">
+          </div>
+        </div>
+
+        <div class="svg-container" id="rr-viz" style="height: 350px;"></div>
+
+        <div class="stats">
+          <div class="stat holomorphic">
+            <div class="stat-value" x-text="rrEll"></div>
+            <div class="stat-label">ℓ(D)</div>
+          </div>
+          <div class="stat sheet2">
+            <div class="stat-value" x-text="rrEllK"></div>
+            <div class="stat-label">ℓ(K-D)</div>
+          </div>
+          <div class="stat genus">
+            <div class="stat-value" x-text="rrRHS"></div>
+            <div class="stat-label">deg(D) - g + 1</div>
+          </div>
+        </div>
+
+        <p class="annotation">
+          The theorem: ℓ(D) - ℓ(K-D) = deg(D) - g + 1.
+          When deg(D) > 2g-2, ℓ(K-D) = 0 and we get the simple formula.
+        </p>
+      </div>
+    </div>
+
+    <!-- Line Bundles -->
+    <div class="interactive-container reveal" style="margin-top: 3rem;">
+      <h3>Line Bundles: The Modern View</h3>
+
+      <div class="prose" style="margin-bottom: 2rem;">
+        <p>
+          In modern language, divisors correspond to <strong>line bundles</strong>. A line bundle
+          $L \to X$ is a "twisted" product where each fiber is a copy of $\mathbb{C}$, but they
+          may be glued together non-trivially.
+        </p>
+
+        <div class="definition">
+          <div class="def-title">Line Bundle Correspondence</div>
+          <p style="margin-bottom: 0;">
+            • Each divisor $D$ defines a line bundle $\mathcal{O}(D)$
+            <br>• Sections of $\mathcal{O}(D)$ correspond to $L(D)$
+            <br>• The canonical bundle $K_X = \Omega^1_X$ has sections = holomorphic 1-forms
+            <br>• $\deg(\mathcal{O}(D)) = \deg(D)$
+          </p>
+        </div>
+      </div>
+
+      <div class="canvas-container" id="line-bundle-canvas" style="height: 400px;"></div>
+
+      <p class="annotation">
+        Visualization: a line bundle over a circle. The "twist" is measured by the degree (how many times the fiber rotates).
+      </p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      Part XIII of <em>An Infinitely Large Napkin</em> by Evan Chen<br>
+      Interactive exploration of the beautiful world where analysis meets topology<br>
+      <a href="https://venhance.github.io/napkin/" target="_blank">Original source →</a>
+    </p>
+  </footer>
+
+  <script>
+    // Initialize KaTeX
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    });
+
+    // Complex number helpers
+    const Complex = {
+      add: (a, b) => ({ re: a.re + b.re, im: a.im + b.im }),
+      sub: (a, b) => ({ re: a.re - b.re, im: a.im - b.im }),
+      mul: (a, b) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re }),
+      div: (a, b) => {
+        const d = b.re * b.re + b.im * b.im;
+        return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d };
+      },
+      abs: (z) => Math.sqrt(z.re * z.re + z.im * z.im),
+      arg: (z) => Math.atan2(z.im, z.re),
+      sqrt: (z) => {
+        const r = Complex.abs(z);
+        const theta = Complex.arg(z);
+        return { re: Math.sqrt(r) * Math.cos(theta / 2), im: Math.sqrt(r) * Math.sin(theta / 2) };
+      },
+      exp: (z) => {
+        const r = Math.exp(z.re);
+        return { re: r * Math.cos(z.im), im: r * Math.sin(z.im) };
+      },
+      log: (z) => ({ re: Math.log(Complex.abs(z)), im: Complex.arg(z) }),
+      pow: (z, n) => {
+        const r = Math.pow(Complex.abs(z), n);
+        const theta = Complex.arg(z) * n;
+        return { re: r * Math.cos(theta), im: r * Math.sin(theta) };
+      }
+    };
+
+    // HSL to RGB for domain coloring
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    // Domain coloring
+    function domainColor(z) {
+      const arg = Complex.arg(z);
+      const abs = Complex.abs(z);
+      const h = (arg + Math.PI) / (2 * Math.PI);
+      const s = 0.8;
+      const l = 1 - 1 / (1 + abs * 0.3);
+      return hslToRgb(h, s, Math.max(0.1, Math.min(0.9, l)));
+    }
+
+    // Three.js scenes storage
+    const scenes = {};
+
+    function riemannExplorer() {
+      return {
+        scrollProgress: 0,
+        currentSection: 'hero',
+
+        // Square root surface
+        sqrtView: 'surface',
+        sheetSeparation: 0.8,
+
+        // Log surface
+        logSheets: 4,
+        logSpiral: 1,
+
+        // Riemann sphere
+        showStereoGrid: true,
+        showStereoCircles: false,
+        stereoPoint: { x: 1, y: 0.5, spherePos: '(0.8, 0.4, 0.4)' },
+
+        // Ramification
+        ramificationN: 2,
+
+        // Elliptic curve
+        ellipticA: -1,
+        ellipticB: 1,
+        ellipticDelta: 0,
+
+        // Lattice/Torus
+        latticeT: { re: 0.3, im: 1 },
+        showLatticePoints: true,
+        showFundDomain: true,
+
+        // Riemann-Roch
+        rrGenus: 1,
+        rrDegree: 3,
+        rrEll: 3,
+        rrEllK: 0,
+        rrRHS: 3,
+
+        init() {
+          gsap.registerPlugin(ScrollTrigger);
+
+          ScrollTrigger.create({
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            onUpdate: self => this.scrollProgress = self.progress * 100
+          });
+
+          const sections = ['hero', 'multi-valued', 'riemann-sphere', 'morphisms', 'algebraic-curves', 'torus', 'genus', 'riemann-roch'];
+          sections.forEach(id => {
+            ScrollTrigger.create({
+              trigger: `#${id}`,
+              start: 'top center',
+              end: 'bottom center',
+              onEnter: () => this.currentSection = id,
+              onEnterBack: () => this.currentSection = id
+            });
+          });
+
+          gsap.utils.toArray('.reveal').forEach(el => {
+            gsap.from(el, {
+              y: 50,
+              opacity: 0,
+              duration: 0.8,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse'
+              }
+            });
+          });
+
+          // Initialize visualizations
+          setTimeout(() => {
+            this.initHeroCanvas();
+            this.initSqrtSurface();
+            this.initSqrtDomainColor();
+            this.initLogSurface();
+            this.initSphereScene();
+            this.initRamificationViz();
+            this.updateElliptic();
+            this.initLatticeViz();
+            this.initTorusScene();
+            this.initGenusGallery();
+            this.updateRR();
+            this.initLineBundleScene();
+          }, 100);
+
+          // Watchers
+          this.$watch('sqrtView', () => {
+            if (this.sqrtView === 'domain') this.initSqrtDomainColor();
+          });
+          this.$watch('ellipticA', () => this.updateElliptic());
+          this.$watch('ellipticB', () => this.updateElliptic());
+        },
+
+        initHeroCanvas() {
+          const container = document.getElementById('hero-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+          const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          // Create a twisted surface
+          const geometry = new THREE.ParametricGeometry((u, v, target) => {
+            const theta = u * Math.PI * 4;
+            const r = 0.5 + v * 2;
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+            const z = (u - 0.5) * 2 + Math.sin(theta * 2) * 0.3;
+            target.set(x, z, y);
+          }, 100, 30);
+
+          const material = new THREE.MeshBasicMaterial({
+            color: 0x3b82f6,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.4
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+
+          camera.position.z = 4;
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            mesh.rotation.x += 0.002;
+            mesh.rotation.y += 0.003;
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        initSqrtSurface() {
+          const container = document.getElementById('sqrt-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x0a0a1a);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(3, 2, 3);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          scenes.sqrt = { scene, camera, renderer, controls };
+          this.updateSqrtSurface();
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        updateSqrtSurface() {
+          const { scene } = scenes.sqrt || {};
+          if (!scene) return;
+
+          while (scene.children.length > 0) {
+            scene.remove(scene.children[0]);
+          }
+
+          const sep = parseFloat(this.sheetSeparation);
+
+          // Create two sheets for sqrt(z)
+          const createSheet = (sign, color) => {
+            const geometry = new THREE.ParametricGeometry((u, v, target) => {
+              const r = u * 2 + 0.1;
+              const theta = v * Math.PI * 2;
+
+              // sqrt(r * e^{i*theta}) = sqrt(r) * e^{i*theta/2}
+              const sqrtR = Math.sqrt(r);
+              const halfTheta = theta / 2 + (sign > 0 ? 0 : Math.PI);
+
+              const x = r * Math.cos(theta);
+              const y = r * Math.sin(theta);
+              const z = sqrtR * Math.sin(halfTheta) * sign + sep * sign;
+
+              target.set(x, z, y);
+            }, 50, 100);
+
+            const material = new THREE.MeshPhongMaterial({
+              color: color,
+              side: THREE.DoubleSide,
+              transparent: true,
+              opacity: 0.7
+            });
+
+            return new THREE.Mesh(geometry, material);
+          };
+
+          const sheet1 = createSheet(1, 0x3b82f6);
+          const sheet2 = createSheet(-1, 0xf59e0b);
+          scene.add(sheet1);
+          scene.add(sheet2);
+
+          // Branch point marker
+          const branchGeo = new THREE.SphereGeometry(0.1);
+          const branchMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const branch = new THREE.Mesh(branchGeo, branchMat);
+          branch.position.set(0, 0, 0);
+          scene.add(branch);
+
+          // Lights
+          const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambient);
+          const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+          directional.position.set(5, 5, 5);
+          scene.add(directional);
+        },
+
+        initSqrtDomainColor() {
+          const canvas = document.getElementById('sqrt-domain-canvas');
+          if (!canvas) return;
+
+          const ctx = canvas.getContext('2d');
+          const width = canvas.width = 500;
+          const height = canvas.height = 400;
+
+          const imageData = ctx.createImageData(width, height);
+          const data = imageData.data;
+
+          for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+              const x = (px / width - 0.5) * 6;
+              const y = (0.5 - py / height) * 4.8;
+
+              const z = { re: x, im: y };
+              const w = Complex.sqrt(z);
+
+              const [r, g, b] = domainColor(w);
+              const idx = (py * width + px) * 4;
+              data[idx] = r;
+              data[idx + 1] = g;
+              data[idx + 2] = b;
+              data[idx + 3] = 255;
+            }
+          }
+
+          ctx.putImageData(imageData, 0, 0);
+        },
+
+        initLogSurface() {
+          const container = document.getElementById('log-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x0a0a1a);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(4, 3, 4);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          scenes.log = { scene, camera, renderer, controls };
+          this.updateLogSurface();
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        updateLogSurface() {
+          const { scene } = scenes.log || {};
+          if (!scene) return;
+
+          while (scene.children.length > 0) {
+            scene.remove(scene.children[0]);
+          }
+
+          const sheets = parseInt(this.logSheets);
+          const spiral = parseFloat(this.logSpiral);
+
+          // Create spiraling surface for log z
+          const geometry = new THREE.ParametricGeometry((u, v, target) => {
+            const r = 0.2 + u * 2;
+            const theta = (v - 0.5) * sheets * Math.PI * 2;
+
+            const x = r * Math.cos(theta / sheets);
+            const y = r * Math.sin(theta / sheets);
+            const z = theta * spiral * 0.15;
+
+            target.set(x, z, y);
+          }, 40, 100);
+
+          const colors = [0x3b82f6, 0xf59e0b, 0x10b981, 0xec4899, 0x8b5cf6, 0x06b6d4, 0xef4444, 0x84cc16];
+          const material = new THREE.MeshPhongMaterial({
+            vertexColors: false,
+            color: 0x3b82f6,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+
+          // Branch point (origin)
+          const branchGeo = new THREE.CylinderGeometry(0.05, 0.05, sheets * Math.PI * spiral * 0.3);
+          const branchMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const branch = new THREE.Mesh(branchGeo, branchMat);
+          scene.add(branch);
+
+          // Lights
+          const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambient);
+          const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+          directional.position.set(5, 5, 5);
+          scene.add(directional);
+        },
+
+        initSphereScene() {
+          const container = document.getElementById('sphere-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x0a0a1a);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(2.5, 2, 2.5);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          // Sphere
+          const sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+          const sphereMat = new THREE.MeshPhongMaterial({
+            color: 0x3b82f6,
+            transparent: true,
+            opacity: 0.6,
+            side: THREE.DoubleSide
+          });
+          const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+          scene.add(sphere);
+
+          // Grid on sphere
+          if (this.showStereoGrid) {
+            for (let lat = -60; lat <= 60; lat += 30) {
+              const latRad = lat * Math.PI / 180;
+              const r = Math.cos(latRad);
+              const y = Math.sin(latRad);
+              const points = [];
+              for (let lon = 0; lon <= 360; lon += 5) {
+                const lonRad = lon * Math.PI / 180;
+                points.push(new THREE.Vector3(r * Math.cos(lonRad), y, r * Math.sin(lonRad)));
+              }
+              const geo = new THREE.BufferGeometry().setFromPoints(points);
+              const mat = new THREE.LineBasicMaterial({ color: 0x444444 });
+              scene.add(new THREE.Line(geo, mat));
+            }
+          }
+
+          // Plane at y = -1.5
+          const planeGeo = new THREE.PlaneGeometry(5, 5);
+          const planeMat = new THREE.MeshBasicMaterial({
+            color: 0xf59e0b,
+            transparent: true,
+            opacity: 0.2,
+            side: THREE.DoubleSide
+          });
+          const plane = new THREE.Mesh(planeGeo, planeMat);
+          plane.rotation.x = -Math.PI / 2;
+          plane.position.y = -1.5;
+          scene.add(plane);
+
+          // Grid on plane
+          const gridHelper = new THREE.GridHelper(5, 10, 0x444444, 0x333333);
+          gridHelper.position.y = -1.49;
+          scene.add(gridHelper);
+
+          // North pole marker
+          const poleGeo = new THREE.SphereGeometry(0.08);
+          const poleMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+          const pole = new THREE.Mesh(poleGeo, poleMat);
+          pole.position.y = 1;
+          scene.add(pole);
+
+          // Lights
+          const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambient);
+          const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+          directional.position.set(3, 3, 3);
+          scene.add(directional);
+
+          scenes.sphere = { scene, camera, renderer, controls };
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        initRamificationViz() {
+          this.updateRamification();
+        },
+
+        updateRamification() {
+          const container = document.getElementById('ramification-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 380;
+          const n = parseInt(this.ramificationN);
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const leftCx = width * 0.25;
+          const rightCx = width * 0.75;
+          const cy = height / 2;
+          const radius = 100;
+
+          // Source (left) - one circle
+          svg.append('circle')
+            .attr('cx', leftCx)
+            .attr('cy', cy)
+            .attr('r', radius)
+            .attr('fill', 'none')
+            .attr('stroke', '#3b82f6')
+            .attr('stroke-width', 2);
+
+          // Moving point on source
+          const numFrames = 60;
+          let frame = 0;
+
+          const sourcePoint = svg.append('circle')
+            .attr('r', 8)
+            .attr('fill', '#f59e0b');
+
+          // Path traced on source
+          const sourcePath = svg.append('path')
+            .attr('fill', 'none')
+            .attr('stroke', '#f59e0b')
+            .attr('stroke-width', 2)
+            .attr('opacity', 0.5);
+
+          // Target (right) - the image
+          svg.append('circle')
+            .attr('cx', rightCx)
+            .attr('cy', cy)
+            .attr('r', radius)
+            .attr('fill', 'none')
+            .attr('stroke', '#10b981')
+            .attr('stroke-width', 2);
+
+          const targetPoint = svg.append('circle')
+            .attr('r', 8)
+            .attr('fill', '#ec4899');
+
+          const targetPath = svg.append('path')
+            .attr('fill', 'none')
+            .attr('stroke', '#ec4899')
+            .attr('stroke-width', 2)
+            .attr('opacity', 0.5);
+
+          // Labels
+          svg.append('text')
+            .attr('x', leftCx)
+            .attr('y', 30)
+            .attr('fill', '#94a3b8')
+            .attr('text-anchor', 'middle')
+            .text('Source');
+
+          svg.append('text')
+            .attr('x', rightCx)
+            .attr('y', 30)
+            .attr('fill', '#94a3b8')
+            .attr('text-anchor', 'middle')
+            .text('Target (z^' + n + ')');
+
+          // Arrow
+          svg.append('line')
+            .attr('x1', leftCx + radius + 20)
+            .attr('y1', cy)
+            .attr('x2', rightCx - radius - 20)
+            .attr('y2', cy)
+            .attr('stroke', '#64748b')
+            .attr('stroke-width', 2)
+            .attr('marker-end', 'url(#arrowhead)');
+
+          svg.append('defs').append('marker')
+            .attr('id', 'arrowhead')
+            .attr('markerWidth', 10)
+            .attr('markerHeight', 7)
+            .attr('refX', 9)
+            .attr('refY', 3.5)
+            .attr('orient', 'auto')
+            .append('polygon')
+            .attr('points', '0 0, 10 3.5, 0 7')
+            .attr('fill', '#64748b');
+
+          // Branch points
+          svg.append('circle')
+            .attr('cx', leftCx)
+            .attr('cy', cy)
+            .attr('r', 6)
+            .attr('fill', '#ef4444');
+
+          svg.append('circle')
+            .attr('cx', rightCx)
+            .attr('cy', cy)
+            .attr('r', 6)
+            .attr('fill', '#ef4444');
+
+          // Animation
+          const sourcePathData = [];
+          const targetPathData = [];
+
+          const animate = () => {
+            const t = frame / numFrames;
+            const theta = t * 2 * Math.PI;
+
+            const sx = leftCx + radius * 0.7 * Math.cos(theta);
+            const sy = cy + radius * 0.7 * Math.sin(theta);
+            sourcePoint.attr('cx', sx).attr('cy', sy);
+
+            // z^n: angle multiplies by n
+            const tx = rightCx + radius * 0.7 * Math.cos(theta * n);
+            const ty = cy + radius * 0.7 * Math.sin(theta * n);
+            targetPoint.attr('cx', tx).attr('cy', ty);
+
+            sourcePathData.push([sx, sy]);
+            targetPathData.push([tx, ty]);
+
+            if (sourcePathData.length > 1) {
+              const line = d3.line();
+              sourcePath.attr('d', line(sourcePathData));
+              targetPath.attr('d', line(targetPathData));
+            }
+
+            frame++;
+            if (frame <= numFrames) {
+              requestAnimationFrame(animate);
+            } else {
+              // Reset
+              setTimeout(() => {
+                frame = 0;
+                sourcePathData.length = 0;
+                targetPathData.length = 0;
+                animate();
+              }, 1000);
+            }
+          };
+
+          animate();
+        },
+
+        updateElliptic() {
+          const container = document.getElementById('elliptic-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 430;
+          const a = parseFloat(this.ellipticA);
+          const b = parseFloat(this.ellipticB);
+
+          // Discriminant
+          this.ellipticDelta = -16 * (4 * a * a * a + 27 * b * b);
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          const cx = width / 2;
+          const cy = height / 2;
+          const scale = 50;
+
+          // Grid
+          for (let i = -5; i <= 5; i++) {
+            svg.append('line')
+              .attr('x1', cx + i * scale).attr('y1', 0)
+              .attr('x2', cx + i * scale).attr('y2', height)
+              .attr('stroke', '#1a1a3a').attr('stroke-width', 1);
+            svg.append('line')
+              .attr('x1', 0).attr('y1', cy + i * scale)
+              .attr('x2', width).attr('y2', cy + i * scale)
+              .attr('stroke', '#1a1a3a').attr('stroke-width', 1);
+          }
+
+          // Axes
+          svg.append('line')
+            .attr('x1', 0).attr('y1', cy)
+            .attr('x2', width).attr('y2', cy)
+            .attr('stroke', '#64748b').attr('stroke-width', 1);
+          svg.append('line')
+            .attr('x1', cx).attr('y1', 0)
+            .attr('x2', cx).attr('y2', height)
+            .attr('stroke', '#64748b').attr('stroke-width', 1);
+
+          // Plot the curve y^2 = x^3 + ax + b
+          const points = [];
+          const negPoints = [];
+
+          for (let px = 0; px < width; px++) {
+            const x = (px - cx) / scale;
+            const rhs = x * x * x + a * x + b;
+
+            if (rhs >= 0) {
+              const y = Math.sqrt(rhs);
+              points.push([cx + x * scale, cy - y * scale]);
+              negPoints.push([cx + x * scale, cy + y * scale]);
+            }
+          }
+
+          if (points.length > 1) {
+            const line = d3.line().curve(d3.curveNatural);
+
+            svg.append('path')
+              .attr('d', line(points))
+              .attr('fill', 'none')
+              .attr('stroke', '#ec4899')
+              .attr('stroke-width', 3);
+
+            svg.append('path')
+              .attr('d', line(negPoints))
+              .attr('fill', 'none')
+              .attr('stroke', '#ec4899')
+              .attr('stroke-width', 3);
+          }
+
+          // Mark singular point if discriminant is 0
+          if (Math.abs(this.ellipticDelta) < 0.5) {
+            // Find the singular point (where cubic has repeated root)
+            svg.append('circle')
+              .attr('cx', cx)
+              .attr('cy', cy)
+              .attr('r', 8)
+              .attr('fill', '#ef4444')
+              .attr('opacity', 0.8);
+
+            svg.append('text')
+              .attr('x', cx + 15)
+              .attr('y', cy - 10)
+              .attr('fill', '#ef4444')
+              .attr('font-size', '12px')
+              .text('Singular!');
+          }
+        },
+
+        initLatticeViz() {
+          const container = document.getElementById('lattice-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 430;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          scenes.latticeSvg = svg;
+          scenes.latticeWidth = width;
+          scenes.latticeHeight = height;
+
+          this.updateLatticeViz();
+        },
+
+        updateLatticeViz() {
+          const svg = scenes.latticeSvg;
+          if (!svg) return;
+
+          const width = scenes.latticeWidth;
+          const height = scenes.latticeHeight;
+
+          svg.selectAll('*').remove();
+
+          const cx = width / 2;
+          const cy = height / 2;
+          const scale = 100;
+
+          const tau = this.latticeT;
+
+          // Draw lattice points
+          if (this.showLatticePoints) {
+            for (let m = -4; m <= 4; m++) {
+              for (let n = -3; n <= 3; n++) {
+                const x = m + n * tau.re;
+                const y = n * tau.im;
+
+                svg.append('circle')
+                  .attr('cx', cx + x * scale)
+                  .attr('cy', cy - y * scale)
+                  .attr('r', 4)
+                  .attr('fill', '#3b82f6')
+                  .attr('opacity', 0.7);
+              }
+            }
+          }
+
+          // Fundamental domain
+          if (this.showFundDomain) {
+            const points = [
+              [cx, cy],
+              [cx + scale, cy],
+              [cx + scale + tau.re * scale, cy - tau.im * scale],
+              [cx + tau.re * scale, cy - tau.im * scale]
+            ];
+
+            svg.append('polygon')
+              .attr('points', points.map(p => p.join(',')).join(' '))
+              .attr('fill', '#f59e0b')
+              .attr('opacity', 0.2)
+              .attr('stroke', '#f59e0b')
+              .attr('stroke-width', 2);
+          }
+
+          // Axes
+          svg.append('line')
+            .attr('x1', 0).attr('y1', cy)
+            .attr('x2', width).attr('y2', cy)
+            .attr('stroke', '#64748b').attr('stroke-width', 1);
+          svg.append('line')
+            .attr('x1', cx).attr('y1', 0)
+            .attr('x2', cx).attr('y2', height)
+            .attr('stroke', '#64748b').attr('stroke-width', 1);
+
+          // Draggable tau point
+          const tauX = cx + tau.re * scale;
+          const tauY = cy - tau.im * scale;
+
+          svg.append('circle')
+            .attr('cx', tauX)
+            .attr('cy', tauY)
+            .attr('r', 12)
+            .attr('fill', '#ec4899')
+            .attr('cursor', 'grab')
+            .call(d3.drag()
+              .on('drag', (event) => {
+                const newRe = (event.x - cx) / scale;
+                const newIm = -(event.y - cy) / scale;
+                if (newIm > 0.1) {  // Keep Im(τ) > 0
+                  this.latticeT = { re: newRe, im: newIm };
+                  this.updateLatticeViz();
+                }
+              }));
+
+          svg.append('text')
+            .attr('x', tauX + 15)
+            .attr('y', tauY - 5)
+            .attr('fill', '#ec4899')
+            .attr('font-size', '14px')
+            .text('τ');
+
+          // Labels
+          svg.append('text')
+            .attr('x', cx + scale)
+            .attr('y', cy + 20)
+            .attr('fill', '#3b82f6')
+            .attr('font-size', '12px')
+            .attr('text-anchor', 'middle')
+            .text('1');
+        },
+
+        initTorusScene() {
+          const container = document.getElementById('torus-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x0a0a1a);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(3, 2, 3);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          // Torus
+          const torusGeo = new THREE.TorusGeometry(1, 0.4, 32, 100);
+          const torusMat = new THREE.MeshPhongMaterial({
+            color: 0xec4899,
+            transparent: true,
+            opacity: 0.7,
+            side: THREE.DoubleSide
+          });
+          const torus = new THREE.Mesh(torusGeo, torusMat);
+          scene.add(torus);
+
+          // Grid lines on torus
+          for (let i = 0; i < 8; i++) {
+            const theta = (i / 8) * Math.PI * 2;
+            const points = [];
+            for (let j = 0; j <= 50; j++) {
+              const phi = (j / 50) * Math.PI * 2;
+              const x = (1 + 0.4 * Math.cos(phi)) * Math.cos(theta);
+              const y = 0.4 * Math.sin(phi);
+              const z = (1 + 0.4 * Math.cos(phi)) * Math.sin(theta);
+              points.push(new THREE.Vector3(x, y, z));
+            }
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            const mat = new THREE.LineBasicMaterial({ color: 0x444466 });
+            scene.add(new THREE.Line(geo, mat));
+          }
+
+          // Lights
+          const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambient);
+          const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+          directional.position.set(3, 3, 3);
+          scene.add(directional);
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        initGenusGallery() {
+          // Genus 0 (Sphere)
+          this.initGenusScene('genus0-canvas', 0);
+          // Genus 1 (Torus)
+          this.initGenusScene('genus1-canvas', 1);
+          // Genus 2 (Double torus)
+          this.initGenusScene('genus2-canvas', 2);
+        },
+
+        initGenusScene(containerId, genus) {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x12122a);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(2, 1.5, 2);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+          controls.autoRotate = true;
+          controls.autoRotateSpeed = 1;
+
+          let geometry;
+          if (genus === 0) {
+            geometry = new THREE.SphereGeometry(0.8, 32, 32);
+          } else if (genus === 1) {
+            geometry = new THREE.TorusGeometry(0.6, 0.3, 16, 50);
+          } else {
+            // Double torus approximation
+            geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 50);
+          }
+
+          const colors = [0x3b82f6, 0xec4899, 0x8b5cf6];
+          const material = new THREE.MeshPhongMaterial({
+            color: colors[genus],
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+
+          // For genus 2, add second torus
+          if (genus === 2) {
+            const torus2 = new THREE.Mesh(
+              new THREE.TorusGeometry(0.5, 0.2, 16, 50),
+              material.clone()
+            );
+            torus2.position.x = 0.8;
+            scene.add(torus2);
+
+            // Connecting tube (rough approximation)
+            const tube = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.15, 0.15, 0.3, 16),
+              material.clone()
+            );
+            tube.rotation.z = Math.PI / 2;
+            tube.position.x = 0.4;
+            scene.add(tube);
+          }
+
+          const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambient);
+          const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+          directional.position.set(3, 3, 3);
+          scene.add(directional);
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        },
+
+        updateRR() {
+          const g = parseInt(this.rrGenus);
+          const d = parseInt(this.rrDegree);
+
+          // Simplified Riemann-Roch
+          // ℓ(D) - ℓ(K-D) = deg(D) - g + 1
+          // For large d, ℓ(K-D) = 0
+          // ℓ(K-D) = max(0, g - 1 - d + 2g - 2 + 1) for K of degree 2g-2
+
+          this.rrRHS = d - g + 1;
+
+          // ℓ(K-D): K has degree 2g-2
+          const kMinusDDeg = (2 * g - 2) - d;
+          if (kMinusDDeg < 0) {
+            this.rrEllK = 0;
+          } else {
+            this.rrEllK = Math.max(0, kMinusDDeg - g + 1);
+          }
+
+          this.rrEll = this.rrRHS + this.rrEllK;
+          if (this.rrEll < 0) this.rrEll = 0;
+
+          // Update visualization
+          const container = document.getElementById('rr-viz');
+          if (!container) return;
+
+          container.innerHTML = '';
+
+          const width = container.clientWidth;
+          const height = 330;
+
+          const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', '100%');
+
+          // Visual representation
+          const leftX = width * 0.3;
+          const rightX = width * 0.7;
+          const cy = height / 2;
+
+          // L(D) space
+          svg.append('text')
+            .attr('x', leftX)
+            .attr('y', 40)
+            .attr('fill', '#10b981')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .text('L(D)');
+
+          for (let i = 0; i < Math.min(this.rrEll, 10); i++) {
+            svg.append('circle')
+              .attr('cx', leftX + (i - Math.min(this.rrEll, 10) / 2) * 25)
+              .attr('cy', cy)
+              .attr('r', 10)
+              .attr('fill', '#10b981')
+              .attr('opacity', 0.7);
+          }
+
+          svg.append('text')
+            .attr('x', leftX)
+            .attr('y', cy + 50)
+            .attr('fill', '#10b981')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px')
+            .text('dim = ' + this.rrEll);
+
+          // L(K-D) space
+          svg.append('text')
+            .attr('x', rightX)
+            .attr('y', 40)
+            .attr('fill', '#f59e0b')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '16px')
+            .text('L(K-D)');
+
+          for (let i = 0; i < Math.min(this.rrEllK, 10); i++) {
+            svg.append('circle')
+              .attr('cx', rightX + (i - Math.min(this.rrEllK, 10) / 2) * 25)
+              .attr('cy', cy)
+              .attr('r', 10)
+              .attr('fill', '#f59e0b')
+              .attr('opacity', 0.7);
+          }
+
+          svg.append('text')
+            .attr('x', rightX)
+            .attr('y', cy + 50)
+            .attr('fill', '#f59e0b')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '20px')
+            .text('dim = ' + this.rrEllK);
+
+          // Formula
+          svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height - 30)
+            .attr('fill', '#94a3b8')
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '14px')
+            .text(`${this.rrEll} - ${this.rrEllK} = ${d} - ${g} + 1 = ${this.rrRHS}`);
+        },
+
+        initLineBundleScene() {
+          const container = document.getElementById('line-bundle-canvas');
+          if (!container) return;
+
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x0a0a1a);
+
+          const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+          camera.position.set(3, 2, 3);
+
+          const renderer = new THREE.WebGLRenderer({ antialias: true });
+          renderer.setSize(container.clientWidth, container.clientHeight);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          container.appendChild(renderer.domElement);
+
+          const controls = new THREE.OrbitControls(camera, renderer.domElement);
+          controls.enableDamping = true;
+
+          // Base circle
+          const circlePoints = [];
+          for (let i = 0; i <= 64; i++) {
+            const theta = (i / 64) * Math.PI * 2;
+            circlePoints.push(new THREE.Vector3(Math.cos(theta), 0, Math.sin(theta)));
+          }
+          const circleGeo = new THREE.BufferGeometry().setFromPoints(circlePoints);
+          const circleMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 2 });
+          scene.add(new THREE.Line(circleGeo, circleMat));
+
+          // Fibers (lines above each point)
+          for (let i = 0; i < 16; i++) {
+            const theta = (i / 16) * Math.PI * 2;
+            const x = Math.cos(theta);
+            const z = Math.sin(theta);
+
+            // Twist: rotate the fiber as we go around
+            const twist = theta;  // degree 1 bundle
+
+            const fiberPoints = [];
+            for (let t = -1; t <= 1; t += 0.1) {
+              const fx = x + t * 0.1 * Math.cos(twist);
+              const fz = z + t * 0.1 * Math.sin(twist);
+              fiberPoints.push(new THREE.Vector3(fx, t * 0.5, fz));
+            }
+
+            const fiberGeo = new THREE.BufferGeometry().setFromPoints(fiberPoints);
+            const fiberMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, opacity: 0.6, transparent: true });
+            scene.add(new THREE.Line(fiberGeo, fiberMat));
+          }
+
+          // Create a surface to show the bundle
+          const bundleGeo = new THREE.ParametricGeometry((u, v, target) => {
+            const theta = u * Math.PI * 2;
+            const t = (v - 0.5) * 2;
+
+            const x = Math.cos(theta);
+            const z = Math.sin(theta);
+
+            // Twist
+            const twist = theta;
+            const fx = x + t * 0.15 * Math.cos(twist);
+            const fz = z + t * 0.15 * Math.sin(twist);
+
+            target.set(fx, t * 0.5, fz);
+          }, 64, 20);
+
+          const bundleMat = new THREE.MeshPhongMaterial({
+            color: 0x8b5cf6,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.3
+          });
+
+          scene.add(new THREE.Mesh(bundleGeo, bundleMat));
+
+          // Lights
+          const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+          scene.add(ambient);
+          const directional = new THREE.DirectionalLight(0xffffff, 0.8);
+          directional.position.set(3, 3, 3);
+          scene.add(directional);
+
+          const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+          };
+          animate();
+        }
+      };
+    }
+  </script>
+</body>
+</html>

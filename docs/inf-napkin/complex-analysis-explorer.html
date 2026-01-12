@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex Analysis Explorer | The Infinitely Large Napkin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-void: #030712;
+            --bg-deep: #0a0f1a;
+            --bg-surface: #111827;
+            --bg-elevated: #1e293b;
+            --plane-grid: rgba(99, 102, 241, 0.08);
+            --accent-cyan: #22d3ee;
+            --accent-magenta: #e879f9;
+            --accent-gold: #fbbf24;
+            --accent-emerald: #34d399;
+            --accent-rose: #fb7185;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-dim: #64748b;
+            --contour-glow: rgba(34, 211, 238, 0.4);
+            --pole-glow: rgba(251, 113, 133, 0.5);
+            --zero-glow: rgba(52, 211, 153, 0.5);
+            --font-display: 'Playfair Display', Georgia, serif;
+            --font-body: 'Crimson Pro', Georgia, serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-void);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 18px;
+        }
+
+        /* Cosmic grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(ellipse at 20% 30%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(232, 121, 249, 0.08) 0%, transparent 50%),
+                linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: linear-gradient(to bottom, var(--bg-void) 0%, rgba(3, 7, 18, 0.95) 70%, transparent 100%);
+            padding: 1rem 2rem 2.5rem;
+        }
+
+        .nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            letter-spacing: 0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 0.25rem;
+            border-radius: 8px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-link {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--accent-cyan);
+            background: rgba(34, 211, 238, 0.1);
+        }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 6rem 2rem;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .hero-part {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--accent-magenta);
+            margin-bottom: 1rem;
+            letter-spacing: 0.15em;
+            opacity: 0;
+            animation: fadeUp 0.8s ease forwards;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 7vw, 5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            animation: fadeUp 0.8s ease 0.1s forwards;
+        }
+
+        .hero h1 .italic {
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin-bottom: 3rem;
+            opacity: 0;
+            animation: fadeUp 0.8s ease 0.2s forwards;
+        }
+
+        .hero-formula {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            color: var(--accent-gold);
+            padding: 1rem 2rem;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 8px;
+            opacity: 0;
+            animation: fadeUp 0.8s ease 0.3s forwards;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Main content */
+        main {
+            position: relative;
+            z-index: 1;
+        }
+
+        section {
+            padding: 6rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            margin-bottom: 3rem;
+        }
+
+        .section-number {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: var(--accent-magenta);
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            max-width: 700px;
+            font-size: 1.1rem;
+        }
+
+        /* Interactive panels */
+        .viz-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .viz-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .viz-panel {
+            background: var(--bg-surface);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .viz-panel.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .viz-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .viz-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .viz-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--accent-cyan);
+            border-radius: 4px;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            aspect-ratio: 4/3;
+            background: var(--bg-deep);
+        }
+
+        .canvas-wrap canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viz-controls {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 120px;
+            height: 4px;
+            background: var(--bg-elevated);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--contour-glow);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .btn {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
+            background: var(--bg-elevated);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover, .btn.active {
+            background: rgba(34, 211, 238, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .result-display {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 6px;
+            color: var(--accent-gold);
+        }
+
+        /* Info boxes */
+        .info-box {
+            background: rgba(34, 211, 238, 0.05);
+            border-left: 3px solid var(--accent-cyan);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-box.warning {
+            background: rgba(251, 113, 133, 0.05);
+            border-color: var(--accent-rose);
+        }
+
+        .info-box h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Math formulas */
+        .formula {
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            color: var(--accent-gold);
+            background: rgba(251, 191, 36, 0.08);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .formula-block {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            color: var(--accent-gold);
+            background: var(--bg-surface);
+            padding: 1.5rem 2rem;
+            border-radius: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        /* Prose content */
+        .prose {
+            max-width: 800px;
+        }
+
+        .prose p {
+            margin-bottom: 1.5rem;
+        }
+
+        .prose h3 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-void);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-elevated);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-inner">
+            <a href="#" class="nav-brand">Part IX · Complex Analysis</a>
+            <div class="nav-links">
+                <a href="#holomorphic" class="nav-link">Holomorphic</a>
+                <a href="#contour" class="nav-link">Contours</a>
+                <a href="#cauchy" class="nav-link">Cauchy</a>
+                <a href="#residues" class="nav-link">Residues</a>
+                <a href="#winding" class="nav-link">Winding</a>
+                <a href="#branch" class="nav-link">Branch Cuts</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-part">PART IX · CHAPTERS 31–34</div>
+        <h1>
+            <span class="gradient">Complex Analysis</span><br>
+            <span class="italic">The Good Twin</span>
+        </h1>
+        <p class="hero-subtitle">
+            Where beautiful formulas and elegant theorems blossom spontaneously,
+            and holomorphic functions are determined entirely by their local behavior.
+        </p>
+        <div class="hero-formula">
+            f(a) = <sup>1</sup>⁄<sub>2πi</sub> ∮<sub>γ</sub> <sup>f(z)</sup>⁄<sub>z−a</sub> dz
+        </div>
+    </header>
+
+    <main>
+        <!-- Section 1: Holomorphic Functions -->
+        <section id="holomorphic">
+            <div class="section-header">
+                <div class="section-number">§31</div>
+                <h2 class="section-title">Holomorphic Functions</h2>
+                <p class="section-desc">
+                    Complex differentiability is far stronger than real differentiability.
+                    The limit must exist from <em>every</em> direction in the complex plane.
+                </p>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel">
+                    <div class="viz-header">
+                        <span class="viz-title">f(z) = z̄ is NOT Holomorphic</span>
+                        <span class="viz-badge">FAILS</span>
+                    </div>
+                    <div class="canvas-wrap">
+                        <canvas id="conjCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Direction θ:</span>
+                            <input type="range" id="conjAngle" min="0" max="360" value="0">
+                            <span id="conjAngleVal" class="control-label">0°</span>
+                        </div>
+                        <div class="result-display" id="conjResult">h̄/h = 1</div>
+                    </div>
+                </div>
+
+                <div class="viz-panel">
+                    <div class="viz-header">
+                        <span class="viz-title">f(z) = z² IS Holomorphic</span>
+                        <span class="viz-badge" style="background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald);">WORKS</span>
+                    </div>
+                    <div class="canvas-wrap">
+                        <canvas id="squareCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Direction θ:</span>
+                            <input type="range" id="squareAngle" min="0" max="360" value="0">
+                            <span id="squareAngleVal" class="control-label">0°</span>
+                        </div>
+                        <div class="result-display" id="squareResult" style="border-color: rgba(52, 211, 153, 0.3); background: rgba(52, 211, 153, 0.1); color: var(--accent-emerald);">f'(z₀) = 2z₀</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 2rem;">
+                <h4>Why does conjugation fail?</h4>
+                <p>
+                    For <span class="formula">f(z) = z̄</span>, the difference quotient
+                    <span class="formula">(f(z₀+h) − f(z₀))/h = h̄/h</span> depends on the
+                    <em>direction</em> of h. Approaching along the real axis gives 1, but along
+                    the imaginary axis gives −1. No single limit exists!
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: Contour Integrals -->
+        <section id="contour">
+            <div class="section-header">
+                <div class="section-number">§31.3</div>
+                <h2 class="section-title">Contour Integrals</h2>
+                <p class="section-desc">
+                    Integrating <span class="formula">z<sup>m</sup></span> around the unit circle reveals
+                    something magical: only m = −1 gives a nonzero result.
+                </p>
+            </div>
+
+            <div class="formula-block">
+                ∮<sub>γ</sub> z<sup>m</sup> dz = { 2πi if m = −1, 0 otherwise }
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel full-width">
+                    <div class="viz-header">
+                        <span class="viz-title">Contour Integral ∮ z<sup>m</sup> dz</span>
+                        <span class="viz-badge">INTERACTIVE</span>
+                    </div>
+                    <div class="canvas-wrap" style="aspect-ratio: 2/1;">
+                        <canvas id="contourCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Power m:</span>
+                            <div class="btn-group">
+                                <button class="btn" data-m="-3">−3</button>
+                                <button class="btn" data-m="-2">−2</button>
+                                <button class="btn active" data-m="-1">−1</button>
+                                <button class="btn" data-m="0">0</button>
+                                <button class="btn" data-m="1">1</button>
+                                <button class="btn" data-m="2">2</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">Speed:</span>
+                            <input type="range" id="contourSpeed" min="0.5" max="3" step="0.1" value="1">
+                        </div>
+                        <div class="result-display" id="contourResult">∮ z⁻¹ dz = 2πi</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 2rem;">
+                <h4>The magic of m = −1</h4>
+                <p>
+                    As you trace the unit circle, <span class="formula">z<sup>m</sup> · dz</span> sums
+                    tangent vectors weighted by z<sup>m</sup>. For most m, symmetry causes perfect cancellation.
+                    But for m = −1, the 1/z factor precisely offsets the rotational symmetry, leaving 2πi.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 3: Cauchy's Integral Formula -->
+        <section id="cauchy">
+            <div class="section-header">
+                <div class="section-number">§31.5</div>
+                <h2 class="section-title">Cauchy's Integral Formula</h2>
+                <p class="section-desc">
+                    The value of a holomorphic function at any interior point is completely determined
+                    by its values on the boundary. This is extraordinary!
+                </p>
+            </div>
+
+            <div class="formula-block">
+                f(a) = <sup>1</sup>⁄<sub>2πi</sub> ∮<sub>γ</sub> <sup>f(z)</sup>⁄<sub>z − a</sub> dz
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel full-width">
+                    <div class="viz-header">
+                        <span class="viz-title">Keyhole Contour Proof</span>
+                        <span class="viz-badge">DRAG POINT</span>
+                    </div>
+                    <div class="canvas-wrap" style="aspect-ratio: 2/1;">
+                        <canvas id="cauchyCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Function:</span>
+                            <div class="btn-group">
+                                <button class="btn active" data-func="exp">e<sup>z</sup></button>
+                                <button class="btn" data-func="sin">sin(z)</button>
+                                <button class="btn" data-func="poly">z² + 1</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">Inner radius ε:</span>
+                            <input type="range" id="cauchyEps" min="0.05" max="0.5" step="0.01" value="0.2">
+                        </div>
+                        <div class="result-display" id="cauchyResult">f(a) = e<sup>a</sup></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 2rem;">
+                <h4>The Keyhole Contour Trick</h4>
+                <p>
+                    Since f(z)/(z−a) has a singularity at z = a, we cut out a tiny circle around a.
+                    As the inner circle shrinks (ε → 0), its contribution approaches 2πi · f(a),
+                    while the corridor walls cancel. The outer contour integral thus equals f(a)!
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 4: Poles & Residues -->
+        <section id="residues">
+            <div class="section-header">
+                <div class="section-number">§32</div>
+                <h2 class="section-title">Poles & Residues</h2>
+                <p class="section-desc">
+                    Meromorphic functions are holomorphic except at isolated poles. The residue—the
+                    coefficient of (z−p)⁻¹ in the Laurent series—controls contour integrals.
+                </p>
+            </div>
+
+            <div class="formula-block">
+                <sup>1</sup>⁄<sub>2πi</sub> ∮<sub>γ</sub> f(z) dz = Σ Res(f; p)
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel full-width">
+                    <div class="viz-header">
+                        <span class="viz-title">Laurent Series & Residues</span>
+                        <span class="viz-badge">DOMAIN COLORING</span>
+                    </div>
+                    <div class="canvas-wrap" style="aspect-ratio: 2/1;">
+                        <canvas id="residueCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Function:</span>
+                            <div class="btn-group" id="residueFuncs">
+                                <button class="btn active" data-func="1/z">1/z</button>
+                                <button class="btn" data-func="1/z2">1/z²</button>
+                                <button class="btn" data-func="exp/z2">e<sup>z</sup>/z²</button>
+                                <button class="btn" data-func="1/sin">1/sin(z)</button>
+                            </div>
+                        </div>
+                        <div class="result-display" id="residueResult">Pole at z=0, order 1, Res = 1</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 2rem;">
+                <h4>Reading the Domain Coloring</h4>
+                <p>
+                    Hue encodes argument (angle), brightness encodes magnitude.
+                    <strong style="color: var(--accent-rose);">Poles</strong> appear as points where all colors spiral inward
+                    (magnitude → ∞). <strong style="color: var(--accent-emerald);">Zeros</strong> show colors spiraling outward.
+                    The winding number around a point counts the phase change.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 5: Winding Numbers -->
+        <section id="winding">
+            <div class="section-header">
+                <div class="section-number">§32.3</div>
+                <h2 class="section-title">Winding Numbers</h2>
+                <p class="section-desc">
+                    The winding number I(γ, p) counts how many times a curve γ winds around a point p.
+                    It's always an integer!
+                </p>
+            </div>
+
+            <div class="formula-block">
+                I(γ, p) = <sup>1</sup>⁄<sub>2πi</sub> ∮<sub>γ</sub> <sup>1</sup>⁄<sub>z − p</sub> dz
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel full-width">
+                    <div class="viz-header">
+                        <span class="viz-title">Winding Number Visualization</span>
+                        <span class="viz-badge">DRAG THE POINT</span>
+                    </div>
+                    <div class="canvas-wrap" style="aspect-ratio: 2/1;">
+                        <canvas id="windingCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Curve:</span>
+                            <div class="btn-group" id="windingCurves">
+                                <button class="btn active" data-curve="circle">Circle</button>
+                                <button class="btn" data-curve="figure8">Figure-8</button>
+                                <button class="btn" data-curve="spiral">Spiral</button>
+                                <button class="btn" data-curve="cardioid">Cardioid</button>
+                            </div>
+                        </div>
+                        <div class="result-display" id="windingResult">I(γ, p) = 1</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 2rem;">
+                <h4>Why Winding Numbers Matter</h4>
+                <p>
+                    The Residue Theorem weights each pole's residue by its winding number.
+                    For simple curves, points inside have winding number 1, outside have 0.
+                    But complex curves can have higher winding numbers!
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 6: Branch Cuts -->
+        <section id="branch">
+            <div class="section-header">
+                <div class="section-number">§33</div>
+                <h2 class="section-title">Branch Cuts & Multi-valued Functions</h2>
+                <p class="section-desc">
+                    √z and log(z) are multi-valued: they "remember" how many times you've circled the origin.
+                    A branch cut makes them single-valued by forbidding certain paths.
+                </p>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel">
+                    <div class="viz-header">
+                        <span class="viz-title">Square Root: √z</span>
+                        <span class="viz-badge" style="background: rgba(251, 113, 133, 0.15); color: var(--accent-rose);">BRANCH CUT</span>
+                    </div>
+                    <div class="canvas-wrap">
+                        <canvas id="sqrtCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Branch cut angle:</span>
+                            <input type="range" id="sqrtAngle" min="0" max="360" value="180">
+                            <span id="sqrtAngleVal" class="control-label">180° (negative real axis)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="viz-panel">
+                    <div class="viz-header">
+                        <span class="viz-title">Complex Logarithm: log(z)</span>
+                        <span class="viz-badge" style="background: rgba(251, 113, 133, 0.15); color: var(--accent-rose);">BRANCH CUT</span>
+                    </div>
+                    <div class="canvas-wrap">
+                        <canvas id="logCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Branch cut angle:</span>
+                            <input type="range" id="logAngle" min="0" max="360" value="180">
+                            <span id="logAngleVal" class="control-label">180° (negative real axis)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="viz-container" style="margin-top: 2rem;">
+                <div class="viz-panel full-width">
+                    <div class="viz-header">
+                        <span class="viz-title">The "Ray of Death" — Why Loops Around 0 Cause Discontinuity</span>
+                        <span class="viz-badge">ANIMATE</span>
+                    </div>
+                    <div class="canvas-wrap" style="aspect-ratio: 2/1;">
+                        <canvas id="rayCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Circle position:</span>
+                            <input type="range" id="rayOffset" min="-1" max="1" step="0.05" value="0">
+                        </div>
+                        <button class="btn" id="rayAnimate">Animate Loop</button>
+                        <div class="result-display" id="rayResult">Circle passes through branch cut!</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box warning" style="margin-top: 2rem;">
+                <h4>The "Ray of Death"</h4>
+                <p>
+                    When a loop encircles the origin, following √z continuously around the loop
+                    returns to a <em>different</em> branch! The branch cut (ray of death) prevents
+                    this by declaring one ray forbidden. Different branch cut placements give
+                    different—but equally valid—branches of √z.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 7: Argument Principle -->
+        <section id="argument">
+            <div class="section-header">
+                <div class="section-number">§32.4</div>
+                <h2 class="section-title">The Argument Principle</h2>
+                <p class="section-desc">
+                    The logarithmic derivative f'/f transforms zeros into simple poles with residue +1,
+                    and poles into simple poles with residue equal to the negative order. Integrating counts them!
+                </p>
+            </div>
+
+            <div class="formula-block">
+                <sup>1</sup>⁄<sub>2πi</sub> ∮<sub>γ</sub> <sup>f'(z)</sup>⁄<sub>f(z)</sub> dz = Z − P
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-panel full-width">
+                    <div class="viz-header">
+                        <span class="viz-title">Counting Zeros and Poles</span>
+                        <span class="viz-badge">INTERACTIVE</span>
+                    </div>
+                    <div class="canvas-wrap" style="aspect-ratio: 2/1;">
+                        <canvas id="argumentCanvas"></canvas>
+                    </div>
+                    <div class="viz-controls">
+                        <div class="control-group">
+                            <span class="control-label">Function:</span>
+                            <div class="btn-group" id="argFuncs">
+                                <button class="btn active" data-func="z2">z²</button>
+                                <button class="btn" data-func="z3-z">(z³−z)</button>
+                                <button class="btn" data-func="rational">(z−1)/(z+1)</button>
+                                <button class="btn" data-func="sin">sin(z)</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <span class="control-label">Contour radius:</span>
+                            <input type="range" id="argRadius" min="0.3" max="2.5" step="0.1" value="1.5">
+                        </div>
+                        <div class="result-display" id="argResult">Z = 2, P = 0 → ∮ f'/f = 4πi</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box" style="margin-top: 2rem;">
+                <h4>Geometric Interpretation</h4>
+                <p>
+                    As z traces γ, the point f(z) traces another curve in the w-plane.
+                    The integral counts how many times f(z) winds around the origin.
+                    Each zero inside γ adds one winding; each pole subtracts one.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Based on <a href="https://venhance.github.io/napkin/" target="_blank">An Infinitely Large Napkin</a> by Evan Chen</p>
+        <p style="margin-top: 0.5rem;">Part IX: Complex Analysis · Chapters 31–34</p>
+    </footer>
+
+    <script>
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        const colors = {
+            bg: '#0a0f1a',
+            grid: 'rgba(99, 102, 241, 0.15)',
+            gridMinor: 'rgba(99, 102, 241, 0.05)',
+            axis: 'rgba(99, 102, 241, 0.4)',
+            cyan: '#22d3ee',
+            magenta: '#e879f9',
+            gold: '#fbbf24',
+            emerald: '#34d399',
+            rose: '#fb7185',
+            text: '#f1f5f9',
+            textDim: '#64748b'
+        };
+
+        function setupCanvas(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            return { ctx, width: rect.width, height: rect.height };
+        }
+
+        function drawComplexPlane(ctx, width, height, originX, originY, scale) {
+            // Background
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            // Grid
+            const step = scale;
+            ctx.strokeStyle = colors.gridMinor;
+            ctx.lineWidth = 0.5;
+
+            for (let x = originX % step; x < width; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            for (let y = originY % step; y < height; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = colors.axis;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, originY);
+            ctx.lineTo(width, originY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(originX, 0);
+            ctx.lineTo(originX, height);
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = colors.textDim;
+            ctx.font = '11px Fira Code';
+            ctx.fillText('Re', width - 25, originY - 8);
+            ctx.fillText('Im', originX + 8, 15);
+        }
+
+        function complexMult(a, b) {
+            return [a[0]*b[0] - a[1]*b[1], a[0]*b[1] + a[1]*b[0]];
+        }
+
+        function complexDiv(a, b) {
+            const denom = b[0]*b[0] + b[1]*b[1];
+            return [(a[0]*b[0] + a[1]*b[1])/denom, (a[1]*b[0] - a[0]*b[1])/denom];
+        }
+
+        function complexExp(z) {
+            const r = Math.exp(z[0]);
+            return [r * Math.cos(z[1]), r * Math.sin(z[1])];
+        }
+
+        function complexSin(z) {
+            const eiz = complexExp([-z[1], z[0]]);
+            const emiz = complexExp([z[1], -z[0]]);
+            return [(eiz[1] - emiz[1])/2, -(eiz[0] - emiz[0])/2];
+        }
+
+        function complexPow(z, n) {
+            if (n === 0) return [1, 0];
+            const r = Math.sqrt(z[0]*z[0] + z[1]*z[1]);
+            const theta = Math.atan2(z[1], z[0]);
+            const rn = Math.pow(r, n);
+            return [rn * Math.cos(n * theta), rn * Math.sin(n * theta)];
+        }
+
+        function complexAbs(z) {
+            return Math.sqrt(z[0]*z[0] + z[1]*z[1]);
+        }
+
+        function complexArg(z) {
+            return Math.atan2(z[1], z[0]);
+        }
+
+        // ============================================
+        // SECTION 1: HOLOMORPHIC FUNCTIONS
+        // ============================================
+        (function() {
+            const conjCanvas = document.getElementById('conjCanvas');
+            const squareCanvas = document.getElementById('squareCanvas');
+            const conjAngle = document.getElementById('conjAngle');
+            const squareAngle = document.getElementById('squareAngle');
+
+            function drawConjugation() {
+                const { ctx, width, height } = setupCanvas(conjCanvas);
+                const originX = width / 2;
+                const originY = height / 2;
+                const scale = 60;
+
+                drawComplexPlane(ctx, width, height, originX, originY, scale);
+
+                const z0 = [1, 0.5];
+                const angle = parseFloat(conjAngle.value) * Math.PI / 180;
+                const hMag = 0.8;
+                const h = [hMag * Math.cos(angle), hMag * Math.sin(angle)];
+
+                // Draw z0
+                ctx.fillStyle = colors.cyan;
+                ctx.beginPath();
+                ctx.arc(originX + z0[0] * scale, originY - z0[1] * scale, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = colors.text;
+                ctx.font = '12px Fira Code';
+                ctx.fillText('z₀', originX + z0[0] * scale + 12, originY - z0[1] * scale);
+
+                // Draw z0 + h
+                const z1 = [z0[0] + h[0], z0[1] + h[1]];
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(originX + z1[0] * scale, originY - z1[1] * scale, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillText('z₀+h', originX + z1[0] * scale + 10, originY - z1[1] * scale - 10);
+
+                // Draw h vector
+                ctx.strokeStyle = colors.gold;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 3]);
+                ctx.beginPath();
+                ctx.moveTo(originX + z0[0] * scale, originY - z0[1] * scale);
+                ctx.lineTo(originX + z1[0] * scale, originY - z1[1] * scale);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // For f(z) = z̄, compute h̄/h
+                const hBar = [h[0], -h[1]];
+                const ratio = complexDiv(hBar, h);
+
+                // Show the result
+                ctx.fillStyle = colors.text;
+                ctx.font = '13px Fira Code';
+                ctx.fillText(`h = ${h[0].toFixed(2)} + ${h[1].toFixed(2)}i`, 15, 25);
+                ctx.fillText(`h̄ = ${hBar[0].toFixed(2)} + ${hBar[1].toFixed(2)}i`, 15, 45);
+
+                document.getElementById('conjAngleVal').textContent = conjAngle.value + '°';
+                document.getElementById('conjResult').textContent =
+                    `h̄/h = ${ratio[0].toFixed(2)} + ${ratio[1].toFixed(2)}i`;
+            }
+
+            function drawSquare() {
+                const { ctx, width, height } = setupCanvas(squareCanvas);
+                const originX = width / 2;
+                const originY = height / 2;
+                const scale = 60;
+
+                drawComplexPlane(ctx, width, height, originX, originY, scale);
+
+                const z0 = [0.8, 0.6];
+                const angle = parseFloat(squareAngle.value) * Math.PI / 180;
+                const hMag = 0.5;
+                const h = [hMag * Math.cos(angle), hMag * Math.sin(angle)];
+
+                // Draw z0
+                ctx.fillStyle = colors.emerald;
+                ctx.beginPath();
+                ctx.arc(originX + z0[0] * scale, originY - z0[1] * scale, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = colors.text;
+                ctx.font = '12px Fira Code';
+                ctx.fillText('z₀', originX + z0[0] * scale + 12, originY - z0[1] * scale);
+
+                // Draw z0 + h
+                const z1 = [z0[0] + h[0], z0[1] + h[1]];
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(originX + z1[0] * scale, originY - z1[1] * scale, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw h vector
+                ctx.strokeStyle = colors.gold;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 3]);
+                ctx.beginPath();
+                ctx.moveTo(originX + z0[0] * scale, originY - z0[1] * scale);
+                ctx.lineTo(originX + z1[0] * scale, originY - z1[1] * scale);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // For f(z) = z², compute (f(z0+h) - f(z0))/h
+                const fz0 = complexMult(z0, z0);
+                const fz1 = complexMult(z1, z1);
+                const diff = [fz1[0] - fz0[0], fz1[1] - fz0[1]];
+                const deriv = complexDiv(diff, h);
+
+                // True derivative at z0 is 2*z0
+                const trueDerivZ0 = [2 * z0[0], 2 * z0[1]];
+
+                ctx.fillStyle = colors.text;
+                ctx.font = '13px Fira Code';
+                ctx.fillText(`2z₀ = ${trueDerivZ0[0].toFixed(2)} + ${trueDerivZ0[1].toFixed(2)}i`, 15, 25);
+
+                document.getElementById('squareAngleVal').textContent = squareAngle.value + '°';
+                document.getElementById('squareResult').textContent =
+                    `f'(z₀) ≈ ${deriv[0].toFixed(2)} + ${deriv[1].toFixed(2)}i`;
+            }
+
+            conjAngle.addEventListener('input', drawConjugation);
+            squareAngle.addEventListener('input', drawSquare);
+
+            drawConjugation();
+            drawSquare();
+            window.addEventListener('resize', () => { drawConjugation(); drawSquare(); });
+        })();
+
+        // ============================================
+        // SECTION 2: CONTOUR INTEGRALS
+        // ============================================
+        (function() {
+            const canvas = document.getElementById('contourCanvas');
+            const speedSlider = document.getElementById('contourSpeed');
+            const resultDisplay = document.getElementById('contourResult');
+            const buttons = document.querySelectorAll('[data-m]');
+
+            let currentM = -1;
+            let t = 0;
+            let animating = true;
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentM = parseInt(btn.dataset.m);
+                    t = 0;
+                });
+            });
+
+            function draw() {
+                const { ctx, width, height } = setupCanvas(canvas);
+                const leftOriginX = width * 0.25;
+                const rightOriginX = width * 0.75;
+                const originY = height / 2;
+                const scale = Math.min(width * 0.15, height * 0.35);
+
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw separator
+                ctx.strokeStyle = colors.grid;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(width / 2, 0);
+                ctx.lineTo(width / 2, height);
+                ctx.stroke();
+
+                // Left: z-plane with unit circle
+                drawComplexPlane(ctx, width / 2, height, leftOriginX, originY, scale);
+
+                // Unit circle
+                ctx.strokeStyle = colors.cyan;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(leftOriginX, originY, scale, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Current point on circle
+                const z = [Math.cos(t), Math.sin(t)];
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(leftOriginX + z[0] * scale, originY - z[1] * scale, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw z^m at current point
+                const zm = complexPow(z, currentM);
+
+                // Labels
+                ctx.fillStyle = colors.text;
+                ctx.font = '14px Fira Code';
+                ctx.textAlign = 'center';
+                ctx.fillText('z-plane', leftOriginX, 25);
+                ctx.fillText(`z = e^{it}, t = ${(t * 180 / Math.PI).toFixed(0)}°`, leftOriginX, height - 15);
+
+                // Right: Accumulated integral
+                ctx.save();
+                ctx.translate(width / 2, 0);
+                drawComplexPlane(ctx, width / 2, height, rightOriginX - width/2, originY, scale * 2);
+                ctx.restore();
+
+                // Draw the path of z^m * dz (tangent vectors weighted by z^m)
+                ctx.strokeStyle = colors.magenta;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                let integralRe = 0, integralIm = 0;
+                const steps = 100;
+                const dt = t / steps;
+
+                for (let i = 0; i <= steps; i++) {
+                    const ti = i * dt;
+                    const zi = [Math.cos(ti), Math.sin(ti)];
+                    const zmi = complexPow(zi, currentM);
+                    // dz = i * e^{it} dt
+                    const dz = [-Math.sin(ti) * dt, Math.cos(ti) * dt];
+                    const contrib = complexMult(zmi, dz);
+                    integralRe += contrib[0];
+                    integralIm += contrib[1];
+
+                    const px = rightOriginX + integralRe * scale * 2;
+                    const py = originY - integralIm * scale * 2;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                // Current integral value point
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(rightOriginX + integralRe * scale * 2, originY - integralIm * scale * 2, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = colors.text;
+                ctx.font = '14px Fira Code';
+                ctx.textAlign = 'center';
+                ctx.fillText('Integral accumulation', rightOriginX, 25);
+
+                // Update result
+                if (Math.abs(t - 2 * Math.PI) < 0.1) {
+                    const expected = currentM === -1 ? '2πi' : '0';
+                    resultDisplay.textContent = `∮ z^${currentM} dz = ${expected}`;
+                } else {
+                    resultDisplay.textContent = `∮ z^${currentM} dz ≈ ${integralRe.toFixed(2)} + ${integralIm.toFixed(2)}i`;
+                }
+
+                // Animate
+                const speed = parseFloat(speedSlider.value);
+                t += 0.02 * speed;
+                if (t > 2 * Math.PI) t = 0;
+
+                if (animating) requestAnimationFrame(draw);
+            }
+
+            draw();
+        })();
+
+        // ============================================
+        // SECTION 3: CAUCHY'S INTEGRAL FORMULA
+        // ============================================
+        (function() {
+            const canvas = document.getElementById('cauchyCanvas');
+            const epsSlider = document.getElementById('cauchyEps');
+            const resultDisplay = document.getElementById('cauchyResult');
+            const funcButtons = document.querySelectorAll('#cauchy .btn-group .btn');
+
+            let currentFunc = 'exp';
+            let pointA = [0.3, 0.2];
+            let isDragging = false;
+            let t = 0;
+
+            const funcs = {
+                exp: { f: complexExp, name: 'e^z', deriv: (z) => complexExp(z) },
+                sin: { f: complexSin, name: 'sin(z)', deriv: (z) => { const c = complexExp([-z[1], z[0]]); const cm = complexExp([z[1], -z[0]]); return [(c[0]+cm[0])/2, (c[1]+cm[1])/2]; }},
+                poly: { f: (z) => [z[0]*z[0] - z[1]*z[1] + 1, 2*z[0]*z[1]], name: 'z²+1' }
+            };
+
+            funcButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    funcButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFunc = btn.dataset.func;
+                });
+            });
+
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const originX = rect.width / 2;
+                const originY = rect.height / 2;
+                const scale = Math.min(rect.width * 0.15, rect.height * 0.35);
+
+                const worldX = (x - originX) / scale;
+                const worldY = (originY - y) / scale;
+
+                if (Math.abs(worldX - pointA[0]) < 0.3 && Math.abs(worldY - pointA[1]) < 0.3) {
+                    isDragging = true;
+                }
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const originX = rect.width / 2;
+                const originY = rect.height / 2;
+                const scale = Math.min(rect.width * 0.15, rect.height * 0.35);
+
+                pointA[0] = Math.max(-1.5, Math.min(1.5, (x - originX) / scale));
+                pointA[1] = Math.max(-1.5, Math.min(1.5, (originY - y) / scale));
+            });
+
+            canvas.addEventListener('mouseup', () => isDragging = false);
+            canvas.addEventListener('mouseleave', () => isDragging = false);
+
+            function draw() {
+                const { ctx, width, height } = setupCanvas(canvas);
+                const originX = width / 2;
+                const originY = height / 2;
+                const scale = Math.min(width * 0.15, height * 0.35);
+                const eps = parseFloat(epsSlider.value);
+
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, width, height);
+                drawComplexPlane(ctx, width, height, originX, originY, scale);
+
+                // Outer circle
+                const R = 2;
+                ctx.strokeStyle = colors.cyan;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(originX, originY, R * scale, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Inner circle around a
+                ctx.strokeStyle = colors.rose;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(originX + pointA[0] * scale, originY - pointA[1] * scale, eps * scale, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Keyhole corridor (animated)
+                const corridorAngle = t;
+                const corridorWidth = 0.05;
+
+                ctx.strokeStyle = colors.gold;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 3]);
+
+                // Corridor line 1
+                const c1Start = [pointA[0] + eps * Math.cos(corridorAngle + corridorWidth),
+                                 pointA[1] + eps * Math.sin(corridorAngle + corridorWidth)];
+                const c1End = [R * Math.cos(corridorAngle + corridorWidth * 0.5),
+                               R * Math.sin(corridorAngle + corridorWidth * 0.5)];
+                ctx.beginPath();
+                ctx.moveTo(originX + c1Start[0] * scale, originY - c1Start[1] * scale);
+                ctx.lineTo(originX + c1End[0] * scale, originY - c1End[1] * scale);
+                ctx.stroke();
+
+                // Corridor line 2
+                const c2Start = [pointA[0] + eps * Math.cos(corridorAngle - corridorWidth),
+                                 pointA[1] + eps * Math.sin(corridorAngle - corridorWidth)];
+                const c2End = [R * Math.cos(corridorAngle - corridorWidth * 0.5),
+                               R * Math.sin(corridorAngle - corridorWidth * 0.5)];
+                ctx.beginPath();
+                ctx.moveTo(originX + c2Start[0] * scale, originY - c2Start[1] * scale);
+                ctx.lineTo(originX + c2End[0] * scale, originY - c2End[1] * scale);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Point a
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(originX + pointA[0] * scale, originY - pointA[1] * scale, 10, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = colors.text;
+                ctx.font = '14px Fira Code';
+                ctx.fillText('a', originX + pointA[0] * scale + 15, originY - pointA[1] * scale);
+
+                // Labels
+                ctx.fillStyle = colors.cyan;
+                ctx.fillText('γ (outer)', originX + R * scale + 10, originY - 10);
+                ctx.fillStyle = colors.rose;
+                ctx.fillText('γε', originX + pointA[0] * scale + eps * scale + 5, originY - pointA[1] * scale - eps * scale);
+
+                // Compute f(a)
+                const fa = funcs[currentFunc].f(pointA);
+                resultDisplay.textContent = `f(a) = ${fa[0].toFixed(3)} + ${fa[1].toFixed(3)}i`;
+
+                t += 0.01;
+                requestAnimationFrame(draw);
+            }
+
+            draw();
+        })();
+
+        // ============================================
+        // SECTION 4: POLES & RESIDUES (Domain Coloring)
+        // ============================================
+        (function() {
+            const canvas = document.getElementById('residueCanvas');
+            const resultDisplay = document.getElementById('residueResult');
+            const funcButtons = document.querySelectorAll('#residueFuncs .btn');
+
+            let currentFunc = '1/z';
+
+            const funcs = {
+                '1/z': {
+                    f: (z) => complexDiv([1, 0], z),
+                    info: 'Pole at z=0, order 1, Res = 1'
+                },
+                '1/z2': {
+                    f: (z) => complexDiv([1, 0], complexMult(z, z)),
+                    info: 'Pole at z=0, order 2, Res = 0'
+                },
+                'exp/z2': {
+                    f: (z) => complexDiv(complexExp(z), complexMult(z, z)),
+                    info: 'Pole at z=0, order 2, Res = 1 (from e^z expansion)'
+                },
+                '1/sin': {
+                    f: (z) => complexDiv([1, 0], complexSin(z)),
+                    info: 'Poles at z=nπ, order 1 each, Res = ±1'
+                }
+            };
+
+            funcButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    funcButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFunc = btn.dataset.func;
+                    resultDisplay.textContent = funcs[currentFunc].info;
+                    drawDomainColoring();
+                });
+            });
+
+            function hslToRgb(h, s, l) {
+                let r, g, b;
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+            }
+
+            function drawDomainColoring() {
+                const { ctx, width, height } = setupCanvas(canvas);
+                const imageData = ctx.createImageData(width, height);
+                const data = imageData.data;
+
+                const scale = 3;
+                const originX = width / 2;
+                const originY = height / 2;
+
+                for (let py = 0; py < height; py++) {
+                    for (let px = 0; px < width; px++) {
+                        const x = (px - originX) / (width / 2) * scale;
+                        const y = (originY - py) / (height / 2) * scale;
+                        const z = [x, y];
+
+                        let w;
+                        try {
+                            w = funcs[currentFunc].f(z);
+                            if (!isFinite(w[0]) || !isFinite(w[1])) throw 'inf';
+                        } catch {
+                            w = [1e10, 0];
+                        }
+
+                        const arg = Math.atan2(w[1], w[0]);
+                        const mag = Math.sqrt(w[0]*w[0] + w[1]*w[1]);
+
+                        // Hue from argument
+                        const hue = (arg + Math.PI) / (2 * Math.PI);
+
+                        // Lightness from magnitude (with log scaling)
+                        const logMag = Math.log(mag + 1);
+                        const lightness = 0.5 + 0.4 * Math.tanh(logMag - 1);
+
+                        const [r, g, b] = hslToRgb(hue, 0.8, Math.min(0.9, Math.max(0.1, lightness)));
+
+                        const idx = (py * width + px) * 4;
+                        data[idx] = r;
+                        data[idx + 1] = g;
+                        data[idx + 2] = b;
+                        data[idx + 3] = 255;
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                // Draw axes
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, originY);
+                ctx.lineTo(width, originY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(originX, 0);
+                ctx.lineTo(originX, height);
+                ctx.stroke();
+
+                // Mark poles
+                ctx.fillStyle = colors.rose;
+                if (currentFunc !== '1/sin') {
+                    ctx.beginPath();
+                    ctx.arc(originX, originY, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = colors.text;
+                    ctx.font = '11px Fira Code';
+                    ctx.fillText('pole', originX + 10, originY - 10);
+                } else {
+                    // Mark multiple poles for 1/sin
+                    for (let n = -1; n <= 1; n++) {
+                        const px = originX + n * Math.PI * (width / 2) / scale;
+                        ctx.beginPath();
+                        ctx.arc(px, originY, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            drawDomainColoring();
+            window.addEventListener('resize', drawDomainColoring);
+        })();
+
+        // ============================================
+        // SECTION 5: WINDING NUMBERS
+        // ============================================
+        (function() {
+            const canvas = document.getElementById('windingCanvas');
+            const resultDisplay = document.getElementById('windingResult');
+            const curveButtons = document.querySelectorAll('#windingCurves .btn');
+
+            let currentCurve = 'circle';
+            let dragPoint = [0, 0];
+            let isDragging = false;
+
+            const curves = {
+                circle: (t) => [1.5 * Math.cos(t), 1.5 * Math.sin(t)],
+                figure8: (t) => [1.5 * Math.sin(t), 1.2 * Math.sin(2*t)],
+                spiral: (t) => {
+                    const r = 0.5 + t / (2 * Math.PI);
+                    return [r * Math.cos(t * 2), r * Math.sin(t * 2)];
+                },
+                cardioid: (t) => {
+                    const r = 1 + Math.cos(t);
+                    return [r * Math.cos(t) - 0.5, r * Math.sin(t)];
+                }
+            };
+
+            curveButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    curveButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentCurve = btn.dataset.curve;
+                    dragPoint = [0, 0];
+                });
+            });
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                updatePoint(e);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDragging) updatePoint(e);
+            });
+
+            canvas.addEventListener('mouseup', () => isDragging = false);
+            canvas.addEventListener('mouseleave', () => isDragging = false);
+
+            function updatePoint(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const originX = rect.width / 2;
+                const originY = rect.height / 2;
+                const scale = Math.min(rect.width * 0.12, rect.height * 0.3);
+
+                dragPoint[0] = (x - originX) / scale;
+                dragPoint[1] = (originY - y) / scale;
+            }
+
+            function computeWindingNumber(curve, point) {
+                let totalAngle = 0;
+                const steps = 500;
+                const dt = 2 * Math.PI / steps;
+
+                for (let i = 0; i < steps; i++) {
+                    const t1 = i * dt;
+                    const t2 = (i + 1) * dt;
+                    const p1 = curve(t1);
+                    const p2 = curve(t2);
+
+                    const v1 = [p1[0] - point[0], p1[1] - point[1]];
+                    const v2 = [p2[0] - point[0], p2[1] - point[1]];
+
+                    const angle1 = Math.atan2(v1[1], v1[0]);
+                    const angle2 = Math.atan2(v2[1], v2[0]);
+
+                    let dAngle = angle2 - angle1;
+                    if (dAngle > Math.PI) dAngle -= 2 * Math.PI;
+                    if (dAngle < -Math.PI) dAngle += 2 * Math.PI;
+
+                    totalAngle += dAngle;
+                }
+
+                return Math.round(totalAngle / (2 * Math.PI));
+            }
+
+            function draw() {
+                const { ctx, width, height } = setupCanvas(canvas);
+                const originX = width / 2;
+                const originY = height / 2;
+                const scale = Math.min(width * 0.12, height * 0.3);
+
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, width, height);
+                drawComplexPlane(ctx, width, height, originX, originY, scale);
+
+                // Draw curve
+                ctx.strokeStyle = colors.cyan;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+
+                const curve = curves[currentCurve];
+                for (let t = 0; t <= 2 * Math.PI; t += 0.02) {
+                    const [x, y] = curve(t);
+                    const px = originX + x * scale;
+                    const py = originY - y * scale;
+                    if (t === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Draw draggable point
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(originX + dragPoint[0] * scale, originY - dragPoint[1] * scale, 12, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = colors.text;
+                ctx.font = '12px Fira Code';
+                ctx.fillText('p', originX + dragPoint[0] * scale + 15, originY - dragPoint[1] * scale + 5);
+
+                // Compute and display winding number
+                const winding = computeWindingNumber(curve, dragPoint);
+                resultDisplay.textContent = `I(γ, p) = ${winding}`;
+
+                // Color based on winding
+                const windingColor = winding === 0 ? colors.textDim :
+                                    winding > 0 ? colors.emerald : colors.rose;
+                resultDisplay.style.color = windingColor;
+                resultDisplay.style.borderColor = windingColor;
+                resultDisplay.style.background = windingColor.replace(')', ', 0.1)').replace('rgb', 'rgba');
+
+                requestAnimationFrame(draw);
+            }
+
+            draw();
+        })();
+
+        // ============================================
+        // SECTION 6: BRANCH CUTS
+        // ============================================
+        (function() {
+            const sqrtCanvas = document.getElementById('sqrtCanvas');
+            const logCanvas = document.getElementById('logCanvas');
+            const rayCanvas = document.getElementById('rayCanvas');
+            const sqrtAngle = document.getElementById('sqrtAngle');
+            const logAngle = document.getElementById('logAngle');
+            const rayOffset = document.getElementById('rayOffset');
+            const animateBtn = document.getElementById('rayAnimate');
+
+            let rayT = 0;
+            let rayAnimating = false;
+
+            function drawBranchCut(canvas, type, cutAngle) {
+                const { ctx, width, height } = setupCanvas(canvas);
+                const originX = width / 2;
+                const originY = height / 2;
+                const scale = Math.min(width * 0.15, height * 0.3);
+
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, width, height);
+
+                // Domain coloring for sqrt or log
+                const imageData = ctx.createImageData(width, height);
+                const data = imageData.data;
+                const cutRad = cutAngle * Math.PI / 180;
+
+                for (let py = 0; py < height; py++) {
+                    for (let px = 0; px < width; px++) {
+                        const x = (px - originX) / scale;
+                        const y = (originY - py) / scale;
+
+                        if (x === 0 && y === 0) continue;
+
+                        const r = Math.sqrt(x*x + y*y);
+                        let theta = Math.atan2(y, x);
+
+                        // Adjust theta based on branch cut
+                        const normalizedCut = ((cutRad % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+                        if (theta < normalizedCut - Math.PI) theta += 2*Math.PI;
+                        if (theta > normalizedCut + Math.PI) theta -= 2*Math.PI;
+
+                        let w;
+                        if (type === 'sqrt') {
+                            const sqrtR = Math.sqrt(r);
+                            const sqrtTheta = theta / 2;
+                            w = [sqrtR * Math.cos(sqrtTheta), sqrtR * Math.sin(sqrtTheta)];
+                        } else {
+                            w = [Math.log(r), theta];
+                        }
+
+                        const arg = Math.atan2(w[1], w[0]);
+                        const mag = Math.sqrt(w[0]*w[0] + w[1]*w[1]);
+
+                        const hue = (arg + Math.PI) / (2 * Math.PI);
+                        const lightness = 0.5 + 0.3 * Math.tanh(mag - 1);
+
+                        const [cr, cg, cb] = hslToRgb(hue, 0.7, Math.min(0.85, Math.max(0.15, lightness)));
+
+                        const idx = (py * width + px) * 4;
+                        data[idx] = cr;
+                        data[idx + 1] = cg;
+                        data[idx + 2] = cb;
+                        data[idx + 3] = 255;
+                    }
+                }
+
+                function hslToRgb(h, s, l) {
+                    let r, g, b;
+                    if (s === 0) { r = g = b = l; }
+                    else {
+                        const hue2rgb = (p, q, t) => {
+                            if (t < 0) t += 1; if (t > 1) t -= 1;
+                            if (t < 1/6) return p + (q - p) * 6 * t;
+                            if (t < 1/2) return q;
+                            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                            return p;
+                        };
+                        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                        const p = 2 * l - q;
+                        r = hue2rgb(p, q, h + 1/3);
+                        g = hue2rgb(p, q, h);
+                        b = hue2rgb(p, q, h - 1/3);
+                    }
+                    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                // Draw branch cut
+                ctx.strokeStyle = colors.rose;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([8, 4]);
+                ctx.beginPath();
+                ctx.moveTo(originX, originY);
+                ctx.lineTo(originX + Math.cos(cutRad) * width, originY - Math.sin(cutRad) * height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Draw axes
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, originY);
+                ctx.lineTo(width, originY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(originX, 0);
+                ctx.lineTo(originX, height);
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = colors.rose;
+                ctx.font = '11px Fira Code';
+                ctx.fillText('branch cut', originX + 10, originY + 15);
+            }
+
+            function drawRayOfDeath() {
+                const { ctx, width, height } = setupCanvas(rayCanvas);
+                const leftOriginX = width * 0.25;
+                const rightOriginX = width * 0.75;
+                const originY = height / 2;
+                const scale = Math.min(width * 0.15, height * 0.35);
+
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, width, height);
+
+                // Separator
+                ctx.strokeStyle = colors.grid;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(width / 2, 0);
+                ctx.lineTo(width / 2, height);
+                ctx.stroke();
+
+                // Left: z-plane with circle
+                drawComplexPlane(ctx, width / 2, height, leftOriginX, originY, scale);
+
+                // Branch cut (negative real axis)
+                ctx.strokeStyle = colors.rose;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([8, 4]);
+                ctx.beginPath();
+                ctx.moveTo(leftOriginX, originY);
+                ctx.lineTo(0, originY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Circle centered at offset
+                const offset = parseFloat(rayOffset.value);
+                const circleRadius = 1.2;
+                ctx.strokeStyle = colors.cyan;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(leftOriginX + offset * scale, originY, circleRadius * scale, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Points on circle (z values)
+                const numPoints = 8;
+                for (let i = 0; i < numPoints; i++) {
+                    const theta = rayT + i * 2 * Math.PI / numPoints;
+                    const zx = offset + circleRadius * Math.cos(theta);
+                    const zy = circleRadius * Math.sin(theta);
+
+                    ctx.fillStyle = colors.gold;
+                    ctx.beginPath();
+                    ctx.arc(leftOriginX + zx * scale, originY - zy * scale, 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = colors.text;
+                    ctx.font = '10px Fira Code';
+                    ctx.fillText(`z${i}`, leftOriginX + zx * scale + 8, originY - zy * scale);
+                }
+
+                // Right: w-plane with √z values
+                ctx.save();
+                ctx.translate(width / 2, 0);
+                drawComplexPlane(ctx, width / 2, height, rightOriginX - width/2, originY, scale);
+                ctx.restore();
+
+                // Compute √z for each point
+                for (let i = 0; i < numPoints; i++) {
+                    const theta = rayT + i * 2 * Math.PI / numPoints;
+                    const zx = offset + circleRadius * Math.cos(theta);
+                    const zy = circleRadius * Math.sin(theta);
+
+                    const r = Math.sqrt(zx*zx + zy*zy);
+                    let arg = Math.atan2(zy, zx);
+                    // Principal branch: -π < arg ≤ π
+                    if (arg > Math.PI) arg -= 2 * Math.PI;
+
+                    const sqrtR = Math.sqrt(r);
+                    const sqrtArg = arg / 2;
+                    const wx = sqrtR * Math.cos(sqrtArg);
+                    const wy = sqrtR * Math.sin(sqrtArg);
+
+                    ctx.fillStyle = colors.magenta;
+                    ctx.beginPath();
+                    ctx.arc(rightOriginX + wx * scale, originY - wy * scale, 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = colors.text;
+                    ctx.font = '10px Fira Code';
+                    ctx.fillText(`w${i}`, rightOriginX + wx * scale + 8, originY - wy * scale);
+                }
+
+                // Labels
+                ctx.fillStyle = colors.text;
+                ctx.font = '14px Fira Code';
+                ctx.textAlign = 'center';
+                ctx.fillText('z-plane', leftOriginX, 25);
+                ctx.fillText('w = √z', rightOriginX, 25);
+
+                // Check if circle crosses branch cut
+                const crossesCut = offset - circleRadius < 0 && Math.abs(offset) < circleRadius;
+                document.getElementById('rayResult').textContent = crossesCut ?
+                    'Circle crosses branch cut — discontinuity!' :
+                    'Circle avoids branch cut — continuous √z';
+                document.getElementById('rayResult').style.color = crossesCut ? colors.rose : colors.emerald;
+            }
+
+            sqrtAngle.addEventListener('input', () => {
+                document.getElementById('sqrtAngleVal').textContent = sqrtAngle.value + '°';
+                drawBranchCut(sqrtCanvas, 'sqrt', parseFloat(sqrtAngle.value));
+            });
+
+            logAngle.addEventListener('input', () => {
+                document.getElementById('logAngleVal').textContent = logAngle.value + '°';
+                drawBranchCut(logCanvas, 'log', parseFloat(logAngle.value));
+            });
+
+            rayOffset.addEventListener('input', drawRayOfDeath);
+
+            animateBtn.addEventListener('click', () => {
+                rayAnimating = !rayAnimating;
+                animateBtn.textContent = rayAnimating ? 'Stop' : 'Animate Loop';
+            });
+
+            function animateRay() {
+                if (rayAnimating) {
+                    rayT += 0.02;
+                    if (rayT > 2 * Math.PI) rayT = 0;
+                }
+                drawRayOfDeath();
+                requestAnimationFrame(animateRay);
+            }
+
+            drawBranchCut(sqrtCanvas, 'sqrt', 180);
+            drawBranchCut(logCanvas, 'log', 180);
+            animateRay();
+        })();
+
+        // ============================================
+        // SECTION 7: ARGUMENT PRINCIPLE
+        // ============================================
+        (function() {
+            const canvas = document.getElementById('argumentCanvas');
+            const resultDisplay = document.getElementById('argResult');
+            const radiusSlider = document.getElementById('argRadius');
+            const funcButtons = document.querySelectorAll('#argFuncs .btn');
+
+            let currentFunc = 'z2';
+            let t = 0;
+
+            const funcs = {
+                'z2': {
+                    f: (z) => complexMult(z, z),
+                    fprime: (z) => [2*z[0], 2*z[1]],
+                    zeros: [[0, 0]],
+                    zeroMults: [2],
+                    poles: [],
+                    name: 'z²'
+                },
+                'z3-z': {
+                    f: (z) => {
+                        const z3 = complexMult(complexMult(z, z), z);
+                        return [z3[0] - z[0], z3[1] - z[1]];
+                    },
+                    fprime: (z) => [3*(z[0]*z[0] - z[1]*z[1]) - 1, 6*z[0]*z[1]],
+                    zeros: [[0, 0], [1, 0], [-1, 0]],
+                    zeroMults: [1, 1, 1],
+                    poles: [],
+                    name: 'z³−z'
+                },
+                'rational': {
+                    f: (z) => complexDiv([z[0]-1, z[1]], [z[0]+1, z[1]]),
+                    fprime: (z) => {
+                        const denom = complexMult([z[0]+1, z[1]], [z[0]+1, z[1]]);
+                        return complexDiv([2, 0], denom);
+                    },
+                    zeros: [[1, 0]],
+                    zeroMults: [1],
+                    poles: [[-1, 0]],
+                    name: '(z−1)/(z+1)'
+                },
+                'sin': {
+                    f: complexSin,
+                    fprime: (z) => {
+                        const eiz = complexExp([-z[1], z[0]]);
+                        const emiz = complexExp([z[1], -z[0]]);
+                        return [(eiz[0] + emiz[0])/2, (eiz[1] + emiz[1])/2];
+                    },
+                    zeros: [[0, 0], [Math.PI, 0], [-Math.PI, 0]],
+                    zeroMults: [1, 1, 1],
+                    poles: [],
+                    name: 'sin(z)'
+                }
+            };
+
+            funcButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    funcButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFunc = btn.dataset.func;
+                });
+            });
+
+            function draw() {
+                const { ctx, width, height } = setupCanvas(canvas);
+                const leftOriginX = width * 0.25;
+                const rightOriginX = width * 0.75;
+                const originY = height / 2;
+                const scale = Math.min(width * 0.12, height * 0.3);
+
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, width, height);
+
+                // Separator
+                ctx.strokeStyle = colors.grid;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(width / 2, 0);
+                ctx.lineTo(width / 2, height);
+                ctx.stroke();
+
+                // Left: z-plane
+                drawComplexPlane(ctx, width / 2, height, leftOriginX, originY, scale);
+
+                const R = parseFloat(radiusSlider.value);
+
+                // Draw contour
+                ctx.strokeStyle = colors.cyan;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(leftOriginX, originY, R * scale, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Draw zeros
+                const func = funcs[currentFunc];
+                let zerosInside = 0;
+                let polesInside = 0;
+
+                func.zeros.forEach((z, i) => {
+                    const dist = Math.sqrt(z[0]*z[0] + z[1]*z[1]);
+                    if (dist < R) zerosInside += func.zeroMults[i];
+
+                    ctx.fillStyle = colors.emerald;
+                    ctx.beginPath();
+                    ctx.arc(leftOriginX + z[0] * scale, originY - z[1] * scale, 7, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                func.poles.forEach(p => {
+                    const dist = Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+                    if (dist < R) polesInside += 1;
+
+                    ctx.fillStyle = colors.rose;
+                    ctx.beginPath();
+                    ctx.arc(leftOriginX + p[0] * scale, originY - p[1] * scale, 7, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw X
+                    ctx.strokeStyle = colors.rose;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(leftOriginX + p[0] * scale - 4, originY - p[1] * scale - 4);
+                    ctx.lineTo(leftOriginX + p[0] * scale + 4, originY - p[1] * scale + 4);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(leftOriginX + p[0] * scale + 4, originY - p[1] * scale - 4);
+                    ctx.lineTo(leftOriginX + p[0] * scale - 4, originY - p[1] * scale + 4);
+                    ctx.stroke();
+                });
+
+                // Current point on contour
+                const zCurrent = [R * Math.cos(t), R * Math.sin(t)];
+                ctx.fillStyle = colors.gold;
+                ctx.beginPath();
+                ctx.arc(leftOriginX + zCurrent[0] * scale, originY - zCurrent[1] * scale, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Right: f(z)-plane, showing f(γ)
+                ctx.save();
+                ctx.translate(width / 2, 0);
+                drawComplexPlane(ctx, width / 2, height, rightOriginX - width/2, originY, scale * 0.8);
+                ctx.restore();
+
+                // Draw f(γ)
+                ctx.strokeStyle = colors.magenta;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i <= 200; i++) {
+                    const theta = i * 2 * Math.PI / 200;
+                    const z = [R * Math.cos(theta), R * Math.sin(theta)];
+                    const fz = func.f(z);
+
+                    const px = rightOriginX + fz[0] * scale * 0.8;
+                    const py = originY - fz[1] * scale * 0.8;
+
+                    if (isFinite(px) && isFinite(py)) {
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                }
+                ctx.stroke();
+
+                // Current f(z) point
+                const fCurrent = func.f(zCurrent);
+                if (isFinite(fCurrent[0]) && isFinite(fCurrent[1])) {
+                    ctx.fillStyle = colors.gold;
+                    ctx.beginPath();
+                    ctx.arc(rightOriginX + fCurrent[0] * scale * 0.8, originY - fCurrent[1] * scale * 0.8, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Origin marker in f-plane
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(rightOriginX, originY, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Labels
+                ctx.fillStyle = colors.text;
+                ctx.font = '14px Fira Code';
+                ctx.textAlign = 'center';
+                ctx.fillText('z-plane', leftOriginX, 25);
+                ctx.fillText('f(z)-plane', rightOriginX, 25);
+
+                // Result
+                const integral = zerosInside - polesInside;
+                resultDisplay.textContent = `Z = ${zerosInside}, P = ${polesInside} → ∮ f'/f dz = ${integral === 0 ? '0' : integral * 2 + 'πi'}`;
+
+                t += 0.02;
+                if (t > 2 * Math.PI) t = 0;
+
+                requestAnimationFrame(draw);
+            }
+
+            draw();
+        })();
+
+        // ============================================
+        // NAV SCROLL HIGHLIGHTING
+        // ============================================
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (window.scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Smooth scroll for nav
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

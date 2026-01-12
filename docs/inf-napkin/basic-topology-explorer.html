@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Topology Explorer - An Infinitely Large Napkin</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-purple: #a371f7;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-cyan: #39c5cf;
+            --border-color: #30363d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin: 3rem 0 1.5rem;
+            color: var(--accent-cyan);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+            color: var(--accent-purple);
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .highlight {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .definition {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .definition-title {
+            color: var(--accent-blue);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .theorem {
+            background: linear-gradient(135deg, rgba(163, 113, 247, 0.1) 0%, rgba(88, 166, 255, 0.1) 100%);
+            border: 1px solid var(--accent-purple);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+        }
+
+        .theorem-title {
+            color: var(--accent-purple);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .interactive-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .interactive-title {
+            font-size: 1.1rem;
+            color: var(--accent-green);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .interactive-title::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        canvas {
+            display: block;
+            margin: 1rem auto;
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            align-items: center;
+        }
+
+        button {
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        button.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        button.active {
+            background: var(--accent-green);
+        }
+
+        select, input[type="range"] {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .info-box {
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        .warning-box {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            color: var(--text-primary);
+        }
+
+        .status-display {
+            font-family: monospace;
+            background: var(--bg-tertiary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            color: var(--accent-cyan);
+        }
+
+        .grid-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .grid-cell {
+            background: var(--bg-tertiary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .grid-cell.open {
+            background: rgba(63, 185, 80, 0.2);
+            border: 1px solid var(--accent-green);
+        }
+
+        .grid-cell.closed {
+            background: rgba(248, 81, 73, 0.2);
+            border: 1px solid var(--accent-red);
+        }
+
+        .grid-cell.clopen {
+            background: linear-gradient(135deg, rgba(63, 185, 80, 0.2) 0%, rgba(248, 81, 73, 0.2) 100%);
+            border: 1px solid var(--accent-purple);
+        }
+
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .chapter-nav {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .chapter-nav a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .chapter-nav a:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .sequence-display {
+            font-family: monospace;
+            overflow-x: auto;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .term {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            margin: 0.1rem;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .term.highlight-term {
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+
+        .path-point {
+            fill: var(--accent-cyan);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            h1 { font-size: 2rem; }
+            .container { padding: 1rem; }
+        }
+
+        .topology-set {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            margin: 0.2rem;
+            border-radius: 4px;
+            font-family: monospace;
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .topology-set:hover {
+            transform: scale(1.05);
+        }
+
+        .topology-set.selected {
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Basic Topology</h1>
+        <p class="subtitle">Part III of An Infinitely Large Napkin</p>
+        <p class="subtitle">Chapters 6-8: From Metric Properties to the Topology of Compactness</p>
+    </header>
+
+    <nav class="chapter-nav">
+        <a href="#ch6">Ch 6: Metric Properties</a>
+        <a href="#ch7">Ch 7: Topological Spaces</a>
+        <a href="#ch8">Ch 8: Compactness</a>
+    </nav>
+
+    <div class="container">
+        <!-- Chapter 6: Properties of Metric Spaces -->
+        <section id="ch6">
+            <h2>Chapter 6: Properties of Metric Spaces</h2>
+
+            <p>We've seen that <span class="highlight">open</span> and <span class="highlight">closed</span> sets describe the local structure around points. Now we'll examine properties that describe entire metric spaces: <span class="highlight">boundedness</span> and <span class="highlight">completeness</span>. These will lead us to the crucial notion of <span class="highlight">compactness</span>.</p>
+
+            <h3>6.1 Boundedness vs Total Boundedness</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Bounded</div>
+                A metric space <span class="math">M</span> is <span class="highlight">bounded</span> if there exists a constant <span class="math">D</span> such that <span class="math">d(p, q) &le; D</span> for all points <span class="math">p, q &isin; M</span>.
+            </div>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Totally Bounded</div>
+                A metric space is <span class="highlight">totally bounded</span> if for any <span class="math">&epsilon; > 0</span>, we can cover <span class="math">M</span> with <em>finitely many</em> <span class="math">&epsilon;</span>-neighborhoods.
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Total Boundedness Explorer</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Adjust <span class="math">&epsilon;</span> to see how many balls are needed to cover the set. The unit square is totally bounded; an infinite discrete space is bounded but NOT totally bounded.</p>
+                <canvas id="totalBoundCanvas" width="700" height="350"></canvas>
+                <div class="controls">
+                    <label>&epsilon;: <input type="range" id="epsilonSlider" min="0.1" max="0.5" step="0.05" value="0.25"></label>
+                    <span class="status-display" id="coveringStatus">&epsilon; = 0.25, Balls needed: 4</span>
+                    <button onclick="toggleSpace()">Toggle: Square / Discrete</button>
+                </div>
+            </div>
+
+            <p>The key insight: a <span class="highlight">discrete space on infinitely many points</span> is bounded (all distances are 1) but NOT totally bounded (you need infinitely many balls of radius 0.5 to cover it). This distinction matters!</p>
+
+            <h3>6.2 Completeness & Cauchy Sequences</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Cauchy Sequence</div>
+                A sequence <span class="math">x<sub>1</sub>, x<sub>2</sub>, ...</span> is <span class="highlight">Cauchy</span> if for any <span class="math">&epsilon; > 0</span>, we have <span class="math">d(x<sub>m</sub>, x<sub>n</sub>) < &epsilon;</span> for all sufficiently large <span class="math">m</span> and <span class="math">n</span>.
+            </div>
+
+            <p>Every convergent sequence is Cauchy. But the converse isn't always true! A space where every Cauchy sequence converges is called <span class="highlight">complete</span>.</p>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Cauchy Sequence Visualizer</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Watch a sequence approach &radic;2 &asymp; 1.414... This sequence is Cauchy, but only converges in <span class="math">&Ropf;</span>, not in <span class="math">&Qopf;</span>!</p>
+                <canvas id="cauchyCanvas" width="700" height="300"></canvas>
+                <div class="sequence-display" id="cauchySequence"></div>
+                <div class="controls">
+                    <button onclick="animateCauchy()">Animate Sequence</button>
+                    <button class="secondary" onclick="resetCauchy()">Reset</button>
+                    <select id="spaceSelect" onchange="updateCauchySpace()">
+                        <option value="R">View in R (complete)</option>
+                        <option value="Q">View in Q (incomplete)</option>
+                    </select>
+                </div>
+                <div class="info-box" id="cauchyInfo">
+                    In <span class="math">&Ropf;</span>: The sequence converges to &radic;2.<br>
+                    In <span class="math">&Qopf;</span>: The sequence is Cauchy but has NO limit!
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <strong>Caveat Emptor:</strong> Neither boundedness nor completeness is preserved under homeomorphism! The interval <span class="math">(0,1)</span> is homeomorphic to <span class="math">&Ropf;</span>, yet <span class="math">(0,1)</span> is bounded but incomplete, while <span class="math">&Ropf;</span> is complete but unbounded.
+            </div>
+        </section>
+
+        <!-- Chapter 7: Topological Spaces -->
+        <section id="ch7">
+            <h2>Chapter 7: Topological Spaces</h2>
+
+            <p>The previous observation reveals something profound: the metric itself is less important than the <span class="highlight">open sets</span> it generates. Let's abstract away the metric entirely.</p>
+
+            <h3>7.1 Forgetting the Metric</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Topological Space</div>
+                A <span class="highlight">topological space</span> is a pair <span class="math">(X, T)</span> where <span class="math">X</span> is a set and <span class="math">T</span> is a collection of subsets called <span class="highlight">open sets</span>, satisfying:
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem; color: var(--text-secondary);">
+                    <li><span class="math">&empty;</span> and <span class="math">X</span> are both in <span class="math">T</span></li>
+                    <li><em>Finite</em> intersections of open sets are open</li>
+                    <li><em>Arbitrary</em> unions of open sets are open</li>
+                </ul>
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Topology Axiom Checker</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Click sets to toggle them in the topology. The system checks if your selection forms a valid topology on X = {a, b, c}.</p>
+                <div id="topologyBuilder">
+                    <div style="margin-bottom: 1rem;">
+                        <strong>X = {a, b, c}</strong> &mdash; All possible subsets:
+                    </div>
+                    <div id="subsetGrid"></div>
+                </div>
+                <div class="status-display" id="topologyStatus" style="margin-top: 1rem;"></div>
+                <div class="controls">
+                    <button onclick="setDiscreteTopology()">Discrete Topology</button>
+                    <button onclick="setTrivialTopology()">Trivial Topology</button>
+                    <button onclick="clearTopology()">Clear All</button>
+                </div>
+            </div>
+
+            <h3>7.3 Hausdorff Spaces</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Hausdorff (T<sub>2</sub>)</div>
+                A space <span class="math">X</span> is <span class="highlight">Hausdorff</span> if for any two distinct points <span class="math">p</span> and <span class="math">q</span>, there exist disjoint open neighborhoods <span class="math">U &ni; p</span> and <span class="math">V &ni; q</span>.
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Hausdorff Separation</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Drag the two points. In a Hausdorff space, we can always find disjoint open neighborhoods separating them.</p>
+                <canvas id="hausdorffCanvas" width="700" height="300"></canvas>
+                <div class="info-box">Every metric space is Hausdorff: just take balls of radius <span class="math">d(p,q)/2</span> around each point!</div>
+            </div>
+
+            <h3>7.5 Connected & Disconnected Spaces</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Clopen & Connected</div>
+                A set is <span class="highlight">clopen</span> if it is both open and closed. A space is <span class="highlight">connected</span> if its only clopen sets are <span class="math">&empty;</span> and <span class="math">X</span> itself.
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Connected vs Disconnected</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">A disconnected space can be written as a disjoint union of non-empty open sets. Each piece is clopen!</p>
+                <canvas id="connectedCanvas" width="700" height="250"></canvas>
+                <div class="controls">
+                    <button onclick="showConnected()">Connected: [0, 1]</button>
+                    <button onclick="showDisconnected()">Disconnected: [0,1] &cup; [2,3]</button>
+                    <button onclick="animateDisconnection()">Animate Split</button>
+                </div>
+            </div>
+
+            <h3>7.6-7.7 Path-Connectedness & Homotopy</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Path & Simply Connected</div>
+                A <span class="highlight">path</span> is a continuous function <span class="math">&gamma;: [0,1] &rarr; X</span>. A space is <span class="highlight">path-connected</span> if any two points can be joined by a path, and <span class="highlight">simply connected</span> if all paths between two points are homotopic (can be continuously deformed into each other).
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Homotopy: The Meteor Example</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">In <span class="math">&Copf;</span>, all paths from <span class="math">p</span> to <span class="math">q</span> are homotopic. But if we remove the origin (the "meteor"), paths going around different sides are NOT homotopic!</p>
+                <canvas id="homotopyCanvas" width="700" height="350"></canvas>
+                <div class="controls">
+                    <button onclick="setPlane('full')">Full Plane C</button>
+                    <button onclick="setPlane('punctured')">Punctured C\{0}</button>
+                    <button onclick="animateHomotopy()">Animate Deformation</button>
+                </div>
+                <div class="info-box" id="homotopyInfo">
+                    <span class="math">&Copf;</span> is simply connected: any path can be deformed to any other.
+                </div>
+            </div>
+
+            <div class="theorem">
+                <div class="theorem-title">Key Insight</div>
+                Path-connected &rArr; Connected, but the converse is false in general (though true for "nice" spaces like open subsets of <span class="math">&Ropf;<sup>n</sup></span>).
+            </div>
+        </section>
+
+        <!-- Chapter 8: Compactness -->
+        <section id="ch8">
+            <h2>Chapter 8: Compactness</h2>
+
+            <p>Compactness is, in the words of Pugh, <em>"the single most important concept in real analysis."</em> It captures the essence of "closed and bounded" in a purely topological way.</p>
+
+            <h3>8.1 Sequential Compactness</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Sequentially Compact</div>
+                A metric space <span class="math">M</span> is <span class="highlight">sequentially compact</span> if every sequence has a convergent subsequence.
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Compactness Tester</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Generate random sequences and watch how subsequences behave. In [0,1], we always find a convergent subsequence. In (0,1), sequences approaching the boundary escape!</p>
+                <canvas id="compactCanvas" width="700" height="300"></canvas>
+                <div class="controls">
+                    <button onclick="testCompactness('[0,1]')">[0, 1] (Compact)</button>
+                    <button onclick="testCompactness('(0,1)')">(0, 1) (Not Compact)</button>
+                    <button onclick="testCompactness('R')">R (Not Compact)</button>
+                    <button class="secondary" onclick="extractSubseq()">Extract Convergent Subsequence</button>
+                </div>
+                <div class="status-display" id="compactStatus">Select a space to begin</div>
+            </div>
+
+            <h3>8.3 Open Cover Definition</h3>
+
+            <div class="definition">
+                <div class="definition-title">Definition: Compact (via Open Covers)</div>
+                A space <span class="math">X</span> is <span class="highlight">compact</span> if every open cover has a <em>finite</em> subcover.
+            </div>
+
+            <p>This definition looks strange but is equivalent to sequential compactness for metric spaces! The power: it's defined purely in terms of open sets, making it a topological property.</p>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Open Cover Explorer</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Watch how [0,1] can always be covered by finitely many open sets, but [0,1) has covers with no finite subcover.</p>
+                <canvas id="openCoverCanvas" width="700" height="300"></canvas>
+                <div class="controls">
+                    <button onclick="demoCover('[0,1]')">Cover [0, 1]</button>
+                    <button onclick="demoCover('[0,1)')">Try to Cover [0, 1)</button>
+                    <button onclick="findFiniteSubcover()">Extract Finite Subcover</button>
+                </div>
+                <div class="info-box" id="coverInfo">
+                    Select a set to see open covers in action.
+                </div>
+            </div>
+
+            <div class="theorem">
+                <div class="theorem-title">Theorem: Bolzano-Weierstrass</div>
+                A subset of <span class="math">&Ropf;<sup>n</sup></span> is compact if and only if it is <span class="highlight">closed and bounded</span>.
+            </div>
+
+            <h3>8.4 Applications of Compactness</h3>
+
+            <div class="theorem">
+                <div class="theorem-title">Extreme Value Theorem</div>
+                If <span class="math">X</span> is compact and <span class="math">f: X &rarr; &Ropf;</span> is continuous, then <span class="math">f</span> achieves its maximum and minimum.
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Extreme Value Theorem Demo</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Continuous functions on compact sets always achieve their extrema. But on non-compact sets, the sup/inf might not be attained!</p>
+                <canvas id="evtCanvas" width="700" height="350"></canvas>
+                <div class="controls">
+                    <select id="functionSelect" onchange="updateEVT()">
+                        <option value="sin">f(x) = sin(3x) on [0, 1]</option>
+                        <option value="poly">f(x) = x(1-x) on [0, 1]</option>
+                        <option value="1/x">f(x) = 1/x on (0, 1] - no minimum!</option>
+                    </select>
+                    <span class="status-display" id="evtStatus">Max: ---, Min: ---</span>
+                </div>
+            </div>
+
+            <div class="theorem">
+                <div class="theorem-title">Heine-Borel Theorem</div>
+                For metric spaces, these are equivalent:<br>
+                (i) Every sequence has a convergent subsequence (seq. compact)<br>
+                (ii) The space is complete and totally bounded<br>
+                (iii) Every open cover has a finite subcover (compact)
+            </div>
+
+            <div class="interactive-container">
+                <div class="interactive-title">Compactness Hierarchy</div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Click on examples to see which properties they satisfy.</p>
+                <div class="two-column">
+                    <div>
+                        <h4 style="color: var(--accent-green); margin-bottom: 1rem;">Compact Examples</h4>
+                        <div class="grid-display" id="compactExamples"></div>
+                    </div>
+                    <div>
+                        <h4 style="color: var(--accent-red); margin-bottom: 1rem;">Non-Compact Examples</h4>
+                        <div class="grid-display" id="nonCompactExamples"></div>
+                    </div>
+                </div>
+                <div class="info-box" id="exampleInfo" style="margin-top: 1rem;">
+                    Click an example to see its properties.
+                </div>
+            </div>
+        </section>
+
+        <section style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+            <h3>Summary: The Topology Ladder</h3>
+            <p>We've climbed from concrete to abstract:</p>
+            <div style="font-family: monospace; background: var(--bg-secondary); padding: 1.5rem; border-radius: 8px; margin: 1rem 0;">
+                Metric d(x,y) &rarr; Open balls B<sub>&epsilon;</sub>(p) &rarr; Open sets &rarr; Topology<br><br>
+                <span style="color: var(--accent-cyan);">Properties preserved under homeomorphism:</span><br>
+                &nbsp;&nbsp;Hausdorff, Connected, Path-Connected, Simply Connected, <strong>Compact</strong><br><br>
+                <span style="color: var(--accent-red);">NOT preserved:</span><br>
+                &nbsp;&nbsp;Bounded, Complete, Cauchy
+            </div>
+            <p>Compactness emerges as the topological essence of "nicely bounded" - no sequences can escape, and every open cover can be tamed to a finite one.</p>
+        </section>
+    </div>
+
+    <script>
+        // ============== CHAPTER 6: TOTAL BOUNDEDNESS ==============
+        const totalBoundCanvas = document.getElementById('totalBoundCanvas');
+        const tbCtx = totalBoundCanvas.getContext('2d');
+        let currentTBSpace = 'square';
+
+        function drawTotalBound() {
+            const eps = parseFloat(document.getElementById('epsilonSlider').value);
+            tbCtx.fillStyle = '#21262d';
+            tbCtx.fillRect(0, 0, 700, 350);
+
+            if (currentTBSpace === 'square') {
+                // Draw unit square
+                tbCtx.strokeStyle = '#58a6ff';
+                tbCtx.lineWidth = 2;
+                tbCtx.strokeRect(100, 50, 200, 200);
+                tbCtx.fillStyle = 'rgba(88, 166, 255, 0.1)';
+                tbCtx.fillRect(100, 50, 200, 200);
+
+                // Calculate covering
+                const cellSize = eps * 200;
+                const numCells = Math.ceil(1 / eps);
+                let ballCount = 0;
+
+                for (let i = 0; i < numCells; i++) {
+                    for (let j = 0; j < numCells; j++) {
+                        const cx = 100 + (i + 0.5) * cellSize;
+                        const cy = 50 + (j + 0.5) * cellSize;
+                        if (cx <= 300 && cy <= 250) {
+                            tbCtx.beginPath();
+                            tbCtx.arc(cx, cy, eps * 200 * 0.7, 0, Math.PI * 2);
+                            tbCtx.strokeStyle = `hsl(${(ballCount * 40) % 360}, 70%, 60%)`;
+                            tbCtx.stroke();
+                            ballCount++;
+                        }
+                    }
+                }
+
+                document.getElementById('coveringStatus').textContent =
+                    `ε = ${eps.toFixed(2)}, Balls needed: ${ballCount} (FINITE)`;
+
+                // Labels
+                tbCtx.fillStyle = '#e6edf3';
+                tbCtx.font = '14px sans-serif';
+                tbCtx.fillText('[0,1]²: Totally Bounded', 130, 280);
+
+                // Right side: explanation
+                tbCtx.fillStyle = '#8b949e';
+                tbCtx.font = '13px sans-serif';
+                const lines = [
+                    'Unit Square [0,1]²',
+                    '',
+                    '• For any ε > 0, we can cover',
+                    '  with finitely many ε-balls',
+                    '',
+                    '• As ε → 0, we need more balls,',
+                    '  but always a finite number',
+                    '',
+                    '• Totally bounded ⟹ Bounded'
+                ];
+                lines.forEach((line, i) => {
+                    tbCtx.fillText(line, 400, 80 + i * 22);
+                });
+            } else {
+                // Discrete space
+                tbCtx.fillStyle = '#e6edf3';
+                tbCtx.font = '14px sans-serif';
+                tbCtx.fillText('Infinite Discrete Space (all distances = 1)', 100, 40);
+
+                const points = [];
+                for (let i = 0; i < 20; i++) {
+                    points.push({
+                        x: 80 + (i % 10) * 50,
+                        y: 80 + Math.floor(i / 10) * 100
+                    });
+                }
+
+                // Draw points
+                points.forEach((p, i) => {
+                    tbCtx.beginPath();
+                    tbCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                    tbCtx.fillStyle = '#3fb950';
+                    tbCtx.fill();
+
+                    // Draw ε-ball around each point
+                    if (eps < 0.5) {
+                        tbCtx.beginPath();
+                        tbCtx.arc(p.x, p.y, 20, 0, Math.PI * 2);
+                        tbCtx.strokeStyle = `hsla(${i * 18}, 70%, 60%, 0.5)`;
+                        tbCtx.stroke();
+                    }
+                });
+
+                // Add "..." to show infinite
+                tbCtx.fillStyle = '#8b949e';
+                tbCtx.font = '20px sans-serif';
+                tbCtx.fillText('...', 560, 90);
+                tbCtx.fillText('...', 560, 190);
+
+                tbCtx.fillStyle = '#f85149';
+                tbCtx.font = '13px sans-serif';
+                if (eps < 0.5) {
+                    document.getElementById('coveringStatus').textContent =
+                        `ε = ${eps.toFixed(2)} < 0.5: Need INFINITELY many balls!`;
+                    tbCtx.fillText('With ε < 0.5, each point needs its own ball!', 100, 260);
+                    tbCtx.fillText('→ NOT totally bounded (but IS bounded: diam = 1)', 100, 285);
+                } else {
+                    document.getElementById('coveringStatus').textContent =
+                        `ε = ${eps.toFixed(2)} ≥ 0.5: One ball covers all (trivially)`;
+                    tbCtx.fillStyle = '#3fb950';
+                    tbCtx.fillText('With ε ≥ 0.5, one ball covers everything', 100, 260);
+                }
+            }
+        }
+
+        function toggleSpace() {
+            currentTBSpace = currentTBSpace === 'square' ? 'discrete' : 'square';
+            drawTotalBound();
+        }
+
+        document.getElementById('epsilonSlider').addEventListener('input', drawTotalBound);
+
+        // ============== CHAPTER 6: CAUCHY SEQUENCES ==============
+        const cauchyCanvas = document.getElementById('cauchyCanvas');
+        const cCtx = cauchyCanvas.getContext('2d');
+        let cauchyTerms = [];
+        let cauchyAnimFrame = 0;
+        let cauchyAnimating = false;
+
+        // Sequence approximating sqrt(2)
+        function sqrtTwoApprox(n) {
+            // Newton's method starting from 1
+            let x = 1;
+            for (let i = 0; i < n; i++) {
+                x = (x + 2/x) / 2;
+            }
+            return x;
+        }
+
+        function drawCauchy() {
+            cCtx.fillStyle = '#21262d';
+            cCtx.fillRect(0, 0, 700, 300);
+
+            // Draw number line
+            cCtx.strokeStyle = '#30363d';
+            cCtx.lineWidth = 2;
+            cCtx.beginPath();
+            cCtx.moveTo(50, 200);
+            cCtx.lineTo(650, 200);
+            cCtx.stroke();
+
+            // Tick marks
+            cCtx.fillStyle = '#8b949e';
+            cCtx.font = '12px sans-serif';
+            for (let i = 0; i <= 20; i++) {
+                const x = 50 + i * 30;
+                const val = 1 + i * 0.05;
+                cCtx.beginPath();
+                cCtx.moveTo(x, 195);
+                cCtx.lineTo(x, 205);
+                cCtx.stroke();
+                if (i % 4 === 0) {
+                    cCtx.fillText(val.toFixed(2), x - 12, 220);
+                }
+            }
+
+            // Mark sqrt(2)
+            const sqrt2x = 50 + (Math.sqrt(2) - 1) * 600;
+            cCtx.strokeStyle = '#a371f7';
+            cCtx.lineWidth = 2;
+            cCtx.setLineDash([5, 5]);
+            cCtx.beginPath();
+            cCtx.moveTo(sqrt2x, 50);
+            cCtx.lineTo(sqrt2x, 200);
+            cCtx.stroke();
+            cCtx.setLineDash([]);
+            cCtx.fillStyle = '#a371f7';
+            cCtx.fillText('√2 ≈ 1.414', sqrt2x - 25, 40);
+
+            // Draw sequence terms
+            const displaySeq = [];
+            for (let i = 0; i < Math.min(cauchyAnimFrame, 8); i++) {
+                const val = sqrtTwoApprox(i);
+                const x = 50 + (val - 1) * 600;
+
+                cCtx.beginPath();
+                cCtx.arc(x, 200 - (i + 1) * 15, 6, 0, Math.PI * 2);
+                cCtx.fillStyle = `hsl(${200 + i * 10}, 80%, 60%)`;
+                cCtx.fill();
+
+                cCtx.fillStyle = '#e6edf3';
+                cCtx.font = '11px monospace';
+                cCtx.fillText(`x${i+1}`, x + 10, 200 - (i + 1) * 15 + 4);
+
+                displaySeq.push(val.toFixed(6));
+            }
+
+            // Update sequence display
+            document.getElementById('cauchySequence').innerHTML = displaySeq.map((v, i) =>
+                `<span class="term ${i === displaySeq.length - 1 ? 'highlight-term' : ''}">${v}</span>`
+            ).join(', ') + (displaySeq.length > 0 ? ', ...' : 'Click "Animate Sequence"');
+
+            const space = document.getElementById('spaceSelect').value;
+            if (space === 'Q') {
+                cCtx.fillStyle = '#f85149';
+                cCtx.font = '14px sans-serif';
+                cCtx.fillText('In Q: √2 does not exist! Sequence is Cauchy but DOES NOT CONVERGE', 150, 270);
+            } else {
+                cCtx.fillStyle = '#3fb950';
+                cCtx.font = '14px sans-serif';
+                cCtx.fillText('In R: Sequence converges to √2 (R is complete)', 200, 270);
+            }
+        }
+
+        function animateCauchy() {
+            if (cauchyAnimating) return;
+            cauchyAnimating = true;
+            cauchyAnimFrame = 0;
+
+            function step() {
+                cauchyAnimFrame++;
+                drawCauchy();
+                if (cauchyAnimFrame < 8) {
+                    setTimeout(step, 500);
+                } else {
+                    cauchyAnimating = false;
+                }
+            }
+            step();
+        }
+
+        function resetCauchy() {
+            cauchyAnimFrame = 0;
+            cauchyAnimating = false;
+            drawCauchy();
+        }
+
+        function updateCauchySpace() {
+            drawCauchy();
+        }
+
+        // ============== CHAPTER 7: TOPOLOGY BUILDER ==============
+        const allSubsets = [
+            { set: [], label: '∅' },
+            { set: ['a'], label: '{a}' },
+            { set: ['b'], label: '{b}' },
+            { set: ['c'], label: '{c}' },
+            { set: ['a', 'b'], label: '{a,b}' },
+            { set: ['a', 'c'], label: '{a,c}' },
+            { set: ['b', 'c'], label: '{b,c}' },
+            { set: ['a', 'b', 'c'], label: 'X' }
+        ];
+
+        let selectedSets = new Set([0, 7]); // Start with empty and X
+
+        function renderTopologyBuilder() {
+            const grid = document.getElementById('subsetGrid');
+            grid.innerHTML = '';
+
+            allSubsets.forEach((subset, i) => {
+                const div = document.createElement('span');
+                div.className = `topology-set ${selectedSets.has(i) ? 'selected' : ''}`;
+                div.textContent = subset.label;
+                div.onclick = () => toggleSubset(i);
+                grid.appendChild(div);
+            });
+
+            checkTopology();
+        }
+
+        function toggleSubset(i) {
+            if (selectedSets.has(i)) {
+                selectedSets.delete(i);
+            } else {
+                selectedSets.add(i);
+            }
+            renderTopologyBuilder();
+        }
+
+        function setEqual(a, b) {
+            if (a.length !== b.length) return false;
+            const sortedA = [...a].sort();
+            const sortedB = [...b].sort();
+            return sortedA.every((v, i) => v === sortedB[i]);
+        }
+
+        function union(a, b) {
+            return [...new Set([...a, ...b])];
+        }
+
+        function intersection(a, b) {
+            return a.filter(x => b.includes(x));
+        }
+
+        function findSubsetIndex(set) {
+            return allSubsets.findIndex(s => setEqual(s.set, set));
+        }
+
+        function checkTopology() {
+            const selected = [...selectedSets].map(i => allSubsets[i].set);
+            const status = document.getElementById('topologyStatus');
+
+            // Check: empty and X must be present
+            const hasEmpty = selectedSets.has(0);
+            const hasX = selectedSets.has(7);
+
+            if (!hasEmpty || !hasX) {
+                status.innerHTML = `<span style="color: var(--accent-red);">Not a topology: must contain ∅ and X</span>`;
+                return;
+            }
+
+            // Check: finite intersections
+            for (let i of selectedSets) {
+                for (let j of selectedSets) {
+                    const inter = intersection(allSubsets[i].set, allSubsets[j].set);
+                    const interIdx = findSubsetIndex(inter);
+                    if (!selectedSets.has(interIdx)) {
+                        status.innerHTML = `<span style="color: var(--accent-red);">Not a topology: ${allSubsets[i].label} ∩ ${allSubsets[j].label} = ${allSubsets[interIdx].label} is missing</span>`;
+                        return;
+                    }
+                }
+            }
+
+            // Check: arbitrary unions
+            for (let i of selectedSets) {
+                for (let j of selectedSets) {
+                    const un = union(allSubsets[i].set, allSubsets[j].set);
+                    const unIdx = findSubsetIndex(un);
+                    if (!selectedSets.has(unIdx)) {
+                        status.innerHTML = `<span style="color: var(--accent-red);">Not a topology: ${allSubsets[i].label} ∪ ${allSubsets[j].label} = ${allSubsets[unIdx].label} is missing</span>`;
+                        return;
+                    }
+                }
+            }
+
+            status.innerHTML = `<span style="color: var(--accent-green);">Valid topology with ${selectedSets.size} open sets</span>`;
+        }
+
+        function setDiscreteTopology() {
+            selectedSets = new Set([0, 1, 2, 3, 4, 5, 6, 7]);
+            renderTopologyBuilder();
+        }
+
+        function setTrivialTopology() {
+            selectedSets = new Set([0, 7]);
+            renderTopologyBuilder();
+        }
+
+        function clearTopology() {
+            selectedSets = new Set([0, 7]);
+            renderTopologyBuilder();
+        }
+
+        // ============== CHAPTER 7: HAUSDORFF ==============
+        const hausdorffCanvas = document.getElementById('hausdorffCanvas');
+        const hCtx = hausdorffCanvas.getContext('2d');
+        let hPoints = [{ x: 250, y: 150 }, { x: 450, y: 150 }];
+        let hDragging = -1;
+
+        function drawHausdorff() {
+            hCtx.fillStyle = '#21262d';
+            hCtx.fillRect(0, 0, 700, 300);
+
+            const dist = Math.sqrt(Math.pow(hPoints[1].x - hPoints[0].x, 2) + Math.pow(hPoints[1].y - hPoints[0].y, 2));
+            const r = dist / 2 - 10;
+
+            // Draw open neighborhoods
+            if (r > 10) {
+                hCtx.beginPath();
+                hCtx.arc(hPoints[0].x, hPoints[0].y, r, 0, Math.PI * 2);
+                hCtx.fillStyle = 'rgba(88, 166, 255, 0.2)';
+                hCtx.fill();
+                hCtx.strokeStyle = '#58a6ff';
+                hCtx.lineWidth = 2;
+                hCtx.setLineDash([5, 5]);
+                hCtx.stroke();
+                hCtx.setLineDash([]);
+
+                hCtx.beginPath();
+                hCtx.arc(hPoints[1].x, hPoints[1].y, r, 0, Math.PI * 2);
+                hCtx.fillStyle = 'rgba(163, 113, 247, 0.2)';
+                hCtx.fill();
+                hCtx.strokeStyle = '#a371f7';
+                hCtx.stroke();
+            }
+
+            // Draw points
+            hCtx.beginPath();
+            hCtx.arc(hPoints[0].x, hPoints[0].y, 8, 0, Math.PI * 2);
+            hCtx.fillStyle = '#58a6ff';
+            hCtx.fill();
+            hCtx.fillStyle = '#e6edf3';
+            hCtx.font = '14px sans-serif';
+            hCtx.fillText('p', hPoints[0].x - 5, hPoints[0].y - 15);
+
+            hCtx.beginPath();
+            hCtx.arc(hPoints[1].x, hPoints[1].y, 8, 0, Math.PI * 2);
+            hCtx.fillStyle = '#a371f7';
+            hCtx.fill();
+            hCtx.fillText('q', hPoints[1].x - 5, hPoints[1].y - 15);
+
+            // Labels
+            hCtx.fillStyle = '#3fb950';
+            hCtx.fillText(`U ∩ V = ∅ (disjoint!)`, 300, 280);
+            hCtx.fillStyle = '#8b949e';
+            hCtx.fillText(`d(p,q) = ${(dist/100).toFixed(2)}, radius = ${(r/100).toFixed(2)}`, 280, 30);
+        }
+
+        hausdorffCanvas.addEventListener('mousedown', (e) => {
+            const rect = hausdorffCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            hPoints.forEach((p, i) => {
+                if (Math.abs(p.x - x) < 20 && Math.abs(p.y - y) < 20) {
+                    hDragging = i;
+                }
+            });
+        });
+
+        hausdorffCanvas.addEventListener('mousemove', (e) => {
+            if (hDragging >= 0) {
+                const rect = hausdorffCanvas.getBoundingClientRect();
+                hPoints[hDragging].x = e.clientX - rect.left;
+                hPoints[hDragging].y = e.clientY - rect.top;
+                drawHausdorff();
+            }
+        });
+
+        hausdorffCanvas.addEventListener('mouseup', () => { hDragging = -1; });
+        hausdorffCanvas.addEventListener('mouseleave', () => { hDragging = -1; });
+
+        // ============== CHAPTER 7: CONNECTED ==============
+        const connectedCanvas = document.getElementById('connectedCanvas');
+        const conCtx = connectedCanvas.getContext('2d');
+        let connectionState = 'connected';
+        let splitProgress = 0;
+
+        function drawConnected() {
+            conCtx.fillStyle = '#21262d';
+            conCtx.fillRect(0, 0, 700, 250);
+
+            if (connectionState === 'connected') {
+                // Draw [0, 1]
+                conCtx.fillStyle = 'rgba(63, 185, 80, 0.3)';
+                conCtx.fillRect(150, 80, 400, 80);
+                conCtx.strokeStyle = '#3fb950';
+                conCtx.lineWidth = 3;
+                conCtx.strokeRect(150, 80, 400, 80);
+
+                conCtx.fillStyle = '#e6edf3';
+                conCtx.font = '16px sans-serif';
+                conCtx.fillText('[0, 1]', 330, 125);
+                conCtx.fillStyle = '#3fb950';
+                conCtx.fillText('CONNECTED', 310, 200);
+                conCtx.fillStyle = '#8b949e';
+                conCtx.font = '13px sans-serif';
+                conCtx.fillText('Only clopen sets: ∅ and [0,1] itself', 250, 225);
+            } else {
+                // Draw [0, 1] ∪ [2, 3] with possible animation
+                const gap = 50 + splitProgress * 50;
+
+                // Left interval
+                conCtx.fillStyle = 'rgba(88, 166, 255, 0.3)';
+                conCtx.fillRect(100, 80, 180, 80);
+                conCtx.strokeStyle = '#58a6ff';
+                conCtx.lineWidth = 3;
+                conCtx.strokeRect(100, 80, 180, 80);
+
+                // Right interval
+                conCtx.fillStyle = 'rgba(163, 113, 247, 0.3)';
+                conCtx.fillRect(280 + gap, 80, 180, 80);
+                conCtx.strokeStyle = '#a371f7';
+                conCtx.strokeRect(280 + gap, 80, 180, 80);
+
+                conCtx.fillStyle = '#e6edf3';
+                conCtx.font = '16px sans-serif';
+                conCtx.fillText('[0, 1]', 170, 125);
+                conCtx.fillText('[2, 3]', 350 + gap, 125);
+
+                conCtx.fillStyle = '#f85149';
+                conCtx.fillText('DISCONNECTED', 290, 200);
+                conCtx.fillStyle = '#8b949e';
+                conCtx.font = '13px sans-serif';
+                conCtx.fillText('Both [0,1] and [2,3] are clopen in this space!', 210, 225);
+            }
+        }
+
+        function showConnected() {
+            connectionState = 'connected';
+            splitProgress = 0;
+            drawConnected();
+        }
+
+        function showDisconnected() {
+            connectionState = 'disconnected';
+            splitProgress = 1;
+            drawConnected();
+        }
+
+        function animateDisconnection() {
+            connectionState = 'disconnected';
+            splitProgress = 0;
+
+            function step() {
+                splitProgress += 0.05;
+                drawConnected();
+                if (splitProgress < 1) {
+                    requestAnimationFrame(step);
+                }
+            }
+            step();
+        }
+
+        // ============== CHAPTER 7: HOMOTOPY ==============
+        const homotopyCanvas = document.getElementById('homotopyCanvas');
+        const homCtx = homotopyCanvas.getContext('2d');
+        let planeType = 'full';
+        let homotopyParam = 0;
+        let homotopyAnimating = false;
+
+        function drawHomotopy() {
+            homCtx.fillStyle = '#21262d';
+            homCtx.fillRect(0, 0, 700, 350);
+
+            const cx = 350, cy = 175;
+
+            // Draw plane region
+            homCtx.fillStyle = 'rgba(88, 166, 255, 0.1)';
+            homCtx.fillRect(50, 25, 600, 300);
+            homCtx.strokeStyle = '#30363d';
+            homCtx.strokeRect(50, 25, 600, 300);
+
+            // If punctured, draw the "meteor"
+            if (planeType === 'punctured') {
+                homCtx.beginPath();
+                homCtx.arc(cx, cy, 25, 0, Math.PI * 2);
+                homCtx.fillStyle = '#21262d';
+                homCtx.fill();
+                homCtx.strokeStyle = '#f85149';
+                homCtx.lineWidth = 3;
+                homCtx.stroke();
+                homCtx.fillStyle = '#f85149';
+                homCtx.font = '12px sans-serif';
+                homCtx.fillText('0', cx - 4, cy + 4);
+            }
+
+            // Points p and q
+            const p = { x: 150, y: 175 };
+            const q = { x: 550, y: 175 };
+
+            // Draw paths
+            if (planeType === 'full') {
+                // All paths can be deformed to straight line
+                // Show multiple paths converging
+                const paths = [
+                    { bend: 80, color: '#58a6ff' },
+                    { bend: 40 * (1 - homotopyParam), color: '#3fb950' },
+                    { bend: -60 * (1 - homotopyParam), color: '#a371f7' }
+                ];
+
+                paths.forEach(path => {
+                    homCtx.beginPath();
+                    homCtx.moveTo(p.x, p.y);
+                    homCtx.quadraticCurveTo(cx, cy - path.bend * (1 - homotopyParam), q.x, q.y);
+                    homCtx.strokeStyle = path.color;
+                    homCtx.lineWidth = 2;
+                    homCtx.stroke();
+                });
+            } else {
+                // Punctured plane - paths cannot cross the hole
+                // Upper path
+                homCtx.beginPath();
+                homCtx.moveTo(p.x, p.y);
+                homCtx.quadraticCurveTo(cx, cy - 80 - 20 * homotopyParam, q.x, q.y);
+                homCtx.strokeStyle = '#58a6ff';
+                homCtx.lineWidth = 2;
+                homCtx.stroke();
+
+                // Lower path
+                homCtx.beginPath();
+                homCtx.moveTo(p.x, p.y);
+                homCtx.quadraticCurveTo(cx, cy + 80 + 20 * homotopyParam, q.x, q.y);
+                homCtx.strokeStyle = '#a371f7';
+                homCtx.lineWidth = 2;
+                homCtx.stroke();
+
+                // Show they can't be deformed to each other
+                if (homotopyParam > 0.5) {
+                    homCtx.fillStyle = '#f85149';
+                    homCtx.font = '14px sans-serif';
+                    homCtx.fillText('Cannot deform! Meteor blocks the way.', 250, 50);
+                }
+            }
+
+            // Draw points
+            homCtx.beginPath();
+            homCtx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+            homCtx.fillStyle = '#3fb950';
+            homCtx.fill();
+            homCtx.fillStyle = '#e6edf3';
+            homCtx.font = '14px sans-serif';
+            homCtx.fillText('p', p.x - 20, p.y + 5);
+
+            homCtx.beginPath();
+            homCtx.arc(q.x, q.y, 8, 0, Math.PI * 2);
+            homCtx.fillStyle = '#3fb950';
+            homCtx.fill();
+            homCtx.fillText('q', q.x + 12, q.y + 5);
+
+            // Info
+            const info = document.getElementById('homotopyInfo');
+            if (planeType === 'full') {
+                info.innerHTML = '<span style="color: var(--accent-green);">ℂ is simply connected:</span> any path can be deformed to any other. All paths p→q are homotopic.';
+            } else {
+                info.innerHTML = '<span style="color: var(--accent-red);">ℂ\\{0} is NOT simply connected:</span> the upper and lower paths have different "winding numbers" around the hole!';
+            }
+        }
+
+        function setPlane(type) {
+            planeType = type;
+            homotopyParam = 0;
+            drawHomotopy();
+        }
+
+        function animateHomotopy() {
+            if (homotopyAnimating) return;
+            homotopyAnimating = true;
+            homotopyParam = 0;
+
+            function step() {
+                homotopyParam += 0.02;
+                drawHomotopy();
+                if (homotopyParam < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    homotopyAnimating = false;
+                }
+            }
+            step();
+        }
+
+        // ============== CHAPTER 8: COMPACTNESS TESTER ==============
+        const compactCanvas = document.getElementById('compactCanvas');
+        const cmpCtx = compactCanvas.getContext('2d');
+        let compactSequence = [];
+        let compactSpace = '[0,1]';
+        let highlightedSubseq = [];
+
+        function generateSequence(space) {
+            compactSequence = [];
+            highlightedSubseq = [];
+
+            for (let i = 0; i < 30; i++) {
+                let val;
+                if (space === '[0,1]') {
+                    val = Math.random();
+                } else if (space === '(0,1)') {
+                    // Generate sequence approaching 0
+                    val = 0.5 / (i + 1) + Math.random() * 0.1;
+                } else {
+                    // R - unbounded sequence
+                    val = i + Math.random() * 2;
+                }
+                compactSequence.push(val);
+            }
+        }
+
+        function drawCompactness() {
+            cmpCtx.fillStyle = '#21262d';
+            cmpCtx.fillRect(0, 0, 700, 300);
+
+            // Draw the space
+            cmpCtx.strokeStyle = '#30363d';
+            cmpCtx.lineWidth = 2;
+            cmpCtx.beginPath();
+            cmpCtx.moveTo(50, 200);
+            cmpCtx.lineTo(650, 200);
+            cmpCtx.stroke();
+
+            let minVal, maxVal, label;
+            if (compactSpace === '[0,1]') {
+                minVal = 0; maxVal = 1;
+                label = '[0, 1] - Compact';
+                // Draw closed endpoints
+                cmpCtx.fillStyle = '#3fb950';
+                cmpCtx.beginPath();
+                cmpCtx.arc(100, 200, 6, 0, Math.PI * 2);
+                cmpCtx.fill();
+                cmpCtx.beginPath();
+                cmpCtx.arc(600, 200, 6, 0, Math.PI * 2);
+                cmpCtx.fill();
+            } else if (compactSpace === '(0,1)') {
+                minVal = 0; maxVal = 1;
+                label = '(0, 1) - NOT Compact (incomplete)';
+                // Draw open endpoints
+                cmpCtx.strokeStyle = '#f85149';
+                cmpCtx.beginPath();
+                cmpCtx.arc(100, 200, 6, 0, Math.PI * 2);
+                cmpCtx.stroke();
+                cmpCtx.beginPath();
+                cmpCtx.arc(600, 200, 6, 0, Math.PI * 2);
+                cmpCtx.stroke();
+            } else {
+                minVal = 0; maxVal = 35;
+                label = 'R - NOT Compact (unbounded)';
+            }
+
+            cmpCtx.fillStyle = '#e6edf3';
+            cmpCtx.font = '14px sans-serif';
+            cmpCtx.fillText(label, 280, 30);
+
+            // Draw sequence points
+            compactSequence.forEach((val, i) => {
+                const x = 100 + ((val - minVal) / (maxVal - minVal)) * 500;
+                const y = 180 - (i % 10) * 15;
+
+                const isHighlighted = highlightedSubseq.includes(i);
+
+                cmpCtx.beginPath();
+                cmpCtx.arc(x, y, isHighlighted ? 6 : 4, 0, Math.PI * 2);
+                cmpCtx.fillStyle = isHighlighted ? '#3fb950' : '#58a6ff';
+                cmpCtx.fill();
+
+                if (isHighlighted) {
+                    cmpCtx.strokeStyle = '#3fb950';
+                    cmpCtx.lineWidth = 1;
+                    cmpCtx.beginPath();
+                    cmpCtx.moveTo(x, y + 6);
+                    cmpCtx.lineTo(x, 200);
+                    cmpCtx.stroke();
+                }
+            });
+
+            // Tick marks
+            cmpCtx.fillStyle = '#8b949e';
+            cmpCtx.font = '11px sans-serif';
+            for (let i = 0; i <= 10; i++) {
+                const x = 100 + i * 50;
+                const val = minVal + (i / 10) * (maxVal - minVal);
+                cmpCtx.fillText(val.toFixed(1), x - 10, 220);
+            }
+
+            // Status
+            const status = document.getElementById('compactStatus');
+            if (compactSpace === '[0,1]') {
+                status.textContent = 'Every sequence has a convergent subsequence (by Bolzano-Weierstrass)';
+            } else if (compactSpace === '(0,1)') {
+                status.textContent = 'Sequence approaches 0, but 0 ∉ (0,1)! No convergent subsequence.';
+            } else {
+                status.textContent = 'Sequence escapes to infinity - no convergent subsequence exists.';
+            }
+        }
+
+        function testCompactness(space) {
+            compactSpace = space;
+            generateSequence(space);
+            highlightedSubseq = [];
+            drawCompactness();
+        }
+
+        function extractSubseq() {
+            if (compactSequence.length === 0) return;
+
+            if (compactSpace === '[0,1]') {
+                // Find convergent subsequence via bisection
+                let target = compactSequence.reduce((a,b) => a + b) / compactSequence.length;
+                highlightedSubseq = compactSequence
+                    .map((v, i) => ({ v, i }))
+                    .sort((a, b) => Math.abs(a.v - target) - Math.abs(b.v - target))
+                    .slice(0, 8)
+                    .map(x => x.i);
+            } else if (compactSpace === '(0,1)') {
+                // Highlight terms approaching 0
+                highlightedSubseq = compactSequence
+                    .map((v, i) => ({ v, i }))
+                    .sort((a, b) => a.v - b.v)
+                    .slice(0, 8)
+                    .map(x => x.i);
+            } else {
+                // Show largest terms escaping
+                highlightedSubseq = compactSequence
+                    .map((v, i) => ({ v, i }))
+                    .sort((a, b) => b.v - a.v)
+                    .slice(0, 8)
+                    .map(x => x.i);
+            }
+
+            drawCompactness();
+        }
+
+        // ============== CHAPTER 8: OPEN COVERS ==============
+        const openCoverCanvas = document.getElementById('openCoverCanvas');
+        const ocCtx = openCoverCanvas.getContext('2d');
+        let coverSpace = '[0,1]';
+        let openSets = [];
+        let showFiniteSubcover = false;
+
+        function generateCover(space) {
+            openSets = [];
+            showFiniteSubcover = false;
+
+            if (space === '[0,1]') {
+                // Create a cover of [0,1]
+                for (let i = 0; i < 20; i++) {
+                    const center = i / 20;
+                    openSets.push({
+                        left: Math.max(0, center - 0.08),
+                        right: Math.min(1, center + 0.08),
+                        color: `hsl(${i * 18}, 70%, 50%)`
+                    });
+                }
+            } else {
+                // Cover of [0,1) - problematic at 1
+                for (let i = 1; i <= 20; i++) {
+                    openSets.push({
+                        left: 0,
+                        right: 1 - 1/(i + 1),
+                        color: `hsl(${i * 18}, 70%, 50%)`
+                    });
+                }
+            }
+        }
+
+        function drawOpenCover() {
+            ocCtx.fillStyle = '#21262d';
+            ocCtx.fillRect(0, 0, 700, 300);
+
+            const leftX = 100, rightX = 600, y = 150;
+
+            // Draw interval base
+            ocCtx.strokeStyle = '#58a6ff';
+            ocCtx.lineWidth = 4;
+            ocCtx.beginPath();
+            ocCtx.moveTo(leftX, y);
+            ocCtx.lineTo(rightX, y);
+            ocCtx.stroke();
+
+            // Draw open sets
+            const setsToShow = showFiniteSubcover ? openSets.slice(0, 5) : openSets;
+
+            setsToShow.forEach((set, i) => {
+                const x1 = leftX + set.left * (rightX - leftX);
+                const x2 = leftX + set.right * (rightX - leftX);
+                const offset = (i % 5) * 8;
+
+                ocCtx.fillStyle = set.color + '40';
+                ocCtx.fillRect(x1, y - 40 - offset, x2 - x1, 30);
+
+                ocCtx.strokeStyle = set.color;
+                ocCtx.lineWidth = 2;
+                ocCtx.strokeRect(x1, y - 40 - offset, x2 - x1, 30);
+
+                // Open endpoints (parentheses)
+                ocCtx.fillStyle = set.color;
+                ocCtx.font = '16px sans-serif';
+                ocCtx.fillText('(', x1 - 5, y - 25 - offset);
+                ocCtx.fillText(')', x2 - 2, y - 25 - offset);
+            });
+
+            // Endpoints
+            ocCtx.fillStyle = coverSpace === '[0,1]' ? '#3fb950' : '#f85149';
+            if (coverSpace === '[0,1]') {
+                ocCtx.beginPath();
+                ocCtx.arc(leftX, y, 6, 0, Math.PI * 2);
+                ocCtx.fill();
+                ocCtx.beginPath();
+                ocCtx.arc(rightX, y, 6, 0, Math.PI * 2);
+                ocCtx.fill();
+            } else {
+                ocCtx.beginPath();
+                ocCtx.arc(leftX, y, 6, 0, Math.PI * 2);
+                ocCtx.fill();
+                ocCtx.strokeStyle = '#f85149';
+                ocCtx.lineWidth = 2;
+                ocCtx.beginPath();
+                ocCtx.arc(rightX, y, 6, 0, Math.PI * 2);
+                ocCtx.stroke();
+            }
+
+            // Labels
+            ocCtx.fillStyle = '#e6edf3';
+            ocCtx.font = '14px sans-serif';
+            ocCtx.fillText('0', leftX - 5, y + 25);
+            ocCtx.fillText('1', rightX - 5, y + 25);
+
+            const info = document.getElementById('coverInfo');
+            if (coverSpace === '[0,1]') {
+                info.innerHTML = showFiniteSubcover ?
+                    '<span style="color: var(--accent-green);">Finite subcover found!</span> [0,1] is compact.' :
+                    'Open cover of [0,1]. Click "Extract Finite Subcover" to find one.';
+            } else {
+                info.innerHTML = showFiniteSubcover ?
+                    '<span style="color: var(--accent-red);">No finite subcover exists!</span> As we approach 1, we need infinitely many sets.' :
+                    'Each set is [0, 1-1/n). Together they cover [0,1), but no finite collection does!';
+            }
+        }
+
+        function demoCover(space) {
+            coverSpace = space;
+            generateCover(space);
+            drawOpenCover();
+        }
+
+        function findFiniteSubcover() {
+            showFiniteSubcover = true;
+            drawOpenCover();
+        }
+
+        // ============== CHAPTER 8: EVT ==============
+        const evtCanvas = document.getElementById('evtCanvas');
+        const evtCtx = evtCanvas.getContext('2d');
+
+        function drawEVT() {
+            evtCtx.fillStyle = '#21262d';
+            evtCtx.fillRect(0, 0, 700, 350);
+
+            const funcType = document.getElementById('functionSelect').value;
+            let fn, domain, label;
+
+            if (funcType === 'sin') {
+                fn = x => Math.sin(3 * Math.PI * x);
+                domain = { left: 0, right: 1, closed: true };
+                label = 'f(x) = sin(3πx) on [0, 1]';
+            } else if (funcType === 'poly') {
+                fn = x => x * (1 - x);
+                domain = { left: 0, right: 1, closed: true };
+                label = 'f(x) = x(1-x) on [0, 1]';
+            } else {
+                fn = x => 1 / x;
+                domain = { left: 0.01, right: 1, closed: false };
+                label = 'f(x) = 1/x on (0, 1]';
+            }
+
+            // Draw axes
+            evtCtx.strokeStyle = '#30363d';
+            evtCtx.lineWidth = 1;
+            evtCtx.beginPath();
+            evtCtx.moveTo(80, 300);
+            evtCtx.lineTo(650, 300);
+            evtCtx.moveTo(80, 20);
+            evtCtx.lineTo(80, 300);
+            evtCtx.stroke();
+
+            // Evaluate function and find extrema
+            const points = [];
+            let maxVal = -Infinity, minVal = Infinity;
+            let maxX = 0, minX = 0;
+
+            for (let i = 0; i <= 200; i++) {
+                const t = i / 200;
+                const x = domain.left + t * (domain.right - domain.left);
+                const y = fn(x);
+                points.push({ x, y });
+
+                if (y > maxVal) { maxVal = y; maxX = x; }
+                if (y < minVal) { minVal = y; minX = x; }
+            }
+
+            // Scale for display
+            const scaleX = 550 / (domain.right - domain.left);
+            const yRange = Math.max(Math.abs(maxVal), Math.abs(minVal), 1);
+            const scaleY = 120 / yRange;
+            const baseY = 200;
+
+            // Draw function
+            evtCtx.strokeStyle = '#58a6ff';
+            evtCtx.lineWidth = 2;
+            evtCtx.beginPath();
+            points.forEach((p, i) => {
+                const px = 80 + (p.x - domain.left) * scaleX;
+                const py = baseY - p.y * scaleY;
+                if (i === 0) evtCtx.moveTo(px, py);
+                else evtCtx.lineTo(px, py);
+            });
+            evtCtx.stroke();
+
+            // Mark extrema
+            if (funcType !== '1/x') {
+                // Max
+                const maxPx = 80 + (maxX - domain.left) * scaleX;
+                const maxPy = baseY - maxVal * scaleY;
+                evtCtx.beginPath();
+                evtCtx.arc(maxPx, maxPy, 8, 0, Math.PI * 2);
+                evtCtx.fillStyle = '#3fb950';
+                evtCtx.fill();
+                evtCtx.fillStyle = '#3fb950';
+                evtCtx.font = '12px sans-serif';
+                evtCtx.fillText(`max = ${maxVal.toFixed(3)}`, maxPx + 10, maxPy - 5);
+
+                // Min
+                const minPx = 80 + (minX - domain.left) * scaleX;
+                const minPy = baseY - minVal * scaleY;
+                evtCtx.beginPath();
+                evtCtx.arc(minPx, minPy, 8, 0, Math.PI * 2);
+                evtCtx.fillStyle = '#f85149';
+                evtCtx.fill();
+                evtCtx.fillStyle = '#f85149';
+                evtCtx.fillText(`min = ${minVal.toFixed(3)}`, minPx + 10, minPy + 15);
+
+                document.getElementById('evtStatus').textContent =
+                    `Max: ${maxVal.toFixed(3)} at x=${maxX.toFixed(3)}, Min: ${minVal.toFixed(3)} at x=${minX.toFixed(3)}`;
+            } else {
+                // Show that inf is not attained
+                evtCtx.fillStyle = '#f85149';
+                evtCtx.font = '14px sans-serif';
+                evtCtx.fillText('As x → 0⁺, f(x) → ∞', 150, 50);
+                evtCtx.fillText('inf = 1 is attained at x=1', 150, 70);
+                evtCtx.fillText('But sup = ∞ is NOT attained!', 150, 90);
+
+                document.getElementById('evtStatus').textContent =
+                    'No maximum! Domain (0,1] is not compact.';
+            }
+
+            // Label
+            evtCtx.fillStyle = '#e6edf3';
+            evtCtx.font = '14px sans-serif';
+            evtCtx.fillText(label, 250, 330);
+        }
+
+        function updateEVT() {
+            drawEVT();
+        }
+
+        // ============== CHAPTER 8: EXAMPLES GRID ==============
+        const compactExamples = [
+            { name: '[0, 1]', props: 'Closed + bounded in R' },
+            { name: '[0,1]²', props: 'Product of compacts' },
+            { name: 'S¹', props: 'Circle: closed + bounded' },
+            { name: '{finite}', props: 'Finite sets are compact' }
+        ];
+
+        const nonCompactExamples = [
+            { name: 'R', props: 'Unbounded' },
+            { name: '(0, 1)', props: 'Not complete' },
+            { name: 'Q', props: 'Not complete' },
+            { name: 'Discrete ∞', props: 'Not totally bounded' }
+        ];
+
+        function renderExamples() {
+            const compactGrid = document.getElementById('compactExamples');
+            const nonCompactGrid = document.getElementById('nonCompactExamples');
+
+            compactGrid.innerHTML = compactExamples.map(ex =>
+                `<div class="grid-cell" onclick="showExample('${ex.name}', '${ex.props}', true)">${ex.name}</div>`
+            ).join('');
+
+            nonCompactGrid.innerHTML = nonCompactExamples.map(ex =>
+                `<div class="grid-cell" onclick="showExample('${ex.name}', '${ex.props}', false)">${ex.name}</div>`
+            ).join('');
+        }
+
+        function showExample(name, props, isCompact) {
+            const info = document.getElementById('exampleInfo');
+            if (isCompact) {
+                info.innerHTML = `<strong style="color: var(--accent-green);">${name}</strong> is compact. ${props}.<br>
+                    ✓ Complete ✓ Totally bounded ✓ Every sequence has convergent subsequence`;
+            } else {
+                info.innerHTML = `<strong style="color: var(--accent-red);">${name}</strong> is NOT compact. ${props}.<br>
+                    Missing at least one of: Complete, Totally bounded`;
+            }
+        }
+
+        // ============== INITIALIZATION ==============
+        function init() {
+            drawTotalBound();
+            drawCauchy();
+            renderTopologyBuilder();
+            drawHausdorff();
+            drawConnected();
+            drawHomotopy();
+            drawCompactness();
+            drawOpenCover();
+            drawEVT();
+            renderExamples();
+        }
+
+        init();
+    </script>
+</body>
+</html>

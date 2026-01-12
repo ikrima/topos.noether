@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homotopy | The Shape of Spaces</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- D3 -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+  <style>
+    :root {
+      --bg-deep: #0d0d12;
+      --bg-card: #14141c;
+      --bg-elevated: #1c1c28;
+      --bg-highlight: #252535;
+      --text-primary: #eae8e4;
+      --text-secondary: #a8a8b8;
+      --text-muted: #686878;
+      --accent-teal: #2dd4bf;
+      --accent-teal-dim: #1a8a7e;
+      --accent-orange: #f97316;
+      --accent-orange-dim: #c25a10;
+      --accent-violet: #a78bfa;
+      --accent-violet-dim: #7c5fc7;
+      --accent-rose: #fb7185;
+      --accent-emerald: #34d399;
+      --accent-sky: #38bdf8;
+      --border-subtle: rgba(255,255,255,0.06);
+      --glow-teal: rgba(45,212,191,0.25);
+      --glow-orange: rgba(249,115,22,0.25);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Crimson Pro', Georgia, serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-size: 1.2rem;
+      line-height: 1.75;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    h1 { font-size: clamp(2.5rem, 6vw, 4rem); line-height: 1.1; }
+    h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); color: var(--accent-teal); margin-bottom: 1.5rem; }
+    h3 { font-size: 1.4rem; color: var(--text-primary); margin-bottom: 1rem; }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+      background: var(--bg-elevated);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+
+    a { color: var(--accent-teal); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 50% 30%, rgba(45,212,191,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 80%, rgba(249,115,22,0.05) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .hero h1 { margin-bottom: 1.5rem; position: relative; }
+    .hero .subtitle {
+      font-size: 1.4rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      position: relative;
+    }
+
+    .hero-viz {
+      width: 400px;
+      height: 400px;
+      margin: 3rem 0;
+      position: relative;
+    }
+
+    /* Sections */
+    section {
+      padding: 6rem 0;
+      position: relative;
+    }
+
+    section.reveal {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .section-intro {
+      max-width: 700px;
+      margin-bottom: 3rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 2rem 0;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    /* Interactive visualizations */
+    .viz-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .viz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .viz-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .viz-canvas {
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 16/10;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .viz-canvas svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--bg-highlight);
+      border-color: var(--accent-teal);
+    }
+
+    .btn.active {
+      background: var(--accent-teal);
+      color: var(--bg-deep);
+      border-color: var(--accent-teal);
+    }
+
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .slider-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    input[type="range"] {
+      width: 120px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--bg-highlight);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--accent-teal);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* Math callouts */
+    .math-block {
+      background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+      border-left: 3px solid var(--accent-violet);
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      border-radius: 0 12px 12px 0;
+    }
+
+    .definition {
+      border-left-color: var(--accent-teal);
+    }
+
+    .theorem {
+      border-left-color: var(--accent-orange);
+    }
+
+    .insight {
+      background: linear-gradient(135deg, rgba(249,115,22,0.1), transparent);
+      border-left-color: var(--accent-orange);
+    }
+
+    .math-block h4 {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-violet);
+      margin-bottom: 0.75rem;
+    }
+
+    .definition h4 { color: var(--accent-teal); }
+    .theorem h4 { color: var(--accent-orange); }
+
+    /* Annotations */
+    .annotation {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 1rem;
+    }
+
+    /* Path drawing styles */
+    .path-main {
+      fill: none;
+      stroke: var(--accent-teal);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+
+    .path-secondary {
+      fill: none;
+      stroke: var(--accent-orange);
+      stroke-width: 2;
+      stroke-dasharray: 8 4;
+    }
+
+    .path-ghost {
+      fill: none;
+      stroke: var(--text-muted);
+      stroke-width: 1;
+      opacity: 0.4;
+    }
+
+    .point {
+      fill: var(--accent-teal);
+    }
+
+    .point-secondary {
+      fill: var(--accent-orange);
+    }
+
+    .point-base {
+      fill: var(--accent-rose);
+    }
+
+    .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      fill: var(--text-secondary);
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-elevated);
+      z-index: 1000;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-teal), var(--accent-orange));
+      width: 0%;
+      transition: width 0.1s;
+    }
+
+    /* Source */
+    .source {
+      margin-top: 6rem;
+      padding: 2rem;
+      background: var(--bg-card);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { padding: 0 1rem; }
+      section { padding: 4rem 0; }
+      .viz-canvas { aspect-ratio: 4/3; }
+    }
+
+    /* Special animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+
+    /* Quotient viz */
+    .quotient-square {
+      stroke: var(--text-muted);
+      stroke-width: 2;
+      fill: var(--bg-elevated);
+    }
+
+    .edge-a { stroke: var(--accent-teal); stroke-width: 3; }
+    .edge-b { stroke: var(--accent-orange); stroke-width: 3; }
+
+    /* Figure-8 */
+    .loop-a { stroke: var(--accent-teal); }
+    .loop-b { stroke: var(--accent-orange); }
+  </style>
+</head>
+<body x-data="homotopyApp()">
+  <!-- Progress bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" :style="{ width: scrollProgress + '%' }"></div>
+  </div>
+
+  <!-- Hero -->
+  <header class="hero">
+    <h1>The Shape of Spaces</h1>
+    <p class="subtitle">
+      How do we know when two spaces are fundamentally different?
+      The answer lies in the paths we can draw—and whether they can be shrunk to a point.
+    </p>
+    <div class="hero-viz">
+      <svg id="hero-svg" viewBox="0 0 400 400"></svg>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">
+      Based on Part XVI of <em>An Infinitely Large Napkin</em> by Evan Chen
+    </p>
+  </header>
+
+  <!-- Section: The Question -->
+  <section id="intro" class="reveal">
+    <div class="container">
+      <h2>The Topologist's Dilemma</h2>
+      <div class="section-intro">
+        <p>
+          You've probably heard the joke: <em>topologists can't tell the difference between a coffee cup and a doughnut</em>.
+          Both have one hole, and you can continuously deform one into the other without tearing.
+        </p>
+        <p style="margin-top: 1rem;">
+          But how do you actually <em>prove</em> two shapes are different? How do you show that a sphere is fundamentally
+          different from a torus? The answer comes from studying <strong>loops</strong>.
+        </p>
+      </div>
+
+      <div class="math-block insight">
+        <h4>The Key Insight</h4>
+        <p>
+          On a sphere, every loop can be continuously shrunk to a point. On a torus, some loops <em>cannot</em> be shrunk—they
+          wrap around the hole. This difference is captured by the <strong>fundamental group</strong> \(\pi_1(X)\).
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Building Spaces -->
+  <section id="constructions" class="reveal">
+    <div class="container">
+      <h2>Building Spaces</h2>
+      <div class="section-intro">
+        <p>
+          Before we can study loops, we need spaces to put them in. Topologists have elegant ways to construct spaces
+          by gluing simpler pieces together.
+        </p>
+      </div>
+
+      <!-- Quotient Space Builder -->
+      <div class="viz-container" x-data="{ mode: 'square', animating: false }">
+        <div class="viz-header">
+          <span class="viz-title">Quotient Space Builder</span>
+          <div class="controls">
+            <button class="btn" :class="{ active: mode === 'square' }" @click="mode = 'square'">Square</button>
+            <button class="btn" :class="{ active: mode === 'cylinder' }" @click="mode = 'cylinder'">Cylinder</button>
+            <button class="btn" :class="{ active: mode === 'torus' }" @click="mode = 'torus'">Torus</button>
+            <button class="btn" :class="{ active: mode === 'klein' }" @click="mode = 'klein'">Klein Bottle</button>
+            <button class="btn" :class="{ active: mode === 'rp2' }" @click="mode = 'rp2'">RP²</button>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="quotient-svg" viewBox="0 0 800 500" x-ref="quotientSvg"></svg>
+        </div>
+        <p class="annotation" x-show="mode === 'square'">
+          Start with a square. We'll identify (glue) edges to create different surfaces.
+        </p>
+        <p class="annotation" x-show="mode === 'cylinder'">
+          Identify the left and right edges (same direction). Walk off one side, appear on the other.
+        </p>
+        <p class="annotation" x-show="mode === 'torus'">
+          Identify <em>both</em> pairs of opposite edges (same direction). This is \(S^1 \times S^1\).
+        </p>
+        <p class="annotation" x-show="mode === 'klein'">
+          One pair same direction, one pair <em>opposite</em>. Cannot exist in 3D without self-intersection!
+        </p>
+        <p class="annotation" x-show="mode === 'rp2'">
+          <em>Both</em> pairs in opposite directions. The real projective plane—half a sphere with antipodal points identified.
+        </p>
+      </div>
+
+      <div class="math-block definition">
+        <h4>Definition: Quotient Space</h4>
+        <p>
+          Given a space \(X\) and an equivalence relation \(\sim\), the <strong>quotient space</strong> \(X/\!\sim\)
+          has points that are equivalence classes, with the finest topology making the projection continuous.
+        </p>
+        <p style="margin-top: 0.75rem;">
+          Key example: \(D^n / S^{n-1} = S^n\). Collapse the boundary of a disk to a point → sphere!
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Paths and Loops -->
+  <section id="paths" class="reveal">
+    <div class="container">
+      <h2>Paths and Loops</h2>
+      <div class="section-intro">
+        <p>
+          A <strong>path</strong> in a space \(X\) is a continuous function \(\gamma: [0,1] \to X\).
+          It has a starting point \(\gamma(0)\) and ending point \(\gamma(1)\).
+        </p>
+        <p style="margin-top: 1rem;">
+          A <strong>loop</strong> is a path where start equals end: \(\gamma(0) = \gamma(1)\).
+        </p>
+      </div>
+
+      <!-- Path Concatenation -->
+      <div class="viz-container" x-data="{ t: 0, playing: false }">
+        <div class="viz-header">
+          <span class="viz-title">Path Concatenation</span>
+          <div class="controls">
+            <button class="btn" @click="playing = !playing; if(playing) animatePaths()">
+              <span x-text="playing ? 'Pause' : 'Play'"></span>
+            </button>
+            <div class="slider-group">
+              <span class="slider-label">t =</span>
+              <input type="range" min="0" max="100" x-model="t" @input="updatePathViz(t/100)">
+              <span class="mono" x-text="(t/100).toFixed(2)"></span>
+            </div>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="path-concat-svg" viewBox="0 0 800 500"></svg>
+        </div>
+        <p class="annotation">
+          Two paths \(\gamma_1\) and \(\gamma_2\) can be <strong>concatenated</strong> into \(\gamma_1 * \gamma_2\)
+          if \(\gamma_1(1) = \gamma_2(0)\). We run twice as fast through each half.
+        </p>
+      </div>
+
+      <div class="math-block">
+        <h4>The Concatenation Hack</h4>
+        <p>
+          \[(\gamma_1 * \gamma_2)(t) = \begin{cases} \gamma_1(2t) & 0 \leq t \leq \frac{1}{2} \\ \gamma_2(2t-1) & \frac{1}{2} \leq t \leq 1 \end{cases}\]
+        </p>
+        <p style="margin-top: 0.75rem;">
+          This isn't associative! \((\gamma_1 * \gamma_2) * \gamma_3\) allocates different time slices than
+          \(\gamma_1 * (\gamma_2 * \gamma_3)\). But they're <em>homotopic</em>—same path, different speeds.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Homotopy -->
+  <section id="homotopy" class="reveal">
+    <div class="container">
+      <h2>Homotopy: When Paths Are "The Same"</h2>
+      <div class="section-intro">
+        <p>
+          Two paths are <strong>homotopic</strong> if one can be continuously deformed into the other while
+          keeping the endpoints fixed. We write \(\gamma_1 \simeq \gamma_2\).
+        </p>
+      </div>
+
+      <!-- Homotopy Deformation -->
+      <div class="viz-container" x-data="{ s: 0, hasObstacle: false }">
+        <div class="viz-header">
+          <span class="viz-title">Path Homotopy</span>
+          <div class="controls">
+            <button class="btn" :class="{ active: !hasObstacle }" @click="hasObstacle = false; updateHomotopyViz(s/100, false)">No Obstacle</button>
+            <button class="btn" :class="{ active: hasObstacle }" @click="hasObstacle = true; updateHomotopyViz(s/100, true)">With Obstacle</button>
+            <div class="slider-group">
+              <span class="slider-label">Deform:</span>
+              <input type="range" min="0" max="100" x-model="s" @input="updateHomotopyViz(s/100, hasObstacle)">
+            </div>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="homotopy-svg" viewBox="0 0 800 500"></svg>
+        </div>
+        <p class="annotation" x-show="!hasObstacle">
+          Without obstacles, any path can be deformed into any other path with the same endpoints.
+        </p>
+        <p class="annotation" x-show="hasObstacle">
+          The obstacle (hole) blocks deformation. The red path <em>cannot</em> be homotoped to the teal path—they're in different <strong>homotopy classes</strong>.
+        </p>
+      </div>
+
+      <div class="math-block definition">
+        <h4>Definition: Path Homotopy</h4>
+        <p>
+          A <strong>path homotopy</strong> between \(\gamma_0\) and \(\gamma_1\) is a continuous function
+          \(F: [0,1] \times [0,1] \to X\) such that:
+        </p>
+        <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+          <li>\(F(t, 0) = \gamma_0(t)\) and \(F(t, 1) = \gamma_1(t)\)</li>
+          <li>\(F(0, s) = \gamma_0(0) = \gamma_1(0)\) and \(F(1, s) = \gamma_0(1) = \gamma_1(1)\) for all \(s\)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Fundamental Group -->
+  <section id="fundamental-group" class="reveal">
+    <div class="container">
+      <h2>The Fundamental Group</h2>
+      <div class="section-intro">
+        <p>
+          Fix a basepoint \(x_0 \in X\). The <strong>fundamental group</strong> \(\pi_1(X, x_0)\) consists of
+          homotopy classes of loops at \(x_0\), with concatenation as the group operation.
+        </p>
+      </div>
+
+      <!-- Winding Number Explorer -->
+      <div class="viz-container" x-data="{ winding: 1, drawing: false }">
+        <div class="viz-header">
+          <span class="viz-title">Winding Numbers: \(\pi_1(S^1) \cong \mathbb{Z}\)</span>
+          <div class="controls">
+            <button class="btn" @click="winding = Math.max(-3, winding - 1); drawWindingLoop(winding)">−1</button>
+            <span class="mono" style="min-width: 3rem; text-align: center;" x-text="winding"></span>
+            <button class="btn" @click="winding = Math.min(3, winding + 1); drawWindingLoop(winding)">+1</button>
+            <button class="btn" @click="winding = 0; drawWindingLoop(0)">Reset</button>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="winding-svg" viewBox="0 0 800 500"></svg>
+        </div>
+        <p class="annotation">
+          Each integer corresponds to a homotopy class: how many times (and which direction) a loop winds around the circle.
+          <strong>This is the fundamental group of \(S^1\)!</strong>
+        </p>
+      </div>
+
+      <div class="math-block theorem">
+        <h4>Theorem: \(\pi_1(S^1) \cong \mathbb{Z}\)</h4>
+        <p>
+          The fundamental group of the circle is the integers. A loop is characterized by its <strong>winding number</strong>:
+          how many times it wraps around. Concatenating loops adds their winding numbers.
+        </p>
+      </div>
+
+      <!-- Figure Eight -->
+      <div class="viz-container" x-data="{ word: '', animating: false }">
+        <div class="viz-header">
+          <span class="viz-title">Figure Eight: Free Group \(\langle a, b \rangle\)</span>
+          <div class="controls">
+            <button class="btn" @click="word += 'a'; animateFigure8Loop(word)">a</button>
+            <button class="btn" @click="word += 'A'; animateFigure8Loop(word)">a⁻¹</button>
+            <button class="btn" @click="word += 'b'; animateFigure8Loop(word)">b</button>
+            <button class="btn" @click="word += 'B'; animateFigure8Loop(word)">b⁻¹</button>
+            <button class="btn" @click="word = ''; animateFigure8Loop('')">Clear</button>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="figure8-svg" viewBox="0 0 800 500"></svg>
+        </div>
+        <p class="annotation">
+          Word: <span class="mono" x-text="word || '(identity)'"></span>
+          <br>
+          \(\pi_1(S^1 \vee S^1) \cong \langle a, b \rangle\) — the <strong>free group</strong> on two generators.
+          The loops \(a\) and \(b\) don't interact, so \(ab \neq ba\).
+        </p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>\(\pi_1(\mathbb{R}^2) = \{1\}\)</h3>
+          <p>The plane is <strong>simply connected</strong>. Every loop can be contracted to a point—just reel it in!</p>
+        </div>
+        <div class="card">
+          <h3>\(\pi_1(S^2) = \{1\}\)</h3>
+          <p>The sphere is also simply connected. Any loop can slide around and shrink. No holes to get caught on.</p>
+        </div>
+        <div class="card">
+          <h3>\(\pi_1(T^2) \cong \mathbb{Z}^2\)</h3>
+          <p>The torus has two independent loops (around the hole, and through the hole). Generated by \(a\) and \(b\) with \(ab = ba\).</p>
+        </div>
+        <div class="card">
+          <h3>\(\pi_1(\mathbb{RP}^2) \cong \mathbb{Z}/2\mathbb{Z}\)</h3>
+          <p>The real projective plane. Go around once, you're at the antipodal point. Go around twice, you're back. Order 2!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Covering Spaces -->
+  <section id="covering" class="reveal">
+    <div class="container">
+      <h2>Covering Spaces</h2>
+      <div class="section-intro">
+        <p>
+          A <strong>covering projection</strong> \(p: E \to B\) is a map where every point in \(B\) has a
+          neighborhood that lifts to disjoint copies in \(E\). The classic example: \(\mathbb{R}\) covers \(S^1\).
+        </p>
+      </div>
+
+      <!-- Helix Covering -->
+      <div class="viz-container" x-data="{ theta: 0, showLift: true }">
+        <div class="viz-header">
+          <span class="viz-title">The Universal Cover: \(\mathbb{R} \to S^1\)</span>
+          <div class="controls">
+            <div class="slider-group">
+              <span class="slider-label">θ:</span>
+              <input type="range" min="0" max="360" x-model="theta" @input="updateCoveringViz(theta)">
+              <span class="mono" x-text="(theta/180).toFixed(1) + 'π'"></span>
+            </div>
+            <button class="btn" :class="{ active: showLift }" @click="showLift = !showLift; updateCoveringViz(theta, showLift)">Show Lift</button>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="covering-svg" viewBox="0 0 800 500"></svg>
+        </div>
+        <p class="annotation">
+          The map \(p: \mathbb{R} \to S^1\) by \(\theta \mapsto e^{2\pi i \theta}\) wraps the real line into a helix above the circle.
+          Each integer in \(\mathbb{R}\) maps to \(1 \in S^1\). The <strong>fiber</strong> over any point is a copy of \(\mathbb{Z}\).
+        </p>
+      </div>
+
+      <div class="math-block definition">
+        <h4>Definition: Covering Projection</h4>
+        <p>
+          A surjective continuous map \(p: E \to B\) is a <strong>covering projection</strong> if every \(b \in B\)
+          has an open neighborhood \(U\) that is <strong>evenly covered</strong>: \(p^{-1}(U)\) is a disjoint union of
+          open sets, each mapped homeomorphically to \(U\) by \(p\).
+        </p>
+      </div>
+
+      <!-- Lifting Paths -->
+      <div class="viz-container" x-data="{ liftStart: 0, pathProgress: 0 }">
+        <div class="viz-header">
+          <span class="viz-title">Lifting Paths</span>
+          <div class="controls">
+            <div class="slider-group">
+              <span class="slider-label">Start at:</span>
+              <button class="btn btn-sm" :class="{ active: liftStart === -1 }" @click="liftStart = -1; updateLiftViz(liftStart, pathProgress)">-1</button>
+              <button class="btn btn-sm" :class="{ active: liftStart === 0 }" @click="liftStart = 0; updateLiftViz(liftStart, pathProgress)">0</button>
+              <button class="btn btn-sm" :class="{ active: liftStart === 1 }" @click="liftStart = 1; updateLiftViz(liftStart, pathProgress)">1</button>
+            </div>
+            <div class="slider-group">
+              <span class="slider-label">Progress:</span>
+              <input type="range" min="0" max="100" x-model="pathProgress" @input="updateLiftViz(liftStart, pathProgress)">
+            </div>
+          </div>
+        </div>
+        <div class="viz-canvas">
+          <svg id="lift-svg" viewBox="0 0 800 500"></svg>
+        </div>
+        <p class="annotation">
+          Given a path in \(S^1\) starting at \(1\), and a choice of starting point in the fiber (any integer),
+          there is a <strong>unique lift</strong> to \(\mathbb{R}\). The ending point tells us the winding number!
+        </p>
+      </div>
+
+      <div class="math-block theorem">
+        <h4>Lifting Theorem</h4>
+        <p>
+          Let \(p: (E, e_0) \to (B, b_0)\) be a covering projection. For any path \(\gamma\) in \(B\) starting at \(b_0\),
+          there exists a <strong>unique</strong> lift \(\tilde{\gamma}\) starting at \(e_0\).
+        </p>
+        <p style="margin-top: 0.75rem;">
+          Moreover, homotopic paths lift to homotopic paths. This gives us a bijection
+          \(\pi_1(B, b_0) \leftrightarrow p^{-1}(b_0)\) when \(E\) is simply connected!
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: The Miracle -->
+  <section id="miracle" class="reveal">
+    <div class="container">
+      <h2>The Galois Correspondence of Topology</h2>
+      <div class="section-intro">
+        <p>
+          Here is the deepest theorem of covering space theory: there is a perfect correspondence between
+          <strong>subgroups of \(\pi_1(B)\)</strong> and <strong>covering spaces of \(B\)</strong>.
+        </p>
+      </div>
+
+      <div class="math-block theorem">
+        <h4>The Classification Theorem</h4>
+        <p>
+          For a "nice" space \(B\) (locally path-connected, semi-locally simply connected):
+        </p>
+        <ul style="margin-top: 0.75rem; margin-left: 1.5rem;">
+          <li>Every subgroup \(H \subseteq \pi_1(B)\) corresponds to a unique covering \(p: E \to B\)</li>
+          <li>\(H = p_*(\pi_1(E))\) — the image of the fundamental group of the cover</li>
+          <li>Normal subgroups correspond to <strong>regular</strong> (Galois) coverings</li>
+          <li>The trivial subgroup corresponds to the <strong>universal cover</strong></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Example: Coverings of \(S^1\)</h3>
+        <p>
+          Since \(\pi_1(S^1) \cong \mathbb{Z}\), the subgroups are \(\{0\}, \mathbb{Z}, 2\mathbb{Z}, 3\mathbb{Z}, \ldots\)
+        </p>
+        <ul style="margin-top: 1rem; margin-left: 1.5rem;">
+          <li>\(\{0\}\) → Universal cover \(\mathbb{R} \to S^1\)</li>
+          <li>\(n\mathbb{Z}\) → The \(n\)-fold cover \(S^1 \xrightarrow{z \mapsto z^n} S^1\)</li>
+        </ul>
+        <p style="margin-top: 1rem;">
+          Just like Galois theory classifies field extensions by subgroups, covering space theory classifies
+          "unwrappings" of a space by subgroups of its fundamental group!
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Conclusion -->
+  <section id="conclusion" class="reveal">
+    <div class="container">
+      <h2>The Shape of Understanding</h2>
+      <div class="section-intro">
+        <p>
+          We began by asking how to tell spaces apart. The fundamental group gives us a powerful invariant:
+          if \(\pi_1(X) \not\cong \pi_1(Y)\), then \(X\) and \(Y\) are not homeomorphic.
+        </p>
+        <p style="margin-top: 1rem;">
+          But the story goes deeper. The fundamental group doesn't just classify spaces—it reveals their
+          <strong>covering structure</strong>, connecting topology to group theory in a profound way.
+        </p>
+      </div>
+
+      <div class="math-block insight">
+        <h4>The Unity of Mathematics</h4>
+        <p>
+          Covering spaces \(\leftrightarrow\) Subgroups of \(\pi_1\) \(\leftrightarrow\) Field extensions
+          (via Galois). The same pattern—symmetric structures classified by symmetry-breaking subgroups—appears
+          throughout mathematics.
+        </p>
+      </div>
+
+      <div class="source">
+        <strong>Source:</strong> Part XVI of <em>An Infinitely Large Napkin</em> by Evan Chen
+        <br>
+        Chapters 64–66: Topological Constructions, Fundamental Groups, Covering Projections
+        <br><br>
+        <a href="https://venhance.github.io/napkin/" target="_blank">https://venhance.github.io/napkin/</a>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Alpine.js app
+    function homotopyApp() {
+      return {
+        scrollProgress: 0,
+
+        init() {
+          gsap.registerPlugin(ScrollTrigger);
+
+          // Progress bar
+          ScrollTrigger.create({
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            onUpdate: self => this.scrollProgress = self.progress * 100
+          });
+
+          // Reveal animations
+          gsap.utils.toArray('.reveal').forEach(el => {
+            gsap.to(el, {
+              opacity: 1,
+              y: 0,
+              duration: 0.8,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                toggleActions: 'play none none reverse'
+              }
+            });
+          });
+
+          // Initialize visualizations
+          this.$nextTick(() => {
+            initHeroViz();
+            initQuotientViz();
+            initPathConcatViz();
+            initHomotopyViz();
+            initWindingViz();
+            initFigure8Viz();
+            initCoveringViz();
+            initLiftViz();
+
+            // Render KaTeX
+            renderMathInElement(document.body, {
+              delimiters: [
+                {left: '\\[', right: '\\]', display: true},
+                {left: '\\(', right: '\\)', display: false}
+              ]
+            });
+          });
+        }
+      };
+    }
+
+    // ========== Hero Visualization ==========
+    function initHeroViz() {
+      const svg = d3.select('#hero-svg');
+      const width = 400, height = 400;
+      const cx = width / 2, cy = height / 2;
+
+      // Draw torus-like shape with loops
+      const g = svg.append('g');
+
+      // Outer circle (torus cross-section)
+      g.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', 120)
+        .attr('fill', 'none')
+        .attr('stroke', 'rgba(45,212,191,0.3)')
+        .attr('stroke-width', 40);
+
+      // Animated loop
+      const loopPath = d3.path();
+      for (let i = 0; i <= 100; i++) {
+        const t = i / 100;
+        const angle = t * Math.PI * 2;
+        const r = 120 + 15 * Math.sin(angle * 3);
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        if (i === 0) loopPath.moveTo(x, y);
+        else loopPath.lineTo(x, y);
+      }
+      loopPath.closePath();
+
+      const loop = g.append('path')
+        .attr('d', loopPath.toString())
+        .attr('fill', 'none')
+        .attr('stroke', '#2dd4bf')
+        .attr('stroke-width', 3)
+        .attr('stroke-dasharray', function() { return this.getTotalLength(); })
+        .attr('stroke-dashoffset', function() { return this.getTotalLength(); });
+
+      // Animate
+      gsap.to(loop.node(), {
+        strokeDashoffset: 0,
+        duration: 2,
+        ease: 'power2.inOut',
+        repeat: -1,
+        yoyo: true
+      });
+
+      // Base point
+      g.append('circle')
+        .attr('cx', cx + 120).attr('cy', cy).attr('r', 6)
+        .attr('fill', '#fb7185');
+    }
+
+    // ========== Quotient Space Visualization ==========
+    function initQuotientViz() {
+      const svg = d3.select('#quotient-svg');
+      svg.selectAll('*').remove();
+
+      const width = 800, height = 500;
+      const g = svg.append('g').attr('transform', 'translate(400, 250)');
+
+      drawQuotientSquare(g, 'square');
+
+      // Watch for mode changes
+      Alpine.effect(() => {
+        const mode = Alpine.$data(document.querySelector('[x-data*="mode"]'))?.mode;
+        if (mode) {
+          svg.selectAll('*').remove();
+          const g = svg.append('g').attr('transform', 'translate(400, 250)');
+          drawQuotientSquare(g, mode);
+        }
+      });
+    }
+
+    function drawQuotientSquare(g, mode) {
+      const size = 200;
+      const hs = size / 2;
+
+      // Square background
+      g.append('rect')
+        .attr('x', -hs).attr('y', -hs)
+        .attr('width', size).attr('height', size)
+        .attr('fill', 'var(--bg-elevated)')
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 1);
+
+      // Edge arrows based on mode
+      const arrowSize = 10;
+
+      // Left edge
+      const leftDir = (mode === 'klein' || mode === 'rp2') ? 1 : -1;
+      drawEdgeArrow(g, -hs, 0, 'vertical', leftDir, 'var(--accent-teal)', mode !== 'square');
+
+      // Right edge
+      drawEdgeArrow(g, hs, 0, 'vertical', -1, 'var(--accent-teal)', mode !== 'square');
+
+      // Top edge
+      const topDir = (mode === 'rp2') ? 1 : -1;
+      if (mode === 'torus' || mode === 'klein' || mode === 'rp2') {
+        drawEdgeArrow(g, 0, -hs, 'horizontal', topDir, 'var(--accent-orange)', true);
+      }
+
+      // Bottom edge
+      if (mode === 'torus' || mode === 'klein' || mode === 'rp2') {
+        drawEdgeArrow(g, 0, hs, 'horizontal', 1, 'var(--accent-orange)', true);
+      }
+
+      // Labels
+      g.append('text')
+        .attr('x', -hs - 25).attr('y', 5)
+        .attr('fill', 'var(--accent-teal)')
+        .attr('font-family', 'JetBrains Mono')
+        .attr('font-size', 14)
+        .text(mode !== 'square' ? 'a' : '');
+
+      g.append('text')
+        .attr('x', hs + 15).attr('y', 5)
+        .attr('fill', 'var(--accent-teal)')
+        .attr('font-family', 'JetBrains Mono')
+        .attr('font-size', 14)
+        .text(mode !== 'square' ? 'a' : '');
+
+      if (mode === 'torus' || mode === 'klein' || mode === 'rp2') {
+        g.append('text')
+          .attr('x', 0).attr('y', -hs - 15)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'var(--accent-orange)')
+          .attr('font-family', 'JetBrains Mono')
+          .attr('font-size', 14)
+          .text('b');
+
+        g.append('text')
+          .attr('x', 0).attr('y', hs + 25)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'var(--accent-orange)')
+          .attr('font-family', 'JetBrains Mono')
+          .attr('font-size', 14)
+          .text('b');
+      }
+
+      // Result shape on the right
+      const resultG = g.append('g').attr('transform', 'translate(280, 0)');
+
+      if (mode === 'cylinder') {
+        drawCylinder(resultG);
+      } else if (mode === 'torus') {
+        drawTorus(resultG);
+      } else if (mode === 'klein') {
+        drawKleinBottle(resultG);
+      } else if (mode === 'rp2') {
+        drawRP2(resultG);
+      }
+    }
+
+    function drawEdgeArrow(g, x, y, orientation, direction, color, show) {
+      if (!show) return;
+
+      const len = 60;
+      const arrowSize = 8;
+
+      if (orientation === 'vertical') {
+        // Draw line
+        g.append('line')
+          .attr('x1', x).attr('y1', y - len/2)
+          .attr('x2', x).attr('y2', y + len/2)
+          .attr('stroke', color)
+          .attr('stroke-width', 4);
+
+        // Arrow head
+        const ay = direction > 0 ? y + len/2 : y - len/2;
+        g.append('polygon')
+          .attr('points', `${x},${ay + direction * arrowSize} ${x - arrowSize/2},${ay} ${x + arrowSize/2},${ay}`)
+          .attr('fill', color);
+      } else {
+        g.append('line')
+          .attr('x1', x - len/2).attr('y1', y)
+          .attr('x2', x + len/2).attr('y2', y)
+          .attr('stroke', color)
+          .attr('stroke-width', 4);
+
+        const ax = direction > 0 ? x + len/2 : x - len/2;
+        g.append('polygon')
+          .attr('points', `${ax + direction * arrowSize},${y} ${ax},${y - arrowSize/2} ${ax},${y + arrowSize/2}`)
+          .attr('fill', color);
+      }
+    }
+
+    function drawCylinder(g) {
+      g.append('ellipse')
+        .attr('cx', 0).attr('cy', -60)
+        .attr('rx', 50).attr('ry', 20)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 2);
+
+      g.append('line')
+        .attr('x1', -50).attr('y1', -60)
+        .attr('x2', -50).attr('y2', 60)
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      g.append('line')
+        .attr('x1', 50).attr('y1', -60)
+        .attr('x2', 50).attr('y2', 60)
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      g.append('ellipse')
+        .attr('cx', 0).attr('cy', 60)
+        .attr('rx', 50).attr('ry', 20)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 2);
+    }
+
+    function drawTorus(g) {
+      // Simplified torus representation
+      g.append('ellipse')
+        .attr('cx', 0).attr('cy', 0)
+        .attr('rx', 70).attr('ry', 40)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-orange)')
+        .attr('stroke-width', 2);
+
+      g.append('ellipse')
+        .attr('cx', 0).attr('cy', 0)
+        .attr('rx', 25).attr('ry', 15)
+        .attr('fill', 'var(--bg-deep)')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 2);
+
+      g.append('text')
+        .attr('x', 0).attr('y', 80)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)')
+        .attr('font-size', 14)
+        .text('S¹ × S¹');
+    }
+
+    function drawKleinBottle(g) {
+      // Simplified Klein bottle
+      const path = d3.path();
+      path.moveTo(-40, -50);
+      path.bezierCurveTo(-60, -30, -60, 30, -40, 50);
+      path.bezierCurveTo(-20, 70, 20, 70, 40, 50);
+      path.bezierCurveTo(60, 30, 60, -30, 40, -50);
+      path.bezierCurveTo(20, -70, -20, -70, -40, -50);
+
+      g.append('path')
+        .attr('d', path.toString())
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-violet)')
+        .attr('stroke-width', 2);
+
+      // Self-intersection indicator
+      g.append('line')
+        .attr('x1', -20).attr('y1', 0)
+        .attr('x2', 20).attr('y2', 0)
+        .attr('stroke', 'var(--accent-rose)')
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '4 2');
+
+      g.append('text')
+        .attr('x', 0).attr('y', 90)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)')
+        .attr('font-size', 14)
+        .text('Klein bottle');
+    }
+
+    function drawRP2(g) {
+      // RP2 as disk with boundary identification
+      g.append('circle')
+        .attr('cx', 0).attr('cy', 0)
+        .attr('r', 50)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-violet)')
+        .attr('stroke-width', 2);
+
+      // Antipodal arrows
+      for (let i = 0; i < 4; i++) {
+        const angle = i * Math.PI / 2;
+        const x = 50 * Math.cos(angle);
+        const y = 50 * Math.sin(angle);
+        g.append('circle')
+          .attr('cx', x).attr('cy', y)
+          .attr('r', 4)
+          .attr('fill', 'var(--accent-rose)');
+      }
+
+      g.append('text')
+        .attr('x', 0).attr('y', 80)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)')
+        .attr('font-size', 14)
+        .text('ℝP²');
+    }
+
+    // ========== Path Concatenation ==========
+    function initPathConcatViz() {
+      const svg = d3.select('#path-concat-svg');
+      const width = 800, height = 500;
+
+      // Define two paths that meet
+      const path1Points = [];
+      const path2Points = [];
+
+      for (let i = 0; i <= 50; i++) {
+        const t = i / 50;
+        path1Points.push({
+          x: 100 + t * 200,
+          y: 250 - 80 * Math.sin(t * Math.PI)
+        });
+      }
+
+      for (let i = 0; i <= 50; i++) {
+        const t = i / 50;
+        path2Points.push({
+          x: 300 + t * 200,
+          y: 250 + 60 * Math.sin(t * Math.PI * 1.5)
+        });
+      }
+
+      svg.selectAll('*').remove();
+
+      // Path 1 (teal)
+      const line1 = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveNatural);
+      svg.append('path')
+        .datum(path1Points)
+        .attr('d', line1)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 3)
+        .attr('id', 'path1');
+
+      // Path 2 (orange)
+      const line2 = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveNatural);
+      svg.append('path')
+        .datum(path2Points)
+        .attr('d', line2)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-orange)')
+        .attr('stroke-width', 3)
+        .attr('id', 'path2');
+
+      // Start/mid/end points
+      svg.append('circle').attr('cx', 100).attr('cy', 250).attr('r', 8).attr('fill', 'var(--accent-teal)');
+      svg.append('circle').attr('cx', 300).attr('cy', 250).attr('r', 8).attr('fill', 'var(--accent-violet)');
+      svg.append('circle').attr('cx', 500).attr('cy', 250).attr('r', 8).attr('fill', 'var(--accent-orange)');
+
+      // Labels
+      svg.append('text').attr('x', 100).attr('y', 280).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 14).text('γ₁(0)');
+      svg.append('text').attr('x', 300).attr('y', 280).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 14).text('γ₁(1)=γ₂(0)');
+      svg.append('text').attr('x', 500).attr('y', 280).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 14).text('γ₂(1)');
+
+      // Moving point
+      svg.append('circle')
+        .attr('id', 'moving-point')
+        .attr('r', 10)
+        .attr('fill', 'var(--accent-rose)');
+
+      // Timeline below
+      svg.append('line')
+        .attr('x1', 100).attr('y1', 400)
+        .attr('x2', 700).attr('y2', 400)
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      svg.append('line')
+        .attr('x1', 400).attr('y1', 395)
+        .attr('x2', 400).attr('y2', 405)
+        .attr('stroke', 'var(--accent-violet)')
+        .attr('stroke-width', 2);
+
+      svg.append('text').attr('x', 100).attr('y', 430).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 12).text('t=0');
+      svg.append('text').attr('x', 400).attr('y', 430).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 12).text('t=½');
+      svg.append('text').attr('x', 700).attr('y', 430).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 12).text('t=1');
+
+      // Time indicator
+      svg.append('circle')
+        .attr('id', 'time-indicator')
+        .attr('cy', 400)
+        .attr('r', 6)
+        .attr('fill', 'var(--accent-rose)');
+
+      updatePathViz(0);
+    }
+
+    window.updatePathViz = function(t) {
+      const svg = d3.select('#path-concat-svg');
+
+      // Compute position on concatenated path
+      let x, y;
+      if (t <= 0.5) {
+        const s = t * 2;
+        x = 100 + s * 200;
+        y = 250 - 80 * Math.sin(s * Math.PI);
+      } else {
+        const s = (t - 0.5) * 2;
+        x = 300 + s * 200;
+        y = 250 + 60 * Math.sin(s * Math.PI * 1.5);
+      }
+
+      svg.select('#moving-point').attr('cx', x).attr('cy', y);
+      svg.select('#time-indicator').attr('cx', 100 + t * 600);
+    };
+
+    window.animatePaths = function() {
+      let t = 0;
+      const interval = setInterval(() => {
+        t += 0.01;
+        if (t > 1) t = 0;
+        updatePathViz(t);
+
+        const app = Alpine.$data(document.querySelector('[x-data*="playing"]'));
+        if (!app?.playing) {
+          clearInterval(interval);
+        }
+      }, 30);
+    };
+
+    // ========== Homotopy Visualization ==========
+    function initHomotopyViz() {
+      const svg = d3.select('#homotopy-svg');
+      svg.selectAll('*').remove();
+
+      const width = 800, height = 500;
+      const cx = 400, cy = 250;
+
+      // Draw space
+      svg.append('rect')
+        .attr('x', 100).attr('y', 100)
+        .attr('width', 600).attr('height', 300)
+        .attr('fill', 'var(--bg-elevated)')
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 1)
+        .attr('rx', 8);
+
+      // Obstacle (hidden initially)
+      svg.append('circle')
+        .attr('id', 'obstacle')
+        .attr('cx', cx).attr('cy', cy)
+        .attr('r', 50)
+        .attr('fill', 'var(--bg-deep)')
+        .attr('stroke', 'var(--accent-rose)')
+        .attr('stroke-width', 3)
+        .style('display', 'none');
+
+      // Start and end points
+      svg.append('circle').attr('cx', 200).attr('cy', cy).attr('r', 8).attr('fill', 'var(--accent-emerald)');
+      svg.append('circle').attr('cx', 600).attr('cy', cy).attr('r', 8).attr('fill', 'var(--accent-emerald)');
+
+      svg.append('text').attr('x', 200).attr('y', cy + 30).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 14).text('Start');
+      svg.append('text').attr('x', 600).attr('y', cy + 30).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)').attr('font-size', 14).text('End');
+
+      // Paths
+      svg.append('path').attr('id', 'homotopy-path-1').attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)').attr('stroke-width', 3);
+      svg.append('path').attr('id', 'homotopy-path-2').attr('fill', 'none')
+        .attr('stroke', 'var(--accent-orange)').attr('stroke-width', 3).attr('stroke-dasharray', '8 4');
+
+      updateHomotopyViz(0, false);
+    }
+
+    window.updateHomotopyViz = function(s, hasObstacle) {
+      const svg = d3.select('#homotopy-svg');
+      const cx = 400, cy = 250;
+
+      svg.select('#obstacle').style('display', hasObstacle ? 'block' : 'none');
+
+      // Path 1: straight-ish line
+      const path1 = d3.path();
+      path1.moveTo(200, cy);
+      const bend1 = -100 * (1 - s);
+      path1.bezierCurveTo(300, cy + bend1, 500, cy + bend1, 600, cy);
+
+      // Path 2: goes around obstacle if present
+      const path2 = d3.path();
+      path2.moveTo(200, cy);
+      if (hasObstacle) {
+        path2.bezierCurveTo(300, cy + 120, 500, cy + 120, 600, cy);
+      } else {
+        const bend2 = 80 * (1 - s);
+        path2.bezierCurveTo(300, cy + bend2, 500, cy + bend2, 600, cy);
+      }
+
+      svg.select('#homotopy-path-1').attr('d', path1.toString());
+      svg.select('#homotopy-path-2').attr('d', path2.toString());
+    };
+
+    // ========== Winding Number Visualization ==========
+    function initWindingViz() {
+      const svg = d3.select('#winding-svg');
+      svg.selectAll('*').remove();
+
+      const width = 800, height = 500;
+      const cx = 400, cy = 250, r = 150;
+
+      // Circle
+      svg.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', r)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      // Center point (the "hole")
+      svg.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', 20)
+        .attr('fill', 'var(--bg-deep)')
+        .attr('stroke', 'var(--accent-rose)')
+        .attr('stroke-width', 2);
+
+      svg.append('text')
+        .attr('x', cx).attr('y', cy + 5)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--accent-rose)')
+        .attr('font-size', 12)
+        .text('hole');
+
+      // Base point
+      svg.append('circle')
+        .attr('cx', cx + r).attr('cy', cy).attr('r', 8)
+        .attr('fill', 'var(--accent-emerald)');
+
+      svg.append('text')
+        .attr('x', cx + r + 20).attr('y', cy + 5)
+        .attr('fill', 'var(--text-secondary)')
+        .attr('font-size', 14)
+        .text('x₀');
+
+      // Winding path
+      svg.append('path')
+        .attr('id', 'winding-path')
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 3);
+
+      // Arrow indicator
+      svg.append('polygon')
+        .attr('id', 'winding-arrow')
+        .attr('fill', 'var(--accent-teal)');
+
+      drawWindingLoop(1);
+    }
+
+    window.drawWindingLoop = function(n) {
+      const svg = d3.select('#winding-svg');
+      const cx = 400, cy = 250;
+
+      if (n === 0) {
+        svg.select('#winding-path').attr('d', '');
+        svg.select('#winding-arrow').attr('points', '');
+        return;
+      }
+
+      const baseR = 150;
+      const spiralGrowth = 15;
+      const totalAngle = n * Math.PI * 2;
+      const steps = Math.abs(n) * 100;
+
+      const points = [];
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const angle = t * totalAngle;
+        const r = baseR + spiralGrowth * Math.sin(t * Math.PI);
+        points.push({
+          x: cx + r * Math.cos(angle),
+          y: cy - r * Math.sin(angle) * Math.sign(n)
+        });
+      }
+
+      const line = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveNatural);
+      svg.select('#winding-path').attr('d', line(points));
+
+      // Arrow at end
+      if (points.length > 2) {
+        const last = points[points.length - 1];
+        const prev = points[points.length - 3];
+        const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
+        const arrowSize = 10;
+        const p1 = { x: last.x, y: last.y };
+        const p2 = { x: last.x - arrowSize * Math.cos(angle - 0.4), y: last.y - arrowSize * Math.sin(angle - 0.4) };
+        const p3 = { x: last.x - arrowSize * Math.cos(angle + 0.4), y: last.y - arrowSize * Math.sin(angle + 0.4) };
+        svg.select('#winding-arrow').attr('points', `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`);
+      }
+    };
+
+    // ========== Figure-8 Visualization ==========
+    function initFigure8Viz() {
+      const svg = d3.select('#figure8-svg');
+      svg.selectAll('*').remove();
+
+      const width = 800, height = 500;
+      const cx = 400, cy = 250;
+      const r = 80;
+
+      // Left loop (a)
+      svg.append('circle')
+        .attr('cx', cx - r).attr('cy', cy).attr('r', r)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 2)
+        .attr('opacity', 0.5);
+
+      // Right loop (b)
+      svg.append('circle')
+        .attr('cx', cx + r).attr('cy', cy).attr('r', r)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-orange)')
+        .attr('stroke-width', 2)
+        .attr('opacity', 0.5);
+
+      // Center point
+      svg.append('circle')
+        .attr('cx', cx).attr('cy', cy).attr('r', 8)
+        .attr('fill', 'var(--accent-violet)');
+
+      svg.append('text')
+        .attr('x', cx).attr('y', cy - 20)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-secondary)')
+        .attr('font-size', 14)
+        .text('x₀');
+
+      // Labels
+      svg.append('text')
+        .attr('x', cx - r).attr('y', cy + r + 30)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--accent-teal)')
+        .attr('font-size', 18)
+        .attr('font-family', 'JetBrains Mono')
+        .text('a');
+
+      svg.append('text')
+        .attr('x', cx + r).attr('y', cy + r + 30)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--accent-orange)')
+        .attr('font-size', 18)
+        .attr('font-family', 'JetBrains Mono')
+        .text('b');
+
+      // Active path
+      svg.append('path')
+        .attr('id', 'figure8-path')
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-rose)')
+        .attr('stroke-width', 4);
+    }
+
+    window.animateFigure8Loop = function(word) {
+      const svg = d3.select('#figure8-svg');
+      const cx = 400, cy = 250;
+      const r = 80;
+
+      if (!word) {
+        svg.select('#figure8-path').attr('d', '');
+        return;
+      }
+
+      const points = [{ x: cx, y: cy }];
+
+      for (const char of word) {
+        const isLeft = char.toLowerCase() === 'a';
+        const clockwise = char === char.toLowerCase();
+        const centerX = isLeft ? cx - r : cx + r;
+
+        const startAngle = isLeft ? 0 : Math.PI;
+        const endAngle = startAngle + (clockwise ? -Math.PI * 2 : Math.PI * 2);
+
+        for (let i = 1; i <= 20; i++) {
+          const t = i / 20;
+          const angle = startAngle + t * (endAngle - startAngle);
+          points.push({
+            x: centerX + r * Math.cos(angle),
+            y: cy + r * Math.sin(angle)
+          });
+        }
+      }
+
+      const line = d3.line().x(d => d.x).y(d => d.y);
+      svg.select('#figure8-path').attr('d', line(points));
+    };
+
+    // ========== Covering Space Visualization ==========
+    function initCoveringViz() {
+      const svg = d3.select('#covering-svg');
+      svg.selectAll('*').remove();
+
+      const width = 800, height = 500;
+
+      // Real line (top)
+      const lineY = 150;
+      svg.append('line')
+        .attr('x1', 50).attr('y1', lineY)
+        .attr('x2', 750).attr('y2', lineY)
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      // Integer markers
+      for (let n = -2; n <= 3; n++) {
+        const x = 400 + n * 100;
+        svg.append('circle')
+          .attr('cx', x).attr('cy', lineY)
+          .attr('r', 6)
+          .attr('fill', 'var(--accent-teal)');
+        svg.append('text')
+          .attr('x', x).attr('y', lineY - 15)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'var(--text-secondary)')
+          .attr('font-family', 'JetBrains Mono')
+          .attr('font-size', 14)
+          .text(n);
+      }
+
+      svg.append('text')
+        .attr('x', 400).attr('y', 100)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-primary)')
+        .attr('font-size', 16)
+        .text('ℝ (covering space)');
+
+      // Circle (bottom)
+      const circleY = 380;
+      const circleR = 80;
+      svg.append('circle')
+        .attr('cx', 400).attr('cy', circleY)
+        .attr('r', circleR)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      svg.append('circle')
+        .attr('cx', 400 + circleR).attr('cy', circleY)
+        .attr('r', 6)
+        .attr('fill', 'var(--accent-emerald)');
+
+      svg.append('text')
+        .attr('x', 400 + circleR + 15).attr('y', circleY + 5)
+        .attr('fill', 'var(--text-secondary)')
+        .attr('font-size', 14)
+        .text('1');
+
+      svg.append('text')
+        .attr('x', 400).attr('y', circleY + circleR + 40)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'var(--text-primary)')
+        .attr('font-size', 16)
+        .text('S¹ (base space)');
+
+      // Projection arrow
+      svg.append('line')
+        .attr('x1', 400).attr('y1', 190)
+        .attr('x2', 400).attr('y2', 270)
+        .attr('stroke', 'var(--accent-violet)')
+        .attr('stroke-width', 2)
+        .attr('marker-end', 'url(#arrowhead)');
+
+      svg.append('text')
+        .attr('x', 420).attr('y', 235)
+        .attr('fill', 'var(--accent-violet)')
+        .attr('font-size', 14)
+        .text('p: θ ↦ e^(2πiθ)');
+
+      // Define arrowhead
+      svg.append('defs').append('marker')
+        .attr('id', 'arrowhead')
+        .attr('markerWidth', 10)
+        .attr('markerHeight', 7)
+        .attr('refX', 9)
+        .attr('refY', 3.5)
+        .attr('orient', 'auto')
+        .append('polygon')
+        .attr('points', '0 0, 10 3.5, 0 7')
+        .attr('fill', 'var(--accent-violet)');
+
+      // Lift indicator
+      svg.append('circle')
+        .attr('id', 'lift-point-top')
+        .attr('r', 8)
+        .attr('fill', 'var(--accent-rose)');
+
+      svg.append('circle')
+        .attr('id', 'lift-point-bottom')
+        .attr('r', 8)
+        .attr('fill', 'var(--accent-rose)');
+
+      updateCoveringViz(0);
+    }
+
+    window.updateCoveringViz = function(theta, showLift = true) {
+      const svg = d3.select('#covering-svg');
+      const lineY = 150;
+      const circleY = 380;
+      const circleR = 80;
+
+      const thetaRad = theta * Math.PI / 180;
+      const normalizedTheta = theta / 360;
+
+      // Position on real line
+      const topX = 400 + normalizedTheta * 100;
+
+      // Position on circle
+      const bottomX = 400 + circleR * Math.cos(thetaRad);
+      const bottomY = circleY - circleR * Math.sin(thetaRad);
+
+      svg.select('#lift-point-top')
+        .attr('cx', topX)
+        .attr('cy', lineY)
+        .style('display', showLift ? 'block' : 'none');
+
+      svg.select('#lift-point-bottom')
+        .attr('cx', bottomX)
+        .attr('cy', bottomY);
+    };
+
+    // ========== Lift Visualization ==========
+    function initLiftViz() {
+      const svg = d3.select('#lift-svg');
+      svg.selectAll('*').remove();
+
+      const width = 800, height = 500;
+
+      // Real line with more range
+      const lineY = 150;
+      svg.append('line')
+        .attr('x1', 50).attr('y1', lineY)
+        .attr('x2', 750).attr('y2', lineY)
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      // Integer markers
+      for (let n = -2; n <= 3; n++) {
+        const x = 400 + n * 100;
+        svg.append('circle')
+          .attr('cx', x).attr('cy', lineY)
+          .attr('r', 6)
+          .attr('fill', n === 0 || n === 1 || n === -1 ? 'var(--accent-teal)' : 'var(--text-muted)');
+        svg.append('text')
+          .attr('x', x).attr('y', lineY - 15)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'var(--text-secondary)')
+          .attr('font-size', 14)
+          .text(n);
+      }
+
+      // Circle
+      const circleY = 380;
+      const circleR = 80;
+      svg.append('circle')
+        .attr('cx', 400).attr('cy', circleY)
+        .attr('r', circleR)
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--text-muted)')
+        .attr('stroke-width', 2);
+
+      // Base point on circle
+      svg.append('circle')
+        .attr('cx', 400 + circleR).attr('cy', circleY)
+        .attr('r', 6)
+        .attr('fill', 'var(--accent-emerald)');
+
+      // Path on circle
+      svg.append('path')
+        .attr('id', 'base-path')
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-teal)')
+        .attr('stroke-width', 3);
+
+      // Lifted path
+      svg.append('path')
+        .attr('id', 'lifted-path')
+        .attr('fill', 'none')
+        .attr('stroke', 'var(--accent-orange)')
+        .attr('stroke-width', 3);
+
+      // Moving points
+      svg.append('circle')
+        .attr('id', 'base-point')
+        .attr('r', 8)
+        .attr('fill', 'var(--accent-rose)');
+
+      svg.append('circle')
+        .attr('id', 'lifted-point')
+        .attr('r', 8)
+        .attr('fill', 'var(--accent-rose)');
+
+      updateLiftViz(0, 0);
+    }
+
+    window.updateLiftViz = function(startInt, progress) {
+      const svg = d3.select('#lift-svg');
+      const lineY = 150;
+      const circleY = 380;
+      const circleR = 80;
+      const p = progress / 100;
+
+      // The loop goes around once
+      const angle = p * Math.PI * 2;
+
+      // Base path on circle
+      const basePath = d3.path();
+      basePath.moveTo(400 + circleR, circleY);
+      for (let i = 1; i <= Math.floor(p * 50); i++) {
+        const a = (i / 50) * Math.PI * 2;
+        basePath.lineTo(400 + circleR * Math.cos(a), circleY - circleR * Math.sin(a));
+      }
+      svg.select('#base-path').attr('d', basePath.toString());
+
+      // Lifted path on real line
+      const liftedPath = d3.path();
+      const startX = 400 + startInt * 100;
+      liftedPath.moveTo(startX, lineY);
+      liftedPath.lineTo(startX + p * 100, lineY);
+      svg.select('#lifted-path').attr('d', liftedPath.toString());
+
+      // Current positions
+      const baseX = 400 + circleR * Math.cos(angle);
+      const baseY = circleY - circleR * Math.sin(angle);
+      svg.select('#base-point').attr('cx', baseX).attr('cy', baseY);
+
+      const liftedX = startX + p * 100;
+      svg.select('#lifted-point').attr('cx', liftedX).attr('cy', lineY);
+    };
+  </script>
+</body>
+</html>
