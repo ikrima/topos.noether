@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Symplectic Geometry — Direct Manipulation Playground</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#0f1624;
+      --panel2:#0c1320;
+      --text:#e7eefc;
+      --muted:#9fb0d0;
+      --line:#25324a;
+      --accent:#7aa2ff;
+      --good:#37d39a;
+      --bad:#ff6b6b;
+      --warn:#ffd166;
+      --shadow: rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    * { box-sizing: border-box; }
+    body{
+      margin:0;
+      background: radial-gradient(1200px 800px at 30% 15%, #121b2f, var(--bg));
+      color: var(--text);
+      font-family: var(--sans);
+      overflow:hidden;
+    }
+
+    .app{
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      height:100vh;
+      width:100vw;
+    }
+
+    .sidebar{
+      background: linear-gradient(180deg, rgba(15,22,36,.92), rgba(10,15,24,.92));
+      border-right:1px solid rgba(255,255,255,.06);
+      padding:18px 16px 16px;
+      overflow:auto;
+    }
+
+    .title{
+      font-weight: 800;
+      letter-spacing: .2px;
+      font-size: 18px;
+      margin: 4px 0 10px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .pill{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 3px 8px;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+    }
+
+    .section{
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+      box-shadow: 0 14px 30px var(--shadow);
+      padding: 12px;
+      margin: 10px 0 12px;
+    }
+    .section h3{
+      margin:0 0 8px;
+      font-size: 13px;
+      letter-spacing:.2px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .row{ display:flex; gap:10px; align-items:center; }
+    .row + .row{ margin-top:10px; }
+
+    label{
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .control{
+      width:100%;
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:center;
+    }
+    input[type="range"]{ width:100%; }
+    .val{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      opacity:.9;
+      min-width: 62px;
+      text-align:right;
+    }
+
+    button{
+      appearance:none;
+      border:none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(122,162,255,.14);
+      color: var(--text);
+      font-weight: 700;
+      cursor:pointer;
+      box-shadow: 0 10px 20px var(--shadow);
+      transition: transform .08s ease, background .15s ease;
+      user-select:none;
+    }
+    button:hover{ background: rgba(122,162,255,.22); }
+    button:active{ transform: translateY(1px) scale(.995); }
+
+    .toggle{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+    .toggle input{ transform: scale(1.1); }
+
+    .hint{
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .hint b{
+      color: var(--text);
+      font-weight: 750;
+    }
+
+    .callout{
+      border-left: 3px solid rgba(122,162,255,.75);
+      padding: 8px 10px;
+      background: rgba(122,162,255,.08);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .math{
+      font-family: var(--mono);
+      color: rgba(231,238,252,.92);
+      font-size: 12px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 8px 10px;
+      border-radius: 12px;
+      overflow:auto;
+    }
+
+    .stage{
+      position:relative;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.02));
+    }
+
+    canvas{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+    }
+
+    .hud{
+      position:absolute;
+      left:14px;
+      top:14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      pointer-events:none;
+    }
+    .chip{
+      pointer-events:none;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.32);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 22px var(--shadow);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot{
+      width:8px;height:8px;border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+    .dot.good{ background: var(--good); box-shadow: 0 0 0 3px rgba(55,211,154,.18); }
+    .dot.bad { background: var(--bad);  box-shadow: 0 0 0 3px rgba(255,107,107,.18); }
+
+    .footerTip{
+      margin-top: 10px;
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .kbd{
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 2px 6px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-bottom-color: rgba(255,255,255,.24);
+      border-radius: 8px;
+      background: rgba(255,255,255,.05);
+      color: rgba(231,238,252,.9);
+    }
+
+    @media (max-width: 980px){
+      body{ overflow:auto; }
+      .app{ grid-template-columns: 1fr; height:auto; }
+      .stage{ height: 72vh; min-height: 520px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="title">
+      Symplectic Geometry Playground
+      <span class="pill">direct manipulation</span>
+      <span class="pill">smooth flow</span>
+    </div>
+
+    <div class="section">
+      <h3>What you’re looking at</h3>
+      <div class="hint">
+        This is a <b>phase space</b> view: horizontal axis is <b>q</b> (position),
+        vertical axis is <b>p</b> (momentum).
+        Symplectic geometry is the rulebook that makes “Hamiltonian motion” behave:
+        it preserves the <b>symplectic area</b> element <span class="math" style="display:inline-block;padding:2px 6px;border-radius:8px;">ω = dq ∧ dp</span>.
+      </div>
+      <div class="footerTip">
+        Drag the <b>point</b>, the <b>parallelogram handles</b>, or scrub parameters.
+        Toggle <b>break symplectic</b> to feel what fails.
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Mode</h3>
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="modeLinear" type="radio" name="mode" checked />
+          <label for="modeLinear"><b>Symplectic maps</b> (linear + nonlinear demo)</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="modeFlow" type="radio" name="mode" />
+          <label for="modeFlow"><b>Hamiltonian flow</b> (Liouville area preservation)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="linearPanel">
+      <h3>Pick a map (acts on q,p)</h3>
+
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="mapShearQ" type="radio" name="map" checked />
+          <label for="mapShearQ">Shear in <span class="math" style="display:inline-block;padding:2px 6px;border-radius:8px;">q′ = q + a·p</span></label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="mapShearP" type="radio" name="map" />
+          <label for="mapShearP">Shear in <span class="math" style="display:inline-block;padding:2px 6px;border-radius:8px;">p′ = p + b·q</span></label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="mapRotate" type="radio" name="map" />
+          <label for="mapRotate">Rotation (harmonic oscillator)</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="mapTwist" type="radio" name="map" />
+          <label for="mapTwist">Nonlinear twist <span class="math" style="display:inline-block;padding:2px 6px;border-radius:8px;">q′=q, p′=p+k·sin(q)</span></label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="breakSympl" type="checkbox" />
+          <label for="breakSympl"><b>Break symplectic</b> (apply scaling, watch invariants fail)</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="control">
+          <input id="paramA" type="range" min="-2" max="2" step="0.001" value="0.9">
+          <div class="val" id="paramAVal">a = 0.900</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="resetLinear" style="width:100%;">Reset point + area element</button>
+      </div>
+
+      <div class="callout" id="linearCallout">
+        <b>Symplectic feel:</b> the little oriented area element (parallelogram) should keep the same signed area under a symplectic map — even as it skews and rotates.
+      </div>
+
+      <div class="math" id="linearMath">
+        Symplectic condition in 2D (matrix case): Aᵀ J A = J, with J = [[0,1],[-1,0]].
+        In 2D this implies det(A) = 1 (but det=1 alone isn’t the whole story in higher dimensions).
+      </div>
+    </div>
+
+    <div class="section" id="flowPanel" style="display:none;">
+      <h3>Hamiltonian flow</h3>
+      <div class="hint">
+        We evolve many phase points under a Hamiltonian H(q,p).
+        The “blob” deforms, but <b>area stays constant</b> (Liouville’s theorem).
+      </div>
+
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="H_ho" type="radio" name="H" checked />
+          <label for="H_ho">Harmonic oscillator <span class="math" style="display:inline-block;padding:2px 6px;border-radius:8px;">H = ½(p² + q²)</span></label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="toggle" style="width:100%;">
+          <input id="H_duff" type="radio" name="H" />
+          <label for="H_duff">Duffing-ish <span class="math" style="display:inline-block;padding:2px 6px;border-radius:8px;">H = ½p² + ¼q⁴</span></label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="control">
+          <input id="dt" type="range" min="0.002" max="0.04" step="0.001" value="0.015">
+          <div class="val" id="dtVal">dt = 0.015</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="control">
+          <input id="speed" type="range" min="0.25" max="3" step="0.01" value="1">
+          <div class="val" id="speedVal">speed = 1.00×</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="togglePlay" style="flex:1;">Pause</button>
+        <button id="resetFlow" style="flex:1;">Reset blob</button>
+      </div>
+
+      <div class="callout">
+        <b>Direct manipulation:</b> drag the blob’s center point to “re-seed” initial conditions; the rest follow as a neighborhood.
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Controls</h3>
+      <div class="hint">
+        <div>• Drag the <b>white point</b> = a phase state (q,p).</div>
+        <div>• Drag the <b>two handle points</b> = basis vectors of a tiny area element.</div>
+        <div>• <span class="kbd">Space</span> in flow mode toggles play/pause.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <canvas id="c"></canvas>
+    <div class="hud">
+      <div class="chip"><span class="dot"></span><span id="hudMode">Mode: Symplectic maps</span></div>
+      <div class="chip"><span class="dot good" id="invDot"></span><span id="hudInv">ω-area preserved</span></div>
+      <div class="chip"><span class="dot"></span><span id="hudVals">q=0.00, p=0.00</span></div>
+      <div class="chip"><span class="dot"></span><span id="hudArea">area=1.000</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ===== Utilities =====
+  const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+  const smooth = (t)=>t*t*(3-2*t);
+  const sign = (x)=> (x<0?-1:1);
+
+  function fmt(x, n=3){
+    const s = (Math.abs(x) < 1e-9) ? 0 : x;
+    return s.toFixed(n);
+  }
+
+  // ===== Canvas + DPR =====
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  let W=1,H=1,dpr=1;
+
+  function resize(){
+    dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    W = Math.floor(rect.width);
+    H = Math.floor(rect.height);
+    canvas.width = Math.floor(W*dpr);
+    canvas.height = Math.floor(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  // ===== UI =====
+  const modeLinear = document.getElementById('modeLinear');
+  const modeFlow   = document.getElementById('modeFlow');
+  const linearPanel = document.getElementById('linearPanel');
+  const flowPanel   = document.getElementById('flowPanel');
+
+  const mapShearQ = document.getElementById('mapShearQ');
+  const mapShearP = document.getElementById('mapShearP');
+  const mapRotate = document.getElementById('mapRotate');
+  const mapTwist  = document.getElementById('mapTwist');
+  const breakSympl = document.getElementById('breakSympl');
+
+  const paramA = document.getElementById('paramA');
+  const paramAVal = document.getElementById('paramAVal');
+  const resetLinear = document.getElementById('resetLinear');
+
+  const H_ho = document.getElementById('H_ho');
+  const H_duff = document.getElementById('H_duff');
+  const dt = document.getElementById('dt');
+  const dtVal = document.getElementById('dtVal');
+  const speed = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+  const togglePlay = document.getElementById('togglePlay');
+  const resetFlow = document.getElementById('resetFlow');
+
+  const hudMode = document.getElementById('hudMode');
+  const hudInv  = document.getElementById('hudInv');
+  const hudVals = document.getElementById('hudVals');
+  const hudArea = document.getElementById('hudArea');
+  const invDot  = document.getElementById('invDot');
+
+  function setMode(isFlow){
+    if(isFlow){
+      linearPanel.style.display = 'none';
+      flowPanel.style.display = '';
+      hudMode.textContent = 'Mode: Hamiltonian flow';
+    } else {
+      linearPanel.style.display = '';
+      flowPanel.style.display = 'none';
+      hudMode.textContent = 'Mode: Symplectic maps';
+    }
+  }
+
+  modeLinear.addEventListener('change', ()=> setMode(false));
+  modeFlow.addEventListener('change', ()=> setMode(true));
+
+  // ===== World ↔ Screen mapping =====
+  // World is (q,p) in a square box.
+  const world = {
+    cx: 0, cy: 0,
+    scale: 1.9, // half-extent shown
+  };
+
+  function worldToScreen(q,p, panelX, panelW){
+    // panelX..panelX+panelW is the panel region horizontally, full height
+    const s = Math.min(panelW, H) / (2*world.scale);
+    const x = panelX + panelW*0.5 + (q - world.cx) * s;
+    const y = H*0.5 - (p - world.cy) * s;
+    return {x,y,s};
+  }
+  function screenToWorld(x,y, panelX, panelW){
+    const s = Math.min(panelW, H) / (2*world.scale);
+    const q = (x - (panelX + panelW*0.5))/s + world.cx;
+    const p = - (y - H*0.5)/s + world.cy;
+    return {q,p,s};
+  }
+
+  // ===== Symplectic maps (2D) =====
+  // State x = (q,p). We'll implement map and its Jacobian J (not to confuse with symplectic J matrix).
+  function mapAndJacobian(q,p){
+    const a = parseFloat(paramA.value);
+    const t = time;
+    let qp, J;
+    if(mapShearQ.checked){
+      // q' = q + a p ; p' = p
+      qp = {q: q + a*p, p: p};
+      J = [[1, a],[0,1]];
+    } else if(mapShearP.checked){
+      // q' = q ; p' = p + a q
+      qp = {q: q, p: p + a*q};
+      J = [[1,0],[a,1]];
+    } else if(mapRotate.checked){
+      // rotation by theta=a (treat slider as angle)
+      const th = a;
+      const c = Math.cos(th), s = Math.sin(th);
+      qp = {q: c*q + s*p, p: -s*q + c*p};
+      J = [[c, s],[-s, c]];
+    } else { // mapTwist
+      // q' = q; p' = p + a sin(q)
+      qp = {q: q, p: p + a*Math.sin(q)};
+      J = [[1,0],[a*Math.cos(q),1]];
+    }
+
+    if(breakSympl.checked){
+      // a deliberately non-symplectic perturbation: anisotropic scaling
+      const sx = 1.15, sy = 0.82; // det != 1 and not symplectic
+      qp = {q: qp.q*sx, p: qp.p*sy};
+      // Jacobian multiplies by diag(sx,sy):  J_total = diag(sx,sy)*J
+      J = [[sx*J[0][0], sx*J[0][1]],[sy*J[1][0], sy*J[1][1]]];
+    }
+    return {qp, J};
+  }
+
+  // Symplectic form area element: dq∧dp represented by oriented area of tiny parallelogram.
+  // We'll visualize a small "basis" (u,v) anchored at the point: x+u and x+v.
+  let point = {q: 0.2, p: -0.35};
+  let u = {q: 0.25, p: 0.08};
+  let v = {q: -0.05, p: 0.22};
+
+  function resetLinearState(){
+    point = {q: 0.2, p: -0.35};
+    u = {q: 0.25, p: 0.08};
+    v = {q: -0.05, p: 0.22};
+    breakSympl.checked = false;
+    paramA.value = 0.9;
+    syncLabels();
+  }
+  resetLinear.addEventListener('click', resetLinearState);
+
+  function areaOfParallelogram(u,v){
+    return u.q*v.p - u.p*v.q; // det([u v]) in (q,p)
+  }
+
+  // apply Jacobian to a vector
+  function mul2(J, vec){
+    return {
+      q: J[0][0]*vec.q + J[0][1]*vec.p,
+      p: J[1][0]*vec.q + J[1][1]*vec.p
+    };
+  }
+
+  // ===== Hamiltonian flow mode =====
+  let playing = true;
+  togglePlay.addEventListener('click', ()=>{
+    playing = !playing;
+    togglePlay.textContent = playing ? 'Pause' : 'Play';
+  });
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space' && modeFlow.checked){
+      e.preventDefault();
+      playing = !playing;
+      togglePlay.textContent = playing ? 'Pause' : 'Play';
+    }
+  });
+
+  dt.addEventListener('input', ()=> dtVal.textContent = `dt = ${fmt(parseFloat(dt.value),3)}`);
+  speed.addEventListener('input', ()=> speedVal.textContent = `speed = ${fmt(parseFloat(speed.value),2)}×`);
+
+  dtVal.textContent = `dt = ${fmt(parseFloat(dt.value),3)}`;
+  speedVal.textContent = `speed = ${fmt(parseFloat(speed.value),2)}×`;
+
+  // Blob is a loop (ordered points)
+  const blob = {
+    center: {q: 0.2, p: 0.25},
+    radius: 0.35,
+    n: 96,
+    pts: [],
+    ptsTmp: [],
+    area0: 0,
+  };
+
+  function initBlob(){
+    blob.pts.length = 0;
+    blob.ptsTmp.length = 0;
+    for(let i=0;i<blob.n;i++){
+      const ang = (i/blob.n)*Math.PI*2;
+      // Slightly non-circular to show deformation
+      const r = blob.radius*(1 + 0.12*Math.cos(3*ang));
+      const q = blob.center.q + r*Math.cos(ang);
+      const p = blob.center.p + r*Math.sin(ang);
+      blob.pts.push({q,p});
+      blob.ptsTmp.push({q,p});
+    }
+    blob.area0 = polygonArea(blob.pts);
+  }
+
+  function polygonArea(pts){
+    let A=0;
+    for(let i=0;i<pts.length;i++){
+      const j=(i+1)%pts.length;
+      A += pts[i].q*pts[j].p - pts[j].q*pts[i].p;
+    }
+    return 0.5*A;
+  }
+
+  function dHdq(q,p){
+    if(H_ho.checked) return q;
+    // H = 1/2 p^2 + 1/4 q^4 => dH/dq = q^3
+    return q*q*q;
+  }
+  function dHdp(q,p){
+    // both have dH/dp = p
+    return p;
+  }
+
+  // Symplectic integrator (leapfrog / Stormer-Verlet) for Hamiltonian systems:
+  // p_{n+1/2} = p_n - (dt/2) dH/dq(q_n)
+  // q_{n+1}   = q_n + dt dH/dp(p_{n+1/2})
+  // p_{n+1}   = p_{n+1/2} - (dt/2) dH/dq(q_{n+1})
+  function stepSymplectic(qp, h){
+    let q = qp.q, p = qp.p;
+    const pHalf = p - 0.5*h*dHdq(q,p);
+    const qNew  = q + h*dHdp(q, pHalf);
+    const pNew  = pHalf - 0.5*h*dHdq(qNew, pHalf);
+    qp.q = qNew; qp.p = pNew;
+  }
+
+  resetFlow.addEventListener('click', ()=>{
+    blob.center = {q: 0.2, p: 0.25};
+    initBlob();
+  });
+
+  initBlob();
+
+  // ===== Direct manipulation (dragging) =====
+  let drag = null;
+
+  function pickHandleLinear(mx,my){
+    // We have 3 draggable things: point, point+u, point+v
+    const panelW = W;
+    // In linear mode we draw 2 panels inside stage: left and right.
+    // Let's treat picking on the left panel only (original space).
+    const split = 0.5;
+    const leftX = 0;
+    const leftW = W*split;
+    const P = worldToScreen(point.q, point.p, leftX, leftW);
+    const Hu = worldToScreen(point.q + u.q, point.p + u.p, leftX, leftW);
+    const Hv = worldToScreen(point.q + v.q, point.p + v.p, leftX, leftW);
+
+    const r = 12;
+    const dP = (mx-P.x)**2 + (my-P.y)**2;
+    const dU = (mx-Hu.x)**2 + (my-Hu.y)**2;
+    const dV = (mx-Hv.x)**2 + (my-Hv.y)**2;
+
+    if(dP < r*r) return {type:'point', off:{dx:0,dy:0}};
+    if(dU < r*r) return {type:'u', off:{dx:0,dy:0}};
+    if(dV < r*r) return {type:'v', off:{dx:0,dy:0}};
+    return null;
+  }
+
+  function pickHandleFlow(mx,my){
+    // Drag blob center in the single panel (full stage)
+    const P = worldToScreen(blob.center.q, blob.center.p, 0, W);
+    const r = 14;
+    const d = (mx-P.x)**2 + (my-P.y)**2;
+    if(d < r*r) return {type:'blobCenter'};
+    return null;
+  }
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    canvas.setPointerCapture(e.pointerId);
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if(modeLinear.checked){
+      drag = pickHandleLinear(mx,my);
+      if(drag){
+        drag.mx0 = mx; drag.my0 = my;
+      }
+    } else {
+      drag = pickHandleFlow(mx,my);
+      if(drag){
+        drag.mx0 = mx; drag.my0 = my;
+      }
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e)=>{
+    if(!drag) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if(modeLinear.checked){
+      const split = 0.5;
+      const leftX = 0;
+      const leftW = W*split;
+      const w = screenToWorld(mx,my,leftX,leftW);
+
+      if(drag.type==='point'){
+        // Move point, keep u and v unchanged as vectors.
+        point.q = clamp(w.q, -world.scale, world.scale);
+        point.p = clamp(w.p, -world.scale, world.scale);
+      } else if(drag.type==='u'){
+        // Set u as the displacement from point
+        u.q = clamp(w.q - point.q, -world.scale, world.scale);
+        u.p = clamp(w.p - point.p, -world.scale, world.scale);
+      } else if(drag.type==='v'){
+        v.q = clamp(w.q - point.q, -world.scale, world.scale);
+        v.p = clamp(w.p - point.p, -world.scale, world.scale);
+      }
+    } else {
+      const w = screenToWorld(mx,my,0,W);
+      blob.center.q = clamp(w.q, -world.scale, world.scale);
+      blob.center.p = clamp(w.p, -world.scale, world.scale);
+      initBlob();
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e)=>{
+    drag = null;
+  });
+
+  canvas.addEventListener('pointercancel', ()=> drag=null);
+
+  // ===== Labels =====
+  function syncLabels(){
+    const a = parseFloat(paramA.value);
+    paramAVal.textContent = `${mapRotate.checked ? 'θ' : 'a'} = ${fmt(a,3)}`;
+  }
+
+  [paramA, mapShearQ, mapShearP, mapRotate, mapTwist].forEach(el=>{
+    el.addEventListener('input', syncLabels);
+    el.addEventListener('change', syncLabels);
+  });
+  syncLabels();
+
+  // ===== Rendering helpers =====
+  function line(x1,y1,x2,y2, color, w=1, alpha=1){
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function circle(x,y,r, fill, stroke=null, sw=1, alpha=1){
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    if(fill){
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+    if(stroke){
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = sw;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function text(str,x,y, color='rgba(231,238,252,.85)', size=12, align='left'){
+    ctx.fillStyle = color;
+    ctx.font = `${size}px ${getComputedStyle(document.documentElement).getPropertyValue('--sans')}`;
+    ctx.textAlign = align;
+    ctx.fillText(str,x,y);
+  }
+
+  function grid(panelX, panelW){
+    const s = Math.min(panelW, H) / (2*world.scale);
+    const x0 = panelX + panelW*0.5 - world.scale*s;
+    const y0 = H*0.5 - world.scale*s;
+    const n = 10;
+
+    // minor lines
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,.05)';
+    ctx.beginPath();
+    const step = (2*world.scale)/n;
+    for(let i=0;i<=n;i++){
+      const q = -world.scale + i*step;
+      const px = panelX + panelW*0.5 + q*s;
+      ctx.moveTo(px, y0);
+      ctx.lineTo(px, y0 + 2*world.scale*s);
+
+      const p = -world.scale + i*step;
+      const py = H*0.5 - p*s;
+      ctx.moveTo(x0, py);
+      ctx.lineTo(x0 + 2*world.scale*s, py);
+    }
+    ctx.stroke();
+
+    // axes
+    const ax = panelX + panelW*0.5;
+    const ay = H*0.5;
+    line(ax, y0, ax, y0 + 2*world.scale*s, 'rgba(122,162,255,.18)', 1.4);
+    line(x0, ay, x0 + 2*world.scale*s, ay, 'rgba(122,162,255,.18)', 1.4);
+
+    // axis labels
+    text('q', panelX + panelW - 18, ay - 8, 'rgba(159,176,208,.9)', 12, 'right');
+    text('p', ax + 10, y0 + 14, 'rgba(159,176,208,.9)', 12, 'left');
+  }
+
+  function drawParallelogram(panelX,panelW, origin, uVec, vVec, fillColor, strokeColor){
+    const o = worldToScreen(origin.q, origin.p, panelX, panelW);
+    const a = worldToScreen(origin.q + uVec.q, origin.p + uVec.p, panelX, panelW);
+    const b = worldToScreen(origin.q + vVec.q, origin.p + vVec.p, panelX, panelW);
+    const c = worldToScreen(origin.q + uVec.q + vVec.q, origin.p + uVec.p + vVec.p, panelX, panelW);
+
+    ctx.beginPath();
+    ctx.moveTo(o.x,o.y);
+    ctx.lineTo(a.x,a.y);
+    ctx.lineTo(c.x,c.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.closePath();
+
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // arrows for u and v
+    arrow(o.x,o.y, a.x,a.y, strokeColor);
+    arrow(o.x,o.y, b.x,b.y, strokeColor);
+
+    return {o,a,b,c};
+  }
+
+  function arrow(x1,y1,x2,y2,color){
+    const dx=x2-x1, dy=y2-y1;
+    const L=Math.hypot(dx,dy);
+    if(L<2) return;
+    const ux=dx/L, uy=dy/L;
+    const hx = x2 - ux*10, hy = y2 - uy*10;
+    const px = -uy, py = ux;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(hx + px*5, hy + py*5);
+    ctx.lineTo(hx - px*5, hy - py*5);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  // ===== Animation loop =====
+  let time = 0;
+  let last = performance.now();
+
+  function invarianceStatus(areaBefore, areaAfter){
+    const denom = Math.max(1e-9, Math.abs(areaBefore));
+    const rel = Math.abs(areaAfter - areaBefore)/denom;
+    const ok = rel < 0.03; // tolerance for visual + nonlinear
+    return {ok, rel};
+  }
+
+  function drawLinear(){
+    const split = 0.5;
+    const leftX = 0, leftW = W*split;
+    const rightX = W*split, rightW = W*(1-split);
+
+    // Panels background
+    ctx.fillStyle = 'rgba(0,0,0,.08)';
+    ctx.fillRect(0,0,W,H);
+
+    // subtle divider
+    ctx.fillStyle = 'rgba(255,255,255,.04)';
+    ctx.fillRect(W*split - 0.5, 0, 1, H);
+
+    // grids
+    grid(leftX,leftW);
+    grid(rightX,rightW);
+
+    // titles
+    text('Original (q,p)', leftX+14, 20, 'rgba(231,238,252,.85)', 13, 'left');
+    text('Mapped (q′,p′)', rightX+14, 20, 'rgba(231,238,252,.85)', 13, 'left');
+
+    // compute map
+    const {qp: mappedPoint, J} = mapAndJacobian(point.q, point.p);
+    const u2 = mul2(J, u);
+    const v2 = mul2(J, v);
+
+    const area0 = areaOfParallelogram(u,v);
+    const area1 = areaOfParallelogram(u2,v2);
+
+    // draw parallelograms (area elements)
+    const fill0 = `rgba(55,211,154,.10)`;
+    const stroke0 = `rgba(55,211,154,.85)`;
+    const fill1 = `rgba(55,211,154,.10)`;
+    const stroke1 = `rgba(55,211,154,.85)`;
+
+    const P0 = drawParallelogram(leftX,leftW, point, u, v, fill0, stroke0);
+    const P1 = drawParallelogram(rightX,rightW, mappedPoint, u2, v2, fill1, stroke1);
+
+    // draw points
+    const sp0 = worldToScreen(point.q, point.p, leftX,leftW);
+    const sp1 = worldToScreen(mappedPoint.q, mappedPoint.p, rightX,rightW);
+    circle(sp0.x, sp0.y, 7.5, 'rgba(255,255,255,.92)', 'rgba(0,0,0,.55)', 2);
+    circle(sp1.x, sp1.y, 7.5, 'rgba(255,255,255,.92)', 'rgba(0,0,0,.55)', 2);
+
+    // handles
+    circle(P0.a.x, P0.a.y, 6.5, 'rgba(122,162,255,.95)', 'rgba(0,0,0,.55)', 2);
+    circle(P0.b.x, P0.b.y, 6.5, 'rgba(122,162,255,.95)', 'rgba(0,0,0,.55)', 2);
+
+    // mapping connectors
+    line(sp0.x, sp0.y, sp1.x, sp1.y, 'rgba(122,162,255,.12)', 1.4);
+
+    // invariance HUD
+    const inv = invarianceStatus(area0, area1);
+    invDot.classList.toggle('good', inv.ok);
+    invDot.classList.toggle('bad', !inv.ok);
+    hudInv.textContent = inv.ok ? 'ω-area preserved' : 'ω-area violated';
+    hudInv.style.color = inv.ok ? 'rgba(159,176,208,.95)' : 'rgba(255,107,107,.95)';
+
+    hudVals.textContent = `q=${fmt(point.q,2)}, p=${fmt(point.p,2)}  →  q′=${fmt(mappedPoint.q,2)}, p′=${fmt(mappedPoint.p,2)}`;
+
+    const A0 = area0, A1 = area1;
+    hudArea.textContent = `area = ${fmt(A0,3)}  →  ${fmt(A1,3)}   (Δ=${fmt(A1-A0,3)})`;
+
+    // show signed area badge in panel
+    const bx = leftX + 14, by = H - 18;
+    const col = inv.ok ? 'rgba(55,211,154,.9)' : 'rgba(255,107,107,.9)';
+    text(`ω(u,v)=det[u v]=${fmt(area0,3)}`, bx, by, col, 12, 'left');
+    text(`ω(Ju,Jv)=${fmt(area1,3)}`, rightX + 14, by, col, 12, 'left');
+
+    // extra: visualize "J-rotation" intuition by drawing a perpendicular-like vector (in canonical coords, J(q,p)=(p,-q))
+    // We'll draw at the origin in each panel as a gentle hint.
+    drawJHint(leftX,leftW);
+    drawJHint(rightX,rightW);
+  }
+
+  function drawJHint(panelX,panelW){
+    const o = worldToScreen(0,0,panelX,panelW);
+    // take a small vector e1 and show J e1
+    const e = {q: 0.3, p: 0.0};
+    const Je = {q: e.p, p: -e.q};
+    const a = worldToScreen(e.q,e.p,panelX,panelW);
+    const b = worldToScreen(Je.q,Je.p,panelX,panelW);
+    line(o.x,o.y,a.x,a.y,'rgba(255,255,255,.10)',2);
+    line(o.x,o.y,b.x,b.y,'rgba(255,255,255,.10)',2);
+    circle(a.x,a.y,3.5,'rgba(255,255,255,.18)');
+    circle(b.x,b.y,3.5,'rgba(255,255,255,.18)');
+    text('J', b.x+6, b.y+4, 'rgba(159,176,208,.6)', 11, 'left');
+  }
+
+  function drawFlow(dtStep, speedMul){
+    ctx.fillStyle = 'rgba(0,0,0,.08)';
+    ctx.fillRect(0,0,W,H);
+    grid(0,W);
+
+    text('Phase space (q,p) evolving under Hamiltonian flow', 14, 20, 'rgba(231,238,252,.85)', 13, 'left');
+
+    // integrate
+    if(playing){
+      // do multiple substeps for smoothness while keeping dt stable-ish
+      const base = dtStep * speedMul;
+      const sub = clamp(Math.floor(0.02 / dtStep), 1, 10);
+      const h = base / sub;
+      for(let k=0;k<sub;k++){
+        for(let i=0;i<blob.pts.length;i++){
+          stepSymplectic(blob.pts[i], h);
+        }
+      }
+    }
+
+    // draw blob fill
+    ctx.beginPath();
+    for(let i=0;i<blob.pts.length;i++){
+      const s = worldToScreen(blob.pts[i].q, blob.pts[i].p, 0, W);
+      if(i===0) ctx.moveTo(s.x,s.y);
+      else ctx.lineTo(s.x,s.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(55,211,154,.08)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(55,211,154,.78)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // draw sample points
+    for(let i=0;i<blob.pts.length;i+=4){
+      const s = worldToScreen(blob.pts[i].q, blob.pts[i].p, 0, W);
+      circle(s.x,s.y,2.4,'rgba(231,238,252,.35)');
+    }
+
+    // draw center handle
+    const c = worldToScreen(blob.center.q, blob.center.p, 0, W);
+    circle(c.x,c.y,8.5,'rgba(255,255,255,.92)','rgba(0,0,0,.55)',2);
+    circle(c.x,c.y,16,'rgba(122,162,255,.10)','rgba(122,162,255,.25)',1.5);
+
+    // invariance
+    const A = polygonArea(blob.pts);
+    const inv = invarianceStatus(blob.area0, A);
+    invDot.classList.toggle('good', inv.ok);
+    invDot.classList.toggle('bad', !inv.ok);
+    hudInv.textContent = 'Liouville: area preserved';
+    hudInv.style.color = 'rgba(159,176,208,.95)';
+    hudVals.textContent = `center q=${fmt(blob.center.q,2)}, p=${fmt(blob.center.p,2)} · H=${H_ho.checked?'½(p²+q²)':'½p²+¼q⁴'}`;
+    hudArea.textContent = `area = ${fmt(blob.area0,3)}  →  ${fmt(A,3)}   (Δ=${fmt(A-blob.area0,3)})`;
+
+    // status badge
+    const col = inv.ok ? 'rgba(55,211,154,.92)' : 'rgba(255,107,107,.92)';
+    text(`A(t) ≈ ${fmt(A,3)}   (A₀=${fmt(blob.area0,3)})`, 14, H-18, col, 12, 'left');
+  }
+
+  // ===== Main loop =====
+  function tick(now){
+    const dtMs = now - last;
+    last = now;
+    time += Math.min(0.05, dtMs/1000);
+
+    // panel mode switching
+    setMode(modeFlow.checked);
+
+    // Clear
+    ctx.clearRect(0,0,W,H);
+
+    if(modeLinear.checked){
+      syncLabels();
+      drawLinear();
+    } else {
+      const d = parseFloat(dt.value);
+      const s = parseFloat(speed.value);
+      drawFlow(d,s);
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+})();
+</script>
+</body>
+</html>
