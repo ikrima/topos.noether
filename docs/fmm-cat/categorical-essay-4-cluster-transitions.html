@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cluster Transitions | Categorical Foundations of FMM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Crimson Pro', serif; font-size: 19px; line-height: 1.7; color: #e8e6e3; background: #0a0a0f; }
+        .container { max-width: 920px; margin: 0 auto; padding: 80px 40px; }
+        header { margin-bottom: 80px; padding-bottom: 40px; border-bottom: 1px solid rgba(251, 146, 60, 0.3); }
+        .series-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: #fb923c; margin-bottom: 20px; }
+        h1 { font-size: 52px; font-weight: 300; line-height: 1.15; margin-bottom: 24px; background: linear-gradient(135deg, #fb923c, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .subtitle { font-size: 22px; font-style: italic; color: #9ca3af; font-weight: 300; }
+        h2 { font-size: 32px; font-weight: 400; margin: 70px 0 30px; color: #fb923c; }
+        h3 { font-size: 24px; font-weight: 400; margin: 50px 0 20px; color: #f472b6; }
+        p { margin-bottom: 24px; text-align: justify; }
+        .lead { font-size: 22px; line-height: 1.8; color: #d1d5db; margin-bottom: 40px; }
+        .figure-container { margin: 50px 0; background: linear-gradient(145deg, rgba(30, 27, 46, 0.95), rgba(20, 18, 35, 0.98)); border-radius: 16px; padding: 30px; border: 1px solid rgba(251, 146, 60, 0.2); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }
+        .figure-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #fb923c; margin-bottom: 20px; }
+        .figure-canvas { background: rgba(10, 10, 20, 0.8); border-radius: 12px; margin-bottom: 20px; }
+        svg { display: block; width: 100%; height: auto; }
+        .controls { display: flex; flex-wrap: wrap; gap: 15px; padding-top: 15px; border-top: 1px solid rgba(251, 146, 60, 0.2); }
+        .control-group { display: flex; align-items: center; gap: 10px; }
+        .control-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+        .btn { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 8px 16px; border: 1px solid rgba(251, 146, 60, 0.4); background: rgba(251, 146, 60, 0.1); color: #fb923c; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+        .btn:hover { background: rgba(251, 146, 60, 0.25); border-color: #fb923c; }
+        .btn.active { background: rgba(251, 146, 60, 0.4); border-color: #fb923c; color: #fff; }
+        .equation-box { background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(244, 114, 182, 0.1)); border: 1px solid rgba(251, 146, 60, 0.3); border-radius: 12px; padding: 30px; margin: 40px 0; text-align: center; }
+        .equation { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: #fb923c; line-height: 2; }
+        .equation-label { font-size: 14px; color: #9ca3af; margin-top: 15px; font-style: italic; }
+        .definition-box { background: rgba(251, 146, 60, 0.08); border-left: 3px solid #fb923c; padding: 25px 30px; margin: 35px 0; border-radius: 0 12px 12px 0; }
+        .definition-header { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #fb923c; margin-bottom: 12px; }
+        .theorem-box { background: linear-gradient(135deg, rgba(244, 114, 182, 0.08), rgba(251, 146, 60, 0.08)); border: 1px solid rgba(244, 114, 182, 0.3); padding: 25px 30px; margin: 35px 0; border-radius: 12px; }
+        .theorem-header { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #f472b6; margin-bottom: 12px; }
+        .insight-box { background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.3); padding: 25px 30px; margin: 35px 0; border-radius: 12px; position: relative; }
+        .insight-box::before { content: "⬡"; position: absolute; top: -12px; left: 25px; background: #0a0a0f; padding: 0 10px; color: #22d3ee; font-size: 18px; }
+        .table-container { overflow-x: auto; margin: 30px 0; }
+        table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+        th, td { padding: 12px 16px; text-align: center; border: 1px solid rgba(251, 146, 60, 0.2); }
+        th { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
+        td { color: #d1d5db; }
+        .symbol { font-family: 'JetBrains Mono', monospace; color: #f472b6; }
+        footer { margin-top: 100px; padding-top: 40px; border-top: 1px solid rgba(251, 146, 60, 0.2); text-align: center; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 30px; }
+        .nav-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #fb923c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="series-label">Categorical Foundations of FMM — Essay IV</div>
+            <h1>Cluster Transitions</h1>
+            <p class="subtitle">Mutations, exchanges, and the algebraic structure of hierarchy reorganization</p>
+        </header>
+
+        <p class="lead">
+            When particles move and the optimal FMM hierarchy changes, what governs the transition? 
+            The answer lies in <em>cluster algebras</em>—algebraic structures where "mutations" 
+            encode the reorganization of combinatorial data. Tree transitions are cluster mutations.
+        </p>
+
+        <h2>The Problem of Hierarchy Transitions</h2>
+
+        <p>
+            Essay III established that FMM convergence regions correspond to tropical cones. As a 
+            particle configuration evolves, it may cross from one cone to another, requiring a 
+            change in the tree hierarchy. But not all transitions are equal—some preserve more 
+            structure than others.
+        </p>
+
+        <p>
+            The key observation is that the number of trees (<span class="symbol">(2n-5)!!</span>) 
+            far exceeds the number of "natural" coordinate systems on the moduli space. This 
+            suggests a <em>coarsening</em>: multiple trees should be grouped together into 
+            "clusters" that share essential structure.
+        </p>
+
+        <div class="table-container">
+            <table>
+                <tr><th>n</th><th>Trees (2n-5)!!</th><th>Clusters C<sub>n-2</sub></th><th>Cluster Type</th><th>Fiber Size</th></tr>
+                <tr><td>4</td><td>3</td><td>1</td><td>A₁</td><td>3</td></tr>
+                <tr><td>5</td><td>15</td><td>5</td><td>A₂</td><td>3</td></tr>
+                <tr><td>6</td><td>105</td><td>14</td><td>A₃</td><td>~7.5</td></tr>
+                <tr><td>7</td><td>945</td><td>42</td><td>A₄</td><td>~22.5</td></tr>
+            </table>
+        </div>
+
+        <h2>Cluster Algebras: The Basics</h2>
+
+        <p>
+            Cluster algebras, introduced by Fomin and Zelevinsky in 2002, are commutative algebras 
+            with a distinguished set of generators related by "mutations"—birational transformations 
+            with remarkable positivity properties.
+        </p>
+
+        <div class="definition-box">
+            <div class="definition-header">Definition — Seed</div>
+            <p>
+                A <strong>seed</strong> of rank <span class="symbol">n</span> is a pair 
+                <span class="symbol">(x, B)</span> where <span class="symbol">x = (x₁, …, xₙ)</span> 
+                are cluster variables generating an ambient field, and 
+                <span class="symbol">B = (bᵢⱼ)</span> is a skew-symmetrizable exchange matrix.
+            </p>
+        </div>
+
+        <div class="definition-box">
+            <div class="definition-header">Definition — Mutation</div>
+            <p>
+                The <strong>mutation</strong> <span class="symbol">μₖ</span> in direction 
+                <span class="symbol">k</span> transforms <span class="symbol">(x, B)</span> to 
+                <span class="symbol">(x', B')</span> where:
+            </p>
+            <p style="margin-top: 15px;">
+                • <span class="symbol">x'ⱼ = xⱼ</span> for <span class="symbol">j ≠ k</span>
+            </p>
+            <p style="margin-top: 10px;">
+                • <span class="symbol">x'ₖ = (∏ xᵢ<sup>[bᵢₖ]₊</sup> + ∏ xᵢ<sup>[-bᵢₖ]₊</sup>) / xₖ</span>
+            </p>
+        </div>
+
+        <div class="figure-container">
+            <div class="figure-title">Figure 1 · Cluster Mutation: The Exchange Relation</div>
+            <div class="figure-canvas" id="fig1-canvas"></div>
+            <div class="controls">
+                <div class="control-group">
+                    <span class="control-label">Mutation:</span>
+                    <button class="btn active" data-mut="none">Initial</button>
+                    <button class="btn" data-mut="1">μ₁</button>
+                    <button class="btn" data-mut="2">μ₂</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn" id="animate-mut">▶ Animate Sequence</button>
+                </div>
+            </div>
+        </div>
+
+        <p>
+            The remarkable properties of cluster algebras include:
+        </p>
+
+        <div class="theorem-box">
+            <div class="theorem-header">Theorem (Laurent Phenomenon)</div>
+            <p>
+                Every cluster variable is a <strong>Laurent polynomial</strong> with integer 
+                coefficients in the variables of any seed. That is, if <span class="symbol">y</span> 
+                is any cluster variable and <span class="symbol">(x₁, …, xₙ)</span> any cluster, 
+                then <span class="symbol">y ∈ ℤ[x₁±¹, …, xₙ±¹]</span>.
+            </p>
+        </div>
+
+        <div class="theorem-box">
+            <div class="theorem-header">Theorem (Positivity)</div>
+            <p>
+                The Laurent expansion of any cluster variable in any seed has 
+                <strong>non-negative coefficients</strong>. This was conjectured by Fomin–Zelevinsky 
+                and proved by Lee–Schiffler in 2015.
+            </p>
+        </div>
+
+        <h2>The Cluster Algebra of M<sub>0,n</sub></h2>
+
+        <p>
+            The moduli space <span class="symbol">M<sub>0,n</sub></span> of genus-zero curves with 
+            <span class="symbol">n</span> marked points carries a natural cluster algebra structure 
+            of type <span class="symbol">A<sub>n-3</sub></span>.
+        </p>
+
+        <div class="theorem-box">
+            <div class="theorem-header">Theorem (Fock–Goncharov)</div>
+            <p>
+                The coordinate ring of <span class="symbol">M<sub>0,n</sub></span> has a cluster 
+                algebra structure where:
+            </p>
+            <p style="margin-top: 15px;">
+                • Cluster variables correspond to <strong>diagonals</strong> of an n-gon
+            </p>
+            <p style="margin-top: 10px;">
+                • Clusters correspond to <strong>triangulations</strong> (maximal non-crossing diagonals)
+            </p>
+            <p style="margin-top: 10px;">
+                • Mutations correspond to <strong>diagonal flips</strong>
+            </p>
+            <p style="margin-top: 15px;">
+                The number of clusters is the Catalan number 
+                <span class="symbol">C<sub>n-2</sub> = (1/(n-1)) C(2n-4, n-2)</span>.
+            </p>
+        </div>
+
+        <div class="figure-container">
+            <div class="figure-title">Figure 2 · Triangulations and Diagonal Flips (n = 5)</div>
+            <div class="figure-canvas" id="fig2-canvas"></div>
+            <div class="controls">
+                <div class="control-group">
+                    <span class="control-label">Triangulation:</span>
+                    <button class="btn active" data-tri="1">T₁</button>
+                    <button class="btn" data-tri="2">T₂</button>
+                    <button class="btn" data-tri="3">T₃</button>
+                    <button class="btn" data-tri="4">T₄</button>
+                    <button class="btn" data-tri="5">T₅</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn" id="show-flip">Show Flip</button>
+                </div>
+            </div>
+        </div>
+
+        <h2>The Coarsening Map</h2>
+
+        <p>
+            The key to understanding FMM transitions is the <em>coarsening map</em> from tree 
+            topologies to clusters:
+        </p>
+
+        <div class="equation-box">
+            <div class="equation">
+                π : Tree<sub>n</sub> → Clust<sub>n</sub>
+            </div>
+            <div class="equation-label">
+                The coarsening map groups trees by their "dominant split"
+            </div>
+        </div>
+
+        <div class="definition-box">
+            <div class="definition-header">Definition — Dominant Split</div>
+            <p>
+                For a tree <span class="symbol">T</span> with splits 
+                <span class="symbol">{Aᵢ, Bᵢ}</span>, the <strong>dominant split</strong> is the 
+                one maximizing the separation ratio:
+            </p>
+            <p style="text-align: center; margin-top: 15px;">
+                <span class="symbol">Q<sub>{A,B}</sub> = |c<sub>A</sub> - c<sub>B</sub>| / max(d<sub>A</sub>, d<sub>B</sub>)</span>
+            </p>
+            <p style="margin-top: 15px;">
+                Trees with the same dominant split belong to the same <strong>fiber</strong> of π.
+            </p>
+        </div>
+
+        <div class="figure-container">
+            <div class="figure-title">Figure 3 · The Coarsening Map: Trees to Clusters</div>
+            <div class="figure-canvas" id="fig3-canvas"></div>
+            <div class="controls">
+                <div class="control-group">
+                    <span class="control-label">View:</span>
+                    <button class="btn active" data-view="fibers">Show Fibers</button>
+                    <button class="btn" data-view="graph">Mutation Graph</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn" id="highlight-fiber">Highlight Fiber</button>
+                </div>
+            </div>
+        </div>
+
+        <h3>Within-Fiber vs. Between-Fiber Transitions</h3>
+
+        <p>
+            The coarsening map reveals two fundamentally different types of hierarchy transitions:
+        </p>
+
+        <div class="insight-box">
+            <p>
+                <strong>Within-fiber transitions</strong> (trees with same dominant split):
+            </p>
+            <p style="margin: 15px 0;">
+                • Preserve cluster coordinates
+            </p>
+            <p style="margin: 10px 0;">
+                • Correspond to reorganizing "secondary" structure
+            </p>
+            <p style="margin: 10px 0;">
+                • Numerically stable: small changes in coefficients
+            </p>
+        </div>
+
+        <div class="insight-box">
+            <p>
+                <strong>Between-fiber transitions</strong> (different dominant splits):
+            </p>
+            <p style="margin: 15px 0;">
+                • Require cluster mutations
+            </p>
+            <p style="margin: 10px 0;">
+                • Correspond to fundamental reorganization
+            </p>
+            <p style="margin: 10px 0;">
+                • The exchange relation ensures positivity (no cancellation)
+            </p>
+        </div>
+
+        <div class="theorem-box">
+            <div class="theorem-header">Theorem 6.2 — Cluster Structure of FMM Transitions</div>
+            <p>
+                <strong>(a)</strong> For trees <span class="symbol">T, T'</span> in the same fiber, 
+                the transition preserves cluster coordinates.
+            </p>
+            <p style="margin-top: 10px;">
+                <strong>(b)</strong> For trees in adjacent fibers (connected by mutation), the 
+                transition is given by the cluster exchange relation.
+            </p>
+            <p style="margin-top: 10px;">
+                <strong>(c)</strong> The exchange relation is <strong>subtraction-free</strong>: 
+                all coefficients remain positive, ensuring numerical stability.
+            </p>
+        </div>
+
+        <h2>The Exchange Relation in FMM Terms</h2>
+
+        <p>
+            The cluster mutation has a concrete meaning for FMM: when the dominant split changes, 
+            the translation operators transform according to the exchange relation.
+        </p>
+
+        <div class="equation-box">
+            <div class="equation">
+                x · x' = y<sub>+</sub> + y<sub>-</sub>
+            </div>
+            <div class="equation-label">
+                The exchange relation: product of old and new equals sum of monomials
+            </div>
+        </div>
+
+        <p>
+            In terms of FMM quantities, if <span class="symbol">x</span> measures the separation 
+            ratio for the old dominant split and <span class="symbol">x'</span> for the new:
+        </p>
+
+        <div class="equation-box">
+            <div class="equation">
+                Q<sub>old</sub> · Q<sub>new</sub> = f(d<sub>ij</sub>) + g(d<sub>ij</sub>)
+            </div>
+            <div class="equation-label">
+                Both terms on the right are positive functions of pairwise distances
+            </div>
+        </div>
+
+        <p>
+            The positivity of both terms is the <em>Laurent positivity</em> theorem in action. 
+            It ensures that hierarchy transitions never involve catastrophic cancellation—a 
+            crucial property for numerical stability.
+        </p>
+
+        <div class="figure-container">
+            <div class="figure-title">Figure 4 · The Exchange Relation: Old × New = Sum</div>
+            <div class="figure-canvas" id="fig4-canvas"></div>
+            <div class="controls">
+                <div class="control-group">
+                    <span class="control-label">Step:</span>
+                    <button class="btn active" data-step="0">Initial</button>
+                    <button class="btn" data-step="1">Transition</button>
+                    <button class="btn" data-step="2">New Cluster</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn" id="play-exchange">▶ Play</button>
+                </div>
+            </div>
+        </div>
+
+        <h2>The Pentagon and Beyond</h2>
+
+        <p>
+            For <span class="symbol">n = 5</span>, the cluster algebra has type 
+            <span class="symbol">A₂</span> with 5 clusters forming a <em>pentagon</em> under 
+            mutation. This pentagon is the simplest example of the <em>exchange graph</em>.
+        </p>
+
+        <div class="figure-container">
+            <div class="figure-title">Figure 5 · The Pentagon: Exchange Graph for n = 5</div>
+            <div class="figure-canvas" id="fig5-canvas"></div>
+            <div class="controls">
+                <div class="control-group">
+                    <span class="control-label">Cluster:</span>
+                    <button class="btn" data-cluster="1">C₁</button>
+                    <button class="btn" data-cluster="2">C₂</button>
+                    <button class="btn" data-cluster="3">C₃</button>
+                    <button class="btn" data-cluster="4">C₄</button>
+                    <button class="btn" data-cluster="5">C₅</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn" id="walk-pentagon">▶ Walk Pentagon</button>
+                </div>
+            </div>
+        </div>
+
+        <p>
+            Each edge of the pentagon represents a single mutation—a diagonal flip in the 
+            triangulation picture. Walking around the pentagon returns to the starting cluster 
+            after 5 mutations, reflecting the cyclic structure of the pentagon.
+        </p>
+
+        <h2>Algorithmic Implications</h2>
+
+        <p>
+            The cluster structure suggests new algorithmic strategies:
+        </p>
+
+        <p>
+            <strong>Lazy reorganization.</strong> Since within-fiber transitions are "cheap" 
+            (preserve cluster coordinates), we can delay full reorganization until a 
+            between-fiber transition is forced.
+        </p>
+
+        <p>
+            <strong>Predictable transitions.</strong> The exchange graph tells us exactly which 
+            transitions are possible from each cluster. We can precompute the exchange relations 
+            and apply them efficiently.
+        </p>
+
+        <p>
+            <strong>Parallel exploration.</strong> Near cluster boundaries, multiple hierarchies 
+            are nearly valid. We can evaluate several in parallel and combine results.
+        </p>
+
+        <div class="insight-box">
+            <p>
+                <strong>The deeper message:</strong> Cluster algebras reveal that FMM hierarchy 
+                changes are not arbitrary reorganizations but <em>mutations</em>—coordinated 
+                transformations that preserve algebraic structure. The positivity theorem 
+                guarantees numerical stability, while the exchange graph provides a roadmap 
+                for navigation.
+            </p>
+        </div>
+
+        <footer>
+            <p style="color: #6b7280; font-size: 16px;">
+                Essay IV of the Categorical Foundations series.
+            </p>
+            <div class="nav-links">
+                <span class="nav-link">← Essay III: Tropical Convergence</span>
+                <span class="nav-link">Essay V: Symmetric Space Extensions →</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // Figure 1: Cluster Mutation
+        (function() {
+            const container = document.getElementById('fig1-canvas');
+            const width = 860, height = 340;
+            const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${width} ${height}`);
+            
+            let mutation = 'none';
+            
+            function draw() {
+                svg.selectAll('*').remove();
+                svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'rgba(10, 10, 20, 0.8)');
+                
+                const cx = width / 2, cy = height / 2;
+                
+                // Draw quiver (directed graph representing exchange matrix)
+                const nodes = [
+                    { x: cx - 100, y: cy, label: 'x₁', color: mutation === '1' ? '#f472b6' : '#fb923c' },
+                    { x: cx + 100, y: cy, label: 'x₂', color: mutation === '2' ? '#f472b6' : '#fb923c' }
+                ];
+                
+                // Arrow from x1 to x2
+                svg.append('defs').append('marker').attr('id', 'arrow-q').attr('markerWidth', 10).attr('markerHeight', 7)
+                    .attr('refX', 10).attr('refY', 3.5).attr('orient', 'auto')
+                    .append('polygon').attr('points', '0 0, 10 3.5, 0 7').attr('fill', '#6b7280');
+                
+                svg.append('line').attr('x1', nodes[0].x + 35).attr('y1', cy)
+                    .attr('x2', nodes[1].x - 35).attr('y2', cy)
+                    .attr('stroke', '#6b7280').attr('stroke-width', 2).attr('marker-end', 'url(#arrow-q)');
+                
+                nodes.forEach(node => {
+                    svg.append('circle').attr('cx', node.x).attr('cy', node.y).attr('r', 30)
+                        .attr('fill', `${node.color}20`).attr('stroke', node.color).attr('stroke-width', 2);
+                    svg.append('text').attr('x', node.x).attr('y', node.y + 6).attr('text-anchor', 'middle')
+                        .attr('fill', node.color).attr('font-family', 'JetBrains Mono').attr('font-size', 16).text(node.label);
+                });
+                
+                // Show exchange relation
+                let formula;
+                if (mutation === 'none') {
+                    formula = 'Initial seed: (x₁, x₂) with B = [[0, 1], [-1, 0]]';
+                } else if (mutation === '1') {
+                    formula = 'μ₁: x₁\' = (x₂ + 1) / x₁';
+                } else {
+                    formula = 'μ₂: x₂\' = (x₁ + 1) / x₂';
+                }
+                
+                svg.append('text').attr('x', cx).attr('y', height - 40).attr('text-anchor', 'middle')
+                    .attr('fill', '#e8e6e3').attr('font-family', 'JetBrains Mono').attr('font-size', 14).text(formula);
+            }
+            
+            draw();
+            
+            document.querySelectorAll('[data-mut]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-mut]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    mutation = btn.dataset.mut;
+                    draw();
+                });
+            });
+            
+            document.getElementById('animate-mut').addEventListener('click', () => {
+                const seq = ['none', '1', '2', '1', 'none'];
+                let i = 0;
+                const interval = setInterval(() => {
+                    mutation = seq[i];
+                    document.querySelectorAll('[data-mut]').forEach(b => b.classList.toggle('active', b.dataset.mut === mutation));
+                    draw();
+                    if (++i >= seq.length) clearInterval(interval);
+                }, 700);
+            });
+        })();
+
+        // Figure 2: Triangulations
+        (function() {
+            const container = document.getElementById('fig2-canvas');
+            const width = 860, height = 380;
+            const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${width} ${height}`);
+            
+            let triIndex = 1;
+            let showFlip = false;
+            
+            // Pentagon vertices
+            const cx = width / 2, cy = height / 2, r = 130;
+            const vertices = [];
+            for (let i = 0; i < 5; i++) {
+                const angle = -Math.PI / 2 + (2 * Math.PI * i / 5);
+                vertices.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+            }
+            
+            // Triangulations (diagonals)
+            const triangulations = [
+                [[0, 2], [0, 3]],  // T1
+                [[0, 2], [2, 4]],  // T2
+                [[1, 3], [1, 4]],  // T3
+                [[1, 3], [3, 0]],  // T4
+                [[2, 4], [4, 1]]   // T5
+            ];
+            
+            function draw() {
+                svg.selectAll('*').remove();
+                svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'rgba(10, 10, 20, 0.8)');
+                
+                // Pentagon edges
+                for (let i = 0; i < 5; i++) {
+                    const j = (i + 1) % 5;
+                    svg.append('line').attr('x1', vertices[i].x).attr('y1', vertices[i].y)
+                        .attr('x2', vertices[j].x).attr('y2', vertices[j].y)
+                        .attr('stroke', '#6b7280').attr('stroke-width', 2);
+                }
+                
+                // Diagonals for current triangulation
+                const diags = triangulations[triIndex - 1];
+                const colors = ['#fb923c', '#f472b6'];
+                diags.forEach((d, idx) => {
+                    svg.append('line').attr('x1', vertices[d[0]].x).attr('y1', vertices[d[0]].y)
+                        .attr('x2', vertices[d[1]].x).attr('y2', vertices[d[1]].y)
+                        .attr('stroke', colors[idx]).attr('stroke-width', 3);
+                });
+                
+                // Vertices
+                vertices.forEach((v, i) => {
+                    svg.append('circle').attr('cx', v.x).attr('cy', v.y).attr('r', 16)
+                        .attr('fill', '#4ade80');
+                    svg.append('text').attr('x', v.x).attr('y', v.y + 5).attr('text-anchor', 'middle')
+                        .attr('fill', '#0a0a0f').attr('font-family', 'JetBrains Mono').attr('font-size', 12).text(i + 1);
+                });
+                
+                // Info
+                svg.append('text').attr('x', cx).attr('y', height - 30).attr('text-anchor', 'middle')
+                    .attr('fill', '#9ca3af').attr('font-family', 'JetBrains Mono').attr('font-size', 12)
+                    .text(`Triangulation T${triIndex}: 2 diagonals, 5 total triangulations (Catalan C₃ = 5)`);
+                
+                if (showFlip) {
+                    // Show which diagonal can flip
+                    const nextTri = triIndex % 5 + 1;
+                    svg.append('text').attr('x', cx).attr('y', 30).attr('text-anchor', 'middle')
+                        .attr('fill', '#22d3ee').attr('font-family', 'JetBrains Mono').attr('font-size', 12)
+                        .text(`Flip diagonal to reach T${nextTri}`);
+                }
+            }
+            
+            draw();
+            
+            document.querySelectorAll('[data-tri]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-tri]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    triIndex = parseInt(btn.dataset.tri);
+                    draw();
+                });
+            });
+            
+            document.getElementById('show-flip').addEventListener('click', () => {
+                showFlip = !showFlip;
+                draw();
+            });
+        })();
+
+        // Figure 3: Coarsening Map
+        (function() {
+            const container = document.getElementById('fig3-canvas');
+            const width = 860, height = 380;
+            const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${width} ${height}`);
+            
+            let viewMode = 'fibers';
+            let highlightedFiber = -1;
+            
+            function draw() {
+                svg.selectAll('*').remove();
+                svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'rgba(10, 10, 20, 0.8)');
+                
+                if (viewMode === 'fibers') {
+                    // Show trees grouped by fiber
+                    const fiberColors = ['#fb923c', '#f472b6', '#4ade80', '#22d3ee', '#a78bfa'];
+                    const fiberLabels = ['C₁', 'C₂', 'C₃', 'C₄', 'C₅'];
+                    
+                    // 5 fibers with 3 trees each
+                    for (let f = 0; f < 5; f++) {
+                        const fx = 100 + f * 140;
+                        const isHighlighted = highlightedFiber === -1 || highlightedFiber === f;
+                        
+                        // Fiber box
+                        svg.append('rect').attr('x', fx - 50).attr('y', 80).attr('width', 100).attr('height', 220)
+                            .attr('fill', isHighlighted ? `${fiberColors[f]}15` : 'transparent')
+                            .attr('stroke', fiberColors[f]).attr('stroke-width', isHighlighted ? 2 : 1)
+                            .attr('rx', 8);
+                        
+                        // Fiber label
+                        svg.append('text').attr('x', fx).attr('y', 60).attr('text-anchor', 'middle')
+                            .attr('fill', fiberColors[f]).attr('font-family', 'JetBrains Mono').attr('font-size', 14).text(fiberLabels[f]);
+                        
+                        // Trees in fiber
+                        for (let t = 0; t < 3; t++) {
+                            const ty = 120 + t * 60;
+                            svg.append('circle').attr('cx', fx).attr('cy', ty).attr('r', 20)
+                                .attr('fill', isHighlighted ? `${fiberColors[f]}40` : '#333')
+                                .attr('stroke', fiberColors[f]).attr('stroke-width', 1);
+                            svg.append('text').attr('x', fx).attr('y', ty + 4).attr('text-anchor', 'middle')
+                                .attr('fill', isHighlighted ? '#fff' : '#666')
+                                .attr('font-family', 'JetBrains Mono').attr('font-size', 10).text(`T${f*3 + t + 1}`);
+                        }
+                    }
+                    
+                    svg.append('text').attr('x', width / 2).attr('y', height - 30).attr('text-anchor', 'middle')
+                        .attr('fill', '#9ca3af').attr('font-family', 'JetBrains Mono').attr('font-size', 12)
+                        .text('15 trees → 5 clusters (fibers of size 3)');
+                } else {
+                    // Mutation graph (pentagon)
+                    const cx = width / 2, cy = height / 2, r = 120;
+                    const colors = ['#fb923c', '#f472b6', '#4ade80', '#22d3ee', '#a78bfa'];
+                    
+                    const nodes = [];
+                    for (let i = 0; i < 5; i++) {
+                        const angle = -Math.PI / 2 + (2 * Math.PI * i / 5);
+                        nodes.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+                    }
+                    
+                    // Edges (mutations)
+                    for (let i = 0; i < 5; i++) {
+                        const j = (i + 1) % 5;
+                        svg.append('line').attr('x1', nodes[i].x).attr('y1', nodes[i].y)
+                            .attr('x2', nodes[j].x).attr('y2', nodes[j].y)
+                            .attr('stroke', '#6b7280').attr('stroke-width', 2);
+                    }
+                    
+                    // Nodes
+                    nodes.forEach((n, i) => {
+                        svg.append('circle').attr('cx', n.x).attr('cy', n.y).attr('r', 30)
+                            .attr('fill', `${colors[i]}40`).attr('stroke', colors[i]).attr('stroke-width', 2);
+                        svg.append('text').attr('x', n.x).attr('y', n.y + 5).attr('text-anchor', 'middle')
+                            .attr('fill', colors[i]).attr('font-family', 'JetBrains Mono').attr('font-size', 14)
+                            .text(`C${i + 1}`);
+                    });
+                    
+                    svg.append('text').attr('x', cx).attr('y', height - 30).attr('text-anchor', 'middle')
+                        .attr('fill', '#9ca3af').attr('font-family', 'JetBrains Mono').attr('font-size', 12)
+                        .text('Exchange graph: Pentagon (type A₂)');
+                }
+            }
+            
+            draw();
+            
+            document.querySelectorAll('[data-view]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    viewMode = btn.dataset.view;
+                    draw();
+                });
+            });
+            
+            document.getElementById('highlight-fiber').addEventListener('click', () => {
+                highlightedFiber = (highlightedFiber + 1) % 6 - 1;
+                draw();
+            });
+        })();
+
+        // Figure 4: Exchange Relation
+        (function() {
+            const container = document.getElementById('fig4-canvas');
+            const width = 860, height = 340;
+            const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${width} ${height}`);
+            
+            let step = 0;
+            
+            function draw() {
+                svg.selectAll('*').remove();
+                svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'rgba(10, 10, 20, 0.8)');
+                
+                const cy = height / 2;
+                
+                // Three boxes showing x, x', and sum
+                const boxes = [
+                    { x: 150, label: 'x (old)', color: '#fb923c', active: step >= 0 },
+                    { x: 430, label: '×', color: '#9ca3af', active: false, isOp: true },
+                    { x: 550, label: "x' (new)", color: '#f472b6', active: step >= 1 },
+                    { x: 710, label: '= y₊ + y₋', color: '#4ade80', active: step >= 2 }
+                ];
+                
+                boxes.forEach(box => {
+                    if (box.isOp) {
+                        svg.append('text').attr('x', box.x).attr('y', cy + 5).attr('text-anchor', 'middle')
+                            .attr('fill', box.color).attr('font-family', 'JetBrains Mono').attr('font-size', 24).text(box.label);
+                    } else {
+                        svg.append('rect').attr('x', box.x - 60).attr('y', cy - 40).attr('width', 120).attr('height', 80)
+                            .attr('fill', box.active ? `${box.color}20` : 'transparent')
+                            .attr('stroke', box.color).attr('stroke-width', box.active ? 2 : 1).attr('rx', 8);
+                        svg.append('text').attr('x', box.x).attr('y', cy + 5).attr('text-anchor', 'middle')
+                            .attr('fill', box.active ? box.color : '#666').attr('font-family', 'JetBrains Mono').attr('font-size', 14)
+                            .text(box.label);
+                    }
+                });
+                
+                // Explanation
+                const explanations = [
+                    'Old cluster variable: separation ratio Q for dominant split',
+                    'Mutation: exchange relation relates old and new variables',
+                    'Sum of positive terms: no cancellation, numerical stability!'
+                ];
+                
+                svg.append('text').attr('x', width / 2).attr('y', height - 40).attr('text-anchor', 'middle')
+                    .attr('fill', '#e8e6e3').attr('font-family', 'JetBrains Mono').attr('font-size', 12)
+                    .text(explanations[step]);
+            }
+            
+            draw();
+            
+            document.querySelectorAll('[data-step]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-step]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    step = parseInt(btn.dataset.step);
+                    draw();
+                });
+            });
+            
+            document.getElementById('play-exchange').addEventListener('click', () => {
+                let s = 0;
+                const interval = setInterval(() => {
+                    step = s;
+                    document.querySelectorAll('[data-step]').forEach(b => b.classList.toggle('active', parseInt(b.dataset.step) === s));
+                    draw();
+                    if (++s > 2) { s = 0; }
+                }, 1000);
+                setTimeout(() => clearInterval(interval), 4000);
+            });
+        })();
+
+        // Figure 5: Pentagon
+        (function() {
+            const container = document.getElementById('fig5-canvas');
+            const width = 860, height = 380;
+            const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${width} ${height}`);
+            
+            let activeCluster = -1;
+            
+            function draw() {
+                svg.selectAll('*').remove();
+                svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'rgba(10, 10, 20, 0.8)');
+                
+                const cx = width / 2, cy = height / 2, r = 130;
+                const colors = ['#fb923c', '#f472b6', '#4ade80', '#22d3ee', '#a78bfa'];
+                
+                const nodes = [];
+                for (let i = 0; i < 5; i++) {
+                    const angle = -Math.PI / 2 + (2 * Math.PI * i / 5);
+                    nodes.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+                }
+                
+                // Edges
+                for (let i = 0; i < 5; i++) {
+                    const j = (i + 1) % 5;
+                    const isActive = activeCluster === -1 || activeCluster === i || activeCluster === j;
+                    svg.append('line').attr('x1', nodes[i].x).attr('y1', nodes[i].y)
+                        .attr('x2', nodes[j].x).attr('y2', nodes[j].y)
+                        .attr('stroke', isActive ? '#6b7280' : '#333').attr('stroke-width', isActive ? 3 : 1);
+                }
+                
+                // Nodes
+                nodes.forEach((n, i) => {
+                    const isActive = activeCluster === -1 || activeCluster === i;
+                    svg.append('circle').attr('cx', n.x).attr('cy', n.y).attr('r', 35)
+                        .attr('fill', isActive ? `${colors[i]}40` : '#222')
+                        .attr('stroke', colors[i]).attr('stroke-width', isActive ? 3 : 1);
+                    svg.append('text').attr('x', n.x).attr('y', n.y + 6).attr('text-anchor', 'middle')
+                        .attr('fill', isActive ? colors[i] : '#555').attr('font-family', 'JetBrains Mono').attr('font-size', 16)
+                        .text(`C${i + 1}`);
+                });
+                
+                // Label
+                svg.append('text').attr('x', cx).attr('y', height - 30).attr('text-anchor', 'middle')
+                    .attr('fill', '#9ca3af').attr('font-family', 'JetBrains Mono').attr('font-size', 12)
+                    .text('Exchange graph for n=5: The Pentagon (5 vertices, 5 edges)');
+            }
+            
+            draw();
+            
+            document.querySelectorAll('[data-cluster]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('[data-cluster]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    activeCluster = parseInt(btn.dataset.cluster) - 1;
+                    draw();
+                });
+            });
+            
+            document.getElementById('walk-pentagon').addEventListener('click', () => {
+                let c = 0;
+                const interval = setInterval(() => {
+                    activeCluster = c % 5;
+                    document.querySelectorAll('[data-cluster]').forEach(b => b.classList.toggle('active', parseInt(b.dataset.cluster) - 1 === activeCluster));
+                    draw();
+                    if (++c >= 10) { clearInterval(interval); activeCluster = -1; draw(); }
+                }, 500);
+            });
+        })();
+    </script>
+</body>
+</html>
