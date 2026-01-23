@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packagers & The Yoneda Lemma</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-surface: #12121a;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a9590;
+            --accent-gold: #d4a574;
+            --accent-blue: #6b93d6;
+            --accent-rose: #c77dba;
+            --accent-mint: #7bc9b8;
+            --glow-gold: rgba(212, 165, 116, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 1.25rem;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        /* Canvas container for Three.js */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #three-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Main content structure */
+        .content {
+            position: relative;
+            z-index: 1;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-rose));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            font-style: italic;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        .scroll-hint svg {
+            width: 24px;
+            height: 24px;
+            margin-top: 0.5rem;
+            stroke: var(--accent-gold);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(10px); }
+        }
+
+        /* Section styling */
+        section {
+            min-height: 100vh;
+            padding: 8rem 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        section.short {
+            min-height: 60vh;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            font-weight: 400;
+            color: var(--accent-gold);
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -0.5rem;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-gold), transparent);
+        }
+
+        h3 {
+            font-size: 1.6rem;
+            font-weight: 400;
+            color: var(--accent-blue);
+            margin: 2rem 0 1rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .emphasis {
+            color: var(--accent-gold);
+            font-style: italic;
+        }
+
+        .math-emphasis {
+            color: var(--accent-mint);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95em;
+        }
+
+        /* Code/math blocks */
+        .math-block {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--accent-gold);
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            line-height: 1.6;
+            border-radius: 0 8px 8px 0;
+            overflow-x: auto;
+        }
+
+        /* Interactive visualization containers */
+        .viz-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: var(--bg-surface);
+            border-radius: 12px;
+            margin: 3rem 0;
+            overflow: hidden;
+            border: 1px solid rgba(212, 165, 116, 0.2);
+        }
+
+        .viz-container.tall {
+            height: 500px;
+        }
+
+        .viz-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viz-label {
+            position: absolute;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        /* Slider controls */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            background: var(--bg-surface);
+            border-radius: 8px;
+        }
+
+        .controls label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+        }
+
+        .controls input[type="range"] {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .controls input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .controls input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .controls .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            color: var(--accent-gold);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* Callout boxes */
+        .callout {
+            background: linear-gradient(135deg, rgba(212, 165, 116, 0.1), rgba(199, 125, 186, 0.1));
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .callout.insight {
+            background: linear-gradient(135deg, rgba(107, 147, 214, 0.15), rgba(123, 201, 184, 0.1));
+            border-color: rgba(107, 147, 214, 0.4);
+        }
+
+        .callout-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-gold);
+            margin-bottom: 1rem;
+        }
+
+        .callout.insight .callout-title {
+            color: var(--accent-blue);
+        }
+
+        /* Fade-in animation for sections */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--accent-gold);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                font-size: 1.1rem;
+            }
+            
+            .content {
+                padding: 0 1.5rem;
+            }
+            
+            .viz-container {
+                height: 300px;
+            }
+            
+            .viz-container.tall {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="three-canvas"></canvas>
+    </div>
+
+    <main class="content">
+        <!-- Hero -->
+        <header class="hero">
+            <h1>Packagers</h1>
+            <p class="subtitle">& The Baby Yoneda Lemma</p>
+            <p style="max-width: 500px; color: var(--text-secondary);">
+                An interactive exploration of how mathematics packages things together—and what objects truly <em>do</em> versus what they <em>are</em>.
+            </p>
+            <div class="scroll-hint">
+                <span>Scroll to explore</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </div>
+        </header>
+
+        <!-- Section 1: The Art of Packaging -->
+        <section id="sec-packaging" class="fade-in">
+            <h2>The Art of Packaging</h2>
+            <p>
+                Mathematics, at its heart, is about <span class="emphasis">bundling disparate things into a single place</span>. 
+                Sets let us collect objects. Coordinates let us compress location. 
+                Numbers themselves package the abstract concept of quantity.
+            </p>
+            <p>
+                But what if we could package not just objects, but their <em>relationships</em> too?
+            </p>
+            <p>
+                This is exactly what categorical products do. And understanding how they work reveals 
+                something profound about the nature of mathematical objects themselves.
+            </p>
+        </section>
+
+        <!-- Section 2: Minimum as Packager -->
+        <section id="sec-minimum" class="fade-in">
+            <h2>The Minimum as Packager</h2>
+            <p>
+                Consider three numbers: let's say <span class="math-emphasis">x = 2</span>, 
+                <span class="math-emphasis">a = 5</span>, and <span class="math-emphasis">b = 7</span>.
+            </p>
+            <p>
+                If we want to assert that <span class="math-emphasis">x ≤ a</span> and <span class="math-emphasis">x ≤ b</span> 
+                simultaneously, we could state both inequalities separately. But there's a more elegant way:
+            </p>
+            
+            <div class="math-block">
+                x ≤ min(a, b)  ⟺  x ≤ a  and  x ≤ b
+            </div>
+
+            <p>
+                The minimum doesn't just give us a number—it <span class="emphasis">packages two inequalities into one</span>.
+            </p>
+
+            <div class="viz-container" id="viz-minimum">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <div class="controls">
+                <label>x value:</label>
+                <input type="range" id="slider-x" min="0" max="10" step="0.1" value="2">
+                <span class="value" id="value-x">2</span>
+            </div>
+
+            <p>
+                Drag the slider above. Watch how the single arrow to <span class="math-emphasis">min(a,b)</span> 
+                automatically implies both arrows to <span class="math-emphasis">a</span> and <span class="math-emphasis">b</span>.
+            </p>
+        </section>
+
+        <!-- Section 3: What About Maximum? -->
+        <section id="sec-maximum" class="fade-in short">
+            <h3>What About Maximum?</h3>
+            <p>
+                The maximum does the same thing, but <em>from the other direction</em>:
+            </p>
+
+            <div class="math-block">
+                max(a, b) ≤ x  ⟺  a ≤ x  and  b ≤ x
+            </div>
+
+            <p>
+                Where minimum packages <em>arrows coming in</em>, maximum packages <em>arrows going out</em>.
+                This asymmetry will become profoundly important.
+            </p>
+        </section>
+
+        <!-- Section 4: GCD -->
+        <section id="sec-gcd" class="fade-in">
+            <h2>Divisibility & The GCD</h2>
+            <p>
+                The same pattern appears with divisibility. The greatest common divisor packages 
+                <em>divisibility relationships</em>:
+            </p>
+
+            <div class="math-block">
+                d | gcd(a, b)  ⟺  d | a  and  d | b
+            </div>
+
+            <p>
+                If <span class="math-emphasis">d</span> divides <span class="math-emphasis">gcd(a, b)</span>, 
+                it must divide both <span class="math-emphasis">a</span> and <span class="math-emphasis">b</span>. 
+                And conversely—if <span class="math-emphasis">d</span> divides both, it divides their gcd.
+            </p>
+
+            <div class="viz-container tall" id="viz-gcd">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <div class="controls">
+                <label>divisor d:</label>
+                <input type="range" id="slider-d" min="1" max="12" step="1" value="3">
+                <span class="value" id="value-d">3</span>
+            </div>
+
+            <p>
+                The visualization shows the divisibility lattice. Numbers at the bottom divide numbers 
+                connected above them. The gcd sits where the "packaging" happens.
+            </p>
+        </section>
+
+        <!-- Section 5: Following the Identity -->
+        <section id="sec-identity" class="fade-in">
+            <h2>Following The Identity</h2>
+            <p>
+                Here's a beautiful trick. Take our packaging formula and substitute the <em>packaged object itself</em>:
+            </p>
+
+            <div class="math-block">
+                min(a, b) ≤ min(a, b)  ⟺  min(a, b) ≤ a  and  min(a, b) ≤ b
+            </div>
+
+            <p>
+                The left side is trivially true (anything equals itself). So the right side must be true too!
+                We've just <em>derived</em> that <span class="math-emphasis">min(a, b) ≤ a</span> and 
+                <span class="math-emphasis">min(a, b) ≤ b</span>.
+            </p>
+
+            <div class="callout insight">
+                <div class="callout-title">The Identity Trick</div>
+                <p style="margin-bottom: 0;">
+                    By "following the identity" through a universal property, we extract the 
+                    <span class="emphasis">canonical projections</span>—the fundamental arrows that 
+                    make unpackaging possible.
+                </p>
+            </div>
+
+            <div class="viz-container" id="viz-identity">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <p>
+                The identity arrow (shown in gold) unpacks into the two projection arrows. This isn't 
+                just a proof technique—it's revealing the <em>structure</em> of packagers.
+            </p>
+        </section>
+
+        <!-- Section 6: Is-Does Duality -->
+        <section id="sec-is-does" class="fade-in">
+            <h2>Is vs. Does</h2>
+            <p>
+                We've been looking at what packagers <em>do</em>. But there's a deeper principle at work here.
+            </p>
+            <p>
+                Consider: what <em>is</em> a word? Its dictionary definition. But what does a word <em>do</em>? 
+                It appears in sentences, relates to other words, has usage patterns.
+            </p>
+            <p>
+                The electron <em>is</em>... a particle? A wave? A quantum field excitation? 
+                The answer changes constantly. But what the electron <em>does</em>—repels other electrons, 
+                forms chemical bonds, conducts electricity—remains stable.
+            </p>
+
+            <div class="callout">
+                <div class="callout-title">Is-Does Duality</div>
+                <p>
+                    <strong>Is:</strong> The internals, the definition, the passive existence.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>Does:</strong> The externals, the interactions, the active behavior.
+                </p>
+            </div>
+
+            <p>
+                In category theory, we often care more about what objects <em>do</em> than what they <em>are</em>. 
+                An object's identity is revealed through its relationships with other objects.
+            </p>
+        </section>
+
+        <!-- Section 7: The Comparison Predicate -->
+        <section id="sec-predicate" class="fade-in">
+            <h2>The Comparison Predicate</h2>
+            <p>
+                In an ordered set, every element <span class="math-emphasis">x</span> induces a 
+                <em>comparison predicate</em>—a function that asks "are you less than or equal to x?"
+            </p>
+
+            <div class="math-block">
+                p(y) = (y ≤ x)
+            </div>
+
+            <p>
+                This predicate captures what <span class="math-emphasis">x</span> <em>does</em>: 
+                how it relates to every other element in the set.
+            </p>
+
+            <div class="viz-container" id="viz-predicate">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <p>
+                The visualization shows a number line. Elements satisfying the predicate 
+                (those ≤ x) glow in gold. The predicate <em>is</em> the set of its satisfiers.
+            </p>
+
+            <div class="controls">
+                <label>x value:</label>
+                <input type="range" id="slider-predicate" min="1" max="9" step="1" value="5">
+                <span class="value" id="value-predicate">5</span>
+            </div>
+        </section>
+
+        <!-- Section 8: Virtual Objects -->
+        <section id="sec-virtual" class="fade-in">
+            <h2>Virtual Objects</h2>
+            <p>
+                Here's where it gets interesting. What if we have a predicate that <em>doesn't</em> 
+                correspond to any actual element?
+            </p>
+            <p>
+                Consider the real number <span class="math-emphasis">π</span> as a "virtual object" 
+                on the integers. It defines a predicate:
+            </p>
+
+            <div class="math-block">
+                p(n) = (n ≤ π)  =  (n ≤ 3)  for integers n
+            </div>
+
+            <p>
+                The number π isn't an integer, but we can still <em>probe</em> it using integers. 
+                We know which integers are below it and which are above.
+            </p>
+
+            <div class="viz-container" id="viz-virtual">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <p>
+                Virtual objects are defined purely by what they <em>do</em>—how they interact with 
+                real objects. This is exactly how Dedekind constructed the real numbers from the rationals.
+            </p>
+        </section>
+
+        <!-- Section 9: The Baby Yoneda Lemma -->
+        <section id="sec-yoneda" class="fade-in">
+            <h2>The Baby Yoneda Lemma</h2>
+            <p>
+                Now we can state the central result. Given an element <span class="math-emphasis">x</span> 
+                and a virtual object <span class="math-emphasis">v</span>:
+            </p>
+
+            <div class="math-block">
+                x ≤ v   ⟺   ∀y. (y ≤ x) → (y ≤ v)
+            </div>
+
+            <p>
+                The left side is what <span class="math-emphasis">x ≤ v</span> <em>is</em>. 
+                The right side is what it <em>does</em>—it transforms any arrow into 
+                <span class="math-emphasis">x</span> into an arrow into <span class="math-emphasis">v</span>.
+            </p>
+
+            <div class="callout insight">
+                <div class="callout-title">The Yoneda Philosophy</div>
+                <p style="margin-bottom: 0;">
+                    A relationship can be understood <strong>passively</strong> (what it is) or 
+                    <strong>actively</strong> (what it enables). These perspectives are 
+                    <em>completely equivalent</em>.
+                </p>
+            </div>
+
+            <div class="viz-container tall" id="viz-yoneda">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <p>
+                The proof is elegant: the → direction follows from transitivity. For the ← direction, 
+                substitute <span class="math-emphasis">y = x</span>. Then reflexivity gives 
+                <span class="math-emphasis">x ≤ x</span>, which implies <span class="math-emphasis">x ≤ v</span>.
+            </p>
+            <p>
+                We <em>follow the identity</em> once more.
+            </p>
+        </section>
+
+        <!-- Section 10: Floor and Ceiling -->
+        <section id="sec-floor" class="fade-in">
+            <h2>Floor & Ceiling</h2>
+            <p>
+                The Yoneda philosophy explains floor and ceiling functions. View a real number 
+                <span class="math-emphasis">r</span> as a virtual object over the integers:
+            </p>
+            <p>
+                If we focus on <em>arrows into</em> <span class="math-emphasis">r</span>, we can represent 
+                <span class="math-emphasis">r</span> by the integer <span class="math-emphasis">⌊r⌋</span>.
+            </p>
+            <p>
+                If we focus on <em>arrows out of</em> <span class="math-emphasis">r</span>, we can represent 
+                <span class="math-emphasis">r</span> by the integer <span class="math-emphasis">⌈r⌉</span>.
+            </p>
+
+            <div class="viz-container" id="viz-floor">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <div class="controls">
+                <label>r value:</label>
+                <input type="range" id="slider-floor" min="0" max="10" step="0.1" value="3.7">
+                <span class="value" id="value-floor">3.7</span>
+            </div>
+
+            <p>
+                The floor is the largest integer with arrows into <span class="math-emphasis">r</span>. 
+                The ceiling is the smallest integer receiving arrows from <span class="math-emphasis">r</span>.
+                Two representations of the same virtual object.
+            </p>
+        </section>
+
+        <!-- Section 11: Closure and Interior -->
+        <section id="sec-closure" class="fade-in">
+            <h2>Closure & Interior</h2>
+            <p>
+                The same pattern explains topological closure and interior. A subset 
+                <span class="math-emphasis">S</span> can be viewed as a virtual object over open sets:
+            </p>
+            <p>
+                The <span class="emphasis">interior</span> Int(S) represents "arrows into" S—it's the 
+                largest open set contained in S.
+            </p>
+            <p>
+                The <span class="emphasis">closure</span> S̄ represents "arrows out of" S—it's the 
+                smallest closed set containing S.
+            </p>
+
+            <div class="viz-container" id="viz-closure">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <p>
+                Click and drag to modify the set S. Watch how the interior (shown in blue) and 
+                closure (shown in rose) respond—always maintaining their Yoneda-characterizations.
+            </p>
+        </section>
+
+        <!-- Section 12: The Categorical Product Revisited -->
+        <section id="sec-product" class="fade-in">
+            <h2>The Categorical Product Revisited</h2>
+            <p>
+                We've come full circle. The categorical product <span class="math-emphasis">A × B</span> 
+                is a packager for morphisms:
+            </p>
+
+            <div class="math-block">
+                Hom(Z, A × B)  ≅  Hom(Z, A) × Hom(Z, B)
+            </div>
+
+            <p>
+                Morphisms into the product correspond to pairs of morphisms. And by following the identity:
+            </p>
+
+            <div class="math-block">
+                id: A × B → A × B  ⟿  π₁: A × B → A  and  π₂: A × B → B
+            </div>
+
+            <p>
+                The universal projections emerge automatically, just like how 
+                <span class="math-emphasis">min(a,b) ≤ a</span> emerged from reflexivity.
+            </p>
+
+            <div class="viz-container tall" id="viz-product">
+                <canvas class="viz-canvas"></canvas>
+            </div>
+
+            <p>
+                The full categorical product in 3D. Morphisms from any object 
+                <span class="math-emphasis">Z</span> into <span class="math-emphasis">A × B</span> 
+                factor uniquely through the projections. This is Yoneda in action.
+            </p>
+        </section>
+
+        <!-- Section 13: Conclusion -->
+        <section id="sec-conclusion" class="fade-in">
+            <h2>The Yoneda Way of Seeing</h2>
+            <p>
+                The Yoneda lemma tells us that objects are determined by their relationships. 
+                What something <em>is</em> and what it <em>does</em> are two views of the same reality.
+            </p>
+            <p>
+                This isn't just a theorem—it's a philosophy. When you want to understand a mathematical 
+                object, don't ask what it's made of. Ask what it interacts with. Ask what arrows go in 
+                and what arrows go out.
+            </p>
+            <p>
+                The identity arrow always factors through any packaging. Following it reveals the 
+                canonical structure hidden within.
+            </p>
+
+            <div class="callout">
+                <div class="callout-title">The Takeaway</div>
+                <p style="margin-bottom: 0;">
+                    Universal properties specify what you want an object to <em>do</em>. 
+                    The Yoneda lemma guarantees that if such an object exists, it's uniquely 
+                    determined by these functional requirements. <em>Doing</em> determines <em>being</em>.
+                </p>
+            </div>
+        </section>
+
+        <footer>
+            <p>
+                Interactive essay inspired by 
+                <a href="https://pseudonium.github.io/2026/01/22/The_Baby_Yoneda_Lemma.html" target="_blank">The Baby Yoneda Lemma</a> 
+                and 
+                <a href="https://pseudonium.github.io/2026/01/18/Products_Categorically.html" target="_blank">Products, Categorically</a>
+                by Pseudonium.
+            </p>
+            <p style="margin-top: 1rem; font-size: 0.85rem;">
+                Built with Three.js & anime.js
+            </p>
+        </footer>
+    </main>
+
+    <script>
+        // =========================================
+        // THREE.JS BACKGROUND SCENE
+        // =========================================
+        const bgCanvas = document.getElementById('three-canvas');
+        const bgRenderer = new THREE.WebGLRenderer({ 
+            canvas: bgCanvas, 
+            antialias: true, 
+            alpha: true 
+        });
+        bgRenderer.setSize(window.innerWidth, window.innerHeight);
+        bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const bgScene = new THREE.Scene();
+        const bgCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        bgCamera.position.z = 30;
+
+        // Floating particles representing abstract morphisms
+        const particleCount = 200;
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        const colorPalette = [
+            new THREE.Color(0xd4a574), // gold
+            new THREE.Color(0x6b93d6), // blue
+            new THREE.Color(0xc77dba), // rose
+            new THREE.Color(0x7bc9b8), // mint
+        ];
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 80;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 80;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 40 - 20;
+
+            const color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.15,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        bgScene.add(particles);
+
+        // Subtle connecting lines
+        const lineGeometry = new THREE.BufferGeometry();
+        const linePositions = new Float32Array(100 * 6);
+        const lineColors = new Float32Array(100 * 6);
+
+        for (let i = 0; i < 100; i++) {
+            const idx1 = Math.floor(Math.random() * particleCount);
+            const idx2 = Math.floor(Math.random() * particleCount);
+            
+            linePositions[i * 6] = positions[idx1 * 3];
+            linePositions[i * 6 + 1] = positions[idx1 * 3 + 1];
+            linePositions[i * 6 + 2] = positions[idx1 * 3 + 2];
+            linePositions[i * 6 + 3] = positions[idx2 * 3];
+            linePositions[i * 6 + 4] = positions[idx2 * 3 + 1];
+            linePositions[i * 6 + 5] = positions[idx2 * 3 + 2];
+
+            const col = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+            for (let j = 0; j < 2; j++) {
+                lineColors[i * 6 + j * 3] = col.r;
+                lineColors[i * 6 + j * 3 + 1] = col.g;
+                lineColors[i * 6 + j * 3 + 2] = col.b;
+            }
+        }
+
+        lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+        lineGeometry.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
+
+        const lineMaterial = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.08,
+            blending: THREE.AdditiveBlending
+        });
+
+        const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+        bgScene.add(lines);
+
+        let scrollY = 0;
+        window.addEventListener('scroll', () => {
+            scrollY = window.scrollY;
+        });
+
+        function animateBg() {
+            requestAnimationFrame(animateBg);
+            
+            const time = Date.now() * 0.0001;
+            particles.rotation.y = time * 0.2 + scrollY * 0.0001;
+            particles.rotation.x = Math.sin(time * 0.3) * 0.1;
+            lines.rotation.y = particles.rotation.y;
+            lines.rotation.x = particles.rotation.x;
+
+            bgRenderer.render(bgScene, bgCamera);
+        }
+        animateBg();
+
+        window.addEventListener('resize', () => {
+            bgCamera.aspect = window.innerWidth / window.innerHeight;
+            bgCamera.updateProjectionMatrix();
+            bgRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // =========================================
+        // FADE-IN OBSERVER
+        // =========================================
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => fadeObserver.observe(el));
+
+        // =========================================
+        // VISUALIZATION: MINIMUM AS PACKAGER
+        // =========================================
+        (function initMinimumViz() {
+            const container = document.getElementById('viz-minimum');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            const slider = document.getElementById('slider-x');
+            const valueDisplay = document.getElementById('value-x');
+
+            let xValue = 2;
+            const a = 5, b = 7;
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cx = w / 2;
+                const cy = h / 2;
+                const spacing = 100;
+
+                // Positions
+                const posX = { x: cx - spacing * 1.5, y: cy + 80 };
+                const posA = { x: cx + spacing * 0.5, y: cy - 60 };
+                const posB = { x: cx + spacing * 1.5, y: cy - 60 };
+                const posMin = { x: cx, y: cy + 80 };
+
+                const minAB = Math.min(a, b);
+                const xValid = xValue <= minAB;
+
+                // Draw arrows
+                function drawArrow(from, to, color, opacity = 1) {
+                    ctx.strokeStyle = color;
+                    ctx.globalAlpha = opacity;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(from.x, from.y);
+                    ctx.lineTo(to.x, to.y);
+                    ctx.stroke();
+
+                    // Arrowhead
+                    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                    const headLen = 10;
+                    ctx.beginPath();
+                    ctx.moveTo(to.x, to.y);
+                    ctx.lineTo(to.x - headLen * Math.cos(angle - Math.PI / 6), to.y - headLen * Math.sin(angle - Math.PI / 6));
+                    ctx.lineTo(to.x - headLen * Math.cos(angle + Math.PI / 6), to.y - headLen * Math.sin(angle + Math.PI / 6));
+                    ctx.closePath();
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+
+                // Dashed arrows (always visible)
+                ctx.setLineDash([5, 5]);
+                drawArrow(posX, posA, '#9a9590', 0.3);
+                drawArrow(posX, posB, '#9a9590', 0.3);
+                ctx.setLineDash([]);
+
+                // Solid arrow to min (when valid)
+                if (xValid) {
+                    drawArrow(posX, posMin, '#d4a574');
+                    // Implied arrows from min
+                    drawArrow(posMin, posA, '#6b93d6', 0.7);
+                    drawArrow(posMin, posB, '#6b93d6', 0.7);
+                }
+
+                // Draw nodes
+                function drawNode(pos, label, value, color) {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0a0a0f';
+                    ctx.font = 'bold 14px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(value.toString(), pos.x, pos.y);
+
+                    ctx.fillStyle = '#e8e6e3';
+                    ctx.font = '14px Crimson Pro';
+                    ctx.fillText(label, pos.x, pos.y - 35);
+                }
+
+                drawNode(posX, 'x', xValue.toFixed(1), xValid ? '#d4a574' : '#9a9590');
+                drawNode(posA, 'a', a, '#6b93d6');
+                drawNode(posB, 'b', b, '#6b93d6');
+                drawNode(posMin, 'min(a,b)', minAB, '#7bc9b8');
+
+                // Status text
+                ctx.fillStyle = xValid ? '#7bc9b8' : '#c77dba';
+                ctx.font = '16px Crimson Pro';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    xValid ? `x ≤ min(a,b) ✓  →  x ≤ a and x ≤ b` : `x > min(a,b)  →  relationship fails`,
+                    cx, h - 30
+                );
+            }
+
+            slider.addEventListener('input', (e) => {
+                xValue = parseFloat(e.target.value);
+                valueDisplay.textContent = xValue.toFixed(1);
+                draw();
+            });
+
+            resize();
+            draw();
+            window.addEventListener('resize', () => { resize(); draw(); });
+        })();
+
+        // =========================================
+        // VISUALIZATION: GCD LATTICE
+        // =========================================
+        (function initGCDViz() {
+            const container = document.getElementById('viz-gcd');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            const slider = document.getElementById('slider-d');
+            const valueDisplay = document.getElementById('value-d');
+
+            let dValue = 3;
+            const a = 12, b = 18;
+
+            function gcd(x, y) {
+                while (y) { [x, y] = [y, x % y]; }
+                return x;
+            }
+
+            const gcdAB = gcd(a, b);
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cx = w / 2;
+                
+                // Lattice positions
+                const nodes = {
+                    1: { x: cx, y: h - 60, value: 1 },
+                    2: { x: cx - 120, y: h - 140, value: 2 },
+                    3: { x: cx, y: h - 140, value: 3 },
+                    6: { x: cx - 60, y: h - 220, value: 6 },
+                    12: { x: cx - 120, y: h - 300, value: 12 },
+                    18: { x: cx + 60, y: h - 300, value: 18 },
+                    gcd: { x: cx - 60, y: h - 220, value: gcdAB, label: 'gcd(12,18)' },
+                    d: { x: cx + 100, y: h - 140, value: dValue, label: 'd' }
+                };
+
+                // Divisibility edges
+                const edges = [
+                    [1, 2], [1, 3], [2, 6], [3, 6], [6, 12], [6, 18]
+                ];
+
+                // Draw edges
+                ctx.strokeStyle = '#3a3a45';
+                ctx.lineWidth = 1;
+                edges.forEach(([from, to]) => {
+                    const f = nodes[from];
+                    const t = nodes[to];
+                    ctx.beginPath();
+                    ctx.moveTo(f.x, f.y);
+                    ctx.lineTo(t.x, t.y);
+                    ctx.stroke();
+                });
+
+                const dDividesGCD = gcdAB % dValue === 0;
+
+                // Draw d's arrows
+                if (dDividesGCD) {
+                    // Arrow from d to gcd
+                    ctx.strokeStyle = '#d4a574';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(nodes.d.x, nodes.d.y);
+                    ctx.lineTo(nodes.gcd.x + 30, nodes.gcd.y);
+                    ctx.stroke();
+
+                    // Arrows to a and b
+                    ctx.strokeStyle = '#6b93d6';
+                    ctx.setLineDash([5, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(nodes.d.x, nodes.d.y);
+                    ctx.lineTo(nodes[12].x + 20, nodes[12].y + 20);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(nodes.d.x, nodes.d.y);
+                    ctx.lineTo(nodes[18].x - 20, nodes[18].y + 20);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Draw nodes
+                function drawNode(key, color, isHighlight = false) {
+                    const node = nodes[key];
+                    if (!node) return;
+                    
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, isHighlight ? 24 : 18, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (isHighlight) {
+                        ctx.strokeStyle = '#d4a574';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = '#0a0a0f';
+                    ctx.font = `bold ${isHighlight ? 14 : 12}px JetBrains Mono`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(node.value.toString(), node.x, node.y);
+
+                    if (node.label) {
+                        ctx.fillStyle = '#e8e6e3';
+                        ctx.font = '13px Crimson Pro';
+                        ctx.fillText(node.label, node.x, node.y - 35);
+                    }
+                }
+
+                drawNode(1, '#5a5a65');
+                drawNode(2, '#5a5a65');
+                drawNode(3, '#5a5a65');
+                drawNode(6, '#7bc9b8', true);
+                drawNode(12, '#6b93d6');
+                drawNode(18, '#6b93d6');
+
+                // Draw d node
+                ctx.fillStyle = dDividesGCD ? '#d4a574' : '#c77dba';
+                ctx.beginPath();
+                ctx.arc(nodes.d.x, nodes.d.y, 22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = 'bold 14px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(dValue.toString(), nodes.d.x, nodes.d.y);
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '13px Crimson Pro';
+                ctx.fillText('d', nodes.d.x, nodes.d.y - 35);
+
+                // Labels
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '14px Crimson Pro';
+                ctx.textAlign = 'left';
+                ctx.fillText('a = 12', nodes[12].x - 50, nodes[12].y - 30);
+                ctx.fillText('b = 18', nodes[18].x + 30, nodes[18].y - 30);
+
+                // Status
+                ctx.textAlign = 'center';
+                ctx.fillStyle = dDividesGCD ? '#7bc9b8' : '#c77dba';
+                ctx.font = '15px Crimson Pro';
+                ctx.fillText(
+                    dDividesGCD 
+                        ? `d=${dValue} divides gcd(12,18)=6  ⟹  d divides 12 and 18` 
+                        : `d=${dValue} does not divide gcd(12,18)=6`,
+                    cx, 35
+                );
+            }
+
+            slider.addEventListener('input', (e) => {
+                dValue = parseInt(e.target.value);
+                valueDisplay.textContent = dValue;
+                draw();
+            });
+
+            resize();
+            draw();
+            window.addEventListener('resize', () => { resize(); draw(); });
+        })();
+
+        // =========================================
+        // VISUALIZATION: FOLLOWING IDENTITY
+        // =========================================
+        (function initIdentityViz() {
+            const container = document.getElementById('viz-identity');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            let animProgress = 0;
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cx = w / 2;
+                const cy = h / 2;
+
+                // Positions
+                const posMin = { x: cx, y: cy + 40 };
+                const posA = { x: cx - 80, y: cy - 80 };
+                const posB = { x: cx + 80, y: cy - 80 };
+
+                // Identity loop
+                ctx.strokeStyle = '#d4a574';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(posMin.x, posMin.y + 25, 25, -Math.PI * 0.8, -Math.PI * 0.2);
+                ctx.stroke();
+                
+                // Arrowhead on loop
+                ctx.fillStyle = '#d4a574';
+                ctx.beginPath();
+                ctx.moveTo(posMin.x + 20, posMin.y + 10);
+                ctx.lineTo(posMin.x + 28, posMin.y + 18);
+                ctx.lineTo(posMin.x + 18, posMin.y + 22);
+                ctx.closePath();
+                ctx.fill();
+
+                // Projection arrows (animated)
+                const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                const prog = ease(animProgress);
+
+                function drawProjection(to, color) {
+                    const fromX = posMin.x + (to.x - posMin.x) * prog;
+                    const fromY = posMin.y + (to.y - posMin.y) * prog;
+                    
+                    ctx.strokeStyle = color;
+                    ctx.globalAlpha = prog;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(posMin.x, posMin.y);
+                    ctx.lineTo(fromX, fromY);
+                    ctx.stroke();
+
+                    if (prog > 0.9) {
+                        const angle = Math.atan2(to.y - posMin.y, to.x - posMin.x);
+                        const headLen = 10;
+                        ctx.beginPath();
+                        ctx.moveTo(to.x, to.y);
+                        ctx.lineTo(to.x - headLen * Math.cos(angle - Math.PI / 6), to.y - headLen * Math.sin(angle - Math.PI / 6));
+                        ctx.lineTo(to.x - headLen * Math.cos(angle + Math.PI / 6), to.y - headLen * Math.sin(angle + Math.PI / 6));
+                        ctx.closePath();
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+                }
+
+                drawProjection(posA, '#6b93d6');
+                drawProjection(posB, '#c77dba');
+
+                // Nodes
+                function drawNode(pos, label, color, size = 22) {
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#e8e6e3';
+                    ctx.font = '14px Crimson Pro';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, pos.x, pos.y - size - 15);
+                }
+
+                drawNode(posMin, 'min(a, b)', '#7bc9b8', 28);
+                drawNode(posA, 'a', '#6b93d6');
+                drawNode(posB, 'b', '#c77dba');
+
+                // Labels
+                ctx.fillStyle = '#d4a574';
+                ctx.font = 'italic 14px Crimson Pro';
+                ctx.fillText('id', posMin.x + 35, posMin.y + 50);
+
+                if (prog > 0.5) {
+                    ctx.globalAlpha = (prog - 0.5) * 2;
+                    ctx.fillStyle = '#6b93d6';
+                    ctx.fillText('π₁', (posMin.x + posA.x) / 2 - 20, (posMin.y + posA.y) / 2);
+                    ctx.fillStyle = '#c77dba';
+                    ctx.fillText('π₂', (posMin.x + posB.x) / 2 + 20, (posMin.y + posB.y) / 2);
+                    ctx.globalAlpha = 1;
+                }
+
+                // Equation
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '15px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText('id: min(a,b) → min(a,b)  ⟹  π₁, π₂', cx, h - 30);
+            }
+
+            // Animation on scroll into view
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    anime({
+                        targets: { prog: 0 },
+                        prog: 1,
+                        duration: 1500,
+                        easing: 'easeInOutQuad',
+                        update: (anim) => {
+                            animProgress = anim.animations[0].currentValue;
+                            draw();
+                        }
+                    });
+                }
+            }, { threshold: 0.5 });
+
+            resize();
+            draw();
+            observer.observe(container);
+            window.addEventListener('resize', () => { resize(); draw(); });
+        })();
+
+        // =========================================
+        // VISUALIZATION: COMPARISON PREDICATE
+        // =========================================
+        (function initPredicateViz() {
+            const container = document.getElementById('viz-predicate');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            const slider = document.getElementById('slider-predicate');
+            const valueDisplay = document.getElementById('value-predicate');
+
+            let xValue = 5;
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cy = h / 2;
+                const startX = 60;
+                const endX = w - 60;
+                const spacing = (endX - startX) / 10;
+
+                // Number line
+                ctx.strokeStyle = '#3a3a45';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(startX - 20, cy);
+                ctx.lineTo(endX + 20, cy);
+                ctx.stroke();
+
+                // Draw numbers 0-10
+                for (let i = 0; i <= 10; i++) {
+                    const x = startX + i * spacing;
+                    const satisfies = i <= xValue;
+
+                    // Glow for satisfying elements
+                    if (satisfies) {
+                        const gradient = ctx.createRadialGradient(x, cy, 0, x, cy, 30);
+                        gradient.addColorStop(0, 'rgba(212, 165, 116, 0.4)');
+                        gradient.addColorStop(1, 'rgba(212, 165, 116, 0)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(x - 30, cy - 30, 60, 60);
+                    }
+
+                    // Tick mark
+                    ctx.strokeStyle = satisfies ? '#d4a574' : '#5a5a65';
+                    ctx.lineWidth = satisfies ? 3 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x, cy - 8);
+                    ctx.lineTo(x, cy + 8);
+                    ctx.stroke();
+
+                    // Number label
+                    ctx.fillStyle = satisfies ? '#d4a574' : '#7a7a85';
+                    ctx.font = `${satisfies ? 'bold ' : ''}14px JetBrains Mono`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i.toString(), x, cy + 28);
+                }
+
+                // Highlight x
+                const xPos = startX + xValue * spacing;
+                ctx.fillStyle = '#7bc9b8';
+                ctx.beginPath();
+                ctx.arc(xPos, cy - 50, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = 'bold 14px JetBrains Mono';
+                ctx.fillText('x', xPos, cy - 50);
+
+                // Arrow from x to its position
+                ctx.strokeStyle = '#7bc9b8';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(xPos, cy - 32);
+                ctx.lineTo(xPos, cy - 12);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Predicate notation
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '15px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(`p(y) = (y ≤ ${xValue})`, w / 2, h - 30);
+
+                // Lower set indicator
+                ctx.fillStyle = '#d4a574';
+                ctx.font = 'italic 14px Crimson Pro';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Lower set: {0, 1, ..., ${xValue}}`, 20, 30);
+            }
+
+            slider.addEventListener('input', (e) => {
+                xValue = parseInt(e.target.value);
+                valueDisplay.textContent = xValue;
+                draw();
+            });
+
+            resize();
+            draw();
+            window.addEventListener('resize', () => { resize(); draw(); });
+        })();
+
+        // =========================================
+        // VISUALIZATION: VIRTUAL OBJECT (π on integers)
+        // =========================================
+        (function initVirtualViz() {
+            const container = document.getElementById('viz-virtual');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cy = h / 2;
+                const startX = 80;
+                const endX = w - 80;
+                const spacing = (endX - startX) / 7;
+
+                // Number line
+                ctx.strokeStyle = '#3a3a45';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(startX - 30, cy);
+                ctx.lineTo(endX + 30, cy);
+                ctx.stroke();
+
+                // π position (between 3 and 4)
+                const piPos = startX + 3.14159 * spacing;
+
+                // Draw integers 0-7
+                for (let i = 0; i <= 7; i++) {
+                    const x = startX + i * spacing;
+                    const belowPi = i <= 3;
+                    const abovePi = i >= 4;
+
+                    // Color based on relation to π
+                    let color = '#5a5a65';
+                    if (belowPi) color = '#6b93d6';
+                    if (abovePi) color = '#c77dba';
+
+                    // Tick
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x, cy - 10);
+                    ctx.lineTo(x, cy + 10);
+                    ctx.stroke();
+
+                    // Number
+                    ctx.fillStyle = color;
+                    ctx.font = 'bold 16px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i.toString(), x, cy + 35);
+
+                    // Arrows to/from π
+                    if (belowPi) {
+                        ctx.strokeStyle = '#6b93d6';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(x, cy - 20);
+                        ctx.quadraticCurveTo((x + piPos) / 2, cy - 60, piPos, cy - 60);
+                        ctx.stroke();
+                    }
+                    if (abovePi) {
+                        ctx.strokeStyle = '#c77dba';
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(piPos, cy - 60);
+                        ctx.quadraticCurveTo((x + piPos) / 2, cy - 90, x, cy - 20);
+                        ctx.stroke();
+                    }
+                }
+
+                // π marker
+                ctx.fillStyle = '#d4a574';
+                ctx.beginPath();
+                ctx.arc(piPos, cy - 60, 20, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Dashed circle (virtual)
+                ctx.strokeStyle = '#d4a574';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(piPos, cy - 60, 25, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // π label
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = 'bold 16px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('π', piPos, cy - 56);
+
+                // Labels
+                ctx.fillStyle = '#6b93d6';
+                ctx.font = '13px Crimson Pro';
+                ctx.fillText('n ≤ π', startX + 1.5 * spacing, cy - 85);
+                
+                ctx.fillStyle = '#c77dba';
+                ctx.fillText('π ≤ n', startX + 5.5 * spacing, cy - 105);
+
+                // Floor/ceiling indicators
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '14px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText('⌊π⌋ = 3', startX + 3 * spacing, cy + 70);
+                ctx.fillText('⌈π⌉ = 4', startX + 4 * spacing, cy + 70);
+
+                // Description
+                ctx.fillStyle = '#9a9590';
+                ctx.font = 'italic 14px Crimson Pro';
+                ctx.fillText('π as a virtual object: probed by integers, defined by its relationships', w / 2, h - 20);
+            }
+
+            resize();
+            draw();
+            window.addEventListener('resize', () => { resize(); draw(); });
+        })();
+
+        // =========================================
+        // VISUALIZATION: BABY YONEDA
+        // =========================================
+        (function initYonedaViz() {
+            const container = document.getElementById('viz-yoneda');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            let animPhase = 0;
+            let time = 0;
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cx = w / 2;
+                const cy = h / 2;
+
+                // x node
+                const posX = { x: cx - 150, y: cy + 20 };
+                // v virtual node
+                const posV = { x: cx + 150, y: cy + 20 };
+                // Various y nodes
+                const yNodes = [
+                    { x: cx - 250, y: cy - 60 },
+                    { x: cx - 200, y: cy + 100 },
+                    { x: cx - 280, y: cy + 50 },
+                ];
+
+                // Draw y → x arrows
+                yNodes.forEach((pos, i) => {
+                    const t = (time + i * 0.3) % 1;
+                    const alpha = 0.3 + 0.4 * Math.sin(t * Math.PI);
+                    
+                    ctx.strokeStyle = `rgba(107, 147, 214, ${alpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y);
+                    ctx.lineTo(posX.x - 25, posX.y + (pos.y - posX.y) * 0.3);
+                    ctx.stroke();
+
+                    // y node
+                    ctx.fillStyle = `rgba(107, 147, 214, ${alpha + 0.3})`;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#e8e6e3';
+                    ctx.font = '11px JetBrains Mono';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`y${i + 1}`, pos.x, pos.y + 4);
+                });
+
+                // x → v arrow (IS perspective)
+                ctx.strokeStyle = '#d4a574';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(posX.x + 25, posX.y);
+                ctx.lineTo(posV.x - 30, posV.y);
+                ctx.stroke();
+
+                // Arrowhead
+                ctx.fillStyle = '#d4a574';
+                ctx.beginPath();
+                ctx.moveTo(posV.x - 25, posV.y);
+                ctx.lineTo(posV.x - 35, posV.y - 6);
+                ctx.lineTo(posV.x - 35, posV.y + 6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Transformation arrows (DOES perspective)
+                yNodes.forEach((pos, i) => {
+                    const t = (time + i * 0.3) % 1;
+                    const alpha = 0.2 + 0.3 * Math.sin(t * Math.PI);
+                    
+                    ctx.strokeStyle = `rgba(123, 201, 184, ${alpha})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x + 15, pos.y);
+                    ctx.quadraticCurveTo(cx, pos.y - 40, posV.x - 25, posV.y - 20);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                });
+
+                // x node
+                ctx.fillStyle = '#6b93d6';
+                ctx.beginPath();
+                ctx.arc(posX.x, posX.y, 22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = 'bold 16px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText('x', posX.x, posX.y + 5);
+
+                // v node (virtual - dashed border)
+                ctx.fillStyle = '#c77dba';
+                ctx.beginPath();
+                ctx.arc(posV.x, posV.y, 22, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#c77dba';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(posV.x, posV.y, 28, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = 'bold 16px JetBrains Mono';
+                ctx.fillText('v', posV.x, posV.y + 5);
+
+                // Labels
+                ctx.fillStyle = '#d4a574';
+                ctx.font = 'italic 14px Crimson Pro';
+                ctx.fillText('x ≤ v', cx, posX.y - 30);
+
+                ctx.fillStyle = '#7bc9b8';
+                ctx.fillText('∀y: (y ≤ x) → (y ≤ v)', cx, cy - 90);
+
+                // The equivalence
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '14px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText('IS', cx - 100, h - 60);
+                ctx.fillText('⟺', cx, h - 60);
+                ctx.fillText('DOES', cx + 100, h - 60);
+
+                ctx.font = '13px JetBrains Mono';
+                ctx.fillStyle = '#d4a574';
+                ctx.fillText('x ≤ v', cx - 100, h - 35);
+                ctx.fillStyle = '#7bc9b8';
+                ctx.fillText('∀y. (y ≤ x) → (y ≤ v)', cx + 100, h - 35);
+
+                time += 0.005;
+            }
+
+            function animate() {
+                draw();
+                requestAnimationFrame(animate);
+            }
+
+            resize();
+            animate();
+            window.addEventListener('resize', resize);
+        })();
+
+        // =========================================
+        // VISUALIZATION: FLOOR/CEILING
+        // =========================================
+        (function initFloorViz() {
+            const container = document.getElementById('viz-floor');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            const slider = document.getElementById('slider-floor');
+            const valueDisplay = document.getElementById('value-floor');
+
+            let rValue = 3.7;
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cy = h / 2;
+                const startX = 60;
+                const endX = w - 60;
+                const scale = (endX - startX) / 10;
+
+                // Number line
+                ctx.strokeStyle = '#3a3a45';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(startX - 20, cy);
+                ctx.lineTo(endX + 20, cy);
+                ctx.stroke();
+
+                const floorR = Math.floor(rValue);
+                const ceilR = Math.ceil(rValue);
+                const rPos = startX + rValue * scale;
+
+                // Draw integers
+                for (let i = 0; i <= 10; i++) {
+                    const x = startX + i * scale;
+                    
+                    let color = '#5a5a65';
+                    if (i === floorR) color = '#6b93d6';
+                    if (i === ceilR) color = '#c77dba';
+
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = i === floorR || i === ceilR ? 3 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x, cy - 8);
+                    ctx.lineTo(x, cy + 8);
+                    ctx.stroke();
+
+                    ctx.fillStyle = color;
+                    ctx.font = `${i === floorR || i === ceilR ? 'bold ' : ''}14px JetBrains Mono`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(i.toString(), x, cy + 30);
+                }
+
+                // r marker
+                ctx.fillStyle = '#d4a574';
+                ctx.beginPath();
+                ctx.arc(rPos, cy - 50, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Dashed (virtual)
+                ctx.strokeStyle = '#d4a574';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.arc(rPos, cy - 50, 23, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#0a0a0f';
+                ctx.font = 'bold 12px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(rValue.toFixed(1), rPos, cy - 47);
+
+                // Arrow to line
+                ctx.strokeStyle = '#d4a574';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(rPos, cy - 27);
+                ctx.lineTo(rPos, cy - 12);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Floor arrow (into r)
+                const floorPos = startX + floorR * scale;
+                ctx.strokeStyle = '#6b93d6';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(floorPos, cy - 15);
+                ctx.quadraticCurveTo(floorPos + 20, cy - 70, rPos - 20, cy - 50);
+                ctx.stroke();
+
+                // Ceiling arrow (from r)
+                const ceilPos = startX + ceilR * scale;
+                ctx.strokeStyle = '#c77dba';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(rPos + 20, cy - 50);
+                ctx.quadraticCurveTo(ceilPos - 20, cy - 70, ceilPos, cy - 15);
+                ctx.stroke();
+
+                // Labels
+                ctx.fillStyle = '#6b93d6';
+                ctx.font = '14px JetBrains Mono';
+                ctx.fillText(`⌊r⌋ = ${floorR}`, floorPos, cy + 60);
+                ctx.font = '12px Crimson Pro';
+                ctx.fillText('arrows into r', floorPos, cy + 80);
+
+                ctx.fillStyle = '#c77dba';
+                ctx.font = '14px JetBrains Mono';
+                ctx.fillText(`⌈r⌉ = ${ceilR}`, ceilPos, cy + 60);
+                ctx.font = '12px Crimson Pro';
+                ctx.fillText('arrows from r', ceilPos, cy + 80);
+
+                // Description
+                ctx.fillStyle = '#9a9590';
+                ctx.font = 'italic 13px Crimson Pro';
+                ctx.textAlign = 'center';
+                ctx.fillText('Two representations of the same virtual object', w / 2, h - 20);
+            }
+
+            slider.addEventListener('input', (e) => {
+                rValue = parseFloat(e.target.value);
+                valueDisplay.textContent = rValue.toFixed(1);
+                draw();
+            });
+
+            resize();
+            draw();
+            window.addEventListener('resize', () => { resize(); draw(); });
+        })();
+
+        // =========================================
+        // VISUALIZATION: CLOSURE/INTERIOR (Simplified)
+        // =========================================
+        (function initClosureViz() {
+            const container = document.getElementById('viz-closure');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            const ctx = canvas.getContext('2d');
+            let time = 0;
+
+            function resize() {
+                const rect = container.getBoundingClientRect();
+                canvas.width = rect.width * window.devicePixelRatio;
+                canvas.height = rect.height * window.devicePixelRatio;
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            function draw() {
+                const w = canvas.width / window.devicePixelRatio;
+                const h = canvas.height / window.devicePixelRatio;
+                
+                ctx.fillStyle = '#12121a';
+                ctx.fillRect(0, 0, w, h);
+
+                const cx = w / 2;
+                const cy = h / 2;
+
+                // Original set S (irregular shape)
+                const pulse = 1 + 0.03 * Math.sin(time * 2);
+                
+                // S boundary points
+                const sPoints = [];
+                const numPoints = 32;
+                const baseRadius = 80;
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    const noise = 15 * Math.sin(angle * 3) + 10 * Math.cos(angle * 5);
+                    const r = baseRadius + noise;
+                    sPoints.push({
+                        x: cx + r * Math.cos(angle),
+                        y: cy + r * Math.sin(angle)
+                    });
+                }
+
+                // Interior (smaller, smoother)
+                ctx.fillStyle = 'rgba(107, 147, 214, 0.3)';
+                ctx.beginPath();
+                const intPoints = sPoints.map((p, i) => {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    const r = 60 + 8 * Math.sin(angle * 3);
+                    return {
+                        x: cx + r * Math.cos(angle),
+                        y: cy + r * Math.sin(angle)
+                    };
+                });
+                ctx.moveTo(intPoints[0].x, intPoints[0].y);
+                for (let i = 1; i < intPoints.length; i++) {
+                    ctx.lineTo(intPoints[i].x, intPoints[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // The set S itself
+                ctx.strokeStyle = '#d4a574';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(sPoints[0].x, sPoints[0].y);
+                for (let i = 1; i < sPoints.length; i++) {
+                    ctx.lineTo(sPoints[i].x, sPoints[i].y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Closure (larger)
+                ctx.strokeStyle = '#c77dba';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                const closPoints = sPoints.map((p, i) => {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    const noise = 20 * Math.sin(angle * 3) + 12 * Math.cos(angle * 5);
+                    const r = baseRadius + noise + 25 * pulse;
+                    return {
+                        x: cx + r * Math.cos(angle),
+                        y: cy + r * Math.sin(angle)
+                    };
+                });
+                ctx.moveTo(closPoints[0].x, closPoints[0].y);
+                for (let i = 1; i < closPoints.length; i++) {
+                    ctx.lineTo(closPoints[i].x, closPoints[i].y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Labels
+                ctx.fillStyle = '#d4a574';
+                ctx.font = 'bold 16px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText('S', cx, cy);
+
+                ctx.fillStyle = '#6b93d6';
+                ctx.font = '14px Crimson Pro';
+                ctx.fillText('Int(S)', cx - 100, cy - 100);
+
+                ctx.fillStyle = '#c77dba';
+                ctx.fillText('S̄', cx + 120, cy - 110);
+
+                // Legend
+                ctx.fillStyle = '#e8e6e3';
+                ctx.font = '13px Crimson Pro';
+                ctx.textAlign = 'left';
+                
+                ctx.fillStyle = '#6b93d6';
+                ctx.fillRect(20, h - 70, 15, 15);
+                ctx.fillStyle = '#e8e6e3';
+                ctx.fillText('Interior: largest open set ⊆ S', 45, h - 58);
+
+                ctx.strokeStyle = '#c77dba';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(20, h - 40);
+                ctx.lineTo(35, h - 40);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#e8e6e3';
+                ctx.fillText('Closure: smallest closed set ⊇ S', 45, h - 35);
+
+                time += 0.02;
+            }
+
+            function animate() {
+                draw();
+                requestAnimationFrame(animate);
+            }
+
+            resize();
+            animate();
+            window.addEventListener('resize', resize);
+        })();
+
+        // =========================================
+        // VISUALIZATION: CATEGORICAL PRODUCT (3D)
+        // =========================================
+        (function initProductViz() {
+            const container = document.getElementById('viz-product');
+            if (!container) return;
+
+            const canvas = container.querySelector('.viz-canvas');
+            
+            const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x12121a);
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(6, 4, 8);
+            camera.lookAt(0, 0, 0);
+
+            // Nodes
+            const nodeGeom = new THREE.SphereGeometry(0.3, 32, 32);
+            
+            // A × B (center-top)
+            const matProduct = new THREE.MeshBasicMaterial({ color: 0x7bc9b8 });
+            const nodeProduct = new THREE.Mesh(nodeGeom, matProduct);
+            nodeProduct.position.set(0, 2, 0);
+            scene.add(nodeProduct);
+
+            // A (left)
+            const matA = new THREE.MeshBasicMaterial({ color: 0x6b93d6 });
+            const nodeA = new THREE.Mesh(nodeGeom, matA);
+            nodeA.position.set(-2, 0, 0);
+            scene.add(nodeA);
+
+            // B (right)
+            const matB = new THREE.MeshBasicMaterial({ color: 0xc77dba });
+            const nodeB = new THREE.Mesh(nodeGeom, matB);
+            nodeB.position.set(2, 0, 0);
+            scene.add(nodeB);
+
+            // Z (front)
+            const matZ = new THREE.MeshBasicMaterial({ color: 0xd4a574 });
+            const nodeZ = new THREE.Mesh(nodeGeom, matZ);
+            nodeZ.position.set(0, 0, 3);
+            scene.add(nodeZ);
+
+            // Create arrow helper
+            function createArrow(from, to, color, dashed = false) {
+                const dir = new THREE.Vector3().subVectors(to, from);
+                const length = dir.length() - 0.4;
+                dir.normalize();
+                
+                const material = new THREE.LineBasicMaterial({ 
+                    color,
+                    transparent: true,
+                    opacity: dashed ? 0.5 : 0.8
+                });
+
+                const points = [];
+                points.push(from.clone().add(dir.clone().multiplyScalar(0.35)));
+                points.push(to.clone().sub(dir.clone().multiplyScalar(0.35)));
+                
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(geometry, material);
+                
+                // Cone for arrowhead
+                const coneGeom = new THREE.ConeGeometry(0.08, 0.2, 8);
+                const cone = new THREE.Mesh(coneGeom, new THREE.MeshBasicMaterial({ color }));
+                cone.position.copy(to.clone().sub(dir.clone().multiplyScalar(0.35)));
+                cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                
+                const group = new THREE.Group();
+                group.add(line);
+                group.add(cone);
+                return group;
+            }
+
+            // Projection arrows (π₁, π₂)
+            const arrowPi1 = createArrow(nodeProduct.position, nodeA.position, 0x6b93d6);
+            const arrowPi2 = createArrow(nodeProduct.position, nodeB.position, 0xc77dba);
+            scene.add(arrowPi1);
+            scene.add(arrowPi2);
+
+            // Morphisms from Z
+            const arrowZP = createArrow(nodeZ.position, nodeProduct.position, 0xd4a574);
+            const arrowZA = createArrow(nodeZ.position, nodeA.position, 0x6b93d6, true);
+            const arrowZB = createArrow(nodeZ.position, nodeB.position, 0xc77dba, true);
+            scene.add(arrowZP);
+            scene.add(arrowZA);
+            scene.add(arrowZB);
+
+            // Labels (sprites)
+            function createLabel(text, position, color) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 128;
+                canvas.height = 64;
+                ctx.fillStyle = color;
+                ctx.font = 'bold 28px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, 64, 32);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+                const sprite = new THREE.Sprite(material);
+                sprite.position.copy(position);
+                sprite.scale.set(1.5, 0.75, 1);
+                return sprite;
+            }
+
+            scene.add(createLabel('A × B', new THREE.Vector3(0, 2.8, 0), '#7bc9b8'));
+            scene.add(createLabel('A', new THREE.Vector3(-2, -0.7, 0), '#6b93d6'));
+            scene.add(createLabel('B', new THREE.Vector3(2, -0.7, 0), '#c77dba'));
+            scene.add(createLabel('Z', new THREE.Vector3(0, -0.7, 3), '#d4a574'));
+
+            let time = 0;
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                time += 0.005;
+                const radius = 10;
+                camera.position.x = radius * Math.sin(time * 0.3);
+                camera.position.z = radius * Math.cos(time * 0.3);
+                camera.position.y = 4 + Math.sin(time * 0.2) * 1;
+                camera.lookAt(0, 0.5, 0);
+                
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            window.addEventListener('resize', () => {
+                const rect = container.getBoundingClientRect();
+                camera.aspect = rect.width / rect.height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(rect.width, rect.height);
+            });
+        })();
+    </script>
+</body>
+</html>

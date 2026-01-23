@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrysalis - Visual Programming for Discovery</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16162a;
+            --bg-elevated: #252542;
+            --border-subtle: #3a3a5a;
+            --text-primary: #eaeaea;
+            --text-secondary: #aaa;
+            --text-dim: #666;
+            --type-num: #4A90D9;
+            --type-str: #5DAE8B;
+            --type-bool: #E89B3C;
+            --type-fn: #C75D7E;
+            --type-unknown: #888;
+            --status-success: #5DAE8B;
+            --status-error: #D64545;
+            --status-warning: #E89B3C;
+            --week-1: #4A90D9;
+            --week-2: #5DAE8B;
+            --week-3: #E89B3C;
+            --week-4: #C75D7E;
+        }
+        
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body, #root { height: 100%; width: 100%; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow: hidden;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           ANIMATIONS
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px var(--status-success); }
+            50% { box-shadow: 0 0 20px var(--status-success); }
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .animate-fade { animation: fadeIn 0.3s ease-out; }
+        .animate-bounce { animation: bounceIn 0.4s ease-out; }
+        .animate-slide { animation: slideIn 0.3s ease-out; }
+        .animate-pulse { animation: pulse 2s infinite; }
+        .animate-glow { animation: glow 1.5s infinite; }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           LAYOUT
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .app { display: flex; flex-direction: column; height: 100vh; }
+        
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 20px; background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 24px; }
+        .logo-text { font-size: 18px; font-weight: 600; }
+        
+        .header-controls { display: flex; align-items: center; gap: 12px; }
+        
+        .week-selector {
+            display: flex; gap: 4px; padding: 4px;
+            background: var(--bg-primary); border-radius: 8px;
+        }
+        .week-btn {
+            padding: 6px 14px; border: none; border-radius: 6px;
+            font-size: 12px; font-weight: 500; cursor: pointer;
+            background: transparent; color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .week-btn:hover { background: var(--bg-elevated); }
+        .week-btn.active { color: #fff; }
+        .week-btn.week-1.active { background: var(--week-1); }
+        .week-btn.week-2.active { background: var(--week-2); }
+        .week-btn.week-3.active { background: var(--week-3); }
+        .week-btn.week-4.active { background: var(--week-4); }
+        
+        .help-btn {
+            padding: 6px 12px; border: 1px solid var(--border-subtle);
+            border-radius: 6px; background: transparent;
+            color: var(--text-secondary); font-size: 12px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .help-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+        
+        .main { display: flex; flex: 1; overflow: hidden; }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           LEFT PANEL
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .left-panel {
+            width: 340px; display: flex; flex-direction: column;
+            border-right: 1px solid var(--border-subtle);
+            background: var(--bg-secondary); flex-shrink: 0;
+        }
+        
+        .week-info {
+            padding: 12px; border-bottom: 1px solid var(--border-subtle);
+            animation: fadeIn 0.3s ease-out;
+        }
+        .week-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .week-desc { font-size: 11px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4; }
+        
+        .editor-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .editor-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; border-bottom: 1px solid var(--border-subtle);
+            font-size: 11px; color: var(--text-secondary);
+        }
+        
+        textarea {
+            flex: 1; padding: 12px; background: var(--bg-primary);
+            border: none; font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 13px; color: var(--text-primary);
+            resize: none; outline: none; line-height: 1.5;
+            transition: border-color 0.2s;
+        }
+        textarea:focus { border-left: 3px solid var(--status-success); }
+        
+        .result-panel {
+            padding: 12px; background: var(--bg-elevated);
+            border-top: 1px solid var(--border-subtle);
+            min-height: 70px;
+        }
+        .result-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
+        .result-value {
+            font-size: 22px; font-weight: 600;
+            font-family: 'Fira Code', monospace;
+            transition: all 0.2s;
+        }
+        .result-error { color: var(--status-error); font-size: 12px; }
+        
+        .hint-panel {
+            padding: 10px 12px; background: var(--bg-primary);
+            border-top: 1px solid var(--border-subtle);
+            font-size: 11px; color: var(--text-secondary);
+            display: flex; align-items: flex-start; gap: 8px;
+        }
+        .hint-icon { font-size: 14px; flex-shrink: 0; }
+        
+        .examples-panel {
+            border-top: 1px solid var(--border-subtle);
+            max-height: 200px; overflow-y: auto;
+        }
+        .examples-header {
+            padding: 8px 12px; font-size: 11px; font-weight: 600;
+            color: var(--text-secondary); background: var(--bg-elevated);
+            position: sticky; top: 0;
+        }
+        .example-item {
+            padding: 8px 12px; cursor: pointer;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: background 0.15s;
+        }
+        .example-item:hover { background: var(--bg-elevated); }
+        .example-name { font-size: 12px; font-weight: 500; }
+        .example-desc { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           RIGHT PANEL - VISUAL EDITOR
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .right-panel { flex: 1; display: flex; overflow: hidden; }
+        
+        .palette {
+            width: 150px; background: var(--bg-secondary);
+            border-right: 1px solid var(--border-subtle);
+            overflow-y: auto; flex-shrink: 0;
+        }
+        .palette-header {
+            padding: 10px; border-bottom: 1px solid var(--border-subtle);
+            font-size: 11px; font-weight: 600; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .palette-category {
+            padding: 8px; border-bottom: 1px solid var(--border-subtle);
+            animation: slideIn 0.3s ease-out;
+        }
+        .palette-category.locked { opacity: 0.4; pointer-events: none; }
+        .category-title {
+            font-size: 10px; color: var(--text-dim); margin-bottom: 6px;
+            text-transform: uppercase; display: flex; align-items: center; gap: 4px;
+        }
+        .lock-icon { font-size: 10px; }
+        .palette-items { display: flex; flex-wrap: wrap; gap: 4px; }
+        .palette-item {
+            display: flex; align-items: center; justify-content: center;
+            padding: 6px 10px; border-radius: 6px; cursor: grab;
+            font-size: 12px; font-family: 'Fira Code', monospace;
+            font-weight: 500; transition: transform 0.15s, box-shadow 0.15s;
+            min-width: 32px;
+        }
+        .palette-item:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .palette-item:active { cursor: grabbing; }
+        
+        .canvas {
+            flex: 1; overflow: auto; padding: 20px;
+            background: 
+                linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px),
+                linear-gradient(var(--border-subtle) 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+        }
+        
+        .empty-canvas {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 100%; color: var(--text-dim);
+            text-align: center; animation: fadeIn 0.5s ease-out;
+        }
+        .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-title { font-size: 18px; font-weight: 600; color: var(--text-secondary); }
+        .empty-subtitle { font-size: 13px; margin-top: 8px; max-width: 280px; }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           VISUAL NODES
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .visual-node { display: inline-block; margin-bottom: 8px; animation: bounceIn 0.3s ease-out; }
+        
+        .node {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 14px; border-radius: 10px; border: 2px solid;
+            font-family: 'Fira Code', monospace; font-size: 14px;
+            cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+        }
+        .node:hover { transform: scale(1.02); }
+        .node.selected {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 3px currentColor, 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .node.drop-target { box-shadow: 0 0 0 3px var(--status-success), 0 0 20px var(--status-success); }
+        
+        .node-icon {
+            display: flex; align-items: center; justify-content: center;
+            min-width: 22px; height: 22px; padding: 0 4px;
+            border-radius: 5px; font-size: 12px; font-weight: 700; color: #fff;
+        }
+        .node-label { font-weight: 500; }
+        .node-badge {
+            font-size: 10px; color: var(--text-dim); margin-left: 4px;
+            background: var(--bg-primary); padding: 2px 6px; border-radius: 10px;
+        }
+        
+        .node-children {
+            margin-left: 24px; padding-left: 14px;
+            border-left: 2px solid var(--border-subtle);
+            margin-top: 8px;
+        }
+        .child-row { display: flex; align-items: flex-start; margin-top: 10px; }
+        .connector {
+            width: 14px; height: 2px; margin-top: 16px; margin-right: 8px;
+            border-top: 2px dashed; opacity: 0.5;
+        }
+        
+        /* Inline editing */
+        .node-input {
+            background: transparent; border: none; outline: none;
+            font: inherit; color: inherit; width: 60px;
+            text-align: center; padding: 0;
+        }
+        .node-input:focus { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        
+        /* Drop zones */
+        .drop-zone {
+            height: 4px; margin: 4px 0; border-radius: 2px;
+            transition: all 0.2s; opacity: 0;
+        }
+        .drop-zone.active {
+            height: 8px; background: var(--status-success);
+            opacity: 1; animation: pulse 1s infinite;
+        }
+        
+        .selection-bar {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 16px; background: var(--bg-elevated);
+            border-top: 1px solid var(--border-subtle);
+            font-size: 12px; animation: slideIn 0.2s ease-out;
+        }
+        .selection-code {
+            font-family: 'Fira Code', monospace;
+            background: var(--bg-primary);
+            padding: 3px 10px; border-radius: 4px;
+        }
+        .selection-actions { display: flex; gap: 8px; }
+        .action-btn {
+            padding: 4px 10px; border: 1px solid var(--border-subtle);
+            border-radius: 4px; background: transparent;
+            color: var(--text-secondary); font-size: 11px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .action-btn:hover { background: var(--bg-primary); color: var(--text-primary); }
+        .action-btn.danger { border-color: var(--status-error); color: var(--status-error); }
+        .action-btn.danger:hover { background: var(--status-error); color: #fff; }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           STATUS BAR
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .status-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 20px; background: var(--bg-secondary);
+            border-top: 1px solid var(--border-subtle);
+            font-size: 11px; color: var(--text-dim); flex-shrink: 0;
+        }
+        .status-left { display: flex; align-items: center; gap: 16px; }
+        .status-dot {
+            display: inline-block; width: 6px; height: 6px;
+            border-radius: 50%; margin-right: 6px;
+        }
+        .status-right { display: flex; gap: 16px; }
+        
+        /* ═══════════════════════════════════════════════════════════════════
+           HELP MODAL
+           ═══════════════════════════════════════════════════════════════════ */
+        
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; animation: fadeIn 0.2s ease-out;
+        }
+        .modal {
+            background: var(--bg-secondary); border-radius: 16px;
+            max-width: 600px; width: 90%; max-height: 80vh;
+            overflow: hidden; animation: bounceIn 0.3s ease-out;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-title { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .modal-close {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 20px; cursor: pointer; padding: 4px;
+        }
+        .modal-body {
+            padding: 20px; overflow-y: auto; max-height: calc(80vh - 120px);
+        }
+        .guide-section { margin-bottom: 20px; }
+        .guide-section h3 {
+            font-size: 14px; color: var(--text-primary); margin-bottom: 8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .guide-section p, .guide-section li {
+            font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+        }
+        .guide-section ul { padding-left: 20px; margin-top: 8px; }
+        .guide-section li { margin-bottom: 6px; }
+        .guide-tip {
+            background: var(--bg-elevated); padding: 12px;
+            border-radius: 8px; border-left: 3px solid var(--status-success);
+            margin-top: 12px;
+        }
+        .guide-tip strong { color: var(--status-success); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script>
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CHRYSALIS - Day 5: Complete Visual Programming Environment
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    const { useState, useMemo, useCallback, useEffect, useRef } = React;
+    const e = React.createElement;
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // DATA TYPES
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    const num = v => ({ tag: 'num', value: v });
+    const str = v => ({ tag: 'str', value: v });
+    const bool = v => ({ tag: 'bool', value: v });
+    const sym = n => ({ tag: 'sym', name: n });
+    const list = (...elements) => ({ tag: 'list', elements });
+    const isList = e => e && e.tag === 'list';
+    const isSym = e => e && e.tag === 'sym';
+    const isNum = e => e && e.tag === 'num';
+    const isStr = e => e && e.tag === 'str';
+    const isBool = e => e && e.tag === 'bool';
+    
+    const vnum = v => ({ tag: 'num', value: v });
+    const vstr = v => ({ tag: 'str', value: v });
+    const vbool = v => ({ tag: 'bool', value: v });
+    const vclosure = (params, body, env) => ({ tag: 'closure', params, body, env });
+    const vprimitive = (name, fn) => ({ tag: 'primitive', name, fn });
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // CURRICULUM DATA
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    const weekColors = { 1: '#4A90D9', 2: '#5DAE8B', 3: '#E89B3C', 4: '#C75D7E' };
+    
+    const weekInfo = {
+        1: { title: 'Numbers & Arithmetic', icon: '🔢', desc: 'Explore how numbers combine. Drag blocks to build calculations.' },
+        2: { title: 'Variables & Naming', icon: '📝', desc: 'Give names to values. Use the same value in many places.' },
+        3: { title: 'Conditionals & Logic', icon: '🔀', desc: 'Make programs that decide. Compare values and choose paths.' },
+        4: { title: 'Functions & Abstraction', icon: '⚡', desc: 'Create your own operations. Build reusable computations.' },
+    };
+    
+    const weekExamples = {
+        1: [
+            { name: 'Simple Addition', code: '(+ 1 2)', desc: 'Add two numbers' },
+            { name: 'Three Numbers', code: '(+ 1 2 3)', desc: 'Add can take many numbers' },
+            { name: 'Nested Math', code: '(+ (* 2 3) (* 4 5))', desc: 'Calculations inside calculations' },
+            { name: 'Square Root', code: '(sqrt 16)', desc: 'Find the square root' },
+            { name: 'Pythagorean', code: '(sqrt (+ (expt 3 2) (expt 4 2)))', desc: 'Calculate hypotenuse: √(3² + 4²)' },
+        ],
+        2: [
+            { name: 'First Variable', code: '(let ((x 5))\n  x)', desc: 'Name a value and use it' },
+            { name: 'Double Use', code: '(let ((x 5))\n  (+ x x))', desc: 'Use the same name twice' },
+            { name: 'Two Variables', code: '(let ((width 4)\n      (height 3))\n  (* width height))', desc: 'Multiple named values' },
+            { name: 'Circle Area', code: '(let ((r 5))\n  (* pi (* r r)))', desc: 'Area: π × r²' },
+        ],
+        3: [
+            { name: 'Comparison', code: '(< 3 5)', desc: 'Is 3 less than 5?' },
+            { name: 'First If', code: '(if (< 3 5)\n    "yes"\n    "no")', desc: 'Choose between options' },
+            { name: 'Absolute Value', code: '(let ((n -7))\n  (if (< n 0)\n      (- 0 n)\n      n))', desc: 'Make negatives positive' },
+            { name: 'Maximum', code: '(let ((a 8) (b 5))\n  (if (> a b) a b))', desc: 'Find the larger number' },
+        ],
+        4: [
+            { name: 'Identity', code: '(lambda (x) x)', desc: 'Simplest function: returns input' },
+            { name: 'Double', code: '(let ((double (lambda (x) (* 2 x))))\n  (double 7))', desc: 'Function that doubles' },
+            { name: 'Square', code: '(let ((sq (lambda (x) (* x x))))\n  (sq 6))', desc: 'Function that squares' },
+            { name: 'Factorial', code: '(let ((f (lambda (self n)\n           (if (<= n 1) 1\n               (* n (self self (- n 1)))))))\n  (f f 5))', desc: '5! = 120' },
+        ],
+    };
+    
+    // Palette data by week
+    const paletteByWeek = {
+        1: [
+            { name: 'Numbers', items: [
+                { l: '0', e: num(0) }, { l: '1', e: num(1) }, { l: '2', e: num(2) },
+                { l: '5', e: num(5) }, { l: '10', e: num(10) }, { l: 'π', e: sym('pi') },
+            ]},
+            { name: 'Arithmetic', items: [
+                { l: '+', e: list(sym('+'), num(0), num(0)) },
+                { l: '−', e: list(sym('-'), num(0), num(0)) },
+                { l: '×', e: list(sym('*'), num(1), num(1)) },
+                { l: '÷', e: list(sym('/'), num(1), num(1)) },
+                { l: '√', e: list(sym('sqrt'), num(4)) },
+                { l: '^', e: list(sym('expt'), num(2), num(2)) },
+            ]},
+        ],
+        2: [
+            { name: 'Variables', items: [
+                { l: 'let', e: list(sym('let'), list(list(sym('x'), num(5))), sym('x')) },
+                { l: 'x', e: sym('x') }, { l: 'y', e: sym('y') }, { l: 'n', e: sym('n') },
+            ]},
+        ],
+        3: [
+            { name: 'Compare', items: [
+                { l: '<', e: list(sym('<'), num(0), num(1)) },
+                { l: '>', e: list(sym('>'), num(1), num(0)) },
+                { l: '=', e: list(sym('='), num(0), num(0)) },
+            ]},
+            { name: 'Logic', items: [
+                { l: '#t', e: bool(true) }, { l: '#f', e: bool(false) },
+                { l: 'if', e: list(sym('if'), bool(true), num(1), num(0)) },
+            ]},
+        ],
+        4: [
+            { name: 'Functions', items: [
+                { l: 'λ', e: list(sym('lambda'), list(sym('x')), sym('x')) },
+            ]},
+        ],
+    };
+    
+    function getPaletteForWeek(week) {
+        let all = [];
+        for (let w = 1; w <= week; w++) {
+            all = all.concat(paletteByWeek[w] || []);
+        }
+        return all;
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // TYPE COLORS
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    const typeColors = { num: '#4A90D9', str: '#5DAE8B', bool: '#E89B3C', fn: '#C75D7E', unknown: '#888' };
+    
+    function inferColor(expr) {
+        if (!expr) return typeColors.unknown;
+        if (isNum(expr)) return typeColors.num;
+        if (isStr(expr)) return typeColors.str;
+        if (isBool(expr)) return typeColors.bool;
+        if (isSym(expr)) {
+            const n = expr.name;
+            if (['+', '-', '*', '/', 'sqrt', 'abs', 'expt', 'min', 'max', 'modulo', 'pi', 'e'].includes(n)) return typeColors.num;
+            if (['<', '>', '<=', '>=', '=', 'not', 'true', 'false'].includes(n)) return typeColors.bool;
+            if (['lambda', 'λ', 'let', 'if'].includes(n)) return typeColors.fn;
+            return typeColors.unknown;
+        }
+        if (isList(expr) && expr.elements.length > 0) return inferColor(expr.elements[0]);
+        return typeColors.unknown;
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // PARSER & PRINTER
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    function tokenize(src) {
+        const tokens = []; let pos = 0;
+        while (pos < src.length) {
+            const c = src[pos];
+            if (/\s/.test(c)) { pos++; continue; }
+            if (c === ';') { while (pos < src.length && src[pos] !== '\n') pos++; continue; }
+            if (c === '(') { tokens.push({ tag: 'lparen' }); pos++; continue; }
+            if (c === ')') { tokens.push({ tag: 'rparen' }); pos++; continue; }
+            if (c === "'") { tokens.push({ tag: 'quote' }); pos++; continue; }
+            if (c === '"') {
+                pos++; let v = '';
+                while (pos < src.length && src[pos] !== '"') {
+                    if (src[pos] === '\\' && pos + 1 < src.length) { pos++; v += src[pos] === 'n' ? '\n' : src[pos] === 't' ? '\t' : src[pos]; }
+                    else v += src[pos];
+                    pos++;
+                }
+                if (pos >= src.length) throw new Error('Unterminated string');
+                pos++; tokens.push({ tag: 'string', value: v }); continue;
+            }
+            if (/\d/.test(c) || (c === '-' && pos + 1 < src.length && /\d/.test(src[pos + 1]))) {
+                let n = c === '-' ? (pos++, '-') : '';
+                while (pos < src.length && /[\d.eE+-]/.test(src[pos])) n += src[pos++];
+                tokens.push({ tag: 'number', value: parseFloat(n) }); continue;
+            }
+            if (c === '#') {
+                pos++;
+                if (src[pos] === 't') { tokens.push({ tag: 'boolean', value: true }); pos++; continue; }
+                if (src[pos] === 'f') { tokens.push({ tag: 'boolean', value: false }); pos++; continue; }
+                throw new Error('Invalid #');
+            }
+            if (/[a-zA-Z_+\-*/<>=!?λ]/.test(c)) {
+                let name = '';
+                while (pos < src.length && /[a-zA-Z0-9_+\-*/<>=!?λ]/.test(src[pos])) name += src[pos++];
+                if (name === 'true') tokens.push({ tag: 'boolean', value: true });
+                else if (name === 'false') tokens.push({ tag: 'boolean', value: false });
+                else tokens.push({ tag: 'symbol', name });
+                continue;
+            }
+            throw new Error('Unexpected: ' + c);
+        }
+        tokens.push({ tag: 'eof' }); return tokens;
+    }
+    
+    function parse(src) {
+        const tokens = tokenize(src); let pos = 0;
+        const peek = () => tokens[pos], advance = () => tokens[pos++];
+        function parseExpr() {
+            const t = peek();
+            if (t.tag === 'number') { advance(); return num(t.value); }
+            if (t.tag === 'string') { advance(); return str(t.value); }
+            if (t.tag === 'boolean') { advance(); return bool(t.value); }
+            if (t.tag === 'symbol') { advance(); return sym(t.name); }
+            if (t.tag === 'quote') { advance(); return list(sym('quote'), parseExpr()); }
+            if (t.tag === 'lparen') {
+                advance(); const els = [];
+                while (peek().tag !== 'rparen' && peek().tag !== 'eof') els.push(parseExpr());
+                if (peek().tag !== 'rparen') throw new Error('Unterminated list');
+                advance(); return list(...els);
+            }
+            throw new Error('Unexpected: ' + t.tag);
+        }
+        const expr = parseExpr();
+        if (peek().tag !== 'eof') throw new Error('Extra content');
+        return expr;
+    }
+    
+    function print(expr) {
+        if (!expr) return '?';
+        if (isNum(expr)) return String(expr.value);
+        if (isStr(expr)) return '"' + expr.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+        if (isBool(expr)) return expr.value ? '#t' : '#f';
+        if (isSym(expr)) return expr.name;
+        if (isList(expr)) return '(' + expr.elements.map(print).join(' ') + ')';
+        return '?';
+    }
+    
+    function prettyPrint(expr, indent = 0) {
+        const pad = '  '.repeat(indent);
+        if (!isList(expr)) return pad + print(expr);
+        if (expr.elements.length === 0) return pad + '()';
+        const simple = print(expr);
+        if (simple.length < 40) return pad + simple;
+        const head = print(expr.elements[0]);
+        const children = expr.elements.slice(1).map(c => prettyPrint(c, indent + 1)).join('\n');
+        return `${pad}(${head}\n${children})`;
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // ENVIRONMENT & EVALUATOR
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    const emptyEnv = { bindings: new Map(), parent: null };
+    function envExtendMany(parent, pairs) { return { bindings: new Map(pairs), parent }; }
+    function envLookup(env, name) {
+        let cur = env;
+        while (cur) { if (cur.bindings.has(name)) return cur.bindings.get(name); cur = cur.parent; }
+        throw new Error('Unbound: ' + name);
+    }
+    
+    function expectNums(args, op) {
+        return args.map(a => { if (a.tag !== 'num') throw new Error(op + ' expects numbers'); return a.value; });
+    }
+    
+    const primitives = [
+        vprimitive('+', args => vnum(expectNums(args, '+').reduce((a, b) => a + b, 0))),
+        vprimitive('-', args => { const ns = expectNums(args, '-'); return ns.length === 1 ? vnum(-ns[0]) : vnum(ns.slice(1).reduce((a, b) => a - b, ns[0])); }),
+        vprimitive('*', args => vnum(expectNums(args, '*').reduce((a, b) => a * b, 1))),
+        vprimitive('/', args => { const ns = expectNums(args, '/'); if (ns.slice(1).some(n => n === 0)) throw new Error('Division by zero'); return ns.length === 1 ? vnum(1 / ns[0]) : vnum(ns.slice(1).reduce((a, b) => a / b, ns[0])); }),
+        vprimitive('modulo', args => { const [a, b] = expectNums(args, 'modulo'); return vnum(((a % b) + b) % b); }),
+        vprimitive('abs', args => vnum(Math.abs(expectNums(args, 'abs')[0]))),
+        vprimitive('min', args => vnum(Math.min(...expectNums(args, 'min')))),
+        vprimitive('max', args => vnum(Math.max(...expectNums(args, 'max')))),
+        vprimitive('expt', args => { const [b, e] = expectNums(args, 'expt'); return vnum(Math.pow(b, e)); }),
+        vprimitive('sqrt', args => { const [x] = expectNums(args, 'sqrt'); if (x < 0) throw new Error('sqrt of negative'); return vnum(Math.sqrt(x)); }),
+        vprimitive('<', args => { const ns = expectNums(args, '<'); for (let i = 0; i < ns.length - 1; i++) if (!(ns[i] < ns[i+1])) return vbool(false); return vbool(true); }),
+        vprimitive('>', args => { const ns = expectNums(args, '>'); for (let i = 0; i < ns.length - 1; i++) if (!(ns[i] > ns[i+1])) return vbool(false); return vbool(true); }),
+        vprimitive('<=', args => { const ns = expectNums(args, '<='); for (let i = 0; i < ns.length - 1; i++) if (!(ns[i] <= ns[i+1])) return vbool(false); return vbool(true); }),
+        vprimitive('>=', args => { const ns = expectNums(args, '>='); for (let i = 0; i < ns.length - 1; i++) if (!(ns[i] >= ns[i+1])) return vbool(false); return vbool(true); }),
+        vprimitive('=', args => { const ns = expectNums(args, '='); const f = ns[0]; return vbool(ns.every(n => n === f)); }),
+        vprimitive('not', args => vbool(args[0].tag === 'bool' && args[0].value === false)),
+    ];
+    
+    const standardEnv = envExtendMany(emptyEnv, [
+        ['pi', vnum(Math.PI)], ['e', vnum(Math.E)], ['true', vbool(true)], ['false', vbool(false)],
+        ...primitives.map(p => [p.name, p])
+    ]);
+    
+    function evaluate(expr, env) {
+        if (isNum(expr)) return vnum(expr.value);
+        if (isStr(expr)) return vstr(expr.value);
+        if (isBool(expr)) return vbool(expr.value);
+        if (isSym(expr)) return envLookup(env, expr.name);
+        if (isList(expr)) return evaluateList(expr, env);
+        throw new Error('Unknown');
+    }
+    
+    function evaluateList(expr, env) {
+        if (expr.elements.length === 0) throw new Error('Empty list');
+        const head = expr.elements[0], args = expr.elements.slice(1);
+        if (isSym(head)) {
+            switch (head.name) {
+                case 'quote': return sexprToValue(args[0]);
+                case 'if': {
+                    if (args.length !== 3) throw new Error('if needs 3 args');
+                    const cond = evaluate(args[0], env);
+                    return (cond.tag === 'bool' && !cond.value) ? evaluate(args[2], env) : evaluate(args[1], env);
+                }
+                case 'let': {
+                    if (args.length < 2) throw new Error('let needs bindings and body');
+                    const bindings = args[0];
+                    if (!isList(bindings)) throw new Error('bindings must be list');
+                    const pairs = bindings.elements.map(b => {
+                        if (!isList(b) || b.elements.length !== 2 || !isSym(b.elements[0])) throw new Error('Invalid binding');
+                        return [b.elements[0].name, evaluate(b.elements[1], env)];
+                    });
+                    const extEnv = envExtendMany(env, pairs);
+                    let result = vnum(0);
+                    for (let i = 1; i < args.length; i++) result = evaluate(args[i], extEnv);
+                    return result;
+                }
+                case 'lambda': case 'λ': {
+                    if (args.length < 2) throw new Error('lambda needs params and body');
+                    const params = args[0];
+                    if (!isList(params)) throw new Error('params must be list');
+                    const paramNames = params.elements.map(p => { if (!isSym(p)) throw new Error('param must be symbol'); return p.name; });
+                    const body = args.length === 2 ? args[1] : list(sym('begin'), ...args.slice(1));
+                    return vclosure(paramNames, body, env);
+                }
+                case 'begin': {
+                    let result = vnum(0);
+                    for (const a of args) result = evaluate(a, env);
+                    return result;
+                }
+            }
+        }
+        const fn = evaluate(head, env);
+        const evalArgs = args.map(a => evaluate(a, env));
+        return applyFn(fn, evalArgs);
+    }
+    
+    function applyFn(fn, args) {
+        if (fn.tag === 'primitive') return fn.fn(args);
+        if (fn.tag === 'closure') {
+            if (args.length !== fn.params.length) throw new Error('Wrong arg count');
+            const pairs = fn.params.map((p, i) => [p, args[i]]);
+            return evaluate(fn.body, envExtendMany(fn.env, pairs));
+        }
+        throw new Error('Cannot apply');
+    }
+    
+    function sexprToValue(expr) {
+        if (isNum(expr)) return vnum(expr.value);
+        if (isStr(expr)) return vstr(expr.value);
+        if (isBool(expr)) return vbool(expr.value);
+        if (isSym(expr)) return vstr(expr.name);
+        if (isList(expr)) return { tag: 'list', elements: expr.elements.map(sexprToValue) };
+        return vstr('?');
+    }
+    
+    function valueToString(v) {
+        if (v.tag === 'num') return String(v.value);
+        if (v.tag === 'str') return '"' + v.value + '"';
+        if (v.tag === 'bool') return v.value ? '#t' : '#f';
+        if (v.tag === 'closure') return '#<λ>';
+        if (v.tag === 'primitive') return '#<' + v.name + '>';
+        if (v.tag === 'list') return '(' + v.elements.map(valueToString).join(' ') + ')';
+        return '?';
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // PATH OPERATIONS
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    function getAtPath(expr, path) {
+        let cur = expr;
+        for (const i of path) { if (!isList(cur) || i >= cur.elements.length) return null; cur = cur.elements[i]; }
+        return cur;
+    }
+    
+    function replaceAtPath(expr, path, newNode) {
+        if (path.length === 0) return newNode;
+        if (!isList(expr)) return expr;
+        const [i, ...rest] = path;
+        return list(...expr.elements.map((el, j) => j === i ? replaceAtPath(el, rest, newNode) : el));
+    }
+    
+    function insertAtPath(expr, parentPath, index, newNode) {
+        const parent = getAtPath(expr, parentPath);
+        if (!parent || !isList(parent)) return expr;
+        const newEls = [...parent.elements.slice(0, index), newNode, ...parent.elements.slice(index)];
+        return replaceAtPath(expr, parentPath, list(...newEls));
+    }
+    
+    function removeAtPath(expr, path) {
+        if (path.length === 0) return null;
+        const parentPath = path.slice(0, -1), idx = path[path.length - 1];
+        const parent = getAtPath(expr, parentPath);
+        if (!parent || !isList(parent)) return expr;
+        const newEls = parent.elements.filter((_, i) => i !== idx);
+        return replaceAtPath(expr, parentPath, list(...newEls));
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // TEACHING HINTS
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    function getHint(result, week) {
+        if (result.status === 'empty') {
+            return week === 1 ? 'Drag a number or operation from the toolbox to start!' :
+                   week === 2 ? 'Try creating a variable with let!' :
+                   week === 3 ? 'Use if to make programs that decide!' :
+                   'Create a function with λ!';
+        }
+        if (result.status === 'parseError') return 'Check your parentheses—every ( needs a )';
+        if (result.status === 'evalError') {
+            const msg = result.error.message;
+            if (msg.includes('Unbound')) return 'That variable isn\'t defined. Use let to create it!';
+            if (msg.includes('Division by zero')) return 'Can\'t divide by zero! Change the second number.';
+            return msg;
+        }
+        if (result.status === 'success') {
+            const v = result.value;
+            if (v.tag === 'num') return week < 4 ? 'Nice! Can you make it bigger?' : 'Numbers are the building blocks!';
+            if (v.tag === 'bool') return v.value ? 'True! The condition passed.' : 'False! The condition failed.';
+            if (v.tag === 'closure') return 'You made a function! Try calling it.';
+            return 'Great work!';
+        }
+        return '';
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // VISUAL NODE COMPONENT
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    function VisualNode({ expr, path, selectedPath, onSelect, onEdit, isDropTarget, depth = 0 }) {
+        const [editing, setEditing] = useState(false);
+        const [editValue, setEditValue] = useState('');
+        const inputRef = useRef(null);
+        
+        const color = inferColor(expr);
+        const isSelected = selectedPath && selectedPath.join('-') === path.join('-');
+        
+        const getIcon = () => {
+            if (isNum(expr)) return '#';
+            if (isStr(expr)) return 'T';
+            if (isBool(expr)) return expr.value ? '✓' : '✗';
+            if (isSym(expr)) {
+                const n = expr.name;
+                if (['+', '-', '*', '/', '<', '>', '='].includes(n)) return n;
+                if (['if', 'let', 'lambda', 'λ'].includes(n)) return '⚡';
+                return 'ƒ';
+            }
+            return '()';
+        };
+        
+        const getLabel = () => {
+            if (isNum(expr)) return String(expr.value);
+            if (isStr(expr)) return `"${expr.value.slice(0, 8)}${expr.value.length > 8 ? '…' : ''}"`;
+            if (isBool(expr)) return expr.value ? 'true' : 'false';
+            if (isSym(expr)) return expr.name;
+            if (isList(expr) && expr.elements.length > 0 && isSym(expr.elements[0])) return expr.elements[0].name;
+            return '(…)';
+        };
+        
+        const handleClick = (ev) => {
+            ev.stopPropagation();
+            onSelect(isSelected ? null : path);
+        };
+        
+        const handleDoubleClick = (ev) => {
+            ev.stopPropagation();
+            if (isNum(expr)) {
+                setEditing(true);
+                setEditValue(String(expr.value));
+                setTimeout(() => inputRef.current?.select(), 0);
+            }
+        };
+        
+        const handleEditSubmit = () => {
+            setEditing(false);
+            const newVal = parseFloat(editValue);
+            if (!isNaN(newVal) && newVal !== expr.value) {
+                onEdit(path, num(newVal));
+            }
+        };
+        
+        const handleEditKeyDown = (ev) => {
+            if (ev.key === 'Enter') handleEditSubmit();
+            if (ev.key === 'Escape') setEditing(false);
+        };
+        
+        // Compound node
+        if (isList(expr) && expr.elements.length > 0) {
+            return e('div', { className: 'visual-node' },
+                e('div', {
+                    className: 'node' + (isSelected ? ' selected' : '') + (isDropTarget ? ' drop-target' : ''),
+                    style: { borderColor: color, background: isSelected ? color + '40' : color + '15' },
+                    onClick: handleClick
+                },
+                    e('span', { className: 'node-icon', style: { background: color } }, getIcon()),
+                    e('span', { className: 'node-label', style: { color } }, getLabel()),
+                    e('span', { className: 'node-badge' }, `${expr.elements.length - 1} arg${expr.elements.length - 1 !== 1 ? 's' : ''}`)
+                ),
+                e('div', { className: 'node-children' },
+                    expr.elements.slice(1).map((child, i) =>
+                        e('div', { key: i, className: 'child-row' },
+                            e('div', { className: 'connector', style: { borderColor: color } }),
+                            e(VisualNode, { expr: child, path: [...path, i + 1], selectedPath, onSelect, onEdit, depth: depth + 1 })
+                        )
+                    )
+                )
+            );
+        }
+        
+        // Atom with inline editing
+        return e('div', { className: 'visual-node' },
+            e('div', {
+                className: 'node' + (isSelected ? ' selected' : '') + (isDropTarget ? ' drop-target' : ''),
+                style: { borderColor: color, background: isSelected ? color + '40' : color + '15' },
+                onClick: handleClick,
+                onDoubleClick: handleDoubleClick
+            },
+                e('span', { className: 'node-icon', style: { background: color } }, getIcon()),
+                editing ? e('input', {
+                    ref: inputRef,
+                    className: 'node-input',
+                    style: { color },
+                    value: editValue,
+                    onChange: ev => setEditValue(ev.target.value),
+                    onBlur: handleEditSubmit,
+                    onKeyDown: handleEditKeyDown,
+                    autoFocus: true
+                }) : e('span', { className: 'node-label', style: { color } }, getLabel())
+            )
+        );
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // HELP MODAL
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    function HelpModal({ onClose }) {
+        return e('div', { className: 'modal-overlay', onClick: onClose },
+            e('div', { className: 'modal', onClick: ev => ev.stopPropagation() },
+                e('div', { className: 'modal-header' },
+                    e('div', { className: 'modal-title' }, '📖 ', 'Parent & Educator Guide'),
+                    e('button', { className: 'modal-close', onClick: onClose }, '×')
+                ),
+                e('div', { className: 'modal-body' },
+                    e('div', { className: 'guide-section' },
+                        e('h3', null, '🦋 About Chrysalis'),
+                        e('p', null, 'Chrysalis is a visual programming environment designed for gifted learners, ' +
+                            'especially those who may be nonverbal or have different learning needs. ' +
+                            'It follows a 4-week curriculum that progressively introduces programming concepts.')
+                    ),
+                    e('div', { className: 'guide-section' },
+                        e('h3', null, '🎯 How to Use'),
+                        e('ul', null,
+                            e('li', null, e('strong', null, 'Drag & Drop: '), 'Pull blocks from the toolbox onto the canvas'),
+                            e('li', null, e('strong', null, 'Click to Select: '), 'Click any node to select it (glows when selected)'),
+                            e('li', null, e('strong', null, 'Double-click Numbers: '), 'Edit number values directly'),
+                            e('li', null, e('strong', null, 'Delete Key: '), 'Remove selected nodes'),
+                            e('li', null, e('strong', null, 'Text Editor: '), 'Type code directly for more control')
+                        )
+                    ),
+                    e('div', { className: 'guide-section' },
+                        e('h3', null, '📅 4-Week Curriculum'),
+                        e('ul', null,
+                            e('li', null, e('strong', null, 'Week 1 (🔢): '), 'Numbers & arithmetic—building intuition for composition'),
+                            e('li', null, e('strong', null, 'Week 2 (📝): '), 'Variables & naming—the power of abstraction'),
+                            e('li', null, e('strong', null, 'Week 3 (🔀): '), 'Conditionals & logic—programs that decide'),
+                            e('li', null, e('strong', null, 'Week 4 (⚡): '), 'Functions—creating reusable computations')
+                        ),
+                        e('div', { className: 'guide-tip' },
+                            e('strong', null, '💡 Tip: '),
+                            'Let the child explore freely within each week before moving on. ' +
+                            'The examples are starting points, not destinations.'
+                        )
+                    ),
+                    e('div', { className: 'guide-section' },
+                        e('h3', null, '🧠 For Nonverbal Learners'),
+                        e('p', null, 'Chrysalis is designed with neurodivergent learners in mind:'),
+                        e('ul', null,
+                            e('li', null, 'All interaction is through direct manipulation—no typing required'),
+                            e('li', null, 'Immediate visual feedback shows cause and effect'),
+                            e('li', null, 'Color-coding provides consistent type information'),
+                            e('li', null, 'Progressive disclosure prevents overwhelm')
+                        ),
+                        e('div', { className: 'guide-tip' },
+                            e('strong', null, '💡 Tip: '),
+                            'Observe which patterns the child gravitates toward. ' +
+                            'Engagement and repetition are signs of learning, even without verbal confirmation.'
+                        )
+                    ),
+                    e('div', { className: 'guide-section' },
+                        e('h3', null, '❓ Troubleshooting'),
+                        e('ul', null,
+                            e('li', null, e('strong', null, 'Red errors: '), 'Usually mismatched parentheses—check the text view'),
+                            e('li', null, e('strong', null, '"Unbound variable": '), 'A name is used but not defined—use let to create it'),
+                            e('li', null, e('strong', null, 'Nothing happens: '), 'Make sure there\'s valid code in the editor')
+                        )
+                    )
+                )
+            )
+        );
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // MAIN APP
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    function App() {
+        const [source, setSource] = useState('(+ (* 2 3) (* 4 5))');
+        const [week, setWeek] = useState(1);
+        const [selectedPath, setSelectedPath] = useState(null);
+        const [draggedExpr, setDraggedExpr] = useState(null);
+        const [showHelp, setShowHelp] = useState(false);
+        const [evalCount, setEvalCount] = useState(0);
+        
+        // Parse and evaluate
+        const result = useMemo(() => {
+            const trimmed = source.replace(/;.*$/gm, '').trim();
+            if (!trimmed) return { status: 'empty' };
+            try {
+                const expr = parse(trimmed);
+                try {
+                    const value = evaluate(expr, standardEnv);
+                    return { status: 'success', expr, value };
+                } catch (e) { return { status: 'evalError', expr, error: e }; }
+            } catch (e) { return { status: 'parseError', error: e }; }
+        }, [source]);
+        
+        // Track evaluations
+        useEffect(() => {
+            if (result.status === 'success') setEvalCount(c => c + 1);
+        }, [result.status, result.value]);
+        
+        const updateExpr = useCallback((newExpr) => {
+            setSource(prettyPrint(newExpr));
+        }, []);
+        
+        const handleEdit = useCallback((path, newNode) => {
+            if (result.status === 'success' || result.status === 'evalError') {
+                updateExpr(replaceAtPath(result.expr, path, newNode));
+            }
+        }, [result, updateExpr]);
+        
+        // Drag handlers
+        const handlePaletteDragStart = useCallback((ev, expr) => {
+            ev.dataTransfer.effectAllowed = 'copy';
+            ev.dataTransfer.setData('text/plain', JSON.stringify(expr));
+            setDraggedExpr(expr);
+        }, []);
+        
+        const handleCanvasDrop = useCallback((ev) => {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData('text/plain');
+            if (!data) return;
+            try {
+                const dropped = JSON.parse(data);
+                if (result.status === 'success' || result.status === 'evalError') {
+                    if (selectedPath && selectedPath.length > 0) {
+                        updateExpr(replaceAtPath(result.expr, selectedPath, dropped));
+                        setSelectedPath(null);
+                    } else if (isList(result.expr)) {
+                        updateExpr(insertAtPath(result.expr, [], result.expr.elements.length, dropped));
+                    }
+                } else {
+                    updateExpr(dropped);
+                }
+            } catch (err) { console.error(err); }
+            setDraggedExpr(null);
+        }, [result, selectedPath, updateExpr]);
+        
+        // Keyboard
+        useEffect(() => {
+            const onKey = (ev) => {
+                if ((ev.key === 'Delete' || ev.key === 'Backspace') && selectedPath && selectedPath.length > 0) {
+                    if (ev.target.tagName === 'TEXTAREA' || ev.target.tagName === 'INPUT') return;
+                    ev.preventDefault();
+                    if (result.status === 'success' || result.status === 'evalError') {
+                        const newExpr = removeAtPath(result.expr, selectedPath);
+                        if (newExpr) { updateExpr(newExpr); setSelectedPath(null); }
+                    }
+                }
+                if (ev.key === 'Escape') setSelectedPath(null);
+            };
+            window.addEventListener('keydown', onKey);
+            return () => window.removeEventListener('keydown', onKey);
+        }, [selectedPath, result, updateExpr]);
+        
+        const hasExpr = result.status === 'success' || result.status === 'evalError';
+        const hint = getHint(result, week);
+        const palette = getPaletteForWeek(week);
+        const examples = weekExamples[week];
+        const wInfo = weekInfo[week];
+        const wColor = weekColors[week];
+        
+        return e('div', { className: 'app' },
+            // Header
+            e('header', { className: 'header' },
+                e('div', { className: 'logo' },
+                    e('span', { className: 'logo-icon' }, '🦋'),
+                    e('span', { className: 'logo-text' }, 'Chrysalis')
+                ),
+                e('div', { className: 'header-controls' },
+                    e('div', { className: 'week-selector' },
+                        [1, 2, 3, 4].map(w => e('button', {
+                            key: w,
+                            className: `week-btn week-${w}` + (week === w ? ' active' : ''),
+                            onClick: () => setWeek(w)
+                        }, `Week ${w}`))
+                    ),
+                    e('button', { className: 'help-btn', onClick: () => setShowHelp(true) }, '📖 Guide')
+                )
+            ),
+            
+            // Main
+            e('main', { className: 'main' },
+                // Left panel
+                e('div', { className: 'left-panel' },
+                    e('div', { className: 'week-info', style: { borderLeft: `3px solid ${wColor}` } },
+                        e('div', { className: 'week-title', style: { color: wColor } }, wInfo.icon, ' ', wInfo.title),
+                        e('div', { className: 'week-desc' }, wInfo.desc)
+                    ),
+                    e('div', { className: 'editor-container' },
+                        e('div', { className: 'editor-header' },
+                            e('span', null, '📝 Code'),
+                            e('span', { style: { color: result.status === 'success' ? 'var(--status-success)' : result.status === 'parseError' ? 'var(--status-error)' : 'inherit' } },
+                                result.status === 'success' ? '● Valid' : result.status === 'parseError' ? '● Error' : '')
+                        ),
+                        e('textarea', {
+                            value: source,
+                            onChange: ev => setSource(ev.target.value),
+                            spellCheck: false,
+                            placeholder: 'Drag nodes here or type code...'
+                        })
+                    ),
+                    e('div', { className: 'result-panel' },
+                        e('div', { className: 'result-label' }, 'Result'),
+                        result.status === 'empty' ? e('span', { style: { color: 'var(--text-dim)' } }, '...') :
+                        result.status === 'parseError' ? e('div', { className: 'result-error' }, '⚠️ Syntax error') :
+                        result.status === 'evalError' ? e('div', { className: 'result-error' }, '❌ ', result.error.message) :
+                        e('div', { className: 'result-value animate-fade', style: { color: inferColor(result.value) } }, valueToString(result.value))
+                    ),
+                    hint && e('div', { className: 'hint-panel' },
+                        e('span', { className: 'hint-icon' }, '💡'),
+                        e('span', null, hint)
+                    ),
+                    e('div', { className: 'examples-panel' },
+                        e('div', { className: 'examples-header' }, '📚 Examples'),
+                        examples.map((ex, i) => e('div', {
+                            key: i,
+                            className: 'example-item',
+                            onClick: () => setSource(ex.code)
+                        },
+                            e('div', { className: 'example-name' }, ex.name),
+                            e('div', { className: 'example-desc' }, ex.desc)
+                        ))
+                    )
+                ),
+                
+                // Right panel
+                e('div', { className: 'right-panel' },
+                    // Palette
+                    e('div', { className: 'palette' },
+                        e('div', { className: 'palette-header' }, '🧰 Toolbox'),
+                        palette.map((cat, ci) => e('div', { key: ci, className: 'palette-category' },
+                            e('div', { className: 'category-title' }, cat.name),
+                            e('div', { className: 'palette-items' },
+                                cat.items.map((item, ii) => e('div', {
+                                    key: ii,
+                                    className: 'palette-item',
+                                    style: { background: inferColor(item.e) + '20', border: `1px solid ${inferColor(item.e)}50`, color: inferColor(item.e) },
+                                    draggable: true,
+                                    onDragStart: ev => handlePaletteDragStart(ev, item.e),
+                                    onDragEnd: () => setDraggedExpr(null),
+                                    title: print(item.e)
+                                }, item.l))
+                            )
+                        ))
+                    ),
+                    
+                    // Canvas
+                    e('div', {
+                        className: 'canvas',
+                        onClick: () => setSelectedPath(null),
+                        onDrop: handleCanvasDrop,
+                        onDragOver: ev => { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; }
+                    },
+                        hasExpr ? e(VisualNode, {
+                            expr: result.expr,
+                            path: [],
+                            selectedPath,
+                            onSelect: setSelectedPath,
+                            onEdit: handleEdit,
+                            isDropTarget: !!draggedExpr && selectedPath !== null
+                        }) : e('div', { className: 'empty-canvas' },
+                            e('div', { className: 'empty-icon' }, '🎯'),
+                            e('div', { className: 'empty-title' }, 'Drop Here to Start'),
+                            e('div', { className: 'empty-subtitle' }, 'Drag a block from the toolbox, or try an example')
+                        ),
+                        
+                        selectedPath && hasExpr && e('div', { className: 'selection-bar' },
+                            e('span', null, 'Selected: ', e('code', { className: 'selection-code' }, print(getAtPath(result.expr, selectedPath) || {}))),
+                            e('div', { className: 'selection-actions' },
+                                e('button', { className: 'action-btn', onClick: () => setSelectedPath(null) }, 'Deselect'),
+                                selectedPath.length > 0 && e('button', { className: 'action-btn danger', onClick: () => {
+                                    const newExpr = removeAtPath(result.expr, selectedPath);
+                                    if (newExpr) { updateExpr(newExpr); setSelectedPath(null); }
+                                }}, '🗑️ Delete')
+                            )
+                        )
+                    )
+                )
+            ),
+            
+            // Status bar
+            e('footer', { className: 'status-bar' },
+                e('div', { className: 'status-left' },
+                    e('span', null,
+                        e('span', { className: 'status-dot', style: { background: result.status === 'success' ? 'var(--status-success)' : result.status === 'parseError' || result.status === 'evalError' ? 'var(--status-error)' : 'var(--text-dim)' } }),
+                        result.status === 'success' ? 'Ready' : result.status === 'parseError' ? 'Parse error' : result.status === 'evalError' ? 'Eval error' : 'Idle'
+                    ),
+                    e('span', null, `${evalCount} evaluations`)
+                ),
+                e('div', { className: 'status-right' },
+                    e('span', null, 'Double-click numbers to edit'),
+                    e('span', null, 'Del to remove')
+                )
+            ),
+            
+            // Help modal
+            showHelp && e(HelpModal, { onClose: () => setShowHelp(false) })
+        );
+    }
+    
+    // Mount
+    ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+    </script>
+</body>
+</html>
