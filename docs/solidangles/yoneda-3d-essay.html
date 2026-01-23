@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Geometry of Knowing: A Visual Journey Through Yoneda</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888a0;
+            --accent-blue: #4a9eff;
+            --accent-cyan: #00d4aa;
+            --accent-purple: #a855f7;
+            --accent-orange: #ff9f43;
+            --accent-pink: #ff6b9d;
+            --glow-blue: rgba(74, 158, 255, 0.4);
+            --glow-cyan: rgba(0, 212, 170, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 18px;
+            overflow-x: hidden;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5em;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            max-width: 600px;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(10px); }
+        }
+
+        .scroll-indicator svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--accent-blue);
+        }
+
+        /* Main Content */
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        section {
+            padding: 100px 0;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 400;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent-cyan);
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        strong {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        em {
+            color: var(--accent-blue);
+            font-style: normal;
+        }
+
+        /* Interactive Visualization Containers */
+        .viz-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 3rem 0;
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .viz-container.tall {
+            height: 600px;
+        }
+
+        .viz-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .viz-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(transparent, rgba(10, 10, 15, 0.95));
+            pointer-events: none;
+        }
+
+        .viz-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .viz-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .viz-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .viz-btn:hover {
+            background: rgba(74, 158, 255, 0.2);
+            border-color: var(--accent-blue);
+        }
+
+        .viz-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        /* Info Cards */
+        .info-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 2rem 0;
+        }
+
+        .info-card.highlight {
+            border-color: var(--accent-blue);
+            background: linear-gradient(135deg, rgba(74, 158, 255, 0.1), rgba(0, 212, 170, 0.05));
+        }
+
+        .info-card h4 {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--accent-cyan);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-card p {
+            margin-bottom: 0;
+            font-size: 16px;
+        }
+
+        /* Equation Display */
+        .equation {
+            text-align: center;
+            padding: 2rem;
+            margin: 2rem 0;
+            background: var(--bg-card);
+            border-radius: 12px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 1.2rem;
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 212, 170, 0.2);
+        }
+
+        /* Interactive Hint */
+        .interact-hint {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: rgba(74, 158, 255, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+        }
+
+        .interact-hint svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        /* Section Divider */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            margin: 4rem 0;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .viz-container {
+                height: 400px;
+                border-radius: 12px;
+            }
+            
+            section {
+                padding: 60px 0;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+
+        .loading::after {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--accent-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero">
+        <canvas id="hero-canvas" class="hero-canvas"></canvas>
+        <div class="hero-content">
+            <h1>The Geometry of Knowing</h1>
+            <p class="subtitle">An interactive journey through the Yoneda lemma—understanding objects through what they do, not what they are</p>
+        </div>
+        <div class="scroll-indicator">
+            <span>Scroll to explore</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <section id="intro">
+            <h2>Two Ways of Knowing</h2>
+            
+            <p>There's a profound duality at the heart of mathematics—perhaps at the heart of all understanding. You can know something by examining <strong>what it is</strong>: its internal structure, its definition, its passive existence. Or you can know something by observing <strong>what it does</strong>: how it interacts, what role it plays, its active existence in relation to others.</p>
+
+            <p>A number like <em>6</em> simply "is" the symbol we write, or perhaps the successor of 5. But what 6 <em>does</em> is far richer—it relates to every other number through comparison. It dominates {1, 2, 3, 4, 5} and is dominated by {7, 8, 9, ...}. These relationships completely characterize it.</p>
+
+            <div class="info-card highlight">
+                <h4>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    The Yoneda Insight
+                </h4>
+                <p>An object is completely determined by how it relates to all other objects. The "does" captures the "is" perfectly—they are two views of the same truth.</p>
+            </div>
+
+            <p>This principle, formalized as the <strong>Yoneda lemma</strong>, is often called the most important result in category theory. But we'll approach it gently, through ordered sets, where everything becomes visual and concrete.</p>
+        </section>
+
+        <section id="poset-viz">
+            <h2>The Landscape of Order</h2>
+            
+            <p>Consider the natural numbers with their familiar ordering. Each number occupies a position in a vast landscape of relationships. Let's visualize this structure in three dimensions, where we can see how each element connects to all others.</p>
+
+            <div class="interact-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                </svg>
+                <span>Click any node to see its relationship profile. Drag to rotate the view.</span>
+            </div>
+
+            <div class="viz-container tall" id="poset-container">
+                <canvas id="poset-canvas" class="viz-canvas"></canvas>
+                <div class="viz-controls">
+                    <button class="viz-btn active" data-view="lattice">Lattice View</button>
+                    <button class="viz-btn" data-view="comparison">Comparison View</button>
+                </div>
+                <div class="viz-overlay">
+                    <div class="viz-label" id="poset-info">Select an element to explore its relationships</div>
+                </div>
+            </div>
+
+            <p>When you select an element, notice how it partitions the entire set into three regions: elements <em>below</em> it (the lower set), elements <em>above</em> it (the upper set), and itself. This partition is the element's "fingerprint"—no two elements have the same one.</p>
+
+            <h3>The Comparison Predicates</h3>
+
+            <p>For any element <em>x</em>, we can define two predicates that capture what <em>x</em> does:</p>
+
+            <div class="equation">
+                L(y) = (y ≤ x) &nbsp;&nbsp;&nbsp;&nbsp; U(y) = (x ≤ y)
+            </div>
+
+            <p>The lower predicate <em>L</em> identifies everything that <em>x</em> dominates. The upper predicate <em>U</em> identifies everything that dominates <em>x</em>. Together, they tell you exactly where <em>x</em> sits in the order—and therefore, what <em>x</em> is.</p>
+        </section>
+
+        <section id="transitivity">
+            <h2>What Relationships Do</h2>
+
+            <p>The "is-does" duality applies not just to elements, but to <em>relationships</em> themselves. A relationship like <em>a ≤ b</em> doesn't just "exist"—it <em>acts</em>.</p>
+
+            <p>What does the fact that 3 ≤ 7 actually <strong>do</strong>? It allows transportation. Whenever you know that <em>z ≤ 3</em>, you can conclude <em>z ≤ 7</em> by transitivity. The relationship acts as a <em>function on other relationships</em>.</p>
+
+            <div class="interact-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                </svg>
+                <span>Drag the source and target to see how relationships transport through transitivity.</span>
+            </div>
+
+            <div class="viz-container" id="transitivity-container">
+                <canvas id="transitivity-canvas" class="viz-canvas"></canvas>
+                <div class="viz-overlay">
+                    <div class="viz-label" id="transitivity-info">Showing: z ≤ a implies z ≤ b by transitivity</div>
+                </div>
+            </div>
+
+            <p>Here's the key observation. Suppose we know that for <em>all</em> z, the implication <em>z ≤ a</em> ⟹ <em>z ≤ b</em> holds. Can we conclude that <em>a ≤ b</em>?</p>
+
+            <p>Yes! We <strong>follow the identity</strong>. Since our implication holds for all z, it holds for <em>z = a</em> in particular. We know <em>a ≤ a</em> by reflexivity, so by our implication, <em>a ≤ b</em>.</p>
+
+            <div class="info-card">
+                <h4>The Baby Yoneda Lemma</h4>
+                <p>The relationship <em>a ≤ b</em> is equivalent to the statement <em>∀z. (z ≤ a) ⟹ (z ≤ b)</em>. The passive "is" of a relationship equals what it actively "does."</p>
+            </div>
+        </section>
+
+        <section id="virtual">
+            <h2>Virtual Objects</h2>
+
+            <p>Sometimes we want to reason about objects that don't actually exist in our set, but could still be "probed" by elements that do. These are <strong>virtual objects</strong>.</p>
+
+            <p>Consider π in relation to the rational numbers. π doesn't exist in ℚ—it's irrational. But we can still compare rationals to π: we know 3 < π < 4, that 3.14 < π < 3.15, and so on. The real number π acts as a virtual object on the rationals, defined entirely by how rationals relate to it.</p>
+
+            <div class="interact-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                </svg>
+                <span>Drag the virtual point to see how it partitions the rationals into a Dedekind cut.</span>
+            </div>
+
+            <div class="viz-container tall" id="virtual-container">
+                <canvas id="virtual-canvas" class="viz-canvas"></canvas>
+                <div class="viz-controls">
+                    <button class="viz-btn active" data-virtual="pi">π</button>
+                    <button class="viz-btn" data-virtual="sqrt2">√2</button>
+                    <button class="viz-btn" data-virtual="e">e</button>
+                    <button class="viz-btn" data-virtual="custom">Custom</button>
+                </div>
+                <div class="viz-overlay">
+                    <div class="viz-label" id="virtual-info">Virtual object: π ≈ 3.14159...</div>
+                </div>
+            </div>
+
+            <p>A virtual object <em>v</em> is defined purely by what it "does"—by its comparison predicate <em>p(y) = (y ≤ v)</em>. This predicate must be consistent: if <em>y ≤ v</em> and <em>x ≤ y</em>, then <em>x ≤ v</em>. This is exactly what it means for a set to be "downward closed."</p>
+
+            <p>This is the essence of <strong>Dedekind cuts</strong>: a real number is nothing more than a consistent way of partitioning the rationals into "below" and "above."</p>
+        </section>
+
+        <section id="representability">
+            <h2>When Virtual Becomes Actual</h2>
+
+            <p>Sometimes a virtual object can be <em>represented</em> by an actual one. Consider a real number <em>r</em> viewed as a virtual object on the integers. The pattern "which integers are ≤ r" defines something, and the <strong>floor function</strong> ⌊r⌋ is the integer that best represents this pattern from below.</p>
+
+            <div class="interact-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                </svg>
+                <span>Drag the real number to see floor and ceiling track it from both sides.</span>
+            </div>
+
+            <div class="viz-container" id="floor-container">
+                <canvas id="floor-canvas" class="viz-canvas"></canvas>
+                <div class="viz-overlay">
+                    <div class="viz-label" id="floor-info">r = 3.14 → ⌊r⌋ = 3, ⌈r⌉ = 4</div>
+                </div>
+            </div>
+
+            <p>The floor ⌊r⌋ represents the virtual object when we focus on arrows pointing <em>into</em> r:</p>
+
+            <div class="equation">
+                n ≤ r &nbsp;⟺&nbsp; n ≤ ⌊r⌋
+            </div>
+
+            <p>The ceiling ⌈r⌉ represents r when we focus on arrows pointing <em>out of</em> r:</p>
+
+            <div class="equation">
+                r ≤ n &nbsp;⟺&nbsp; ⌈r⌉ ≤ n
+            </div>
+
+            <p>This pattern—having two "best approximations" from opposite directions—is the hallmark of an <strong>adjunction</strong>, one of the most important concepts in category theory.</p>
+        </section>
+
+        <section id="products">
+            <h2>Products as Packagers</h2>
+
+            <p>The same Yoneda thinking illuminates how we understand products. Consider what it means to give a map into a product <em>A × B</em>. By the universal property:</p>
+
+            <div class="equation">
+                f : X → A × B &nbsp;⟺&nbsp; (π₁ ∘ f, π₂ ∘ f) : X → A and X → B
+            </div>
+
+            <p>A single map into the product is the same as a <em>pair</em> of maps to the factors. The product "packages" pairs of maps into single maps.</p>
+
+            <div class="interact-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/>
+                </svg>
+                <span>Click on source objects to see how maps to factors package into maps to the product.</span>
+            </div>
+
+            <div class="viz-container tall" id="product-container">
+                <canvas id="product-canvas" class="viz-canvas"></canvas>
+                <div class="viz-controls">
+                    <button class="viz-btn active" data-product="packaging">Packaging</button>
+                    <button class="viz-btn" data-product="projections">Projections</button>
+                    <button class="viz-btn" data-product="universal">Universal Property</button>
+                </div>
+                <div class="viz-overlay">
+                    <div class="viz-label" id="product-info">Product A × B packages pairs of maps</div>
+                </div>
+            </div>
+
+            <p>The projections π₁ and π₂ arise from "following the identity." Setting X = A × B and f = id gives us the universal projections that unpackage maps from the product.</p>
+
+            <h3>Minimum and Maximum</h3>
+
+            <p>In ordered sets, the product becomes the <em>minimum</em>:</p>
+
+            <div class="equation">
+                x ≤ min(a, b) &nbsp;⟺&nbsp; x ≤ a and x ≤ b
+            </div>
+
+            <p>Dually, the <em>coproduct</em> (sum) becomes the <em>maximum</em>:</p>
+
+            <div class="equation">
+                max(a, b) ≤ x &nbsp;⟺&nbsp; a ≤ x and b ≤ x
+            </div>
+
+            <p>The min "packages" pairs of upper bounds; the max "packages" pairs of lower bounds. Both are defined not by what they "are" but by what they "do"—their universal properties.</p>
+        </section>
+
+        <section id="synthesis">
+            <h2>The Cathedral of Representability</h2>
+
+            <p>We've journeyed through a landscape where objects are known by their relationships, where virtual things probe actual things, and where universal properties package complex data into simple forms.</p>
+
+            <div class="viz-container tall" id="synthesis-container">
+                <canvas id="synthesis-canvas" class="viz-canvas"></canvas>
+                <div class="viz-overlay">
+                    <div class="viz-label">The hierarchy of representability</div>
+                </div>
+            </div>
+
+            <p>At the foundation sits a category—the "actual" objects. The Yoneda embedding lifts this category into presheaves, where representable presheaves are images of actual objects, and non-representable presheaves are "virtual objects" that can be probed but don't exist in the original category.</p>
+
+            <div class="info-card highlight">
+                <h4>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                    The Meta-Pattern
+                </h4>
+                <p>Throughout all of this, one principle repeats: <strong>objects are determined by their morphisms</strong>. Whether we work with actual arrows, virtual arrows, or weighted diagrams, the "does" perspective captures everything. The Yoneda lemma is not just a theorem—it's a way of thinking about mathematics itself.</p>
+            </div>
+
+            <p>When we understand something through its relationships rather than its internal structure, we gain both abstraction and concreteness simultaneously. We can work with virtual objects as if they were real, compute with universal properties, and translate between different mathematical worlds.</p>
+
+            <p>This is the geometry of knowing: <em>to understand an object is to understand how it interacts with everything else</em>.</p>
+        </section>
+    </div>
+
+    <footer>
+        <p>Inspired by "The Baby Yoneda Lemma" and "How to Represent Non-Representable Functors"</p>
+        <p style="margin-top: 8px; opacity: 0.6;">Interactive visualizations built with Three.js and anime.js</p>
+    </footer>
+
+    <script>
+    // ============================================
+    // Utility Functions
+    // ============================================
+
+    function createRenderer(canvas) {
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas, 
+            antialias: true,
+            alpha: true
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x12121a, 1);
+        return renderer;
+    }
+
+    function resizeRenderer(renderer, container) {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        renderer.setSize(width, height);
+        return { width, height };
+    }
+
+    // Glow shader material
+    function createGlowMaterial(color, intensity = 1.0) {
+        return new THREE.ShaderMaterial({
+            uniforms: {
+                glowColor: { value: new THREE.Color(color) },
+                intensity: { value: intensity }
+            },
+            vertexShader: `
+                varying vec3 vNormal;
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform vec3 glowColor;
+                uniform float intensity;
+                varying vec3 vNormal;
+                void main() {
+                    float glow = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                    gl_FragColor = vec4(glowColor, glow * intensity);
+                }
+            `,
+            side: THREE.FrontSide,
+            blending: THREE.AdditiveBlending,
+            transparent: true
+        });
+    }
+
+    // Create a node sphere
+    function createNode(radius, color, emissive = false) {
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
+        const material = new THREE.MeshStandardMaterial({
+            color: color,
+            emissive: emissive ? color : 0x000000,
+            emissiveIntensity: emissive ? 0.3 : 0,
+            metalness: 0.3,
+            roughness: 0.7
+        });
+        return new THREE.Mesh(geometry, material);
+    }
+
+    // Create an arrow/edge between two points
+    function createArrow(start, end, color, thickness = 0.02) {
+        const direction = new THREE.Vector3().subVectors(end, start);
+        const length = direction.length();
+        direction.normalize();
+
+        const group = new THREE.Group();
+
+        // Line segment
+        const lineGeometry = new THREE.CylinderGeometry(thickness, thickness, length * 0.85, 8);
+        const lineMaterial = new THREE.MeshStandardMaterial({ 
+            color: color,
+            emissive: color,
+            emissiveIntensity: 0.2
+        });
+        const line = new THREE.Mesh(lineGeometry, lineMaterial);
+        line.position.copy(start).lerp(end, 0.425);
+
+        // Arrow head
+        const coneGeometry = new THREE.ConeGeometry(thickness * 3, length * 0.15, 8);
+        const cone = new THREE.Mesh(coneGeometry, lineMaterial);
+        cone.position.copy(start).lerp(end, 0.9);
+
+        // Orient
+        const quaternion = new THREE.Quaternion();
+        quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+        line.quaternion.copy(quaternion);
+        cone.quaternion.copy(quaternion);
+
+        group.add(line);
+        group.add(cone);
+        return group;
+    }
+
+    // Create dashed line
+    function createDashedLine(start, end, color) {
+        const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+        const material = new THREE.LineDashedMaterial({
+            color: color,
+            dashSize: 0.1,
+            gapSize: 0.05,
+            transparent: true,
+            opacity: 0.7
+        });
+        const line = new THREE.Line(geometry, material);
+        line.computeLineDistances();
+        return line;
+    }
+
+    // Create text sprite
+    function createTextSprite(text, color = '#ffffff', size = 64) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 128;
+        
+        context.fillStyle = color;
+        context.font = `bold ${size}px SF Pro Display, -apple-system, sans-serif`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, 128, 64);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ 
+            map: texture, 
+            transparent: true,
+            depthTest: false
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(0.5, 0.25, 1);
+        return sprite;
+    }
+
+    // ============================================
+    // Hero Canvas - Floating particles
+    // ============================================
+
+    (function initHero() {
+        const canvas = document.getElementById('hero-canvas');
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 30;
+
+        // Create particle system
+        const particleCount = 200;
+        const positions = new Float32Array(particleCount * 3);
+        const velocities = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 60;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
+            velocities.push({
+                x: (Math.random() - 0.5) * 0.02,
+                y: (Math.random() - 0.5) * 0.02,
+                z: (Math.random() - 0.5) * 0.01
+            });
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const material = new THREE.PointsMaterial({
+            color: 0x4a9eff,
+            size: 0.15,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        // Create connecting lines
+        const lineGeometry = new THREE.BufferGeometry();
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0x4a9eff,
+            transparent: true,
+            opacity: 0.1
+        });
+
+        function updateLines() {
+            const linePositions = [];
+            const pos = particles.geometry.attributes.position.array;
+
+            for (let i = 0; i < particleCount; i++) {
+                for (let j = i + 1; j < particleCount; j++) {
+                    const dx = pos[i * 3] - pos[j * 3];
+                    const dy = pos[i * 3 + 1] - pos[j * 3 + 1];
+                    const dz = pos[i * 3 + 2] - pos[j * 3 + 2];
+                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    if (dist < 5) {
+                        linePositions.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+                        linePositions.push(pos[j * 3], pos[j * 3 + 1], pos[j * 3 + 2]);
+                    }
+                }
+            }
+
+            lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+        }
+
+        const lines = new THREE.LineSegments(lineGeometry, lineMaterial);
+        scene.add(lines);
+
+        function resize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            renderer.setSize(width, height);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                pos[i * 3] += velocities[i].x;
+                pos[i * 3 + 1] += velocities[i].y;
+                pos[i * 3 + 2] += velocities[i].z;
+
+                // Wrap around
+                if (pos[i * 3] > 30) pos[i * 3] = -30;
+                if (pos[i * 3] < -30) pos[i * 3] = 30;
+                if (pos[i * 3 + 1] > 20) pos[i * 3 + 1] = -20;
+                if (pos[i * 3 + 1] < -20) pos[i * 3 + 1] = 20;
+            }
+
+            particles.geometry.attributes.position.needsUpdate = true;
+            updateLines();
+
+            particles.rotation.y += 0.0003;
+            lines.rotation.y += 0.0003;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Poset Visualization
+    // ============================================
+
+    (function initPoset() {
+        const container = document.getElementById('poset-container');
+        const canvas = document.getElementById('poset-canvas');
+        const infoEl = document.getElementById('poset-info');
+        
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        camera.position.set(0, 3, 12);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        
+        const pointLight = new THREE.PointLight(0x4a9eff, 1, 50);
+        pointLight.position.set(5, 10, 5);
+        scene.add(pointLight);
+
+        // Create nodes for numbers 1-9
+        const nodes = [];
+        const nodeGroup = new THREE.Group();
+        const edgeGroup = new THREE.Group();
+
+        const colors = {
+            default: 0x4a9eff,
+            selected: 0x00d4aa,
+            lower: 0xa855f7,
+            upper: 0xff9f43
+        };
+
+        for (let i = 1; i <= 9; i++) {
+            const angle = (i - 1) * (Math.PI * 2 / 9);
+            const radius = 4;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const y = (i - 5) * 0.4;
+
+            const node = createNode(0.3, colors.default);
+            node.position.set(x, y, z);
+            node.userData = { value: i, originalColor: colors.default };
+            nodes.push(node);
+            nodeGroup.add(node);
+
+            const label = createTextSprite(i.toString(), '#ffffff', 48);
+            label.position.set(x, y + 0.6, z);
+            nodeGroup.add(label);
+        }
+
+        scene.add(nodeGroup);
+        scene.add(edgeGroup);
+
+        let selectedNode = null;
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        function updateSelection(selected) {
+            selectedNode = selected;
+            edgeGroup.clear();
+
+            nodes.forEach(node => {
+                const val = node.userData.value;
+                let color = colors.default;
+
+                if (selected !== null) {
+                    if (val === selected) {
+                        color = colors.selected;
+                    } else if (val < selected) {
+                        color = colors.lower;
+                    } else {
+                        color = colors.upper;
+                    }
+                }
+
+                node.material.color.setHex(color);
+                node.material.emissive.setHex(val === selected ? color : 0x000000);
+            });
+
+            if (selected !== null) {
+                // Draw edges
+                nodes.forEach(node => {
+                    const val = node.userData.value;
+                    if (val < selected) {
+                        const targetNode = nodes.find(n => n.userData.value === selected);
+                        const arrow = createArrow(node.position, targetNode.position, colors.lower, 0.015);
+                        edgeGroup.add(arrow);
+                    }
+                });
+
+                const lowerSet = nodes.filter(n => n.userData.value < selected).map(n => n.userData.value);
+                const upperSet = nodes.filter(n => n.userData.value > selected).map(n => n.userData.value);
+                infoEl.textContent = `Element ${selected}: Lower set = {${lowerSet.join(', ')}} | Upper set = {${upperSet.join(', ')}}`;
+            } else {
+                infoEl.textContent = 'Select an element to explore its relationships';
+            }
+        }
+
+        // Raycaster for mouse picking
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        canvas.addEventListener('click', (e) => {
+            if (isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(nodes);
+
+            if (intersects.length > 0) {
+                const clicked = intersects[0].object.userData.value;
+                updateSelection(clicked === selectedNode ? null : clicked);
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = false;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (e.buttons !== 1) return;
+            
+            const deltaX = e.clientX - previousMousePosition.x;
+            const deltaY = e.clientY - previousMousePosition.y;
+            
+            if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+                isDragging = true;
+            }
+
+            nodeGroup.rotation.y += deltaX * 0.01;
+            edgeGroup.rotation.y += deltaX * 0.01;
+            
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        function resize() {
+            const { width, height } = resizeRenderer(renderer, container);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!isDragging) {
+                nodeGroup.rotation.y += 0.002;
+                edgeGroup.rotation.y += 0.002;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Transitivity Visualization
+    // ============================================
+
+    (function initTransitivity() {
+        const container = document.getElementById('transitivity-container');
+        const canvas = document.getElementById('transitivity-canvas');
+        const infoEl = document.getElementById('transitivity-info');
+        
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        camera.position.set(0, 2, 10);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8, 50);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Create three nodes: z, a, b
+        const nodeA = createNode(0.4, 0x4a9eff, true);
+        nodeA.position.set(-2, 0, 0);
+        scene.add(nodeA);
+
+        const nodeB = createNode(0.4, 0x00d4aa, true);
+        nodeB.position.set(2, 0, 0);
+        scene.add(nodeB);
+
+        const nodeZ = createNode(0.3, 0xff9f43, true);
+        nodeZ.position.set(-3, 2, 0);
+        scene.add(nodeZ);
+
+        // Labels
+        const labelA = createTextSprite('a', '#4a9eff');
+        labelA.position.set(-2, -0.8, 0);
+        scene.add(labelA);
+
+        const labelB = createTextSprite('b', '#00d4aa');
+        labelB.position.set(2, -0.8, 0);
+        scene.add(labelB);
+
+        const labelZ = createTextSprite('z', '#ff9f43');
+        labelZ.position.set(-3, 2.7, 0);
+        scene.add(labelZ);
+
+        // Arrows
+        const arrowGroup = new THREE.Group();
+        scene.add(arrowGroup);
+
+        function updateArrows() {
+            arrowGroup.clear();
+
+            // z -> a
+            const arrow1 = createArrow(
+                nodeZ.position.clone().add(new THREE.Vector3(0.3, -0.2, 0)),
+                nodeA.position.clone().add(new THREE.Vector3(-0.2, 0.3, 0)),
+                0xff9f43, 0.02
+            );
+            arrowGroup.add(arrow1);
+
+            // a -> b
+            const arrow2 = createArrow(
+                nodeA.position.clone().add(new THREE.Vector3(0.4, 0, 0)),
+                nodeB.position.clone().add(new THREE.Vector3(-0.4, 0, 0)),
+                0x4a9eff, 0.02
+            );
+            arrowGroup.add(arrow2);
+
+            // z -> b (dashed, implied)
+            const arrow3 = createDashedLine(
+                nodeZ.position.clone().add(new THREE.Vector3(0.2, -0.2, 0)),
+                nodeB.position.clone().add(new THREE.Vector3(0, 0.4, 0)),
+                0x00d4aa
+            );
+            arrowGroup.add(arrow3);
+
+            // Check if z = a (following identity)
+            const dist = nodeZ.position.distanceTo(nodeA.position);
+            if (dist < 0.6) {
+                infoEl.innerHTML = '<strong style="color:#00d4aa">★ Following the identity!</strong> z = a, so a ≤ a ⟹ a ≤ b';
+            } else {
+                infoEl.textContent = 'z ≤ a and a ≤ b ⟹ z ≤ b (by transitivity)';
+            }
+        }
+
+        updateArrows();
+
+        // Dragging z
+        let isDragging = false;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const intersection = new THREE.Vector3();
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(nodeZ);
+            if (intersects.length > 0) {
+                isDragging = true;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.intersectPlane(plane, intersection);
+
+            nodeZ.position.x = Math.max(-4, Math.min(1, intersection.x));
+            nodeZ.position.y = Math.max(-1, Math.min(3, intersection.y));
+            labelZ.position.set(nodeZ.position.x, nodeZ.position.y + 0.7, 0);
+
+            updateArrows();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function resize() {
+            const { width, height } = resizeRenderer(renderer, container);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Virtual Objects (Dedekind Cuts)
+    // ============================================
+
+    (function initVirtual() {
+        const container = document.getElementById('virtual-container');
+        const canvas = document.getElementById('virtual-canvas');
+        const infoEl = document.getElementById('virtual-info');
+        
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        camera.position.set(0, 4, 12);
+        camera.lookAt(0, 0, 0);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x4a9eff, 1, 50);
+        pointLight.position.set(5, 10, 5);
+        scene.add(pointLight);
+
+        // Number line
+        const lineGeometry = new THREE.CylinderGeometry(0.03, 0.03, 12, 8);
+        const lineMaterial = new THREE.MeshStandardMaterial({ color: 0x333344 });
+        const numberLine = new THREE.Mesh(lineGeometry, lineMaterial);
+        numberLine.rotation.z = Math.PI / 2;
+        scene.add(numberLine);
+
+        // Rationals as nodes
+        const rationals = [];
+        const rationalValues = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+        const nodeGroup = new THREE.Group();
+
+        rationalValues.forEach(val => {
+            const x = (val - 2.5) * 2;
+            const node = createNode(0.15, 0x666680);
+            node.position.set(x, 0, 0);
+            node.userData = { value: val };
+            rationals.push(node);
+            nodeGroup.add(node);
+
+            const label = createTextSprite(val % 1 === 0 ? val.toString() : '', '#888899', 32);
+            label.position.set(x, -0.5, 0);
+            label.scale.set(0.3, 0.15, 1);
+            nodeGroup.add(label);
+        });
+
+        scene.add(nodeGroup);
+
+        // Virtual object
+        const virtualNode = createNode(0.25, 0xff6b9d, true);
+        virtualNode.position.set(1.28, 1.5, 0); // π ≈ 3.14 -> x = (3.14-2.5)*2 ≈ 1.28
+        scene.add(virtualNode);
+
+        // Virtual node glow
+        const glowGeometry = new THREE.SphereGeometry(0.4, 32, 32);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff6b9d,
+            transparent: true,
+            opacity: 0.2,
+            blending: THREE.AdditiveBlending
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        virtualNode.add(glow);
+
+        // Dashed lines from virtual to rationals
+        const lineGroup = new THREE.Group();
+        scene.add(lineGroup);
+
+        let virtualValue = Math.PI;
+
+        const virtualConstants = {
+            'pi': Math.PI,
+            'sqrt2': Math.SQRT2,
+            'e': Math.E,
+            'custom': 2.7
+        };
+
+        function updateVirtual() {
+            const x = (virtualValue - 2.5) * 2;
+            virtualNode.position.x = x;
+
+            lineGroup.clear();
+
+            rationals.forEach(node => {
+                const val = node.userData.value;
+                const isBelow = val < virtualValue;
+
+                node.material.color.setHex(isBelow ? 0xa855f7 : 0xff9f43);
+                node.material.emissive.setHex(isBelow ? 0x330033 : 0x332200);
+
+                // Draw virtual arrow
+                const line = createDashedLine(
+                    new THREE.Vector3(node.position.x, 0.2, 0),
+                    new THREE.Vector3(virtualNode.position.x, virtualNode.position.y - 0.3, 0),
+                    isBelow ? 0xa855f7 : 0xff9f43
+                );
+                lineGroup.add(line);
+            });
+
+            const below = rationals.filter(n => n.userData.value < virtualValue).length;
+            infoEl.textContent = `Virtual object: ${virtualValue.toFixed(5)}... | ${below} rationals below, ${rationals.length - below} above`;
+        }
+
+        updateVirtual();
+
+        // Button handlers
+        container.querySelectorAll('.viz-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                container.querySelectorAll('.viz-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const key = btn.dataset.virtual;
+                virtualValue = virtualConstants[key];
+                updateVirtual();
+            });
+        });
+
+        // Dragging virtual node
+        let isDragging = false;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const intersection = new THREE.Vector3();
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(virtualNode);
+            if (intersects.length > 0) {
+                isDragging = true;
+                container.querySelector('[data-virtual="custom"]').classList.add('active');
+                container.querySelectorAll('.viz-btn:not([data-virtual="custom"])').forEach(b => b.classList.remove('active'));
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.intersectPlane(plane, intersection);
+
+            const newX = Math.max(-5, Math.min(5, intersection.x));
+            virtualValue = newX / 2 + 2.5;
+            virtualValue = Math.max(0.1, Math.min(4.9, virtualValue));
+            virtualConstants.custom = virtualValue;
+            updateVirtual();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function resize() {
+            const { width, height } = resizeRenderer(renderer, container);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Pulse glow
+            const pulse = Math.sin(Date.now() * 0.003) * 0.1 + 0.2;
+            glow.material.opacity = pulse;
+            
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Floor/Ceiling Visualization
+    // ============================================
+
+    (function initFloor() {
+        const container = document.getElementById('floor-container');
+        const canvas = document.getElementById('floor-canvas');
+        const infoEl = document.getElementById('floor-info');
+        
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        camera.position.set(0, 3, 10);
+        camera.lookAt(0, 0, 0);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8, 50);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Integer line (lower)
+        const intGroup = new THREE.Group();
+        intGroup.position.y = -1;
+
+        for (let i = 0; i <= 6; i++) {
+            const x = (i - 3) * 1.5;
+            const node = createNode(0.25, 0x4a9eff);
+            node.position.set(x, 0, 0);
+            node.userData = { value: i };
+            intGroup.add(node);
+
+            const label = createTextSprite(i.toString(), '#4a9eff', 40);
+            label.position.set(x, -0.6, 0);
+            label.scale.set(0.3, 0.15, 1);
+            intGroup.add(label);
+        }
+
+        scene.add(intGroup);
+
+        // Real number (draggable)
+        const realNode = createNode(0.2, 0xff6b9d, true);
+        realNode.position.set(0.21, 1, 0); // 3.14
+        scene.add(realNode);
+
+        // Floor and ceiling indicators
+        const floorIndicator = createNode(0.2, 0x00d4aa, true);
+        floorIndicator.position.y = -1;
+        scene.add(floorIndicator);
+
+        const ceilIndicator = createNode(0.2, 0xff9f43, true);
+        ceilIndicator.position.y = -1;
+        scene.add(ceilIndicator);
+
+        // Connection lines
+        const connectionGroup = new THREE.Group();
+        scene.add(connectionGroup);
+
+        let realValue = 3.14;
+
+        function updateFloorCeil() {
+            const x = (realValue - 3) * 1.5;
+            realNode.position.x = x;
+
+            const floor = Math.floor(realValue);
+            const ceil = Math.ceil(realValue);
+
+            floorIndicator.position.x = (floor - 3) * 1.5;
+            ceilIndicator.position.x = (ceil - 3) * 1.5;
+
+            // Update integer colors
+            intGroup.children.forEach(child => {
+                if (child.userData && child.userData.value !== undefined) {
+                    const val = child.userData.value;
+                    if (val === floor) {
+                        child.material.color.setHex(0x00d4aa);
+                        child.material.emissive.setHex(0x003322);
+                    } else if (val === ceil) {
+                        child.material.color.setHex(0xff9f43);
+                        child.material.emissive.setHex(0x332200);
+                    } else if (val < floor) {
+                        child.material.color.setHex(0x00d4aa);
+                        child.material.emissive.setHex(0x001111);
+                    } else {
+                        child.material.color.setHex(0xff9f43);
+                        child.material.emissive.setHex(0x111100);
+                    }
+                }
+            });
+
+            // Connection lines
+            connectionGroup.clear();
+
+            const line1 = createDashedLine(
+                new THREE.Vector3(realNode.position.x, realNode.position.y - 0.25, 0),
+                new THREE.Vector3(floorIndicator.position.x, -0.7, 0),
+                0x00d4aa
+            );
+            connectionGroup.add(line1);
+
+            const line2 = createDashedLine(
+                new THREE.Vector3(realNode.position.x, realNode.position.y - 0.25, 0),
+                new THREE.Vector3(ceilIndicator.position.x, -0.7, 0),
+                0xff9f43
+            );
+            connectionGroup.add(line2);
+
+            infoEl.innerHTML = `r = <strong style="color:#ff6b9d">${realValue.toFixed(2)}</strong> → ⌊r⌋ = <strong style="color:#00d4aa">${floor}</strong>, ⌈r⌉ = <strong style="color:#ff9f43">${ceil}</strong>`;
+        }
+
+        updateFloorCeil();
+
+        // Dragging
+        let isDragging = false;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const intersection = new THREE.Vector3();
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(realNode);
+            if (intersects.length > 0) {
+                isDragging = true;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.intersectPlane(plane, intersection);
+
+            realValue = intersection.x / 1.5 + 3;
+            realValue = Math.max(0.1, Math.min(5.9, realValue));
+            updateFloorCeil();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function resize() {
+            const { width, height } = resizeRenderer(renderer, container);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Product Visualization
+    // ============================================
+
+    (function initProduct() {
+        const container = document.getElementById('product-container');
+        const canvas = document.getElementById('product-canvas');
+        const infoEl = document.getElementById('product-info');
+        
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        camera.position.set(0, 2, 10);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8, 50);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // Objects A, B, and A×B
+        const nodeA = createNode(0.35, 0x4a9eff, true);
+        nodeA.position.set(-3, -1.5, 0);
+        scene.add(nodeA);
+
+        const nodeB = createNode(0.35, 0x00d4aa, true);
+        nodeB.position.set(3, -1.5, 0);
+        scene.add(nodeB);
+
+        const nodeProduct = createNode(0.45, 0xa855f7, true);
+        nodeProduct.position.set(0, -1.5, 0);
+        scene.add(nodeProduct);
+
+        // Source object X
+        const nodeX = createNode(0.3, 0xff9f43, true);
+        nodeX.position.set(0, 2, 0);
+        scene.add(nodeX);
+
+        // Labels
+        const labelA = createTextSprite('A', '#4a9eff');
+        labelA.position.set(-3, -2.3, 0);
+        scene.add(labelA);
+
+        const labelB = createTextSprite('B', '#00d4aa');
+        labelB.position.set(3, -2.3, 0);
+        scene.add(labelB);
+
+        const labelP = createTextSprite('A×B', '#a855f7');
+        labelP.position.set(0, -2.3, 0);
+        scene.add(labelP);
+
+        const labelX = createTextSprite('X', '#ff9f43');
+        labelX.position.set(0, 2.7, 0);
+        scene.add(labelX);
+
+        // Arrows
+        const arrowGroup = new THREE.Group();
+        scene.add(arrowGroup);
+
+        let mode = 'packaging';
+
+        function updateArrows() {
+            arrowGroup.clear();
+
+            if (mode === 'packaging') {
+                // Arrows from X to A and B
+                const arrowXA = createArrow(
+                    new THREE.Vector3(-0.2, 1.7, 0),
+                    new THREE.Vector3(-2.7, -1.2, 0),
+                    0xff9f43, 0.02
+                );
+                arrowGroup.add(arrowXA);
+
+                const arrowXB = createArrow(
+                    new THREE.Vector3(0.2, 1.7, 0),
+                    new THREE.Vector3(2.7, -1.2, 0),
+                    0xff9f43, 0.02
+                );
+                arrowGroup.add(arrowXB);
+
+                // Packaged arrow to product (dashed)
+                const arrowXP = createDashedLine(
+                    new THREE.Vector3(0, 1.7, 0),
+                    new THREE.Vector3(0, -1.0, 0),
+                    0xa855f7
+                );
+                arrowGroup.add(arrowXP);
+
+                infoEl.innerHTML = 'Maps to A and B <strong style="color:#a855f7">package</strong> into a map to A×B';
+
+            } else if (mode === 'projections') {
+                // Projections from product
+                const arrowPA = createArrow(
+                    new THREE.Vector3(-0.4, -1.5, 0),
+                    new THREE.Vector3(-2.6, -1.5, 0),
+                    0xa855f7, 0.02
+                );
+                arrowGroup.add(arrowPA);
+
+                const arrowPB = createArrow(
+                    new THREE.Vector3(0.4, -1.5, 0),
+                    new THREE.Vector3(2.6, -1.5, 0),
+                    0xa855f7, 0.02
+                );
+                arrowGroup.add(arrowPB);
+
+                infoEl.innerHTML = 'Projections <strong style="color:#a855f7">π₁</strong> and <strong style="color:#a855f7">π₂</strong> unpackage maps from the product';
+
+            } else {
+                // Universal property
+                const arrowXA = createArrow(
+                    new THREE.Vector3(-0.2, 1.7, 0),
+                    new THREE.Vector3(-2.7, -1.2, 0),
+                    0xff9f43, 0.02
+                );
+                arrowGroup.add(arrowXA);
+
+                const arrowXB = createArrow(
+                    new THREE.Vector3(0.2, 1.7, 0),
+                    new THREE.Vector3(2.7, -1.2, 0),
+                    0xff9f43, 0.02
+                );
+                arrowGroup.add(arrowXB);
+
+                const arrowXP = createArrow(
+                    new THREE.Vector3(0, 1.7, 0),
+                    new THREE.Vector3(0, -1.0, 0),
+                    0xa855f7, 0.02
+                );
+                arrowGroup.add(arrowXP);
+
+                const arrowPA = createArrow(
+                    new THREE.Vector3(-0.4, -1.5, 0),
+                    new THREE.Vector3(-2.6, -1.5, 0),
+                    0x666688, 0.015
+                );
+                arrowGroup.add(arrowPA);
+
+                const arrowPB = createArrow(
+                    new THREE.Vector3(0.4, -1.5, 0),
+                    new THREE.Vector3(2.6, -1.5, 0),
+                    0x666688, 0.015
+                );
+                arrowGroup.add(arrowPB);
+
+                infoEl.innerHTML = '<strong style="color:#a855f7">Universal property:</strong> f : X → A×B ⟺ (π₁∘f, π₂∘f) : X → A and X → B';
+            }
+        }
+
+        updateArrows();
+
+        container.querySelectorAll('.viz-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                container.querySelectorAll('.viz-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                mode = btn.dataset.product;
+                updateArrows();
+            });
+        });
+
+        function resize() {
+            const { width, height } = resizeRenderer(renderer, container);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Synthesis Visualization
+    // ============================================
+
+    (function initSynthesis() {
+        const container = document.getElementById('synthesis-container');
+        const canvas = document.getElementById('synthesis-canvas');
+        
+        const renderer = createRenderer(canvas);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        camera.position.set(0, 0, 15);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x4a9eff, 1, 50);
+        pointLight.position.set(5, 10, 10);
+        scene.add(pointLight);
+
+        // Create layered structure
+        const layers = [
+            { y: -4, label: 'Category C', color: 0x4a9eff, count: 5 },
+            { y: -1.5, label: 'Representable Presheaves', color: 0x00d4aa, count: 5 },
+            { y: 1, label: 'Cauchy Complete', color: 0xff9f43, count: 7 },
+            { y: 3.5, label: 'All Presheaves', color: 0xa855f7, count: 10 }
+        ];
+
+        const layerGroups = [];
+
+        layers.forEach((layer, li) => {
+            const group = new THREE.Group();
+            group.position.y = layer.y;
+
+            // Create ring of nodes
+            for (let i = 0; i < layer.count; i++) {
+                const angle = (i / layer.count) * Math.PI * 2;
+                const radius = 3 + li * 0.5;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+
+                const isVirtual = li > 1 && i >= 5;
+                const node = createNode(0.2, layer.color, !isVirtual);
+                node.position.set(x, 0, z);
+
+                if (isVirtual) {
+                    node.material.transparent = true;
+                    node.material.opacity = 0.5;
+                }
+
+                group.add(node);
+            }
+
+            // Label
+            const label = createTextSprite(layer.label, '#' + layer.color.toString(16).padStart(6, '0'), 36);
+            label.position.set(0, 0.8, 0);
+            label.scale.set(0.8, 0.4, 1);
+            group.add(label);
+
+            scene.add(group);
+            layerGroups.push(group);
+        });
+
+        // Yoneda embedding arrows (connecting first two layers)
+        const arrowGroup = new THREE.Group();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i / 5) * Math.PI * 2;
+            const r1 = 3;
+            const r2 = 3.5;
+            
+            const start = new THREE.Vector3(
+                Math.cos(angle) * r1,
+                -4 + 0.3,
+                Math.sin(angle) * r1
+            );
+            const end = new THREE.Vector3(
+                Math.cos(angle) * r2,
+                -1.5 - 0.3,
+                Math.sin(angle) * r2
+            );
+
+            const arrow = createDashedLine(start, end, 0x00d4aa);
+            arrowGroup.add(arrow);
+        }
+        scene.add(arrowGroup);
+
+        let time = 0;
+
+        function resize() {
+            const { width, height } = resizeRenderer(renderer, container);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.005;
+
+            layerGroups.forEach((group, i) => {
+                group.rotation.y = time * (0.2 + i * 0.05);
+            });
+
+            arrowGroup.rotation.y = time * 0.2;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    })();
+
+    // ============================================
+    // Scroll-based animations
+    // ============================================
+
+    const observerOptions = {
+        threshold: 0.2,
+        rootMargin: '0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('section, .info-card, .equation').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(el);
+    });
+
+    </script>
+</body>
+</html>

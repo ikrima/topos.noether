@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Yoneda Perspective, Part II: Adjunctions and Beyond</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --text: #1a1a1a;
+            --text-secondary: #666;
+            --accent: #2563eb;
+            --accent-light: #dbeafe;
+            --highlight: #f59e0b;
+            --highlight-light: #fef3c7;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --purple: #8b5cf6;
+            --purple-light: #ede9fe;
+            --border: #e5e7eb;
+            --canvas-bg: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            font-weight: normal;
+            margin-top: 2.5em;
+            margin-bottom: 0.8em;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.3em;
+        }
+
+        h3 {
+            font-size: 1.2em;
+            font-weight: normal;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: var(--text-secondary);
+        }
+
+        p {
+            margin-bottom: 1.2em;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--text-secondary);
+            margin-bottom: 2em;
+        }
+
+        .interactive-container {
+            background: var(--canvas-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 2em 0;
+            overflow: hidden;
+        }
+
+        .interactive-header {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--border);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .interactive-hint {
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .controls {
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls label {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .controls input[type="range"] {
+            width: 120px;
+            accent-color: var(--accent);
+        }
+
+        .controls button {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            padding: 6px 16px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .controls button:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .controls button.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .equation {
+            text-align: center;
+            margin: 1.5em 0;
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1em;
+        }
+
+        .highlight-box {
+            background: var(--accent-light);
+            border-left: 4px solid var(--accent);
+            padding: 1em 1.5em;
+            margin: 1.5em 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .insight-box {
+            background: var(--highlight-light);
+            border-left: 4px solid var(--highlight);
+            padding: 1em 1.5em;
+            margin: 1.5em 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .purple-box {
+            background: var(--purple-light);
+            border-left: 4px solid var(--purple);
+            padding: 1em 1.5em;
+            margin: 1.5em 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2em;
+            margin: 1.5em 0;
+        }
+
+        @media (max-width: 700px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        footer {
+            margin-top: 4em;
+            padding-top: 2em;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: var(--accent-light);
+            border-radius: 4px;
+            margin-right: 10px;
+            font-family: system-ui, sans-serif;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p><a href="yoneda-essay.html" class="nav-link">← Part I: The Basics</a></p>
+        
+        <h1>The Yoneda Perspective, Part II</h1>
+        <p class="subtitle">Adjunctions, Profunctors, and the Geometry of Relationships</p>
+
+        <p>In Part I, we saw how the Baby Yoneda lemma for ordered sets reveals a deep principle: objects are determined by their relationships. Now we'll explore what happens when we have <em>two</em> ordered sets (or categories) that interact with each other, and how the Yoneda perspective illuminates the structure of these interactions.</p>
+
+        <h2>Part VIII: Galois Connections</h2>
+
+        <p>When two ordered sets are related by a pair of maps that "respect" each other in a precise way, we get a <strong>Galois connection</strong>. This is the ordered-set version of an adjunction, and it captures the pattern we saw with floor/ceiling and interior/closure.</p>
+
+        <p>Consider two posets P and Q, with maps L: P → Q (going "left") and R: Q → P (going "right"). They form a Galois connection when:</p>
+
+        <div class="equation">
+            <span class="math">L(p) ≤ q</span> &nbsp;⟺&nbsp; <span class="math">p ≤ R(q)</span>
+        </div>
+
+        <p>This single equation captures a remarkable amount of structure. Let's visualize what it means.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Galois connections: L ⊣ R</span>
+                <span class="interactive-hint">Drag elements to see the adjunction in action</span>
+            </div>
+            <canvas id="canvas-galois" height="400"></canvas>
+            <div class="controls">
+                <button id="btn-floor-ceil" class="active">Floor ⊣ Include ⊣ Ceiling</button>
+                <button id="btn-image-preimage">Image ⊣ Preimage</button>
+                <button id="btn-interior-closure">Interior ⊣ Include ⊣ Closure</button>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #2563eb;"></div>
+                    <span>Selected element p</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #10b981;"></div>
+                    <span>L(p) in Q</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #f59e0b;"></div>
+                    <span>R(q) in P</span>
+                </div>
+            </div>
+        </div>
+
+        <p>The magic of a Galois connection is that it provides a perfect "translation" between asking questions in P and asking questions in Q. The map L takes elements of P and finds their "best approximation from below" in Q, while R takes elements of Q and finds their "best approximation from above" in P.</p>
+
+        <div class="highlight-box">
+            <strong>The Unit and Counit:</strong> Every Galois connection comes with two special inequalities. The <em>unit</em> says p ≤ R(L(p)) — if you translate to Q and back, you don't lose information, you might gain some. The <em>counit</em> says L(R(q)) ≤ q — if you translate to P and back, you stay below where you started.
+        </div>
+
+        <p>These arise directly from the Yoneda perspective: we "follow the identity" in the defining equivalence. Setting q = L(p), we get L(p) ≤ L(p) ⟺ p ≤ R(L(p)). Setting p = R(q), we get L(R(q)) ≤ q ⟺ R(q) ≤ R(q).</p>
+
+        <h2>Part IX: Virtual Arrows in Both Directions</h2>
+
+        <p>So far, we've considered virtual objects that can only be "probed from one side"—presheaves let you probe from the right (arrows in), while copresheaves let you probe from the left (arrows out). But what if we want to probe from <em>both</em> directions simultaneously?</p>
+
+        <p>This leads to <strong>profunctors</strong>, also called distributors or bimodules. A profunctor H: C ⇸ D is like a "virtual functor" that hasn't quite decided whether it wants to be covariant or contravariant—it accepts arrows from C on one side and arrows to D on the other.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Profunctors: Virtual arrows between categories</span>
+                <span class="interactive-hint">Click on objects to see how profunctors mediate between categories</span>
+            </div>
+            <canvas id="canvas-profunctor" height="420"></canvas>
+            <div class="controls">
+                <button id="btn-hom-profunctor" class="active">Hom profunctor</button>
+                <button id="btn-graph-profunctor">Graph of a functor</button>
+                <button id="btn-general-profunctor">General profunctor</button>
+            </div>
+        </div>
+
+        <p>Formally, a profunctor H: C ⇸ D is a functor H: C<sup>op</sup> × D → Set. For objects c in C and d in D, the set H(c, d) consists of "heteromorphisms" or "chimera morphisms" from c to d—they're not actual morphisms in any category, but they behave like morphisms in how they compose.</p>
+
+        <div class="insight-box">
+            <strong>Composition of Profunctors:</strong> Two profunctors H: C ⇸ D and K: D ⇸ E can be composed to give H ⊗ K: C ⇸ E. This composition involves an integral (coend) over D, "tracing out" the intermediate category: (H ⊗ K)(c, e) = ∫<sup>d∈D</sup> H(c, d) × K(d, e).
+        </div>
+
+        <h2>Part X: The Ninja Yoneda Lemma</h2>
+
+        <p>The standard Yoneda lemma says that natural transformations from Hom(−, A) to a presheaf F correspond bijectively to elements of F(A). But there's a more powerful version that lets us compute with functors directly.</p>
+
+        <p>The <strong>Ninja Yoneda lemma</strong> (also called the density formula or co-Yoneda lemma) says that every presheaf is a colimit of representables:</p>
+
+        <div class="equation">
+            <span class="math">F ≅ ∫<sup>c</sup> F(c) × Hom(−, c)</span>
+        </div>
+
+        <p>This formula expresses F as a "weighted sum" of representable presheaves, where the weights are given by F itself. It's the presheaf version of saying "every vector is a sum of basis vectors, weighted by its components."</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Ninja Yoneda: Presheaves as colimits of representables</span>
+                <span class="interactive-hint">Adjust the weights to build different presheaves</span>
+            </div>
+            <canvas id="canvas-ninja" height="400"></canvas>
+            <div class="controls">
+                <label>Weight at A:</label>
+                <input type="range" id="weight-a" min="0" max="4" value="2">
+                <span id="weight-a-val">2</span>
+                <label style="margin-left: 15px;">Weight at B:</label>
+                <input type="range" id="weight-b" min="0" max="4" value="1">
+                <span id="weight-b-val">1</span>
+                <label style="margin-left: 15px;">Weight at C:</label>
+                <input type="range" id="weight-c" min="0" max="4" value="3">
+                <span id="weight-c-val">3</span>
+            </div>
+        </div>
+
+        <p>The coend ∫<sup>c</sup> is like a "sum" that also enforces a consistency condition: the action of morphisms in C must be respected. This is what makes the ninja Yoneda work—the colimit automatically quotients out the redundancy in our weighted sum.</p>
+
+        <h2>Part XI: Day Convolution</h2>
+
+        <p>When a category C has a monoidal structure (a way to "multiply" objects), we can lift this structure to the presheaf category. The resulting tensor product on presheaves is called the <strong>Day convolution</strong>.</p>
+
+        <p>For presheaves F and G on a monoidal category (C, ⊗, I), their Day convolution is:</p>
+
+        <div class="equation">
+            <span class="math">(F ⊛ G)(z) = ∫<sup>x,y</sup> C(x ⊗ y, z) × F(x) × G(y)</span>
+        </div>
+
+        <p>This formula says: an element of (F ⊛ G)(z) consists of a pair of elements (one from F, one from G) together with a way to "merge" their sources into z.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Day Convolution: Monoidal structure on presheaves</span>
+                <span class="interactive-hint">Combine virtual arrows from two presheaves</span>
+            </div>
+            <canvas id="canvas-day" height="450"></canvas>
+            <div class="controls">
+                <button id="btn-day-simple" class="active">Simple example</button>
+                <button id="btn-day-compose">Parallel composition</button>
+            </div>
+        </div>
+
+        <p>The remarkable fact is that the Yoneda embedding preserves this monoidal structure:</p>
+
+        <div class="equation">
+            <span class="math">Hom(−, A) ⊛ Hom(−, B) ≅ Hom(−, A ⊗ B)</span>
+        </div>
+
+        <p>This means virtual objects can be "multiplied" in a way that's compatible with actual objects. The world of presheaves extends the world of representables without breaking anything.</p>
+
+        <div class="purple-box">
+            <strong>Connection to Your Research:</strong> For graphics applications, Day convolution captures how procedural textures (presheaves) can be combined. The monoidal structure on the underlying category—say, texture spaces with Cartesian product—lifts to a monoidal structure on procedural operations. Combining two procedural textures via Day convolution respects the underlying geometry.
+        </div>
+
+        <h2>Part XII: Cauchy Completion</h2>
+
+        <p>Not every presheaf is representable. But among the non-representable presheaves, some are "almost" representable—they're retracts of representables, or absolute colimits. The <strong>Cauchy completion</strong> (or Karoubi envelope) of a category adds just enough objects to make all such presheaves representable.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Cauchy Completion: Splitting idempotents</span>
+                <span class="interactive-hint">See how new objects emerge from idempotent morphisms</span>
+            </div>
+            <canvas id="canvas-cauchy" height="380"></canvas>
+            <div class="controls">
+                <button id="btn-cauchy-before" class="active">Before completion</button>
+                <button id="btn-cauchy-after">After completion</button>
+                <button id="btn-cauchy-animate">Animate splitting</button>
+            </div>
+        </div>
+
+        <p>An idempotent is a morphism e: A → A with e ∘ e = e. In Set, every idempotent splits: there's an object B with morphisms A ⇄ B such that going A → B → A equals e. But in an arbitrary category, idempotents might not split.</p>
+
+        <p>The Cauchy completion adds formal "images" of idempotents. If e: A → A is an idempotent, we add an object Im(e) together with morphisms that make e = (A → Im(e) → A).</p>
+
+        <div class="highlight-box">
+            <strong>Why "Cauchy"?</strong> In the category of metric spaces with distance-decreasing maps, Cauchy completion in this sense corresponds to ordinary Cauchy completion! A Cauchy sequence is like an "almost convergent" sequence—a virtual limit point—and completing adds all such limits.
+        </div>
+
+        <h2>Part XIII: Weighted Limits in Full Generality</h2>
+
+        <p>We saw weighted limits briefly in Part I. Now let's explore them fully. A weighted limit takes two inputs: a diagram D: J → C (what we're taking the limit of) and a weight W: J → Set (which specifies "how many copies" of each constraint we want).</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Weighted Limits: The general theory</span>
+                <span class="interactive-hint">Adjust the weight to see different limit types</span>
+            </div>
+            <canvas id="canvas-weighted" height="420"></canvas>
+            <div class="controls">
+                <button id="btn-wlim-product" class="active">Product (const weight)</button>
+                <button id="btn-wlim-power">Power X<sup>S</sup></button>
+                <button id="btn-wlim-end">End ∫<sub>c</sub></button>
+                <button id="btn-wlim-equalizer">Equalizer</button>
+            </div>
+        </div>
+
+        <p>The universal property of a weighted limit {W, D} says:</p>
+
+        <div class="equation">
+            <span class="math">Hom(X, {W, D}) ≅ [J, Set](W, Hom(X, D−))</span>
+        </div>
+
+        <p>In other words: maps into the weighted limit correspond to "W-weighted cones" over the diagram. When W is the constant functor at the one-element set, we recover ordinary limits.</p>
+
+        <h2>Synthesis: The Cathedral of Representability</h2>
+
+        <p>Let's step back and see the whole picture. The Yoneda perspective organizes itself into a hierarchy:</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>The hierarchy of representability</span>
+                <span class="interactive-hint">Click levels to explore</span>
+            </div>
+            <canvas id="canvas-hierarchy" height="500"></canvas>
+        </div>
+
+        <p>At the base, we have a category C—the "actual" objects. The Yoneda embedding lifts C into presheaves, where representable presheaves are the images of actual objects. Non-representable presheaves are "virtual objects" that can be probed by actual objects but don't exist in C.</p>
+
+        <p>Some virtual objects are "almost actual"—they're Cauchy-complete, meaning they arise from splitting idempotents. These can be added to C without changing its essential character.</p>
+
+        <p>Higher up, we have weighted limits and colimits, which provide ways to "construct" new objects from old ones according to blueprints given by weight functors. Profunctors mediate between different categories, allowing us to compare and translate between different mathematical worlds.</p>
+
+        <div class="insight-box">
+            <strong>The Meta-Pattern:</strong> Throughout all of this, the same principle repeats: <em>objects are determined by their morphisms</em>. Whether we're working with actual morphisms (in C), virtual morphisms (in presheaves), heteromorphisms (in profunctors), or weighted morphisms (in weighted limits), the "does" perspective captures everything. The Yoneda lemma is not just a theorem—it's a way of thinking about mathematics.
+        </div>
+
+        <footer>
+            <p>This essay was inspired by Paolo Perrone's "How to Represent Non-Representable Functors" and the pedagogical approach of Bartosz Ciechanowski and Bret Victor.</p>
+            <p><a href="yoneda-essay.html">← Back to Part I</a></p>
+        </footer>
+    </div>
+
+    <script>
+    // ============================================
+    // Utility functions
+    // ============================================
+    
+    function setupCanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        return { ctx, width: rect.width, height: rect.height, dpr };
+    }
+
+    function lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
+
+    function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color = '#333', lineWidth = 2, headSize = 8) {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(
+            x2 - headSize * Math.cos(angle - Math.PI / 6),
+            y2 - headSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+            x2 - headSize * Math.cos(angle + Math.PI / 6),
+            y2 - headSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawCurvedArrow(ctx, x1, y1, x2, y2, curve, color = '#333', lineWidth = 2, headSize = 8) {
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const cx = mx - dy * curve;
+        const cy = my + dx * curve;
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(cx, cy, x2, y2);
+        ctx.stroke();
+        
+        // Arrow head
+        const t = 0.98;
+        const px = (1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;
+        const py = (1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;
+        const angle = Math.atan2(y2 - py, x2 - px);
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(
+            x2 - headSize * Math.cos(angle - Math.PI / 6),
+            y2 - headSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+            x2 - headSize * Math.cos(angle + Math.PI / 6),
+            y2 - headSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawDashedArrow(ctx, x1, y1, x2, y2, color = '#999', lineWidth = 1.5, headSize = 6) {
+        ctx.setLineDash([5, 5]);
+        drawArrow(ctx, x1, y1, x2, y2, color, lineWidth, headSize);
+        ctx.setLineDash([]);
+    }
+
+    function drawNode(ctx, x, y, label, color = '#666', fillColor = '#f3f4f6', radius = 20) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = color;
+        ctx.font = `bold ${radius * 0.8}px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, y);
+    }
+
+    function drawVirtualNode(ctx, x, y, label, color = '#2563eb', fillColor = '#dbeafe', radius = 20) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = color;
+        ctx.font = `bold ${radius * 0.8}px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, y);
+    }
+
+    // ============================================
+    // Canvas 8: Galois Connections
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-galois');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let mode = 'floor-ceil';
+        let selectedP = 3.5;
+        let selectedQ = null;
+        let dragging = null;
+        
+        const modes = {
+            'floor-ceil': {
+                pName: 'ℝ',
+                qName: 'ℤ',
+                pRange: [0, 6],
+                qRange: [0, 6],
+                L: x => Math.floor(x),
+                R: x => x,
+                Linv: x => x + 1 - 0.001,
+                description: '⌊−⌋ ⊣ include ⊣ ⌈−⌉'
+            },
+            'image-preimage': {
+                pName: 'P(X)',
+                qName: 'P(Y)',
+                pRange: [0, 5],
+                qRange: [0, 5],
+                L: x => Math.min(5, x * 0.8),
+                R: x => Math.min(5, x * 1.2),
+                description: 'f(−) ⊣ f⁻¹(−)'
+            },
+            'interior-closure': {
+                pName: 'Open',
+                qName: 'All Sets',
+                pRange: [0, 5],
+                qRange: [0, 5],
+                L: x => x,
+                R: x => Math.max(0, x - 0.3),
+                description: 'include ⊣ Int(−)'
+            }
+        };
+        
+        function pToX(p) {
+            const m = modes[mode];
+            const margin = 100;
+            const range = m.pRange[1] - m.pRange[0];
+            return margin + ((p - m.pRange[0]) / range) * (width / 2 - margin - 50);
+        }
+        
+        function qToX(q) {
+            const m = modes[mode];
+            const margin = 100;
+            const range = m.qRange[1] - m.qRange[0];
+            return width / 2 + 50 + ((q - m.qRange[0]) / range) * (width / 2 - margin - 50);
+        }
+        
+        function xToP(x) {
+            const m = modes[mode];
+            const margin = 100;
+            const range = m.pRange[1] - m.pRange[0];
+            return m.pRange[0] + ((x - margin) / (width / 2 - margin - 50)) * range;
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            const m = modes[mode];
+            
+            const pY = height / 2;
+            const qY = height / 2;
+            
+            // Draw P axis
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(80, pY);
+            ctx.lineTo(width / 2 - 30, pY);
+            ctx.stroke();
+            
+            // Draw Q axis
+            ctx.beginPath();
+            ctx.moveTo(width / 2 + 30, qY);
+            ctx.lineTo(width - 80, qY);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = '#666';
+            ctx.font = '16px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText(m.pName, width / 4, 40);
+            ctx.fillText(m.qName, 3 * width / 4, 40);
+            
+            // Draw tick marks
+            ctx.font = '12px system-ui';
+            for (let i = m.pRange[0]; i <= m.pRange[1]; i++) {
+                const x = pToX(i);
+                ctx.beginPath();
+                ctx.moveTo(x, pY - 5);
+                ctx.lineTo(x, pY + 5);
+                ctx.stroke();
+                ctx.fillText(i, x, pY + 20);
+            }
+            
+            for (let i = m.qRange[0]; i <= m.qRange[1]; i++) {
+                const x = qToX(i);
+                ctx.beginPath();
+                ctx.moveTo(x, qY - 5);
+                ctx.lineTo(x, qY + 5);
+                ctx.stroke();
+                ctx.fillText(i, x, qY + 20);
+            }
+            
+            // Selected element in P
+            const pX = pToX(selectedP);
+            ctx.beginPath();
+            ctx.arc(pX, pY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = '#dbeafe';
+            ctx.fill();
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'bold 11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('p', pX, pY + 3);
+            
+            // L(p) in Q
+            const Lp = m.L(selectedP);
+            const LpX = qToX(Lp);
+            
+            ctx.beginPath();
+            ctx.arc(LpX, qY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = '#d1fae5';
+            ctx.fill();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 10px system-ui';
+            ctx.fillText('L(p)', LpX, qY + 3);
+            
+            // R(L(p)) back in P
+            const RLp = m.R(Lp);
+            const RLpX = pToX(RLp);
+            
+            ctx.beginPath();
+            ctx.arc(RLpX, pY - 60, 10, 0, Math.PI * 2);
+            ctx.fillStyle = '#fef3c7';
+            ctx.fill();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 9px system-ui';
+            ctx.fillText('RL(p)', RLpX, pY - 57);
+            
+            // Draw the adjunction arrows
+            drawCurvedArrow(ctx, pX + 15, pY - 5, LpX - 15, qY - 5, -0.2, '#10b981', 1.5, 6);
+            ctx.fillStyle = '#10b981';
+            ctx.font = '12px Georgia';
+            ctx.fillText('L', (pX + LpX) / 2, pY - 50);
+            
+            drawCurvedArrow(ctx, LpX - 15, qY + 5, RLpX + 15, pY - 55, 0.3, '#f59e0b', 1.5, 6);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText('R', (LpX + RLpX) / 2 + 40, pY - 20);
+            
+            // Unit inequality
+            if (selectedP <= RLp + 0.01) {
+                ctx.fillStyle = '#10b981';
+                ctx.font = '14px Georgia';
+                ctx.textAlign = 'left';
+                ctx.fillText('✓ p ≤ R(L(p)) (unit)', 20, height - 60);
+            }
+            
+            // Value displays
+            ctx.fillStyle = '#666';
+            ctx.font = '13px system-ui';
+            ctx.textAlign = 'left';
+            ctx.fillText(`p = ${selectedP.toFixed(2)}`, 20, height - 35);
+            ctx.fillText(`L(p) = ${Lp.toFixed(2)}`, 20, height - 18);
+            ctx.textAlign = 'right';
+            ctx.fillText(`R(L(p)) = ${RLp.toFixed(2)}`, width - 20, height - 35);
+            
+            // Description
+            ctx.fillStyle = '#999';
+            ctx.font = 'italic 13px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText(m.description, width / 2, height - 15);
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const pX = pToX(selectedP);
+            
+            if (Math.hypot(x - pX, y - height/2) < 20) {
+                dragging = 'p';
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const m = modes[mode];
+            
+            if (dragging === 'p') {
+                selectedP = Math.max(m.pRange[0], Math.min(m.pRange[1], xToP(x)));
+                draw();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => { dragging = null; });
+        canvas.addEventListener('mouseleave', () => { dragging = null; });
+        
+        document.getElementById('btn-floor-ceil').addEventListener('click', function() {
+            mode = 'floor-ceil';
+            selectedP = 3.5;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-image-preimage').addEventListener('click', function() {
+            mode = 'image-preimage';
+            selectedP = 2.5;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-interior-closure').addEventListener('click', function() {
+            mode = 'interior-closure';
+            selectedP = 3;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 9: Profunctors
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-profunctor');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let mode = 'hom';
+        let selectedC = null;
+        let selectedD = null;
+        
+        const cObjects = [
+            { id: 'A', x: 0.2, y: 0.3 },
+            { id: 'B', x: 0.2, y: 0.7 }
+        ];
+        
+        const dObjects = [
+            { id: 'X', x: 0.8, y: 0.25 },
+            { id: 'Y', x: 0.8, y: 0.5 },
+            { id: 'Z', x: 0.8, y: 0.75 }
+        ];
+        
+        function getPos(obj, cat) {
+            const margin = 80;
+            const catWidth = (width - 3 * margin) / 2;
+            const baseX = cat === 'C' ? margin : width / 2 + margin / 2;
+            return {
+                x: baseX + obj.x * catWidth,
+                y: 80 + obj.y * (height - 160)
+            };
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw category boxes
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(50, 60, width / 2 - 80, height - 120);
+            ctx.strokeRect(width / 2 + 30, 60, width / 2 - 80, height - 120);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#999';
+            ctx.font = '14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Category C', width / 4, 45);
+            ctx.fillText('Category D', 3 * width / 4, 45);
+            
+            // Draw morphisms in C
+            const cMorphisms = [{ from: 'A', to: 'B' }];
+            cMorphisms.forEach(m => {
+                const from = getPos(cObjects.find(o => o.id === m.from), 'C');
+                const to = getPos(cObjects.find(o => o.id === m.to), 'C');
+                drawArrow(ctx, from.x, from.y + 22, to.x, to.y - 22, '#999', 1.5, 6);
+            });
+            
+            // Draw morphisms in D
+            const dMorphisms = [
+                { from: 'X', to: 'Y' },
+                { from: 'Y', to: 'Z' }
+            ];
+            dMorphisms.forEach(m => {
+                const from = getPos(dObjects.find(o => o.id === m.from), 'D');
+                const to = getPos(dObjects.find(o => o.id === m.to), 'D');
+                drawArrow(ctx, from.x, from.y + 22, to.x, to.y - 22, '#999', 1.5, 6);
+            });
+            
+            // Draw objects
+            cObjects.forEach(obj => {
+                const pos = getPos(obj, 'C');
+                const isSelected = selectedC === obj.id;
+                drawNode(ctx, pos.x, pos.y, obj.id, 
+                        isSelected ? '#2563eb' : '#666',
+                        isSelected ? '#dbeafe' : '#f3f4f6');
+            });
+            
+            dObjects.forEach(obj => {
+                const pos = getPos(obj, 'D');
+                const isSelected = selectedD === obj.id;
+                drawNode(ctx, pos.x, pos.y, obj.id,
+                        isSelected ? '#10b981' : '#666',
+                        isSelected ? '#d1fae5' : '#f3f4f6');
+            });
+            
+            // Draw profunctor arrows based on mode
+            if (mode === 'hom' && selectedC && selectedD) {
+                // H(c,d) = Hom_D(F(c), d) for some functor F
+                const cPos = getPos(cObjects.find(o => o.id === selectedC), 'C');
+                const dPos = getPos(dObjects.find(o => o.id === selectedD), 'D');
+                
+                // Draw virtual arrow
+                ctx.setLineDash([4, 4]);
+                drawArrow(ctx, cPos.x + 22, cPos.y, dPos.x - 22, dPos.y, '#8b5cf6', 2, 8);
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = '13px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillText(`H(${selectedC}, ${selectedD})`, (cPos.x + dPos.x) / 2, (cPos.y + dPos.y) / 2 - 15);
+            } else if (mode === 'graph') {
+                // Graph of a functor: show all pairs (c, F(c))
+                const fMap = { 'A': 'X', 'B': 'Y' };
+                cObjects.forEach(cObj => {
+                    const cPos = getPos(cObj, 'C');
+                    const dObj = dObjects.find(o => o.id === fMap[cObj.id]);
+                    const dPos = getPos(dObj, 'D');
+                    
+                    ctx.setLineDash([4, 4]);
+                    drawArrow(ctx, cPos.x + 22, cPos.y, dPos.x - 22, dPos.y, '#8b5cf6', 2, 8);
+                    ctx.setLineDash([]);
+                });
+                
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = 'italic 13px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillText('Graph(F): H(c,d) = {∗ if d = F(c), ∅ otherwise}', width / 2, height - 25);
+            } else if (mode === 'general') {
+                // General profunctor: show all possible heteromorphisms
+                cObjects.forEach(cObj => {
+                    dObjects.forEach(dObj => {
+                        const cPos = getPos(cObj, 'C');
+                        const dPos = getPos(dObj, 'D');
+                        
+                        // Some random structure
+                        const count = (cObj.id === 'A' && dObj.id === 'Y') ? 2 :
+                                     (cObj.id === 'B' && dObj.id === 'Z') ? 1 : 0;
+                        
+                        if (count > 0) {
+                            for (let i = 0; i < count; i++) {
+                                const offset = (i - (count - 1) / 2) * 8;
+                                ctx.setLineDash([4, 4]);
+                                drawArrow(ctx, cPos.x + 22, cPos.y + offset, 
+                                         dPos.x - 22, dPos.y + offset, '#8b5cf6', 1.5, 6);
+                                ctx.setLineDash([]);
+                            }
+                        }
+                    });
+                });
+                
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = 'italic 13px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillText('H: C ⇸ D — heteromorphisms between categories', width / 2, height - 25);
+            }
+            
+            // Hint
+            if (mode === 'hom') {
+                ctx.fillStyle = '#999';
+                ctx.font = '12px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillText('Click objects in C and D to see the profunctor value H(c, d)', width / 2, height - 10);
+            }
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            cObjects.forEach(obj => {
+                const pos = getPos(obj, 'C');
+                if (Math.hypot(x - pos.x, y - pos.y) < 25) {
+                    selectedC = obj.id;
+                }
+            });
+            
+            dObjects.forEach(obj => {
+                const pos = getPos(obj, 'D');
+                if (Math.hypot(x - pos.x, y - pos.y) < 25) {
+                    selectedD = obj.id;
+                }
+            });
+            
+            draw();
+        });
+        
+        document.getElementById('btn-hom-profunctor').addEventListener('click', function() {
+            mode = 'hom';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-graph-profunctor').addEventListener('click', function() {
+            mode = 'graph';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-general-profunctor').addEventListener('click', function() {
+            mode = 'general';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 10: Ninja Yoneda
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-ninja');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let weights = { A: 2, B: 1, C: 3 };
+        
+        const objects = [
+            { id: 'A', x: 0.2 },
+            { id: 'B', x: 0.5 },
+            { id: 'C', x: 0.8 }
+        ];
+        
+        const morphisms = [
+            { from: 'A', to: 'B' },
+            { from: 'B', to: 'C' }
+        ];
+        
+        function getObjX(obj) {
+            return 100 + obj.x * (width - 200);
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const baseY = height - 100;
+            const topY = 100;
+            
+            // Draw category C at bottom
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(60, baseY - 40, width - 120, 80);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#999';
+            ctx.font = '13px Georgia';
+            ctx.textAlign = 'left';
+            ctx.fillText('Category C', 70, baseY + 50);
+            
+            // Draw morphisms
+            morphisms.forEach(m => {
+                const from = objects.find(o => o.id === m.from);
+                const to = objects.find(o => o.id === m.to);
+                drawArrow(ctx, getObjX(from) + 22, baseY, getObjX(to) - 22, baseY, '#999', 1.5, 6);
+            });
+            
+            // Draw objects in C
+            objects.forEach(obj => {
+                const x = getObjX(obj);
+                drawNode(ctx, x, baseY, obj.id, '#666', '#f3f4f6', 18);
+            });
+            
+            // Draw the presheaf F at top
+            ctx.fillStyle = '#2563eb';
+            ctx.font = '16px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Presheaf F', width / 2, 40);
+            
+            // Draw F as weighted sum of representables
+            objects.forEach(obj => {
+                const x = getObjX(obj);
+                const w = weights[obj.id];
+                
+                // Draw the weight
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = '14px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(`F(${obj.id}) = ${w}`, x, topY - 30);
+                
+                // Draw virtual arrows from F to the representables
+                for (let i = 0; i < w; i++) {
+                    const offset = (i - (w - 1) / 2) * 15;
+                    const startX = width / 2 + offset * 0.3;
+                    const startY = topY + 30;
+                    const endX = x + offset * 0.8;
+                    const endY = baseY - 60;
+                    
+                    ctx.setLineDash([4, 4]);
+                    ctx.strokeStyle = '#8b5cf6';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.quadraticCurveTo((startX + endX) / 2, (startY + endY) / 2 - 20, endX, endY);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                // Draw representable y(obj)
+                drawVirtualNode(ctx, x, baseY - 60, `y${obj.id}`, '#2563eb', '#dbeafe', 16);
+            });
+            
+            // Draw the presheaf node
+            ctx.beginPath();
+            ctx.arc(width / 2, topY + 30, 25, 0, Math.PI * 2);
+            ctx.fillStyle = '#ede9fe';
+            ctx.fill();
+            ctx.strokeStyle = '#8b5cf6';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#8b5cf6';
+            ctx.font = 'bold 18px Georgia';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('F', width / 2, topY + 30);
+            
+            // Formula
+            ctx.fillStyle = '#666';
+            ctx.font = 'italic 14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText(`F ≅ ${weights.A}·y(A) + ${weights.B}·y(B) + ${weights.C}·y(C)`, width / 2, height - 25);
+            ctx.font = '12px Georgia';
+            ctx.fillText('(colimit of representables, weighted by F)', width / 2, height - 8);
+        }
+        
+        ['a', 'b', 'c'].forEach(id => {
+            const slider = document.getElementById(`weight-${id}`);
+            const display = document.getElementById(`weight-${id}-val`);
+            slider.addEventListener('input', () => {
+                weights[id.toUpperCase()] = parseInt(slider.value);
+                display.textContent = slider.value;
+                draw();
+            });
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 11: Day Convolution
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-day');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let mode = 'simple';
+        let time = 0;
+        let animating = false;
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            if (mode === 'simple') {
+                drawSimple();
+            } else {
+                drawCompose();
+            }
+        }
+        
+        function drawSimple() {
+            // Show F ⊛ G as a combination
+            const fX = width / 4;
+            const gX = 3 * width / 4;
+            const topY = 80;
+            const midY = height / 2;
+            const botY = height - 80;
+            
+            // Draw F
+            ctx.fillStyle = '#2563eb';
+            ctx.font = '16px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Presheaf F', fX, topY - 30);
+            
+            drawVirtualNode(ctx, fX, topY + 20, 'F', '#2563eb', '#dbeafe', 25);
+            
+            // F's values
+            ctx.font = '12px system-ui';
+            ctx.fillStyle = '#2563eb';
+            ctx.fillText('F(A) = {f₁, f₂}', fX, topY + 70);
+            
+            // Draw G
+            ctx.fillStyle = '#10b981';
+            ctx.font = '16px Georgia';
+            ctx.fillText('Presheaf G', gX, topY - 30);
+            
+            drawVirtualNode(ctx, gX, topY + 20, 'G', '#10b981', '#d1fae5', 25);
+            
+            ctx.font = '12px system-ui';
+            ctx.fillStyle = '#10b981';
+            ctx.fillText('G(B) = {g₁}', gX, topY + 70);
+            
+            // Draw Day convolution
+            ctx.fillStyle = '#8b5cf6';
+            ctx.font = '16px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('F ⊛ G', width / 2, midY - 20);
+            
+            drawVirtualNode(ctx, width / 2, midY + 20, 'F⊛G', '#8b5cf6', '#ede9fe', 30);
+            
+            // Arrows from F and G to F ⊛ G
+            drawCurvedArrow(ctx, fX + 20, topY + 45, width / 2 - 35, midY + 10, -0.15, '#999', 1.5, 6);
+            drawCurvedArrow(ctx, gX - 20, topY + 45, width / 2 + 35, midY + 10, 0.15, '#999', 1.5, 6);
+            
+            // Base category
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(width / 4, botY - 40, width / 2, 60);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#999';
+            ctx.font = '12px Georgia';
+            ctx.textAlign = 'left';
+            ctx.fillText('Monoidal category (C, ⊗)', width / 4 + 10, botY + 30);
+            
+            // Objects in base
+            drawNode(ctx, width / 3, botY - 10, 'A', '#666', '#f3f4f6', 15);
+            drawNode(ctx, width / 2, botY - 10, 'B', '#666', '#f3f4f6', 15);
+            drawNode(ctx, 2 * width / 3, botY - 10, 'A⊗B', '#666', '#f3f4f6', 15);
+            
+            drawArrow(ctx, width / 3 + 18, botY - 10, width / 2 - 18, botY - 10, '#ccc', 1, 5);
+            drawArrow(ctx, width / 2 + 18, botY - 10, 2 * width / 3 - 22, botY - 10, '#ccc', 1, 5);
+            
+            // Formula
+            ctx.fillStyle = '#666';
+            ctx.font = 'italic 13px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('(F ⊛ G)(Z) = ∫^{X,Y} C(X⊗Y, Z) × F(X) × G(Y)', width / 2, height - 20);
+        }
+        
+        function drawCompose() {
+            // Show parallel composition with virtual arrows
+            const leftX = 100;
+            const rightX = width - 100;
+            const midX = width / 2;
+            const topY = 100;
+            const botY = height - 100;
+            
+            // Virtual objects
+            drawVirtualNode(ctx, leftX, topY, 'F', '#2563eb', '#dbeafe', 22);
+            drawVirtualNode(ctx, rightX, topY, 'G', '#10b981', '#d1fae5', 22);
+            
+            // Actual objects
+            drawNode(ctx, leftX, botY, 'X', '#666', '#f3f4f6', 20);
+            drawNode(ctx, midX, botY, 'Y', '#666', '#f3f4f6', 20);
+            drawNode(ctx, rightX, botY, 'Z', '#666', '#f3f4f6', 20);
+            
+            // Virtual arrows (dashed)
+            ctx.setLineDash([4, 4]);
+            drawArrow(ctx, leftX, topY + 25, leftX, botY - 25, '#2563eb', 2, 7);
+            ctx.fillStyle = '#2563eb';
+            ctx.font = '12px Georgia';
+            ctx.textAlign = 'right';
+            ctx.fillText('f ∈ F(X)', leftX - 10, (topY + botY) / 2);
+            
+            drawArrow(ctx, rightX, topY + 25, rightX, botY - 25, '#10b981', 2, 7);
+            ctx.fillStyle = '#10b981';
+            ctx.textAlign = 'left';
+            ctx.fillText('g ∈ G(Z)', rightX + 10, (topY + botY) / 2);
+            ctx.setLineDash([]);
+            
+            // Actual morphisms
+            drawArrow(ctx, leftX + 22, botY, midX - 22, botY, '#666', 1.5, 6);
+            drawArrow(ctx, midX + 22, botY, rightX - 22, botY, '#666', 1.5, 6);
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('a', (leftX + midX) / 2, botY - 12);
+            ctx.fillText('b', (midX + rightX) / 2, botY - 12);
+            
+            // The combined virtual arrow
+            const combY = topY + 60;
+            ctx.setLineDash([4, 4]);
+            drawCurvedArrow(ctx, midX - 30, combY, midX, botY - 25, -0.3, '#8b5cf6', 2, 7);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#8b5cf6';
+            ctx.font = '13px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('(f ⊗ g) ∈ (F ⊛ G)(Y)', midX, combY - 15);
+            
+            // Combined virtual object
+            drawVirtualNode(ctx, midX, combY + 30, 'F⊛G', '#8b5cf6', '#ede9fe', 20);
+            
+            // Labels
+            ctx.fillStyle = '#999';
+            ctx.font = 'italic 12px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Virtual arrows compose "in parallel" via Day convolution', width / 2, height - 20);
+        }
+        
+        document.getElementById('btn-day-simple').addEventListener('click', function() {
+            mode = 'simple';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-day-compose').addEventListener('click', function() {
+            mode = 'compose';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 12: Cauchy Completion
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-cauchy');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let mode = 'before';
+        let animProgress = 0;
+        let animating = false;
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // Draw the main object A
+            const aX = centerX;
+            const aY = centerY - 30;
+            
+            drawNode(ctx, aX, aY, 'A', '#2563eb', '#dbeafe', 28);
+            
+            // Draw the idempotent e: A → A
+            drawCurvedArrow(ctx, aX + 25, aY - 15, aX + 25, aY + 15, 0.5, '#f59e0b', 2, 7);
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '14px Georgia';
+            ctx.textAlign = 'left';
+            ctx.fillText('e', aX + 55, aY);
+            ctx.font = '11px system-ui';
+            ctx.fillText('(e ∘ e = e)', aX + 55, aY + 15);
+            
+            if (mode === 'before') {
+                // Just show the idempotent
+                ctx.fillStyle = '#666';
+                ctx.font = 'italic 14px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillText('An idempotent e: A → A that doesn\'t split', centerX, height - 40);
+                ctx.font = '12px Georgia';
+                ctx.fillText('(no object Im(e) with A ⇄ Im(e) composing to e)', centerX, height - 20);
+            } else {
+                // After: show the split
+                const t = mode === 'animate' ? easeInOut(animProgress) : 1;
+                
+                const imX = aX;
+                const imY = aY + 100 * t;
+                
+                if (t > 0.1) {
+                    // Draw Im(e)
+                    ctx.globalAlpha = t;
+                    drawNode(ctx, imX, imY, 'Im(e)', '#10b981', '#d1fae5', 24);
+                    ctx.globalAlpha = 1;
+                    
+                    // Draw the splitting morphisms
+                    if (t > 0.3) {
+                        ctx.globalAlpha = (t - 0.3) / 0.7;
+                        
+                        // p: A → Im(e)
+                        drawArrow(ctx, aX - 15, aY + 30, imX - 15, imY - 28, '#10b981', 2, 7);
+                        ctx.fillStyle = '#10b981';
+                        ctx.font = '13px Georgia';
+                        ctx.textAlign = 'right';
+                        ctx.fillText('p', aX - 25, (aY + imY) / 2);
+                        
+                        // s: Im(e) → A
+                        drawArrow(ctx, imX + 15, imY - 28, aX + 15, aY + 30, '#10b981', 2, 7);
+                        ctx.textAlign = 'left';
+                        ctx.fillText('s', aX + 25, (aY + imY) / 2);
+                        
+                        ctx.globalAlpha = 1;
+                    }
+                    
+                    if (t > 0.6) {
+                        ctx.globalAlpha = (t - 0.6) / 0.4;
+                        ctx.fillStyle = '#666';
+                        ctx.font = 'italic 13px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('s ∘ p = e  and  p ∘ s = id', centerX, height - 50);
+                        ctx.font = '12px Georgia';
+                        ctx.fillText('The idempotent now "splits" through Im(e)', centerX, height - 30);
+                        ctx.globalAlpha = 1;
+                    }
+                }
+            }
+        }
+        
+        function animate() {
+            if (!animating) return;
+            animProgress += 0.02;
+            if (animProgress >= 1) {
+                animProgress = 1;
+                animating = false;
+                mode = 'after';
+            }
+            draw();
+            if (animating) requestAnimationFrame(animate);
+        }
+        
+        document.getElementById('btn-cauchy-before').addEventListener('click', function() {
+            mode = 'before';
+            animProgress = 0;
+            animating = false;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-cauchy-after').addEventListener('click', function() {
+            mode = 'after';
+            animProgress = 1;
+            animating = false;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-cauchy-animate').addEventListener('click', function() {
+            mode = 'animate';
+            animProgress = 0;
+            animating = true;
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            animate();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 13: Weighted Limits
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-weighted');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let mode = 'product';
+        
+        const modes = {
+            'product': {
+                name: 'Product (constant weight)',
+                weight: { A: 1, B: 1 },
+                formula: '{1, D} = D(A) × D(B)'
+            },
+            'power': {
+                name: 'Power X^S',
+                weight: { A: 3, B: 0 },
+                formula: '{S, Δ_X} = X^S (S-fold product)'
+            },
+            'end': {
+                name: 'End ∫_c',
+                weight: { A: 2, B: 2 },
+                formula: '∫_c F(c,c) = {Hom, F}'
+            },
+            'equalizer': {
+                name: 'Equalizer',
+                weight: { A: 1, B: 0 },
+                formula: 'eq(f,g) = {W, D} where W picks out source'
+            }
+        };
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const m = modes[mode];
+            const tipY = 80;
+            const baseY = height - 120;
+            
+            // Title
+            ctx.fillStyle = '#2563eb';
+            ctx.font = '16px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText(m.name, width / 2, 35);
+            
+            // Draw the weighted limit (tip)
+            drawNode(ctx, width / 2, tipY, '{W,D}', '#8b5cf6', '#ede9fe', 30);
+            
+            // Draw the diagram J
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(width / 4, baseY - 50, width / 2, 100);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#999';
+            ctx.font = '12px Georgia';
+            ctx.textAlign = 'left';
+            ctx.fillText('Diagram D: J → C', width / 4 + 10, baseY + 60);
+            
+            // Objects in diagram
+            const objects = [
+                { id: 'A', x: width / 3, y: baseY },
+                { id: 'B', x: 2 * width / 3, y: baseY }
+            ];
+            
+            drawArrow(ctx, objects[0].x + 22, objects[0].y, objects[1].x - 22, objects[1].y, '#999', 1.5, 6);
+            
+            objects.forEach(obj => {
+                drawNode(ctx, obj.x, obj.y, 'D' + obj.id, '#666', '#f3f4f6', 18);
+            });
+            
+            // Draw weighted arrows from tip to diagram
+            objects.forEach(obj => {
+                const w = m.weight[obj.id];
+                for (let i = 0; i < w; i++) {
+                    const offset = (i - (w - 1) / 2) * 12;
+                    drawArrow(ctx, width / 2 + offset, tipY + 35, 
+                             obj.x + offset * 0.3, obj.y - 22, '#8b5cf6', 1.5, 6);
+                }
+                
+                // Weight label
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = '12px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(`W(${obj.id})=${w}`, obj.x, baseY - 60);
+            });
+            
+            // Draw the weight functor
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '13px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Weight W: J → Set', width / 2, tipY + 80);
+            
+            // Formula
+            ctx.fillStyle = '#666';
+            ctx.font = 'italic 14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText(m.formula, width / 2, height - 20);
+        }
+        
+        document.getElementById('btn-wlim-product').addEventListener('click', function() {
+            mode = 'product';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-wlim-power').addEventListener('click', function() {
+            mode = 'power';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-wlim-end').addEventListener('click', function() {
+            mode = 'end';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        document.getElementById('btn-wlim-equalizer').addEventListener('click', function() {
+            mode = 'equalizer';
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 14: Hierarchy
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-hierarchy');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let hoveredLevel = null;
+        
+        const levels = [
+            { y: 0.85, label: 'Category C', sublabel: 'Actual objects', color: '#2563eb' },
+            { y: 0.65, label: 'Representable Presheaves', sublabel: 'Yoneda image of C', color: '#10b981' },
+            { y: 0.45, label: 'Cauchy-Complete Presheaves', sublabel: 'Split idempotents', color: '#f59e0b' },
+            { y: 0.25, label: 'All Presheaves', sublabel: 'Virtual objects', color: '#8b5cf6' },
+            { y: 0.08, label: 'Profunctors', sublabel: 'Virtual functors', color: '#ec4899' }
+        ];
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const margin = 60;
+            const boxWidth = width - 2 * margin;
+            
+            // Draw levels
+            levels.forEach((level, i) => {
+                const y = level.y * height;
+                const boxHeight = 60;
+                const indent = i * 20;
+                
+                const isHovered = hoveredLevel === i;
+                
+                ctx.fillStyle = isHovered ? level.color + '30' : level.color + '15';
+                ctx.strokeStyle = level.color;
+                ctx.lineWidth = isHovered ? 2 : 1;
+                
+                ctx.beginPath();
+                ctx.roundRect(margin + indent, y - boxHeight / 2, boxWidth - 2 * indent, boxHeight, 8);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = level.color;
+                ctx.font = isHovered ? 'bold 15px Georgia' : '14px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillText(level.label, width / 2, y - 8);
+                
+                ctx.fillStyle = '#666';
+                ctx.font = '12px system-ui';
+                ctx.fillText(level.sublabel, width / 2, y + 12);
+            });
+            
+            // Draw inclusion arrows
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < levels.length - 1; i++) {
+                const y1 = levels[i].y * height - 35;
+                const y2 = levels[i + 1].y * height + 35;
+                drawArrow(ctx, width / 2, y1, width / 2, y2, '#ccc', 1.5, 6);
+            }
+            
+            // Labels for arrows
+            ctx.fillStyle = '#999';
+            ctx.font = 'italic 11px Georgia';
+            ctx.textAlign = 'left';
+            ctx.fillText('Yoneda', width / 2 + 15, (levels[0].y + levels[1].y) / 2 * height);
+            ctx.fillText('split idem.', width / 2 + 15, (levels[1].y + levels[2].y) / 2 * height);
+            ctx.fillText('completion', width / 2 + 15, (levels[2].y + levels[3].y) / 2 * height);
+            ctx.fillText('profunctors', width / 2 + 15, (levels[3].y + levels[4].y) / 2 * height);
+        }
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            
+            hoveredLevel = null;
+            levels.forEach((level, i) => {
+                const ly = level.y * height;
+                if (Math.abs(y - ly) < 35) {
+                    hoveredLevel = i;
+                }
+            });
+            draw();
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            hoveredLevel = null;
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    </script>
+</body>
+</html>

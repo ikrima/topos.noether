@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Yoneda Perspective: Understanding Objects Through What They Do</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --text: #1a1a1a;
+            --text-secondary: #666;
+            --accent: #2563eb;
+            --accent-light: #dbeafe;
+            --highlight: #f59e0b;
+            --highlight-light: #fef3c7;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --border: #e5e7eb;
+            --canvas-bg: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 24px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: normal;
+            margin-bottom: 0.5em;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            font-weight: normal;
+            margin-top: 2em;
+            margin-bottom: 0.8em;
+            color: var(--text);
+        }
+
+        h3 {
+            font-size: 1.2em;
+            font-weight: normal;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: var(--text-secondary);
+        }
+
+        p {
+            margin-bottom: 1.2em;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--text-secondary);
+            margin-bottom: 2em;
+        }
+
+        .interactive-container {
+            background: var(--canvas-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 2em 0;
+            overflow: hidden;
+        }
+
+        .interactive-header {
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--border);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .interactive-hint {
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .controls {
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls label {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .controls input[type="range"] {
+            width: 150px;
+            accent-color: var(--accent);
+        }
+
+        .controls button {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            padding: 6px 16px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .controls button:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .controls button.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+
+        .equation {
+            text-align: center;
+            margin: 1.5em 0;
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1em;
+        }
+
+        .highlight-box {
+            background: var(--accent-light);
+            border-left: 4px solid var(--accent);
+            padding: 1em 1.5em;
+            margin: 1.5em 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .insight-box {
+            background: var(--highlight-light);
+            border-left: 4px solid var(--highlight);
+            padding: 1em 1.5em;
+            margin: 1.5em 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 13px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        footer {
+            margin-top: 4em;
+            padding-top: 2em;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 600px) {
+            body { font-size: 16px; }
+            h1 { font-size: 1.8em; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Yoneda Perspective</h1>
+        <p class="subtitle">Understanding mathematical objects through what they <em>do</em>, not just what they <em>are</em></p>
+
+        <p>There are two fundamentally different ways to understand any mathematical object. You can describe what it <em>is</em>—its internal structure, its definition, how it exists passively. Or you can describe what it <em>does</em>—how it interacts with other objects, what role it plays, how it exists actively.</p>
+
+        <p>This duality pervades mathematics, but its deepest expression is the <strong>Yoneda lemma</strong>, often called the most important result in category theory. Today we'll explore a simplified version—the "Baby Yoneda Lemma"—that captures the essential insight while remaining concrete and visual.</p>
+
+        <h2>Part I: The Two Perspectives</h2>
+
+        <p>Consider a number like 6 sitting in the ordered set of natural numbers. We can characterize it in two ways:</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>The "Is" vs "Does" of an element</span>
+                <span class="interactive-hint">Click on any number to select it</span>
+            </div>
+            <canvas id="canvas-is-does" height="300"></canvas>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #2563eb;"></div>
+                    <span>Selected element</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #10b981;"></div>
+                    <span>Elements ≤ selected (lower set)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #f59e0b;"></div>
+                    <span>Elements ≥ selected (upper set)</span>
+                </div>
+            </div>
+        </div>
+
+        <p>The <strong>"is"</strong> of 6 is simply the symbol "6" or its definition as the successor of 5. But the <strong>"does"</strong> of 6 consists of two comparison predicates:</p>
+
+        <div class="equation">
+            <span class="math">L(y) = (y ≤ 6)</span> &nbsp;&nbsp;and&nbsp;&nbsp; <span class="math">U(y) = (6 ≤ y)</span>
+        </div>
+
+        <p>The lower set {1, 2, 3, 4, 5, 6} tells us everything that 6 "dominates." The upper set {6, 7, 8, ...} tells us everything that "dominates" 6. Together, these two predicates completely characterize 6—no other element has exactly this combination of relationships.</p>
+
+        <div class="highlight-box">
+            <strong>Key Insight:</strong> In an ordered set, an element is uniquely determined by how it compares to all other elements. The "does" completely captures the "is."
+        </div>
+
+        <h2>Part II: Relationships Have Actions Too</h2>
+
+        <p>The "is-does" duality doesn't just apply to elements—it applies to relationships between elements. A relationship like <span class="math">a ≤ b</span> also has something it "does."</p>
+
+        <p>What does the relationship <span class="math">3 ≤ 7</span> do? It allows us to <em>transport</em> other relationships. Whenever we know <span class="math">z ≤ 3</span>, we can conclude <span class="math">z ≤ 7</span> by transitivity. The relationship <span class="math">3 ≤ 7</span> acts as a <em>function on relationships</em>.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>What a relationship "does"</span>
+                <span class="interactive-hint">Drag the test element to see transitivity in action</span>
+            </div>
+            <canvas id="canvas-transitivity" height="350"></canvas>
+            <div class="controls">
+                <label>Source: </label>
+                <input type="range" id="source-slider" min="1" max="8" value="3">
+                <span id="source-value">3</span>
+                <label style="margin-left: 20px;">Target: </label>
+                <input type="range" id="target-slider" min="1" max="10" value="7">
+                <span id="target-value">7</span>
+            </div>
+        </div>
+
+        <p>Here's the crucial observation. Suppose we know that <em>for all z</em>, the implication <span class="math">z ≤ a</span> ⟹ <span class="math">z ≤ b</span> holds. Can we conclude that <span class="math">a ≤ b</span>?</p>
+
+        <p>Yes! We simply <strong>follow the identity</strong>: since the implication holds for all z, it holds in particular for <span class="math">z = a</span>. We know <span class="math">a ≤ a</span> by reflexivity, so by our implication, <span class="math">a ≤ b</span>.</p>
+
+        <div class="insight-box">
+            <strong>The Baby Yoneda Lemma (one direction):</strong> The relationship <span class="math">a ≤ b</span> is equivalent to having the implication <span class="math">∀z. (z ≤ a) ⟹ (z ≤ b)</span>. The "is" of a relationship equals its "does."
+        </div>
+
+        <h2>Part III: Virtual Objects</h2>
+
+        <p>Here's where things get interesting. Sometimes we want to talk about objects that don't actually exist in our ordered set, but can still be "probed" by elements that do exist.</p>
+
+        <p>Consider the rational numbers ℚ. The number π doesn't exist in ℚ—it's irrational. But we can still <em>compare</em> rationals to π! We know that 3 < π < 4, that 3.1 < π < 3.2, and so on. The irrational π acts as a "virtual object" that can be probed by actual rationals.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Virtual objects: Dedekind cuts</span>
+                <span class="interactive-hint">Drag the virtual point to see how rationals respond</span>
+            </div>
+            <canvas id="canvas-dedekind" height="300"></canvas>
+            <div class="controls">
+                <button id="btn-pi" class="active">π ≈ 3.14159</button>
+                <button id="btn-sqrt2">√2 ≈ 1.414</button>
+                <button id="btn-e">e ≈ 2.718</button>
+                <button id="btn-custom">Custom</button>
+                <input type="range" id="virtual-slider" min="0" max="500" value="157" style="display: none;">
+            </div>
+        </div>
+
+        <p>A virtual object <span class="math">v</span> is defined purely by what it <em>does</em>—by the comparison predicate <span class="math">p(y) = (y ≤ v)</span>. This predicate must satisfy a consistency condition: if <span class="math">y ≤ v</span> and <span class="math">x ≤ y</span>, then <span class="math">x ≤ v</span>. This is exactly what it means to be a "lower set" or "downward closed" set.</p>
+
+        <p>This is the essence of <strong>Dedekind cuts</strong>: a real number is defined as a consistent way of partitioning the rationals into "below" and "above."</p>
+
+        <h2>Part IV: When Virtual Becomes Actual</h2>
+
+        <p>Sometimes a virtual object can be <em>represented</em> by an actual object. Consider a real number <span class="math">r</span> viewed as a virtual object on the integers ℤ. The virtual predicate "which integers are ≤ r" defines a pattern, and the <strong>floor function</strong> ⌊r⌋ is the integer that best represents this pattern from below.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Representability: Floor and Ceiling</span>
+                <span class="interactive-hint">Drag the real number to see its integer representatives</span>
+            </div>
+            <canvas id="canvas-floor-ceil" height="280"></canvas>
+            <div class="controls">
+                <label>Real number r: </label>
+                <input type="range" id="real-slider" min="0" max="600" value="314">
+                <span id="real-value">3.14</span>
+            </div>
+        </div>
+
+        <p>The floor ⌊r⌋ "represents" the virtual object when we focus on arrows pointing <em>into</em> r: we have <span class="math">n ≤ r</span> if and only if <span class="math">n ≤ ⌊r⌋</span> for integers n.</p>
+
+        <p>The ceiling ⌈r⌉ "represents" r when we focus on arrows pointing <em>out of</em> r: we have <span class="math">r ≤ n</span> if and only if <span class="math">⌈r⌉ ≤ n</span>.</p>
+
+        <div class="highlight-box">
+            <strong>The Pattern:</strong> Virtual objects that <em>can</em> be represented by actual objects form adjoints/Galois connections. Floor and ceiling are adjoint to the inclusion ℤ ↪ ℝ.
+        </div>
+
+        <h2>Part V: Interior and Closure</h2>
+
+        <p>The same pattern appears in topology. An arbitrary subset S of a topological space is a "virtual object" when viewed from the lattice of open sets (for interior) or closed sets (for closure).</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Interior and Closure as Representatives</span>
+                <span class="interactive-hint">Draw a region to see its interior and closure</span>
+            </div>
+            <canvas id="canvas-topology" height="400"></canvas>
+            <div class="controls">
+                <button id="btn-clear-topo">Clear</button>
+                <button id="btn-preset1">Preset: Blob</button>
+                <button id="btn-preset2">Preset: Scattered</button>
+                <label style="margin-left: 20px;">Grid resolution:</label>
+                <input type="range" id="grid-slider" min="8" max="24" value="12">
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: rgba(37, 99, 235, 0.3); border: 2px solid #2563eb;"></div>
+                    <span>Your region S</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #10b981;"></div>
+                    <span>Interior (largest open ⊆ S)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #f59e0b; opacity: 0.5;"></div>
+                    <span>Closure (smallest closed ⊇ S)</span>
+                </div>
+            </div>
+        </div>
+
+        <p>The <strong>interior</strong> Int(S) is the largest open set contained in S. It "represents" the virtual object S when we ask: which open sets are contained in S? The interior is the universal such open set—every open set U ⊆ S satisfies U ⊆ Int(S).</p>
+
+        <p>The <strong>closure</strong> S̄ is the smallest closed set containing S. It represents S when we ask: which closed sets contain S? Every closed set C ⊇ S satisfies S̄ ⊆ C.</p>
+
+        <div class="insight-box">
+            <strong>The Universal Property at Work:</strong> We can compute S̄ = ∩{C closed | S ⊆ C}. This formula comes directly from the Yoneda perspective: we're finding the object that "does" what S does.
+        </div>
+
+        <h2>Part VI: The General Pattern</h2>
+
+        <p>Let's now see how these ideas unify. In category theory, a <strong>presheaf</strong> on a category C is like a "virtual object"—it specifies how something would interact with all actual objects of C, without necessarily being an object itself.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>Virtual cones and weighted limits</span>
+                <span class="interactive-hint">Drag the virtual tip to see how it projects onto the base</span>
+            </div>
+            <canvas id="canvas-cones" height="400"></canvas>
+            <div class="controls">
+                <button id="btn-single-arrows" class="active">Single arrows (ordinary cone)</button>
+                <button id="btn-multiple-arrows">Multiple arrows (weighted)</button>
+            </div>
+        </div>
+
+        <p>An ordinary limit is a universal cone—an object T with arrows to each object in a diagram, satisfying certain commutativity conditions. The key insight is that we can generalize this by allowing <em>multiple</em> arrows (or no arrows) from the tip to each base object, specified by a "weight" functor W.</p>
+
+        <p>The <strong>weighted limit</strong> {W, D} is then the object representing all such weighted cones. When W assigns a single element to each object (the constant presheaf), we recover ordinary limits.</p>
+
+        <h2>Part VII: The Full Yoneda</h2>
+
+        <p>We've been working with ordered sets, where everything simplifies beautifully. But the same ideas work in full generality. In a category C, an object A defines a presheaf:</p>
+
+        <div class="equation">
+            <span class="math">Hom(−, A) : C<sup>op</sup> → Set</span>
+        </div>
+
+        <p>This presheaf captures "what A does"—how morphisms from various objects land in A. The Yoneda lemma says this capture is perfect: the presheaf Hom(−, A) determines A up to isomorphism, and natural transformations between such presheaves correspond exactly to morphisms between the representing objects.</p>
+
+        <div class="interactive-container">
+            <div class="interactive-header">
+                <span>The Yoneda embedding</span>
+                <span class="interactive-hint">Hover over objects to see their presheaf representation</span>
+            </div>
+            <canvas id="canvas-yoneda" height="400"></canvas>
+            <div class="controls">
+                <label>View mode:</label>
+                <button id="btn-category" class="active">Category C</button>
+                <button id="btn-presheaves">Presheaf category</button>
+                <button id="btn-embedding">Yoneda embedding</button>
+            </div>
+        </div>
+
+        <p>The <strong>Yoneda embedding</strong> C → [C<sup>op</sup>, Set] sends each object to its representable presheaf. This embedding is <em>fully faithful</em>: it perfectly preserves all the structure of C. The objects of C sit inside the presheaf category as the "actual" objects, while non-representable presheaves are the "virtual" objects.</p>
+
+        <div class="highlight-box">
+            <strong>The Yoneda Philosophy:</strong> To understand an object, understand how it interacts with everything else. The "does" perspective—captured by the presheaf Hom(−, A)—is equivalent to the "is" perspective. Category theory systematically prefers "does" because it's more robust, more portable, and reveals deeper structure.
+        </div>
+
+        <h2>Conclusion: Knowing Through Interaction</h2>
+
+        <p>The Yoneda lemma tells us something profound: <em>objects are determined by their relationships</em>. You don't need to peer inside an object to know it completely—you can know it entirely through how it connects to everything else.</p>
+
+        <p>This perspective pervades modern mathematics:</p>
+
+        <p>In <strong>algebraic geometry</strong>, schemes are determined by their functors of points—how they're probed by all rings. In <strong>topology</strong>, spaces are determined by their continuous maps from simple test spaces. In <strong>linear algebra</strong>, operators are determined by their action on vectors. In <strong>physics</strong>, particles are determined by their interactions and symmetries.</p>
+
+        <p>The Baby Yoneda Lemma for posets is the simplest case of this deep principle, but it already contains the essential insight: <em>is</em> and <em>does</em> are two sides of the same coin, and mathematics often prefers the "does" side because it's more flexible, more categorical, and ultimately more powerful.</p>
+
+        <footer>
+            <p>This essay was inspired by the blog post "The Baby Yoneda Lemma" by Pseudonium and Paolo Perrone's paper "How to Represent Non-Representable Functors."</p>
+        </footer>
+    </div>
+
+    <script>
+    // ============================================
+    // Utility functions
+    // ============================================
+    
+    function setupCanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        return { ctx, width: rect.width, height: rect.height, dpr };
+    }
+
+    function lerp(a, b, t) {
+        return a + (b - a) * t;
+    }
+
+    function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    function drawArrow(ctx, x1, y1, x2, y2, color = '#333', lineWidth = 2, headSize = 8) {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = 'round';
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(
+            x2 - headSize * Math.cos(angle - Math.PI / 6),
+            y2 - headSize * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+            x2 - headSize * Math.cos(angle + Math.PI / 6),
+            y2 - headSize * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawDashedLine(ctx, x1, y1, x2, y2, color = '#999', lineWidth = 1.5) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // ============================================
+    // Canvas 1: Is-Does Duality
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-is-does');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let selected = 6;
+        let animProgress = 1;
+        let targetSelected = 6;
+        
+        function getNumberPos(n) {
+            const spacing = width / (numbers.length + 1);
+            return {
+                x: spacing * n,
+                y: height / 2
+            };
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw the number line
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(30, height / 2);
+            ctx.lineTo(width - 30, height / 2);
+            ctx.stroke();
+            
+            // Draw numbers
+            numbers.forEach(n => {
+                const pos = getNumberPos(n);
+                let color = '#666';
+                let radius = 20;
+                let fillColor = 'white';
+                
+                if (n === selected) {
+                    color = '#2563eb';
+                    radius = 24;
+                    fillColor = '#dbeafe';
+                } else if (n < selected) {
+                    color = '#10b981';
+                    fillColor = '#d1fae5';
+                } else if (n > selected) {
+                    color = '#f59e0b';
+                    fillColor = '#fef3c7';
+                }
+                
+                // Draw circle
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw number
+                ctx.fillStyle = color;
+                ctx.font = 'bold 16px system-ui, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(n, pos.x, pos.y);
+            });
+            
+            // Draw labels
+            ctx.font = '14px Georgia, serif';
+            ctx.fillStyle = '#10b981';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Lower set: {1, ..., ${selected}}`, width / 4, height - 30);
+            ctx.fillText(`"Things ≤ ${selected}"`, width / 4, height - 12);
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText(`Upper set: {${selected}, ..., ∞}`, 3 * width / 4, height - 30);
+            ctx.fillText(`"Things ≥ ${selected}"`, 3 * width / 4, height - 12);
+            
+            // The element itself
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'italic 14px Georgia, serif';
+            ctx.fillText(`Selected: ${selected}`, width / 2, 30);
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            
+            numbers.forEach(n => {
+                const pos = getNumberPos(n);
+                if (Math.abs(x - pos.x) < 25) {
+                    selected = n;
+                    draw();
+                }
+            });
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 2: Transitivity
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-transitivity');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let source = 3;
+        let target = 7;
+        let testElement = 2;
+        let dragging = false;
+        
+        const sourceSlider = document.getElementById('source-slider');
+        const targetSlider = document.getElementById('target-slider');
+        const sourceValue = document.getElementById('source-value');
+        const targetValue = document.getElementById('target-value');
+        
+        function getPos(n, row) {
+            const y = row === 'top' ? 80 : (row === 'middle' ? height / 2 : height - 80);
+            const spacing = width / 12;
+            return { x: spacing * (n + 1), y };
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw the relationship a ≤ b
+            const aPos = getPos(source, 'middle');
+            const bPos = getPos(target, 'middle');
+            
+            // Draw number line
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(30, height / 2);
+            ctx.lineTo(width - 30, height / 2);
+            ctx.stroke();
+            
+            // Draw source and target
+            [source, target].forEach((n, i) => {
+                const pos = i === 0 ? aPos : bPos;
+                const color = i === 0 ? '#2563eb' : '#10b981';
+                const label = i === 0 ? 'a' : 'b';
+                
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 22, 0, Math.PI * 2);
+                ctx.fillStyle = i === 0 ? '#dbeafe' : '#d1fae5';
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = color;
+                ctx.font = 'bold 16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(n, pos.x, pos.y);
+                
+                ctx.font = 'italic 14px Georgia';
+                ctx.fillText(label, pos.x, pos.y + 40);
+            });
+            
+            // Draw the relationship arrow
+            if (source <= target) {
+                drawArrow(ctx, aPos.x + 25, aPos.y, bPos.x - 25, bPos.y, '#666', 2);
+                ctx.font = '14px Georgia';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('a ≤ b', (aPos.x + bPos.x) / 2, aPos.y - 35);
+            }
+            
+            // Draw the test element
+            if (testElement <= 10) {
+                const zPos = { x: getPos(testElement, 'middle').x, y: 100 };
+                
+                ctx.beginPath();
+                ctx.arc(zPos.x, zPos.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = testElement <= source ? '#fef3c7' : '#f3f4f6';
+                ctx.fill();
+                ctx.strokeStyle = testElement <= source ? '#f59e0b' : '#9ca3af';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = testElement <= source ? '#f59e0b' : '#9ca3af';
+                ctx.font = 'bold 16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(testElement, zPos.x, zPos.y);
+                
+                ctx.font = 'italic 14px Georgia';
+                ctx.fillText('z (drag me)', zPos.x, zPos.y - 35);
+                
+                // Draw implications
+                if (testElement <= source) {
+                    drawDashedLine(ctx, zPos.x, zPos.y + 22, aPos.x, aPos.y - 24, '#f59e0b', 2);
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.font = '13px Georgia';
+                    ctx.fillText('z ≤ a ✓', (zPos.x + aPos.x) / 2 - 30, (zPos.y + aPos.y) / 2 - 10);
+                    
+                    if (source <= target) {
+                        drawDashedLine(ctx, zPos.x, zPos.y + 22, bPos.x, bPos.y - 24, '#10b981', 2);
+                        ctx.fillStyle = '#10b981';
+                        ctx.fillText('∴ z ≤ b ✓', (zPos.x + bPos.x) / 2 + 30, (zPos.y + bPos.y) / 2 - 10);
+                    }
+                }
+                
+                // The key insight
+                if (testElement === source) {
+                    ctx.font = 'bold 14px Georgia';
+                    ctx.fillStyle = '#2563eb';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('★ Following the identity: z = a!', width / 2, height - 30);
+                    ctx.font = '13px Georgia';
+                    ctx.fillText('Since a ≤ a (reflexivity), we get a ≤ b directly.', width / 2, height - 10);
+                }
+            }
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const zPos = { x: getPos(testElement, 'middle').x, y: 100 };
+            
+            if (Math.hypot(x - zPos.x, y - zPos.y) < 25) {
+                dragging = true;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            
+            const spacing = width / 12;
+            let newTest = Math.round((x / spacing) - 1);
+            newTest = Math.max(1, Math.min(10, newTest));
+            if (newTest !== testElement) {
+                testElement = newTest;
+                draw();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => { dragging = false; });
+        canvas.addEventListener('mouseleave', () => { dragging = false; });
+        
+        sourceSlider.addEventListener('input', () => {
+            source = parseInt(sourceSlider.value);
+            sourceValue.textContent = source;
+            if (target < source) {
+                target = source;
+                targetSlider.value = target;
+                targetValue.textContent = target;
+            }
+            draw();
+        });
+        
+        targetSlider.addEventListener('input', () => {
+            target = parseInt(targetSlider.value);
+            targetValue.textContent = target;
+            if (source > target) {
+                source = target;
+                sourceSlider.value = source;
+                sourceValue.textContent = source;
+            }
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 3: Dedekind Cuts
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-dedekind');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        const constants = {
+            'pi': Math.PI,
+            'sqrt2': Math.SQRT2,
+            'e': Math.E
+        };
+        
+        let virtualValue = Math.PI;
+        let dragging = false;
+        let customMode = false;
+        
+        const slider = document.getElementById('virtual-slider');
+        const buttons = {
+            pi: document.getElementById('btn-pi'),
+            sqrt2: document.getElementById('btn-sqrt2'),
+            e: document.getElementById('btn-e'),
+            custom: document.getElementById('btn-custom')
+        };
+        
+        function valueToX(v) {
+            return 50 + (v / 5) * (width - 100);
+        }
+        
+        function xToValue(x) {
+            return ((x - 50) / (width - 100)) * 5;
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const lineY = height / 2;
+            
+            // Draw number line
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(30, lineY);
+            ctx.lineTo(width - 30, lineY);
+            ctx.stroke();
+            
+            // Draw rational markers with fractions
+            const rationals = [
+                { v: 0, label: '0' },
+                { v: 0.5, label: '½' },
+                { v: 1, label: '1' },
+                { v: 1.5, label: '3/2' },
+                { v: 2, label: '2' },
+                { v: 2.5, label: '5/2' },
+                { v: 3, label: '3' },
+                { v: 3.5, label: '7/2' },
+                { v: 4, label: '4' },
+                { v: 4.5, label: '9/2' },
+                { v: 5, label: '5' }
+            ];
+            
+            rationals.forEach(({ v, label }) => {
+                const x = valueToX(v);
+                const isBelow = v < virtualValue;
+                
+                ctx.beginPath();
+                ctx.arc(x, lineY, 8, 0, Math.PI * 2);
+                ctx.fillStyle = isBelow ? '#d1fae5' : '#fef3c7';
+                ctx.fill();
+                ctx.strokeStyle = isBelow ? '#10b981' : '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = isBelow ? '#10b981' : '#f59e0b';
+                ctx.font = '12px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(label, x, lineY + 25);
+            });
+            
+            // Draw the virtual object
+            const virtualX = valueToX(virtualValue);
+            
+            // Draw dashed lines showing the "cut"
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(virtualX, lineY - 50);
+            ctx.lineTo(virtualX, lineY + 50);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw the virtual point
+            ctx.beginPath();
+            ctx.arc(virtualX, lineY - 70, 16, 0, Math.PI * 2);
+            ctx.fillStyle = '#dbeafe';
+            ctx.fill();
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Virtual arrows
+            ctx.strokeStyle = '#2563eb';
+            ctx.setLineDash([3, 3]);
+            rationals.slice(0, -1).forEach(({ v }) => {
+                if (Math.abs(v - virtualValue) < 0.1) return;
+                const x = valueToX(v);
+                ctx.beginPath();
+                if (v < virtualValue) {
+                    ctx.moveTo(x, lineY - 10);
+                    ctx.lineTo(virtualX - 5, lineY - 60);
+                } else {
+                    ctx.moveTo(virtualX + 5, lineY - 60);
+                    ctx.lineTo(x, lineY - 10);
+                }
+                ctx.stroke();
+            });
+            ctx.setLineDash([]);
+            
+            // Label
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'italic 14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Virtual object', virtualX, lineY - 100);
+            ctx.font = '16px Georgia';
+            ctx.fillText(virtualValue.toFixed(5) + '...', virtualX, lineY - 82);
+            
+            // Labels for the cut
+            ctx.font = '13px Georgia';
+            ctx.fillStyle = '#10b981';
+            ctx.textAlign = 'right';
+            ctx.fillText('q < v (lower cut)', virtualX - 20, height - 20);
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.textAlign = 'left';
+            ctx.fillText('v < q (upper cut)', virtualX + 20, height - 20);
+        }
+        
+        function setActive(key) {
+            Object.values(buttons).forEach(b => b.classList.remove('active'));
+            buttons[key].classList.add('active');
+        }
+        
+        buttons.pi.addEventListener('click', () => {
+            virtualValue = Math.PI;
+            customMode = false;
+            slider.style.display = 'none';
+            setActive('pi');
+            draw();
+        });
+        
+        buttons.sqrt2.addEventListener('click', () => {
+            virtualValue = Math.SQRT2;
+            customMode = false;
+            slider.style.display = 'none';
+            setActive('sqrt2');
+            draw();
+        });
+        
+        buttons.e.addEventListener('click', () => {
+            virtualValue = Math.E;
+            customMode = false;
+            slider.style.display = 'none';
+            setActive('e');
+            draw();
+        });
+        
+        buttons.custom.addEventListener('click', () => {
+            customMode = true;
+            slider.style.display = 'inline-block';
+            setActive('custom');
+            virtualValue = slider.value / 100;
+            draw();
+        });
+        
+        slider.addEventListener('input', () => {
+            if (customMode) {
+                virtualValue = slider.value / 100;
+                draw();
+            }
+        });
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const virtualX = valueToX(virtualValue);
+            
+            if (Math.abs(x - virtualX) < 30) {
+                dragging = true;
+                customMode = true;
+                slider.style.display = 'inline-block';
+                setActive('custom');
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            virtualValue = Math.max(0.1, Math.min(4.9, xToValue(x)));
+            slider.value = virtualValue * 100;
+            draw();
+        });
+        
+        canvas.addEventListener('mouseup', () => { dragging = false; });
+        canvas.addEventListener('mouseleave', () => { dragging = false; });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 4: Floor and Ceiling
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-floor-ceil');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let realValue = 3.14;
+        
+        const slider = document.getElementById('real-slider');
+        const valueDisplay = document.getElementById('real-value');
+        
+        function valueToX(v) {
+            return 80 + (v / 7) * (width - 160);
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const lineY = height / 2 + 20;
+            const floor = Math.floor(realValue);
+            const ceil = Math.ceil(realValue);
+            
+            // Draw number line
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(60, lineY);
+            ctx.lineTo(width - 60, lineY);
+            ctx.stroke();
+            
+            // Draw integers
+            for (let i = 0; i <= 7; i++) {
+                const x = valueToX(i);
+                const isFloor = i === floor;
+                const isCeil = i === ceil;
+                const isBelow = i <= floor;
+                const isAbove = i >= ceil;
+                
+                let color = '#9ca3af';
+                let fillColor = '#f3f4f6';
+                let radius = 14;
+                
+                if (isFloor) {
+                    color = '#10b981';
+                    fillColor = '#d1fae5';
+                    radius = 18;
+                } else if (isCeil) {
+                    color = '#f59e0b';
+                    fillColor = '#fef3c7';
+                    radius = 18;
+                } else if (isBelow) {
+                    color = '#10b981';
+                    fillColor = '#ecfdf5';
+                } else if (isAbove) {
+                    color = '#f59e0b';
+                    fillColor = '#fffbeb';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(x, lineY, radius, 0, Math.PI * 2);
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = color;
+                ctx.font = 'bold 14px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(i, x, lineY);
+            }
+            
+            // Draw real number
+            const realX = valueToX(realValue);
+            
+            ctx.beginPath();
+            ctx.arc(realX, lineY - 60, 20, 0, Math.PI * 2);
+            ctx.fillStyle = '#dbeafe';
+            ctx.fill();
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'bold 14px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('r', realX, lineY - 60);
+            
+            // Draw connections
+            ctx.setLineDash([4, 4]);
+            
+            // To floor
+            const floorX = valueToX(floor);
+            ctx.strokeStyle = '#10b981';
+            ctx.beginPath();
+            ctx.moveTo(realX - 10, lineY - 45);
+            ctx.lineTo(floorX + 5, lineY - 20);
+            ctx.stroke();
+            
+            // To ceiling
+            const ceilX = valueToX(ceil);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.moveTo(realX + 10, lineY - 45);
+            ctx.lineTo(ceilX - 5, lineY - 20);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.font = '14px Georgia';
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.textAlign = 'center';
+            ctx.fillText('r = ' + realValue.toFixed(2), realX, lineY - 90);
+            
+            ctx.fillStyle = '#10b981';
+            ctx.textAlign = 'center';
+            ctx.fillText('⌊r⌋ = ' + floor, floorX, lineY + 40);
+            ctx.font = '12px Georgia';
+            ctx.fillText('(represents "arrows in")', floorX, lineY + 56);
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('⌈r⌉ = ' + ceil, ceilX, lineY + 40);
+            ctx.font = '12px Georgia';
+            ctx.fillText('(represents "arrows out")', ceilX, lineY + 56);
+            
+            // The key equations
+            ctx.font = '13px Georgia';
+            ctx.fillStyle = '#10b981';
+            ctx.textAlign = 'left';
+            ctx.fillText('n ≤ r  ⟺  n ≤ ⌊r⌋', 30, 30);
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.textAlign = 'right';
+            ctx.fillText('r ≤ n  ⟺  ⌈r⌉ ≤ n', width - 30, 30);
+        }
+        
+        slider.addEventListener('input', () => {
+            realValue = slider.value / 100;
+            valueDisplay.textContent = realValue.toFixed(2);
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 5: Topology (Interior/Closure)
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-topology');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let gridSize = 12;
+        let cells = new Set();
+        let isDrawing = false;
+        let drawMode = true; // true = add, false = remove
+        
+        const gridSlider = document.getElementById('grid-slider');
+        
+        function cellKey(i, j) { return `${i},${j}`; }
+        function parseKey(key) { return key.split(',').map(Number); }
+        
+        function getCellFromMouse(x, y) {
+            const margin = 40;
+            const cellW = (width - 2 * margin) / gridSize;
+            const cellH = (height - 2 * margin) / gridSize;
+            const i = Math.floor((x - margin) / cellW);
+            const j = Math.floor((y - margin) / cellH);
+            if (i >= 0 && i < gridSize && j >= 0 && j < gridSize) {
+                return { i, j };
+            }
+            return null;
+        }
+        
+        function getCellRect(i, j) {
+            const margin = 40;
+            const cellW = (width - 2 * margin) / gridSize;
+            const cellH = (height - 2 * margin) / gridSize;
+            return {
+                x: margin + i * cellW,
+                y: margin + j * cellH,
+                w: cellW,
+                h: cellH
+            };
+        }
+        
+        function computeInterior() {
+            // Interior: cells where all 4-neighbors are also in the set
+            const interior = new Set();
+            cells.forEach(key => {
+                const [i, j] = parseKey(key);
+                const neighbors = [
+                    cellKey(i-1, j), cellKey(i+1, j),
+                    cellKey(i, j-1), cellKey(i, j+1)
+                ];
+                if (neighbors.every(n => cells.has(n))) {
+                    interior.add(key);
+                }
+            });
+            return interior;
+        }
+        
+        function computeClosure() {
+            // Closure: cells that are in the set OR adjacent to a cell in the set
+            const closure = new Set(cells);
+            cells.forEach(key => {
+                const [i, j] = parseKey(key);
+                const neighbors = [
+                    cellKey(i-1, j), cellKey(i+1, j),
+                    cellKey(i, j-1), cellKey(i, j+1)
+                ];
+                neighbors.forEach(n => {
+                    const [ni, nj] = parseKey(n);
+                    if (ni >= 0 && ni < gridSize && nj >= 0 && nj < gridSize) {
+                        closure.add(n);
+                    }
+                });
+            });
+            return closure;
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const interior = computeInterior();
+            const closure = computeClosure();
+            
+            // Draw closure first (background)
+            closure.forEach(key => {
+                if (!cells.has(key)) {
+                    const [i, j] = parseKey(key);
+                    const rect = getCellRect(i, j);
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+                    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                }
+            });
+            
+            // Draw original cells
+            cells.forEach(key => {
+                const [i, j] = parseKey(key);
+                const rect = getCellRect(i, j);
+                ctx.fillStyle = 'rgba(37, 99, 235, 0.3)';
+                ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+            });
+            
+            // Draw interior
+            interior.forEach(key => {
+                const [i, j] = parseKey(key);
+                const rect = getCellRect(i, j);
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+                ctx.fillRect(rect.x + 4, rect.y + 4, rect.w - 8, rect.h - 8);
+            });
+            
+            // Draw grid
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            const margin = 40;
+            const cellW = (width - 2 * margin) / gridSize;
+            const cellH = (height - 2 * margin) / gridSize;
+            
+            for (let i = 0; i <= gridSize; i++) {
+                ctx.beginPath();
+                ctx.moveTo(margin + i * cellW, margin);
+                ctx.lineTo(margin + i * cellW, height - margin);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(margin, margin + i * cellH);
+                ctx.lineTo(width - margin, margin + i * cellH);
+                ctx.stroke();
+            }
+            
+            // Stats
+            ctx.font = '13px system-ui';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#2563eb';
+            ctx.fillText(`|S| = ${cells.size}`, 10, 20);
+            ctx.fillStyle = '#10b981';
+            ctx.fillText(`|Int(S)| = ${interior.size}`, 10, 36);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText(`|Closure(S)| = ${closure.size}`, width - 130, 20);
+        }
+        
+        function handleDraw(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cell = getCellFromMouse(x, y);
+            
+            if (cell) {
+                const key = cellKey(cell.i, cell.j);
+                if (drawMode) {
+                    cells.add(key);
+                } else {
+                    cells.delete(key);
+                }
+                draw();
+            }
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cell = getCellFromMouse(x, y);
+            if (cell) {
+                const key = cellKey(cell.i, cell.j);
+                drawMode = !cells.has(key);
+            }
+            handleDraw(e);
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) handleDraw(e);
+        });
+        
+        canvas.addEventListener('mouseup', () => { isDrawing = false; });
+        canvas.addEventListener('mouseleave', () => { isDrawing = false; });
+        
+        document.getElementById('btn-clear-topo').addEventListener('click', () => {
+            cells.clear();
+            draw();
+        });
+        
+        document.getElementById('btn-preset1').addEventListener('click', () => {
+            cells.clear();
+            // Draw a blob
+            const center = Math.floor(gridSize / 2);
+            for (let i = -2; i <= 2; i++) {
+                for (let j = -2; j <= 2; j++) {
+                    if (i*i + j*j <= 5) {
+                        cells.add(cellKey(center + i, center + j));
+                    }
+                }
+            }
+            draw();
+        });
+        
+        document.getElementById('btn-preset2').addEventListener('click', () => {
+            cells.clear();
+            // Scattered points
+            const points = [
+                [2,2], [3,2], [2,3],
+                [7,3], [8,3], [7,4], [8,4],
+                [4,7], [5,7], [4,8],
+                [9,8]
+            ];
+            points.forEach(([i, j]) => {
+                if (i < gridSize && j < gridSize) {
+                    cells.add(cellKey(i, j));
+                }
+            });
+            draw();
+        });
+        
+        gridSlider.addEventListener('input', () => {
+            gridSize = parseInt(gridSlider.value);
+            cells.clear();
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        // Start with preset
+        document.getElementById('btn-preset1').click();
+    })();
+
+    // ============================================
+    // Canvas 6: Cones and Weighted Limits
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-cones');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let multipleArrows = false;
+        let tipY = 80;
+        let dragging = false;
+        
+        const baseObjects = [
+            { x: 0.2, label: 'A' },
+            { x: 0.5, label: 'B' },
+            { x: 0.8, label: 'C' }
+        ];
+        
+        const weights = {
+            'A': 2,
+            'B': 1,
+            'C': 3
+        };
+        
+        document.getElementById('btn-single-arrows').addEventListener('click', function() {
+            multipleArrows = false;
+            this.classList.add('active');
+            document.getElementById('btn-multiple-arrows').classList.remove('active');
+            draw();
+        });
+        
+        document.getElementById('btn-multiple-arrows').addEventListener('click', function() {
+            multipleArrows = true;
+            this.classList.add('active');
+            document.getElementById('btn-single-arrows').classList.remove('active');
+            draw();
+        });
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const baseY = height - 100;
+            const tipX = width / 2;
+            
+            // Draw base category box
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(50, baseY - 40, width - 100, 80);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '12px system-ui';
+            ctx.textAlign = 'left';
+            ctx.fillText('Category C (base)', 55, baseY + 50);
+            
+            // Draw arrows between base objects
+            baseObjects.forEach((obj, i) => {
+                if (i < baseObjects.length - 1) {
+                    const x1 = 50 + obj.x * (width - 100);
+                    const x2 = 50 + baseObjects[i + 1].x * (width - 100);
+                    drawArrow(ctx, x1 + 20, baseY, x2 - 20, baseY, '#999', 1.5, 6);
+                }
+            });
+            
+            // Draw base objects
+            baseObjects.forEach(obj => {
+                const x = 50 + obj.x * (width - 100);
+                
+                ctx.beginPath();
+                ctx.arc(x, baseY, 18, 0, Math.PI * 2);
+                ctx.fillStyle = '#f3f4f6';
+                ctx.fill();
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.label, x, baseY);
+            });
+            
+            // Draw the tip (virtual object)
+            ctx.beginPath();
+            ctx.arc(tipX, tipY, 22, 0, Math.PI * 2);
+            ctx.fillStyle = '#dbeafe';
+            ctx.fill();
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'bold 16px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('T', tipX, tipY);
+            
+            ctx.font = '12px Georgia';
+            ctx.fillText('(tip / virtual)', tipX, tipY - 35);
+            
+            // Draw arrows from tip to base
+            baseObjects.forEach(obj => {
+                const baseX = 50 + obj.x * (width - 100);
+                const numArrows = multipleArrows ? weights[obj.label] : 1;
+                
+                for (let i = 0; i < numArrows; i++) {
+                    const offset = (i - (numArrows - 1) / 2) * 8;
+                    const startX = tipX + offset;
+                    const endX = baseX + offset * 0.5;
+                    
+                    // Calculate arrow endpoint (stop at circle edge)
+                    const angle = Math.atan2(baseY - 18 - (tipY + 22), endX - startX);
+                    const endXAdj = endX;
+                    const endYAdj = baseY - 20;
+                    
+                    if (multipleArrows) {
+                        ctx.setLineDash([4, 4]);
+                    }
+                    drawArrow(ctx, startX, tipY + 24, endXAdj, endYAdj, 
+                             multipleArrows ? '#2563eb' : '#666', 1.5, 6);
+                    ctx.setLineDash([]);
+                }
+                
+                // Weight label
+                if (multipleArrows) {
+                    ctx.fillStyle = '#2563eb';
+                    ctx.font = '11px system-ui';
+                    ctx.textAlign = 'center';
+                    const midX = (tipX + baseX) / 2 + (baseX < tipX ? -20 : (baseX > tipX ? 20 : 0));
+                    const midY = (tipY + baseY) / 2;
+                    ctx.fillText(`W(${obj.label})=${weights[obj.label]}`, midX, midY);
+                }
+            });
+            
+            // Explanation
+            ctx.font = '13px Georgia';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            if (multipleArrows) {
+                ctx.fillText('Weighted cone: W specifies how many arrows from T to each object', width / 2, height - 20);
+            } else {
+                ctx.fillText('Ordinary cone: exactly one arrow from tip T to each object', width / 2, height - 20);
+            }
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (Math.hypot(x - width/2, y - tipY) < 30) {
+                dragging = true;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            tipY = Math.max(50, Math.min(height - 150, y));
+            draw();
+        });
+        
+        canvas.addEventListener('mouseup', () => { dragging = false; });
+        canvas.addEventListener('mouseleave', () => { dragging = false; });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    // ============================================
+    // Canvas 7: Yoneda Embedding
+    // ============================================
+    
+    (function() {
+        const canvas = document.getElementById('canvas-yoneda');
+        let { ctx, width, height } = setupCanvas(canvas);
+        
+        let viewMode = 'category'; // 'category', 'presheaves', 'embedding'
+        let hoveredObject = null;
+        let animProgress = 0;
+        let animating = false;
+        
+        const objects = [
+            { id: 'A', x: 0.2, y: 0.5 },
+            { id: 'B', x: 0.5, y: 0.3 },
+            { id: 'C', x: 0.5, y: 0.7 },
+            { id: 'D', x: 0.8, y: 0.5 }
+        ];
+        
+        const morphisms = [
+            { from: 'A', to: 'B' },
+            { from: 'A', to: 'C' },
+            { from: 'B', to: 'D' },
+            { from: 'C', to: 'D' }
+        ];
+        
+        function getObjectPos(id, inPresheaf = false) {
+            const obj = objects.find(o => o.id === id);
+            const margin = 80;
+            const w = width - 2 * margin;
+            const h = height - 2 * margin;
+            
+            let x = margin + obj.x * w;
+            let y = margin + obj.y * h;
+            
+            if (inPresheaf && viewMode !== 'category') {
+                // Shift to the right half for presheaf view
+                x = width / 2 + (obj.x - 0.3) * w * 0.6;
+            }
+            
+            return { x, y };
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            if (viewMode === 'category') {
+                drawCategory();
+            } else if (viewMode === 'presheaves') {
+                drawPresheaves();
+            } else {
+                drawEmbedding();
+            }
+        }
+        
+        function drawCategory() {
+            // Title
+            ctx.fillStyle = '#666';
+            ctx.font = '14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Category C', width / 2, 30);
+            
+            // Draw morphisms
+            morphisms.forEach(m => {
+                const from = getObjectPos(m.from);
+                const to = getObjectPos(m.to);
+                drawArrow(ctx, from.x + 20, from.y, to.x - 20, to.y, '#999', 1.5, 6);
+            });
+            
+            // Draw objects
+            objects.forEach(obj => {
+                const pos = getObjectPos(obj.id);
+                const isHovered = hoveredObject === obj.id;
+                
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, isHovered ? 24 : 20, 0, Math.PI * 2);
+                ctx.fillStyle = isHovered ? '#dbeafe' : '#f3f4f6';
+                ctx.fill();
+                ctx.strokeStyle = isHovered ? '#2563eb' : '#666';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = isHovered ? '#2563eb' : '#333';
+                ctx.font = 'bold 18px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.id, pos.x, pos.y);
+            });
+            
+            // Hint
+            ctx.fillStyle = '#999';
+            ctx.font = '12px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Hover over objects to see their hom-sets', width / 2, height - 20);
+            
+            // If hovering, show the presheaf
+            if (hoveredObject) {
+                drawHoveredPresheaf();
+            }
+        }
+        
+        function drawHoveredPresheaf() {
+            const boxX = width - 200;
+            const boxY = 50;
+            const boxW = 180;
+            const boxH = 150;
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(boxX, boxY, boxW, boxH, 8);
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'italic 14px Georgia';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Hom(−, ${hoveredObject})`, boxX + 15, boxY + 25);
+            
+            ctx.font = '13px system-ui';
+            ctx.fillStyle = '#333';
+            let y = boxY + 50;
+            
+            objects.forEach(obj => {
+                // Count morphisms from obj to hoveredObject
+                let count = 0;
+                if (obj.id === hoveredObject) count = 1; // identity
+                morphisms.forEach(m => {
+                    if (m.from === obj.id && m.to === hoveredObject) count++;
+                });
+                // Also count composites
+                morphisms.forEach(m1 => {
+                    morphisms.forEach(m2 => {
+                        if (m1.from === obj.id && m1.to === m2.from && m2.to === hoveredObject) {
+                            if (m1.from !== hoveredObject) count++;
+                        }
+                    });
+                });
+                
+                ctx.fillText(`${obj.id} ↦ {${count} morphism${count !== 1 ? 's' : ''}}`, boxX + 15, y);
+                y += 22;
+            });
+        }
+        
+        function drawPresheaves() {
+            // Draw two regions
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(0, 0, width / 2 - 10, height);
+            
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(width / 2, 40);
+            ctx.lineTo(width / 2, height - 40);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Labels
+            ctx.fillStyle = '#666';
+            ctx.font = '14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Category C', width / 4, 30);
+            ctx.fillText('Presheaf Category [C^op, Set]', 3 * width / 4, 30);
+            
+            // Draw original category on left (smaller)
+            const leftMargin = 60;
+            const leftW = width / 2 - 120;
+            
+            morphisms.forEach(m => {
+                const fromObj = objects.find(o => o.id === m.from);
+                const toObj = objects.find(o => o.id === m.to);
+                const from = { x: leftMargin + fromObj.x * leftW, y: 80 + fromObj.y * (height - 160) };
+                const to = { x: leftMargin + toObj.x * leftW, y: 80 + toObj.y * (height - 160) };
+                drawArrow(ctx, from.x + 15, from.y, to.x - 15, to.y, '#ccc', 1, 5);
+            });
+            
+            objects.forEach(obj => {
+                const x = leftMargin + obj.x * leftW;
+                const y = 80 + obj.y * (height - 160);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.fillStyle = '#f3f4f6';
+                ctx.fill();
+                ctx.strokeStyle = '#999';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#666';
+                ctx.font = '14px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.id, x, y);
+            });
+            
+            // Draw presheaves on right
+            const rightMargin = width / 2 + 60;
+            const rightW = width / 2 - 120;
+            
+            // Representable presheaves (from Yoneda image)
+            objects.forEach((obj, i) => {
+                const x = rightMargin + obj.x * rightW;
+                const y = 80 + obj.y * (height - 160);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+                ctx.fillStyle = '#dbeafe';
+                ctx.fill();
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#2563eb';
+                ctx.font = '12px Georgia';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`y${obj.id}`, x, y);
+            });
+            
+            // A non-representable presheaf
+            ctx.beginPath();
+            ctx.arc(rightMargin + 0.3 * rightW, 80 + 0.2 * (height - 160), 18, 0, Math.PI * 2);
+            ctx.fillStyle = '#fef3c7';
+            ctx.fill();
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '12px Georgia';
+            ctx.fillText('P', rightMargin + 0.3 * rightW, 80 + 0.2 * (height - 160));
+            
+            ctx.font = '11px Georgia';
+            ctx.fillText('(virtual)', rightMargin + 0.3 * rightW, 80 + 0.2 * (height - 160) + 30);
+        }
+        
+        function drawEmbedding() {
+            drawPresheaves();
+            
+            // Draw the embedding arrows
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            
+            const leftMargin = 60;
+            const leftW = width / 2 - 120;
+            const rightMargin = width / 2 + 60;
+            const rightW = width / 2 - 120;
+            
+            objects.forEach(obj => {
+                const fromX = leftMargin + obj.x * leftW + 18;
+                const fromY = 80 + obj.y * (height - 160);
+                const toX = rightMargin + obj.x * rightW - 20;
+                const toY = 80 + obj.y * (height - 160);
+                
+                drawArrow(ctx, fromX, fromY, toX, toY, '#10b981', 1.5, 6);
+            });
+            ctx.setLineDash([]);
+            
+            // Label
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'italic 14px Georgia';
+            ctx.textAlign = 'center';
+            ctx.fillText('Yoneda embedding (fully faithful)', width / 2, height - 30);
+        }
+        
+        document.getElementById('btn-category').addEventListener('click', function() {
+            viewMode = 'category';
+            this.classList.add('active');
+            document.getElementById('btn-presheaves').classList.remove('active');
+            document.getElementById('btn-embedding').classList.remove('active');
+            draw();
+        });
+        
+        document.getElementById('btn-presheaves').addEventListener('click', function() {
+            viewMode = 'presheaves';
+            this.classList.add('active');
+            document.getElementById('btn-category').classList.remove('active');
+            document.getElementById('btn-embedding').classList.remove('active');
+            draw();
+        });
+        
+        document.getElementById('btn-embedding').addEventListener('click', function() {
+            viewMode = 'embedding';
+            this.classList.add('active');
+            document.getElementById('btn-category').classList.remove('active');
+            document.getElementById('btn-presheaves').classList.remove('active');
+            draw();
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (viewMode !== 'category') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            hoveredObject = null;
+            objects.forEach(obj => {
+                const pos = getObjectPos(obj.id);
+                if (Math.hypot(x - pos.x, y - pos.y) < 25) {
+                    hoveredObject = obj.id;
+                }
+            });
+            draw();
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            hoveredObject = null;
+            draw();
+        });
+        
+        window.addEventListener('resize', () => {
+            ({ ctx, width, height } = setupCanvas(canvas));
+            draw();
+        });
+        
+        draw();
+    })();
+
+    </script>
+</body>
+</html>
