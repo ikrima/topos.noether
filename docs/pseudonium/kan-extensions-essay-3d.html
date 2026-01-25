@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kan Extensions in 3D - Interactive Categorical Geometry</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #050508;
+            color: #e8e8f0;
+            overflow: hidden;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .overlay {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .title-panel {
+            top: 30px;
+            left: 30px;
+        }
+        
+        .title-panel h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #6366f1, #22d3ee, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        .title-panel p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .control-panel {
+            bottom: 30px;
+            left: 30px;
+            right: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            pointer-events: auto;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #555;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 140px;
+            height: 4px;
+            background: linear-gradient(90deg, #333, #444);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #6366f1, #22d3ee);
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+        
+        .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #22d3ee;
+            min-width: 45px;
+            text-align: right;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .mode-btn {
+            padding: 8px 16px;
+            background: rgba(30, 30, 45, 0.8);
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #888;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mode-btn:hover {
+            border-color: #555;
+            color: #aaa;
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(34,211,238,0.2));
+            border-color: #6366f1;
+            color: #fff;
+        }
+        
+        .info-panel {
+            top: 30px;
+            right: 30px;
+            max-width: 280px;
+            padding: 20px;
+            background: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            pointer-events: auto;
+        }
+        
+        .info-panel h3 {
+            font-size: 1rem;
+            color: #22d3ee;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .info-panel p {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.6;
+        }
+        
+        .info-panel .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            color: #f472b6;
+        }
+        
+        .hint {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #444;
+            z-index: 50;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="overlay title-panel">
+        <h1>Kan Extensions</h1>
+        <p>Interactive Categorical Geometry in 3D</p>
+    </div>
+    
+    <div class="overlay info-panel" id="info-panel">
+        <h3>The Extension Problem</h3>
+        <p>
+            Given <span class="math">K : C → D</span> and <span class="math">F : C → E</span>, 
+            the Kan extension finds the "best" way to extend F along K to get <span class="math">G : D → E</span>.
+        </p>
+    </div>
+    
+    <div class="overlay control-panel">
+        <div class="control-group">
+            <span class="control-label">View Mode</span>
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="extension">Extension</button>
+                <button class="mode-btn" data-mode="left">Left Kan</button>
+                <button class="mode-btn" data-mode="right">Right Kan</button>
+                <button class="mode-btn" data-mode="universal">Universal</button>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <span class="control-label">Extension Progress</span>
+            <div class="slider-container">
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span class="value" id="progress-value">0%</span>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <span class="control-label">Complexity</span>
+            <div class="slider-container">
+                <input type="range" id="complexity" min="3" max="8" value="4">
+                <span class="value" id="complexity-value">4</span>
+            </div>
+        </div>
+    </div>
+    
+    <p class="hint">Drag to rotate • Scroll to zoom • Adjust parameters to explore</p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    // ============================================
+    // MAIN APPLICATION
+    // ============================================
+    
+    const container = document.getElementById('canvas-container');
+    const infoPanel = document.getElementById('info-panel');
+    
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050508);
+    scene.fog = new THREE.FogExp2(0x050508, 0.008);
+    
+    // Camera
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 8, 20);
+    camera.lookAt(0, 0, 0);
+    
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+    
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x222233, 0.5);
+    scene.add(ambientLight);
+    
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    mainLight.position.set(10, 20, 10);
+    mainLight.castShadow = true;
+    scene.add(mainLight);
+    
+    const fillLight = new THREE.DirectionalLight(0x6366f1, 0.3);
+    fillLight.position.set(-10, 5, -10);
+    scene.add(fillLight);
+    
+    const rimLight = new THREE.DirectionalLight(0x22d3ee, 0.2);
+    rimLight.position.set(0, -5, 15);
+    scene.add(rimLight);
+    
+    // Grid helper (subtle)
+    const gridHelper = new THREE.GridHelper(40, 40, 0x222233, 0x111122);
+    gridHelper.position.y = -5;
+    scene.add(gridHelper);
+    
+    // ============================================
+    // CATEGORY VISUALIZATION
+    // ============================================
+    
+    // Materials
+    const categoryMaterials = {
+        C: new THREE.MeshPhongMaterial({ 
+            color: 0xf472b6, 
+            emissive: 0xf472b6, 
+            emissiveIntensity: 0.2,
+            shininess: 100 
+        }),
+        D: new THREE.MeshPhongMaterial({ 
+            color: 0x6366f1, 
+            emissive: 0x6366f1, 
+            emissiveIntensity: 0.15,
+            shininess: 100 
+        }),
+        E: new THREE.MeshPhongMaterial({ 
+            color: 0x22d3ee, 
+            emissive: 0x22d3ee, 
+            emissiveIntensity: 0.2,
+            shininess: 100 
+        }),
+        extension: new THREE.MeshPhongMaterial({ 
+            color: 0x4ade80, 
+            emissive: 0x4ade80, 
+            emissiveIntensity: 0.3,
+            shininess: 100,
+            transparent: true,
+            opacity: 0.8
+        })
+    };
+    
+    // Glow materials for halos
+    const glowMaterials = {
+        C: new THREE.MeshBasicMaterial({ 
+            color: 0xf472b6, 
+            transparent: true, 
+            opacity: 0.15,
+            side: THREE.BackSide
+        }),
+        D: new THREE.MeshBasicMaterial({ 
+            color: 0x6366f1, 
+            transparent: true, 
+            opacity: 0.1,
+            side: THREE.BackSide
+        }),
+        E: new THREE.MeshBasicMaterial({ 
+            color: 0x22d3ee, 
+            transparent: true, 
+            opacity: 0.15,
+            side: THREE.BackSide
+        })
+    };
+    
+    // Arrow material
+    const arrowMaterial = new THREE.LineBasicMaterial({ 
+        color: 0x888899, 
+        transparent: true, 
+        opacity: 0.6 
+    });
+    
+    const functorKMaterial = new THREE.LineBasicMaterial({ 
+        color: 0xa855f7, 
+        linewidth: 2 
+    });
+    
+    const functorFMaterial = new THREE.LineBasicMaterial({ 
+        color: 0xfbbf24, 
+        linewidth: 2 
+    });
+    
+    const extensionMaterial = new THREE.LineBasicMaterial({ 
+        color: 0x4ade80, 
+        linewidth: 2,
+        transparent: true,
+        opacity: 0
+    });
+    
+    // Groups for organization
+    const categoryC = new THREE.Group();
+    const categoryD = new THREE.Group();
+    const categoryE = new THREE.Group();
+    const functorsGroup = new THREE.Group();
+    const extensionGroup = new THREE.Group();
+    
+    scene.add(categoryC, categoryD, categoryE, functorsGroup, extensionGroup);
+    
+    // Position categories in 3D space (triangular arrangement)
+    categoryC.position.set(-8, 0, 5);
+    categoryD.position.set(8, 0, 5);
+    categoryE.position.set(0, 6, -5);
+    
+    // State
+    let state = {
+        mode: 'extension',
+        progress: 0,
+        complexity: 4,
+        time: 0,
+        mouseX: 0,
+        mouseY: 0,
+        isDragging: false,
+        rotationX: 0,
+        rotationY: 0
+    };
+    
+    // Object storage
+    let objects = {
+        C: [],
+        D: [],
+        E: [],
+        morphismsC: [],
+        morphismsD: [],
+        functorK: [],
+        functorF: [],
+        extensionG: []
+    };
+    
+    // ============================================
+    // CATEGORY GENERATION
+    // ============================================
+    
+    function createSphere(radius, material, glowMaterial) {
+        const group = new THREE.Group();
+        
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.castShadow = true;
+        group.add(sphere);
+        
+        // Glow halo
+        const glowGeometry = new THREE.SphereGeometry(radius * 1.5, 16, 16);
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        group.add(glow);
+        
+        return group;
+    }
+    
+    function createArrow(start, end, material) {
+        const points = [start, end];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        return new THREE.Line(geometry, material);
+    }
+    
+    function createCurvedArrow(start, end, controlOffset, material) {
+        const curve = new THREE.QuadraticBezierCurve3(
+            start,
+            new THREE.Vector3(
+                (start.x + end.x) / 2 + controlOffset.x,
+                (start.y + end.y) / 2 + controlOffset.y,
+                (start.z + end.z) / 2 + controlOffset.z
+            ),
+            end
+        );
+        const points = curve.getPoints(30);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        return new THREE.Line(geometry, material);
+    }
+    
+    function generateCategory(group, numObjects, material, glowMaterial, radius, objectsArray) {
+        // Clear previous
+        while (group.children.length > 0) {
+            group.remove(group.children[0]);
+        }
+        objectsArray.length = 0;
+        
+        // Generate objects in a cluster
+        for (let i = 0; i < numObjects; i++) {
+            const angle = (i / numObjects) * Math.PI * 2;
+            const r = radius * (0.7 + Math.random() * 0.6);
+            const height = (Math.random() - 0.5) * 2;
+            
+            const obj = createSphere(0.4, material.clone(), glowMaterial.clone());
+            obj.position.set(
+                Math.cos(angle) * r,
+                height,
+                Math.sin(angle) * r
+            );
+            obj.userData = {
+                basePosition: obj.position.clone(),
+                phase: Math.random() * Math.PI * 2,
+                frequency: 0.5 + Math.random() * 0.5
+            };
+            
+            group.add(obj);
+            objectsArray.push(obj);
+        }
+        
+        // Generate morphisms (arrows) between some objects
+        const morphisms = [];
+        for (let i = 0; i < numObjects; i++) {
+            for (let j = i + 1; j < numObjects; j++) {
+                if (Math.random() < 0.4) {
+                    const start = objectsArray[i].position.clone();
+                    const end = objectsArray[j].position.clone();
+                    const controlOffset = new THREE.Vector3(
+                        (Math.random() - 0.5) * 2,
+                        (Math.random() - 0.5) * 2,
+                        (Math.random() - 0.5) * 2
+                    );
+                    const arrow = createCurvedArrow(start, end, controlOffset, arrowMaterial);
+                    group.add(arrow);
+                    morphisms.push({ from: i, to: j, arrow });
+                }
+            }
+        }
+        
+        return morphisms;
+    }
+    
+    function generateFunctors() {
+        // Clear previous
+        while (functorsGroup.children.length > 0) {
+            functorsGroup.remove(functorsGroup.children[0]);
+        }
+        objects.functorK.length = 0;
+        objects.functorF.length = 0;
+        
+        // K: C → D
+        for (let i = 0; i < Math.min(objects.C.length, objects.D.length); i++) {
+            const startWorld = objects.C[i].position.clone().add(categoryC.position);
+            const endWorld = objects.D[Math.floor(i * objects.D.length / objects.C.length)].position.clone().add(categoryD.position);
+            
+            const controlOffset = new THREE.Vector3(0, 3, 0);
+            const arrow = createCurvedArrow(startWorld, endWorld, controlOffset, functorKMaterial);
+            functorsGroup.add(arrow);
+            objects.functorK.push(arrow);
+        }
+        
+        // F: C → E
+        for (let i = 0; i < objects.C.length; i++) {
+            const startWorld = objects.C[i].position.clone().add(categoryC.position);
+            const endWorld = objects.E[i % objects.E.length].position.clone().add(categoryE.position);
+            
+            const controlOffset = new THREE.Vector3(-2, 2, -2);
+            const arrow = createCurvedArrow(startWorld, endWorld, controlOffset, functorFMaterial);
+            functorsGroup.add(arrow);
+            objects.functorF.push(arrow);
+        }
+    }
+    
+    function generateExtension() {
+        // Clear previous
+        while (extensionGroup.children.length > 0) {
+            extensionGroup.remove(extensionGroup.children[0]);
+        }
+        objects.extensionG.length = 0;
+        
+        // G: D → E (the Kan extension)
+        for (let i = 0; i < objects.D.length; i++) {
+            const startWorld = objects.D[i].position.clone().add(categoryD.position);
+            const endWorld = objects.E[i % objects.E.length].position.clone().add(categoryE.position);
+            
+            const controlOffset = new THREE.Vector3(2, 2, -2);
+            const arrow = createCurvedArrow(startWorld, endWorld, controlOffset, extensionMaterial.clone());
+            extensionGroup.add(arrow);
+            objects.extensionG.push(arrow);
+        }
+    }
+    
+    function rebuildScene() {
+        const n = state.complexity;
+        
+        objects.morphismsC = generateCategory(categoryC, n, categoryMaterials.C, glowMaterials.C, 2.5, objects.C);
+        objects.morphismsD = generateCategory(categoryD, n + 2, categoryMaterials.D, glowMaterials.D, 3, objects.D);
+        generateCategory(categoryE, n + 1, categoryMaterials.E, glowMaterials.E, 2.8, objects.E);
+        
+        generateFunctors();
+        generateExtension();
+    }
+    
+    // ============================================
+    // ANIMATION
+    // ============================================
+    
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        state.time += 0.016;
+        
+        // Gentle floating animation for objects
+        [objects.C, objects.D, objects.E].forEach(arr => {
+            arr.forEach(obj => {
+                if (obj.userData && obj.userData.basePosition) {
+                    obj.position.y = obj.userData.basePosition.y + 
+                        Math.sin(state.time * obj.userData.frequency + obj.userData.phase) * 0.15;
+                }
+            });
+        });
+        
+        // Update extension visibility based on progress
+        objects.extensionG.forEach(arrow => {
+            if (arrow.material) {
+                arrow.material.opacity = state.progress;
+            }
+        });
+        
+        // Camera orbit based on mouse
+        if (!state.isDragging) {
+            state.rotationY += 0.002;
+        }
+        
+        const radius = 25;
+        const height = 10 + Math.sin(state.time * 0.2) * 2;
+        camera.position.x = Math.sin(state.rotationY) * radius;
+        camera.position.z = Math.cos(state.rotationY) * radius;
+        camera.position.y = height + state.rotationX * 10;
+        camera.lookAt(0, 2, 0);
+        
+        // Pulse glow based on mode
+        const pulseIntensity = 0.1 + Math.sin(state.time * 2) * 0.05;
+        
+        if (state.mode === 'left') {
+            categoryMaterials.C.emissiveIntensity = 0.3 + pulseIntensity;
+            categoryMaterials.extension.emissiveIntensity = 0.4 + pulseIntensity;
+        } else if (state.mode === 'right') {
+            categoryMaterials.D.emissiveIntensity = 0.3 + pulseIntensity;
+        } else if (state.mode === 'universal') {
+            categoryMaterials.E.emissiveIntensity = 0.4 + pulseIntensity;
+        }
+        
+        renderer.render(scene, camera);
+    }
+    
+    // ============================================
+    // CONTROLS
+    // ============================================
+    
+    // Slider controls
+    document.getElementById('progress').addEventListener('input', e => {
+        state.progress = e.target.value / 100;
+        document.getElementById('progress-value').textContent = e.target.value + '%';
+    });
+    
+    document.getElementById('complexity').addEventListener('input', e => {
+        state.complexity = parseInt(e.target.value);
+        document.getElementById('complexity-value').textContent = e.target.value;
+        rebuildScene();
+    });
+    
+    // Mode buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.mode = btn.dataset.mode;
+            updateInfoPanel();
+        });
+    });
+    
+    function updateInfoPanel() {
+        const info = {
+            extension: {
+                title: 'The Extension Problem',
+                text: 'Given <span class="math">K : C → D</span> and <span class="math">F : C → E</span>, the Kan extension finds the "best" way to extend F along K to get <span class="math">G : D → E</span>.'
+            },
+            left: {
+                title: 'Left Kan Extension (Lan)',
+                text: 'The left Kan extension <span class="math">Lan_K F</span> is the "best approximation from below"—it\'s built using colimits, constructing the extension by gluing together pieces.'
+            },
+            right: {
+                title: 'Right Kan Extension (Ran)',
+                text: 'The right Kan extension <span class="math">Ran_K F</span> is the "best approximation from above"—it\'s built using limits, constraining the extension to fit all requirements.'
+            },
+            universal: {
+                title: 'Universal Property',
+                text: 'The Kan extension is universal: any other extension <span class="math">G</span> factors through it uniquely. This makes it the "canonical" choice—the one that loses the least information.'
+            }
+        };
+        
+        const current = info[state.mode];
+        infoPanel.innerHTML = `<h3>${current.title}</h3><p>${current.text}</p>`;
+    }
+    
+    // Mouse controls for rotation
+    let lastMouseX = 0, lastMouseY = 0;
+    
+    renderer.domElement.addEventListener('mousedown', e => {
+        state.isDragging = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    });
+    
+    window.addEventListener('mousemove', e => {
+        if (state.isDragging) {
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+            state.rotationY += deltaX * 0.005;
+            state.rotationX += deltaY * 0.002;
+            state.rotationX = Math.max(-0.5, Math.min(0.5, state.rotationX));
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    });
+    
+    window.addEventListener('mouseup', () => {
+        state.isDragging = false;
+    });
+    
+    // Scroll to zoom
+    renderer.domElement.addEventListener('wheel', e => {
+        camera.fov += e.deltaY * 0.05;
+        camera.fov = Math.max(30, Math.min(90, camera.fov));
+        camera.updateProjectionMatrix();
+    });
+    
+    // Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // ============================================
+    // INIT
+    // ============================================
+    
+    rebuildScene();
+    animate();
+    
+    </script>
+</body>
+</html>

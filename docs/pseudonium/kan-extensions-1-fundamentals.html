@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kan Extensions: The Universal Language of Thought</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #e8e6e3;
+            --text-secondary: #9a9590;
+            --text-muted: #5a5550;
+            --accent-blue: #4a9eff;
+            --accent-orange: #ff8a4a;
+            --accent-green: #4aff8a;
+            --accent-purple: #9a4aff;
+            --accent-pink: #ff4a9a;
+            --line-dim: rgba(255,255,255,0.08);
+            --line-medium: rgba(255,255,255,0.15);
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Crimson Pro', Georgia, serif;
+            font-size: 19px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+        
+        header {
+            padding: 120px 0 80px;
+            text-align: center;
+            border-bottom: 1px solid var(--line-dim);
+        }
+        
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        section {
+            padding: 80px 0;
+            border-bottom: 1px solid var(--line-dim);
+        }
+        
+        h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 32px;
+            color: var(--text-primary);
+        }
+        
+        p {
+            margin-bottom: 24px;
+            max-width: 720px;
+        }
+        
+        .highlight {
+            color: var(--accent-blue);
+            font-weight: 400;
+        }
+        
+        .math {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: var(--bg-tertiary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--accent-orange);
+        }
+        
+        .interactive-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 32px;
+            margin: 40px 0;
+            border: 1px solid var(--line-medium);
+        }
+        
+        .interactive-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        
+        .diagram-container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .node:hover {
+            transform: scale(1.1);
+        }
+        
+        .node-circle {
+            fill: var(--bg-tertiary);
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+        
+        .node-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            fill: var(--text-primary);
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+        
+        .category-label {
+            font-family: 'Crimson Pro', serif;
+            font-size: 18px;
+            font-style: italic;
+            fill: var(--text-secondary);
+        }
+        
+        .arrow {
+            fill: none;
+            stroke-width: 2;
+            marker-end: url(#arrowhead);
+            transition: all 0.3s ease;
+        }
+        
+        .arrow-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            fill: var(--text-secondary);
+        }
+        
+        .functor-path {
+            fill: none;
+            stroke-width: 3;
+            stroke-dasharray: 8, 4;
+            opacity: 0.7;
+        }
+        
+        .extension-path {
+            fill: none;
+            stroke-width: 3;
+            stroke-dasharray: 4, 4;
+            animation: dash 1s linear infinite;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -16; }
+        }
+        
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            padding: 12px 24px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--line-medium);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+        
+        button.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 24px 0;
+        }
+        
+        .slider-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 120px;
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 200px;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        .value-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-orange);
+            min-width: 60px;
+        }
+        
+        .explanation-box {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-blue);
+            padding: 20px 24px;
+            margin: 24px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .explanation-box p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        .coend-visualization {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin: 32px 0;
+        }
+        
+        .coend-panel {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 24px;
+        }
+        
+        .coend-panel h3 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .weight-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .weight-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .weight-bar-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            width: 60px;
+        }
+        
+        .weight-bar-fill {
+            height: 8px;
+            background: var(--accent-blue);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .weight-bar-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-orange);
+            width: 40px;
+            text-align: right;
+        }
+        
+        footer {
+            padding: 60px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        .category-box {
+            stroke: var(--line-medium);
+            stroke-width: 1;
+            fill: none;
+            rx: 12;
+        }
+        
+        .insight-card {
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            border: 1px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 28px;
+            margin: 40px 0;
+        }
+        
+        .insight-card h3 {
+            color: var(--accent-purple);
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 20px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .coend-visualization {
+                grid-template-columns: 1fr;
+            }
+            
+            .diagram-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Kan Extensions</h1>
+            <p class="subtitle">The universal language of thought—how minds extend partial knowledge to complete understanding</p>
+        </header>
+        
+        <section id="intro">
+            <h2>The Problem of Extension</h2>
+            <p>
+                You've observed a fraction of reality. From scattered data points, you must construct a coherent worldview. 
+                This is the fundamental problem of cognition: <span class="highlight">how do we extend partial information to complete understanding?</span>
+            </p>
+            <p>
+                The mathematician Saunders Mac Lane claimed that "all concepts are Kan extensions." This sounds like hyperbole until you see 
+                what Kan extensions actually do: they are the <em>universal</em> solution to the problem of extending structure-preserving maps.
+            </p>
+            <p>
+                Below, you can directly manipulate the basic setup. We have three categories—think of them as three different "worlds" of objects 
+                and relationships—and we want to extend a functor (a structure-preserving map) from a small world to a larger one.
+            </p>
+            
+            <div class="interactive-container">
+                <div class="interactive-title">Interactive: The Basic Setup</div>
+                <div class="diagram-container" id="basic-diagram"></div>
+                <div class="controls">
+                    <button id="btn-show-problem" class="active">The Problem</button>
+                    <button id="btn-show-left">Left Kan Extension</button>
+                    <button id="btn-show-right">Right Kan Extension</button>
+                </div>
+                <div class="explanation-box" id="diagram-explanation">
+                    <p>We have a functor <span class="math">F: C → D</span> and a functor <span class="math">K: C → E</span>. 
+                    The question: can we extend F along K to get a functor from E to D?</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="universal-property">
+            <h2>The Universal Property</h2>
+            <p>
+                What makes Kan extensions special is their <span class="highlight">universal property</span>. 
+                The left Kan extension <span class="math">Lan_K F</span> is not just <em>any</em> extension—it's the 
+                <em>best possible</em> extension in a precise sense.
+            </p>
+            <p>
+                For any other functor <span class="math">G: E → D</span>, there's a correspondence:
+            </p>
+            <div class="explanation-box">
+                <p><span class="math">Nat(Lan_K F, G) ≅ Nat(F, G ∘ K)</span></p>
+            </div>
+            <p>
+                This says: maps <em>out of</em> the extension correspond to maps <em>into</em> the composition. 
+                The extension is "free" in that it adds no spurious constraints.
+            </p>
+            
+            <div class="interactive-container">
+                <div class="interactive-title">Interactive: The Universal Property</div>
+                <div class="diagram-container" id="universal-diagram"></div>
+                <div class="slider-container">
+                    <span class="slider-label">Candidate G:</span>
+                    <input type="range" id="g-slider" min="0" max="100" value="50">
+                    <span class="value-display" id="g-value">G₅₀</span>
+                </div>
+                <div class="explanation-box" id="universal-explanation">
+                    <p>Drag the slider to explore different candidate functors G. Notice how the correspondence 
+                    between natural transformations is maintained.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="coend-formula">
+            <h2>The Coend Formula: How Extension Actually Works</h2>
+            <p>
+                The left Kan extension has an explicit formula using <span class="highlight">coends</span>:
+            </p>
+            <div class="explanation-box">
+                <p><span class="math">(Lan_K F)(e) = ∫^{c ∈ C} Hom_E(K(c), e) · F(c)</span></p>
+            </div>
+            <p>
+                This formula encodes exactly how cognition works. To compute the extension at a new point <span class="math">e</span>:
+            </p>
+            <p>
+                1. Consider every observation <span class="math">c</span> you've made<br>
+                2. Weight it by <span class="math">Hom_E(K(c), e)</span>—how "relevant" that observation is to the current query<br>
+                3. Combine the responses <span class="math">F(c)</span> according to these weights
+            </p>
+            <p>
+                <span class="highlight">This is analogical reasoning made precise.</span> We extend from the known to the unknown 
+                by weighted combination of past experience.
+            </p>
+            
+            <div class="interactive-container">
+                <div class="interactive-title">Interactive: The Coend Formula in Action</div>
+                <div class="diagram-container" id="coend-diagram"></div>
+                <div class="coend-visualization">
+                    <div class="coend-panel">
+                        <h3>Observations (C)</h3>
+                        <div class="weight-bars" id="observations-panel"></div>
+                    </div>
+                    <div class="coend-panel">
+                        <h3>Relevance Weights</h3>
+                        <div class="weight-bars" id="weights-panel"></div>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <span class="slider-label">Query point e:</span>
+                    <input type="range" id="query-slider" min="0" max="100" value="50">
+                    <span class="value-display" id="query-value">e = 0.50</span>
+                </div>
+                <div class="explanation-box" id="coend-explanation">
+                    <p>Move the query point to see how the relevance weights change. Nearby observations 
+                    contribute more to the extension.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="left-vs-right">
+            <h2>Left vs. Right: Two Modes of Thought</h2>
+            <p>
+                There are two Kan extensions with fundamentally different characters:
+            </p>
+            <p>
+                The <span class="highlight">left Kan extension</span> is <em>colimit-like</em>: it freely generates, 
+                extrapolates, makes inductive leaps. It asks: "What's the simplest pattern that fits my observations?"
+            </p>
+            <p>
+                The <span class="highlight">right Kan extension</span> is <em>limit-like</em>: it constrains, 
+                abstracts, deduces conservatively. It asks: "What must be true given all my observations?"
+            </p>
+            
+            <div class="insight-card">
+                <h3>The Cognitive Interpretation</h3>
+                <p>
+                    Full cognition requires <em>both</em> modes. Left extensions give us creativity and generalization—
+                    the ability to see patterns beyond the data. Right extensions give us rigor and bounds—
+                    the ability to know what we don't know. The space between them, when they disagree, 
+                    is the space of <em>interpretation</em>.
+                </p>
+            </div>
+            
+            <div class="interactive-container">
+                <div class="interactive-title">Interactive: Left vs Right Extension</div>
+                <div class="diagram-container" id="lr-diagram"></div>
+                <div class="controls">
+                    <button id="btn-left-ext" class="active">Left (Generalize)</button>
+                    <button id="btn-right-ext">Right (Constrain)</button>
+                    <button id="btn-both-ext">Both (Underdetermination)</button>
+                </div>
+                <div class="explanation-box" id="lr-explanation">
+                    <p>The left extension freely extends to new points. The right extension only commits 
+                    where forced by the data.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="cognition">
+            <h2>All Cognition is Kan Extensions</h2>
+            <p>
+                Let's make the cognitive interpretation concrete. An observer has:
+            </p>
+            <p>
+                <span class="math">C</span> = the category of direct observations (what we've actually perceived)<br>
+                <span class="math">E</span> = the category of possible world-states (including unobserved)<br>
+                <span class="math">K: C → E</span> = embedding observations into world-states<br>
+                <span class="math">F: C → D</span> = our response functor (how we react to observations)<br>
+                <span class="math">D</span> = the category of cognitive states
+            </p>
+            <p>
+                Then <span class="highlight">cognition = Lan_K F</span>: the universal extension of our responses 
+                to observations into responses to all possible world-states.
+            </p>
+            
+            <div class="interactive-container">
+                <div class="interactive-title">Interactive: Cognition as Kan Extension</div>
+                <div class="diagram-container" id="cognition-diagram"></div>
+                <div class="controls">
+                    <button id="btn-add-obs">Add Observation</button>
+                    <button id="btn-clear-obs">Clear</button>
+                    <button id="btn-show-extension">Show Extension</button>
+                </div>
+                <div class="explanation-box" id="cognition-explanation">
+                    <p>Click "Add Observation" to add new data points. The extension (dashed region) shows 
+                    how cognition extrapolates from the known to the unknown.</p>
+                </div>
+            </div>
+        </section>
+        
+        <footer>
+            <p>Part 1 of 4: Kan Extension Fundamentals</p>
+            <p style="margin-top: 8px; font-size: 0.8rem;">Inspired by Bartosz Ciechanowski and Bret Victor</p>
+        </footer>
+    </div>
+    
+    <script>
+        // ============================================
+        // DIAGRAM 1: Basic Setup
+        // ============================================
+        
+        const basicDiagram = d3.select('#basic-diagram')
+            .append('svg')
+            .attr('viewBox', '0 0 800 500');
+        
+        // Define arrow marker
+        basicDiagram.append('defs').append('marker')
+            .attr('id', 'arrowhead')
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 8)
+            .attr('refY', 0)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M0,-5L10,0L0,5')
+            .attr('fill', '#4a9eff');
+        
+        // Category positions
+        const categories = {
+            C: { x: 200, y: 250, color: '#4aff8a', label: 'C (Observations)' },
+            D: { x: 600, y: 100, color: '#ff8a4a', label: 'D (Responses)' },
+            E: { x: 600, y: 400, color: '#9a4aff', label: 'E (World States)' }
+        };
+        
+        // Draw category boxes
+        Object.entries(categories).forEach(([key, cat]) => {
+            const g = basicDiagram.append('g').attr('class', 'category-group');
+            
+            g.append('rect')
+                .attr('class', 'category-box')
+                .attr('x', cat.x - 80)
+                .attr('y', cat.y - 60)
+                .attr('width', 160)
+                .attr('height', 120)
+                .attr('stroke', cat.color)
+                .attr('opacity', 0.3);
+            
+            g.append('text')
+                .attr('class', 'category-label')
+                .attr('x', cat.x)
+                .attr('y', cat.y - 75)
+                .attr('text-anchor', 'middle')
+                .attr('fill', cat.color)
+                .text(cat.label);
+            
+            // Add some objects inside
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2 - Math.PI / 2;
+                const r = 30;
+                g.append('circle')
+                    .attr('cx', cat.x + Math.cos(angle) * r)
+                    .attr('cy', cat.y + Math.sin(angle) * r)
+                    .attr('r', 8)
+                    .attr('fill', cat.color)
+                    .attr('opacity', 0.6);
+            }
+        });
+        
+        // Functor F: C → D
+        const functorF = basicDiagram.append('g').attr('class', 'functor-F');
+        functorF.append('path')
+            .attr('class', 'functor-path')
+            .attr('d', `M ${categories.C.x + 80} ${categories.C.y - 30} 
+                        Q ${400} ${100} 
+                        ${categories.D.x - 80} ${categories.D.y + 30}`)
+            .attr('stroke', '#4aff8a');
+        
+        functorF.append('text')
+            .attr('x', 350)
+            .attr('y', 130)
+            .attr('fill', '#4aff8a')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '16px')
+            .text('F');
+        
+        // Functor K: C → E
+        const functorK = basicDiagram.append('g').attr('class', 'functor-K');
+        functorK.append('path')
+            .attr('class', 'functor-path')
+            .attr('d', `M ${categories.C.x + 80} ${categories.C.y + 30} 
+                        Q ${400} ${400} 
+                        ${categories.E.x - 80} ${categories.E.y - 30}`)
+            .attr('stroke', '#9a4aff');
+        
+        functorK.append('text')
+            .attr('x', 350)
+            .attr('y', 380)
+            .attr('fill', '#9a4aff')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '16px')
+            .text('K');
+        
+        // Extension (initially hidden)
+        const extensionPath = basicDiagram.append('g')
+            .attr('class', 'extension')
+            .attr('opacity', 0);
+        
+        extensionPath.append('path')
+            .attr('class', 'extension-path')
+            .attr('d', `M ${categories.E.x} ${categories.E.y - 60} 
+                        L ${categories.D.x} ${categories.D.y + 60}`)
+            .attr('stroke', '#ff4a9a');
+        
+        extensionPath.append('text')
+            .attr('x', 620)
+            .attr('y', 250)
+            .attr('fill', '#ff4a9a')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '16px')
+            .text('Lan_K F');
+        
+        // Question mark
+        const questionMark = basicDiagram.append('text')
+            .attr('x', 620)
+            .attr('y', 250)
+            .attr('fill', '#5a5550')
+            .attr('font-size', '48px')
+            .attr('text-anchor', 'middle')
+            .attr('class', 'pulse')
+            .text('?');
+        
+        // Button handlers
+        const explanationBox = document.getElementById('diagram-explanation');
+        
+        document.getElementById('btn-show-problem').addEventListener('click', function() {
+            setActiveButton(this);
+            extensionPath.transition().duration(500).attr('opacity', 0);
+            questionMark.transition().duration(500).attr('opacity', 1);
+            explanationBox.innerHTML = `<p>We have a functor <span class="math">F: C → D</span> and a functor <span class="math">K: C → E</span>. 
+                The question: can we extend F along K to get a functor from E to D?</p>`;
+        });
+        
+        document.getElementById('btn-show-left').addEventListener('click', function() {
+            setActiveButton(this);
+            questionMark.transition().duration(500).attr('opacity', 0);
+            extensionPath.select('path').attr('stroke', '#ff4a9a');
+            extensionPath.select('text').text('Lan_K F').attr('fill', '#ff4a9a');
+            extensionPath.transition().duration(500).attr('opacity', 1);
+            explanationBox.innerHTML = `<p>The <span class="highlight">left Kan extension</span> <span class="math">Lan_K F</span> 
+                freely generates the extension. It's the "optimistic" choice—extrapolating as freely as the structure allows.</p>`;
+        });
+        
+        document.getElementById('btn-show-right').addEventListener('click', function() {
+            setActiveButton(this);
+            questionMark.transition().duration(500).attr('opacity', 0);
+            extensionPath.select('path').attr('stroke', '#4a9eff');
+            extensionPath.select('text').text('Ran_K F').attr('fill', '#4a9eff');
+            extensionPath.transition().duration(500).attr('opacity', 1);
+            explanationBox.innerHTML = `<p>The <span class="highlight">right Kan extension</span> <span class="math">Ran_K F</span> 
+                constrains the extension. It's the "conservative" choice—committing only where forced by the data.</p>`;
+        });
+        
+        function setActiveButton(btn) {
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        
+        // ============================================
+        // DIAGRAM 2: Universal Property
+        // ============================================
+        
+        const universalDiagram = d3.select('#universal-diagram')
+            .append('svg')
+            .attr('viewBox', '0 0 800 400');
+        
+        universalDiagram.append('defs').append('marker')
+            .attr('id', 'arrowhead2')
+            .attr('viewBox', '0 -5 10 10')
+            .attr('refX', 8)
+            .attr('refY', 0)
+            .attr('markerWidth', 6)
+            .attr('markerHeight', 6)
+            .attr('orient', 'auto')
+            .append('path')
+            .attr('d', 'M0,-5L10,0L0,5')
+            .attr('fill', '#4a9eff');
+        
+        // Draw the commutative diagram for universal property
+        const upCategories = {
+            C: { x: 150, y: 200 },
+            E: { x: 400, y: 80 },
+            D: { x: 400, y: 320 }
+        };
+        
+        // Labels
+        universalDiagram.append('text')
+            .attr('x', upCategories.C.x)
+            .attr('y', upCategories.C.y)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#4aff8a')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '24px')
+            .text('C');
+        
+        universalDiagram.append('text')
+            .attr('x', upCategories.E.x)
+            .attr('y', upCategories.E.y)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#9a4aff')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '24px')
+            .text('E');
+        
+        universalDiagram.append('text')
+            .attr('x', upCategories.D.x)
+            .attr('y', upCategories.D.y)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#ff8a4a')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '24px')
+            .text('D');
+        
+        // Arrows
+        // K: C → E
+        universalDiagram.append('line')
+            .attr('x1', upCategories.C.x + 20)
+            .attr('y1', upCategories.C.y - 20)
+            .attr('x2', upCategories.E.x - 30)
+            .attr('y2', upCategories.E.y + 20)
+            .attr('stroke', '#9a4aff')
+            .attr('stroke-width', 2)
+            .attr('marker-end', 'url(#arrowhead2)');
+        
+        universalDiagram.append('text')
+            .attr('x', 250)
+            .attr('y', 110)
+            .attr('fill', '#9a4aff')
+            .attr('font-family', 'JetBrains Mono')
+            .text('K');
+        
+        // F: C → D
+        universalDiagram.append('line')
+            .attr('x1', upCategories.C.x + 20)
+            .attr('y1', upCategories.C.y + 20)
+            .attr('x2', upCategories.D.x - 30)
+            .attr('y2', upCategories.D.y - 20)
+            .attr('stroke', '#4aff8a')
+            .attr('stroke-width', 2)
+            .attr('marker-end', 'url(#arrowhead2)');
+        
+        universalDiagram.append('text')
+            .attr('x', 250)
+            .attr('y', 290)
+            .attr('fill', '#4aff8a')
+            .attr('font-family', 'JetBrains Mono')
+            .text('F');
+        
+        // Lan_K F: E → D
+        universalDiagram.append('line')
+            .attr('x1', upCategories.E.x)
+            .attr('y1', upCategories.E.y + 30)
+            .attr('x2', upCategories.D.x)
+            .attr('y2', upCategories.D.y - 30)
+            .attr('stroke', '#ff4a9a')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '6,3')
+            .attr('marker-end', 'url(#arrowhead2)');
+        
+        universalDiagram.append('text')
+            .attr('x', 430)
+            .attr('y', 200)
+            .attr('fill', '#ff4a9a')
+            .attr('font-family', 'JetBrains Mono')
+            .text('Lan_K F');
+        
+        // Candidate G (animated)
+        const gArrow = universalDiagram.append('g').attr('id', 'g-arrow');
+        
+        gArrow.append('path')
+            .attr('d', `M ${upCategories.E.x + 30} ${upCategories.E.y + 10} 
+                        Q 550 200 
+                        ${upCategories.D.x + 30} ${upCategories.D.y - 10}`)
+            .attr('fill', 'none')
+            .attr('stroke', '#4a9eff')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '4,4')
+            .attr('marker-end', 'url(#arrowhead2)');
+        
+        gArrow.append('text')
+            .attr('id', 'g-label')
+            .attr('x', 550)
+            .attr('y', 200)
+            .attr('fill', '#4a9eff')
+            .attr('font-family', 'JetBrains Mono')
+            .text('G');
+        
+        // Right side: Natural transformations
+        universalDiagram.append('text')
+            .attr('x', 650)
+            .attr('y', 120)
+            .attr('fill', '#e8e6e3')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '14px')
+            .text('Nat(Lan_K F, G)');
+        
+        universalDiagram.append('text')
+            .attr('x', 700)
+            .attr('y', 200)
+            .attr('fill', '#5a5550')
+            .attr('font-size', '24px')
+            .text('≅');
+        
+        universalDiagram.append('text')
+            .attr('x', 650)
+            .attr('y', 280)
+            .attr('fill', '#e8e6e3')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '14px')
+            .text('Nat(F, G∘K)');
+        
+        // Slider for G
+        document.getElementById('g-slider').addEventListener('input', function() {
+            const val = this.value;
+            document.getElementById('g-value').textContent = `G_${val}`;
+            
+            // Animate the G arrow curvature
+            const curve = 450 + (val - 50) * 2;
+            gArrow.select('path')
+                .attr('d', `M ${upCategories.E.x + 30} ${upCategories.E.y + 10} 
+                            Q ${curve} 200 
+                            ${upCategories.D.x + 30} ${upCategories.D.y - 10}`);
+            
+            gArrow.select('text')
+                .attr('x', curve)
+                .text(`G_${val}`);
+        });
+        
+        // ============================================
+        // DIAGRAM 3: Coend Formula
+        // ============================================
+        
+        const coendDiagram = d3.select('#coend-diagram')
+            .append('svg')
+            .attr('viewBox', '0 0 800 350');
+        
+        // Observation points on the left
+        const observations = [
+            { id: 'c1', x: 100, y: 80, value: 0.2, response: 'R₁' },
+            { id: 'c2', x: 100, y: 160, value: 0.4, response: 'R₂' },
+            { id: 'c3', x: 100, y: 240, value: 0.6, response: 'R₃' },
+            { id: 'c4', x: 100, y: 320, value: 0.85, response: 'R₄' }
+        ];
+        
+        // Draw observations
+        observations.forEach(obs => {
+            const g = coendDiagram.append('g').attr('class', 'observation');
+            
+            g.append('circle')
+                .attr('cx', obs.x)
+                .attr('cy', obs.y)
+                .attr('r', 12)
+                .attr('fill', '#4aff8a')
+                .attr('opacity', 0.8);
+            
+            g.append('text')
+                .attr('x', obs.x + 25)
+                .attr('y', obs.y + 5)
+                .attr('fill', '#9a9590')
+                .attr('font-family', 'JetBrains Mono')
+                .attr('font-size', '12px')
+                .text(`K(${obs.id}) = ${obs.value.toFixed(2)}`);
+        });
+        
+        // Query point (draggable via slider)
+        const queryPoint = coendDiagram.append('g').attr('id', 'query-point');
+        
+        queryPoint.append('circle')
+            .attr('cx', 500)
+            .attr('cy', 200)
+            .attr('r', 16)
+            .attr('fill', '#ff4a9a')
+            .attr('opacity', 0.9);
+        
+        queryPoint.append('text')
+            .attr('x', 500)
+            .attr('y', 205)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#0a0a0f')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '12px')
+            .attr('font-weight', 'bold')
+            .text('e');
+        
+        // Relevance lines
+        const relevanceLines = coendDiagram.append('g').attr('id', 'relevance-lines');
+        
+        // Result display
+        coendDiagram.append('text')
+            .attr('id', 'result-display')
+            .attr('x', 650)
+            .attr('y', 200)
+            .attr('fill', '#ff8a4a')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '14px')
+            .text('(Lan_K F)(e) = ?');
+        
+        // Labels
+        coendDiagram.append('text')
+            .attr('x', 100)
+            .attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#4aff8a')
+            .attr('font-family', 'JetBrains Mono')
+            .text('Observations');
+        
+        coendDiagram.append('text')
+            .attr('x', 500)
+            .attr('y', 40)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#ff4a9a')
+            .attr('font-family', 'JetBrains Mono')
+            .text('Query Point');
+        
+        // Initialize weight panels
+        const obsPanel = document.getElementById('observations-panel');
+        const weightsPanel = document.getElementById('weights-panel');
+        
+        observations.forEach(obs => {
+            // Observation panel
+            const obsBar = document.createElement('div');
+            obsBar.className = 'weight-bar';
+            obsBar.innerHTML = `
+                <span class="weight-bar-label">${obs.id}</span>
+                <div class="weight-bar-fill" style="width: 60px; background: #4aff8a;"></div>
+                <span class="weight-bar-value">${obs.response}</span>
+            `;
+            obsPanel.appendChild(obsBar);
+            
+            // Weight panel
+            const weightBar = document.createElement('div');
+            weightBar.className = 'weight-bar';
+            weightBar.id = `weight-${obs.id}`;
+            weightBar.innerHTML = `
+                <span class="weight-bar-label">w(${obs.id})</span>
+                <div class="weight-bar-fill" style="width: 0px; background: #4a9eff;"></div>
+                <span class="weight-bar-value">0.00</span>
+            `;
+            weightsPanel.appendChild(weightBar);
+        });
+        
+        function updateCoendVisualization(queryValue) {
+            const e = queryValue / 100;
+            
+            // Update query point position
+            const qy = 80 + e * 240;
+            queryPoint.select('circle').attr('cy', qy);
+            queryPoint.select('text').attr('y', qy + 5);
+            
+            // Calculate and visualize relevance weights
+            relevanceLines.selectAll('*').remove();
+            
+            let totalWeight = 0;
+            const weights = observations.map(obs => {
+                // Relevance = 1 / (1 + distance^2)
+                const dist = Math.abs(obs.value - e);
+                const w = 1 / (1 + dist * dist * 10);
+                totalWeight += w;
+                return { obs, w };
+            });
+            
+            // Normalize and display
+            weights.forEach(({ obs, w }) => {
+                const normalizedW = w / totalWeight;
+                
+                // Draw relevance line
+                const qy = 80 + e * 240;
+                relevanceLines.append('line')
+                    .attr('x1', obs.x + 15)
+                    .attr('y1', obs.y)
+                    .attr('x2', 484)
+                    .attr('y2', qy)
+                    .attr('stroke', '#4a9eff')
+                    .attr('stroke-width', normalizedW * 8)
+                    .attr('opacity', 0.3 + normalizedW * 0.7);
+                
+                // Update weight bar
+                const weightBar = document.getElementById(`weight-${obs.id}`);
+                const fill = weightBar.querySelector('.weight-bar-fill');
+                const value = weightBar.querySelector('.weight-bar-value');
+                fill.style.width = `${normalizedW * 150}px`;
+                value.textContent = normalizedW.toFixed(2);
+            });
+            
+            // Update result
+            coendDiagram.select('#result-display')
+                .text(`(Lan_K F)(${e.toFixed(2)}) = Σ wᵢRᵢ`);
+        }
+        
+        document.getElementById('query-slider').addEventListener('input', function() {
+            const val = this.value;
+            document.getElementById('query-value').textContent = `e = ${(val/100).toFixed(2)}`;
+            updateCoendVisualization(val);
+        });
+        
+        // Initialize
+        updateCoendVisualization(50);
+        
+        // ============================================
+        // DIAGRAM 4: Left vs Right
+        // ============================================
+        
+        const lrDiagram = d3.select('#lr-diagram')
+            .append('svg')
+            .attr('viewBox', '0 0 800 400');
+        
+        // Draw a 1D function extension problem
+        const lrMargin = { left: 80, right: 80, top: 40, bottom: 60 };
+        const lrWidth = 800 - lrMargin.left - lrMargin.right;
+        const lrHeight = 400 - lrMargin.top - lrMargin.bottom;
+        
+        const lrG = lrDiagram.append('g')
+            .attr('transform', `translate(${lrMargin.left}, ${lrMargin.top})`);
+        
+        // Axes
+        lrG.append('line')
+            .attr('x1', 0)
+            .attr('y1', lrHeight)
+            .attr('x2', lrWidth)
+            .attr('y2', lrHeight)
+            .attr('stroke', '#5a5550')
+            .attr('stroke-width', 1);
+        
+        lrG.append('line')
+            .attr('x1', 0)
+            .attr('y1', 0)
+            .attr('x2', 0)
+            .attr('y2', lrHeight)
+            .attr('stroke', '#5a5550')
+            .attr('stroke-width', 1);
+        
+        lrG.append('text')
+            .attr('x', lrWidth / 2)
+            .attr('y', lrHeight + 40)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#9a9590')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '12px')
+            .text('E (World States)');
+        
+        lrG.append('text')
+            .attr('x', -40)
+            .attr('y', lrHeight / 2)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#9a9590')
+            .attr('font-family', 'JetBrains Mono')
+            .attr('font-size', '12px')
+            .attr('transform', `rotate(-90, -40, ${lrHeight/2})`)
+            .text('D (Responses)');
+        
+        // Data points (observations)
+        const dataPoints = [
+            { x: 0.1, y: 0.3 },
+            { x: 0.25, y: 0.5 },
+            { x: 0.4, y: 0.45 },
+            { x: 0.6, y: 0.7 },
+            { x: 0.85, y: 0.6 }
+        ];
+        
+        const xScale = d3.scaleLinear().domain([0, 1]).range([0, lrWidth]);
+        const yScale = d3.scaleLinear().domain([0, 1]).range([lrHeight, 0]);
+        
+        // Draw data points
+        dataPoints.forEach(pt => {
+            lrG.append('circle')
+                .attr('cx', xScale(pt.x))
+                .attr('cy', yScale(pt.y))
+                .attr('r', 8)
+                .attr('fill', '#4aff8a');
+        });
+        
+        // Left extension (smooth interpolation)
+        const leftLine = d3.line()
+            .x(d => xScale(d.x))
+            .y(d => yScale(d.y))
+            .curve(d3.curveCatmullRom.alpha(0.5));
+        
+        // Generate left extension curve
+        const leftData = [];
+        for (let x = 0; x <= 1; x += 0.02) {
+            // Simple weighted interpolation
+            let sum = 0, weightSum = 0;
+            dataPoints.forEach(pt => {
+                const w = Math.exp(-Math.pow(x - pt.x, 2) * 20);
+                sum += w * pt.y;
+                weightSum += w;
+            });
+            leftData.push({ x, y: weightSum > 0 ? sum / weightSum : 0.5 });
+        }
+        
+        const leftPath = lrG.append('path')
+            .datum(leftData)
+            .attr('d', leftLine)
+            .attr('fill', 'none')
+            .attr('stroke', '#ff4a9a')
+            .attr('stroke-width', 3)
+            .attr('opacity', 0);
+        
+        // Right extension (envelope bounds)
+        const upperBound = [], lowerBound = [];
+        for (let x = 0; x <= 1; x += 0.02) {
+            let minDist = Infinity;
+            let nearestY = 0.5;
+            dataPoints.forEach(pt => {
+                const d = Math.abs(x - pt.x);
+                if (d < minDist) {
+                    minDist = d;
+                    nearestY = pt.y;
+                }
+            });
+            const uncertainty = Math.min(minDist * 2, 0.3);
+            upperBound.push({ x, y: Math.min(nearestY + uncertainty, 1) });
+            lowerBound.push({ x, y: Math.max(nearestY - uncertainty, 0) });
+        }
+        
+        const areaGenerator = d3.area()
+            .x(d => xScale(d.x))
+            .y0((d, i) => yScale(lowerBound[i].y))
+            .y1(d => yScale(d.y))
+            .curve(d3.curveMonotoneX);
+        
+        const rightArea = lrG.append('path')
+            .datum(upperBound)
+            .attr('d', areaGenerator)
+            .attr('fill', '#4a9eff')
+            .attr('opacity', 0);
+        
+        // Underdetermination region
+        const undeterminedArea = lrG.append('path')
+            .datum(upperBound)
+            .attr('d', areaGenerator)
+            .attr('fill', '#9a4aff')
+            .attr('opacity', 0);
+        
+        // Button handlers for L/R diagram
+        const lrExplanation = document.getElementById('lr-explanation');
+        
+        document.getElementById('btn-left-ext').addEventListener('click', function() {
+            setLRActive(this);
+            leftPath.transition().duration(500).attr('opacity', 1);
+            rightArea.transition().duration(500).attr('opacity', 0);
+            undeterminedArea.transition().duration(500).attr('opacity', 0);
+            lrExplanation.innerHTML = `<p>The <span class="highlight">left Kan extension</span> picks a specific curve through the data—
+                it "commits" to an interpolation. This is generalization: making a definite prediction even where data is sparse.</p>`;
+        });
+        
+        document.getElementById('btn-right-ext').addEventListener('click', function() {
+            setLRActive(this);
+            leftPath.transition().duration(500).attr('opacity', 0);
+            rightArea.transition().duration(500).attr('opacity', 0.3);
+            undeterminedArea.transition().duration(500).attr('opacity', 0);
+            lrExplanation.innerHTML = `<p>The <span class="highlight">right Kan extension</span> only commits where the data forces it.
+                The shaded region shows uncertainty—multiple values are consistent with observations.</p>`;
+        });
+        
+        document.getElementById('btn-both-ext').addEventListener('click', function() {
+            setLRActive(this);
+            leftPath.transition().duration(500).attr('opacity', 1);
+            rightArea.transition().duration(500).attr('opacity', 0);
+            undeterminedArea.transition().duration(500).attr('opacity', 0.2);
+            lrExplanation.innerHTML = `<p>When left ≠ right, we have <span class="highlight">underdetermination</span>. 
+                The purple region shows where interpretation is needed—multiple extensions are consistent with the data.
+                This is the space of subjectivity.</p>`;
+        });
+        
+        function setLRActive(btn) {
+            document.querySelectorAll('#lr-diagram ~ .controls button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        
+        // Initialize left extension
+        leftPath.attr('opacity', 1);
+        
+        // ============================================
+        // DIAGRAM 5: Cognition
+        // ============================================
+        
+        const cogDiagram = d3.select('#cognition-diagram')
+            .append('svg')
+            .attr('viewBox', '0 0 800 400');
+        
+        const cogMargin = { left: 60, right: 60, top: 40, bottom: 40 };
+        const cogWidth = 800 - cogMargin.left - cogMargin.right;
+        const cogHeight = 400 - cogMargin.top - cogMargin.bottom;
+        
+        const cogG = cogDiagram.append('g')
+            .attr('transform', `translate(${cogMargin.left}, ${cogMargin.top})`);
+        
+        // World state space (2D grid)
+        const gridSize = 20;
+        for (let i = 0; i <= gridSize; i++) {
+            cogG.append('line')
+                .attr('x1', (i / gridSize) * cogWidth)
+                .attr('y1', 0)
+                .attr('x2', (i / gridSize) * cogWidth)
+                .attr('y2', cogHeight)
+                .attr('stroke', '#1a1a24')
+                .attr('stroke-width', 1);
+            
+            cogG.append('line')
+                .attr('x1', 0)
+                .attr('y1', (i / gridSize) * cogHeight)
+                .attr('x2', cogWidth)
+                .attr('y2', (i / gridSize) * cogHeight)
+                .attr('stroke', '#1a1a24')
+                .attr('stroke-width', 1);
+        }
+        
+        // Observation points
+        let cogObservations = [];
+        const cogObsGroup = cogG.append('g').attr('id', 'cog-observations');
+        const cogExtGroup = cogG.append('g').attr('id', 'cog-extension');
+        
+        function addCogObservation() {
+            const x = Math.random() * cogWidth;
+            const y = Math.random() * cogHeight;
+            const response = Math.random();
+            
+            cogObservations.push({ x, y, response });
+            
+            cogObsGroup.append('circle')
+                .attr('cx', x)
+                .attr('cy', y)
+                .attr('r', 0)
+                .attr('fill', d3.interpolateViridis(response))
+                .attr('stroke', '#e8e6e3')
+                .attr('stroke-width', 2)
+                .transition()
+                .duration(300)
+                .attr('r', 12);
+            
+            updateCogExtension();
+        }
+        
+        function clearCogObservations() {
+            cogObservations = [];
+            cogObsGroup.selectAll('*').remove();
+            cogExtGroup.selectAll('*').remove();
+        }
+        
+        function updateCogExtension() {
+            if (cogObservations.length < 2) return;
+            
+            cogExtGroup.selectAll('*').remove();
+            
+            // Create a heat map of the extension
+            const resolution = 40;
+            const cellW = cogWidth / resolution;
+            const cellH = cogHeight / resolution;
+            
+            for (let i = 0; i < resolution; i++) {
+                for (let j = 0; j < resolution; j++) {
+                    const cx = (i + 0.5) * cellW;
+                    const cy = (j + 0.5) * cellH;
+                    
+                    // Compute weighted response (Kan extension)
+                    let sum = 0, weightSum = 0;
+                    cogObservations.forEach(obs => {
+                        const dx = cx - obs.x;
+                        const dy = cy - obs.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        const w = Math.exp(-dist * dist / 5000);
+                        sum += w * obs.response;
+                        weightSum += w;
+                    });
+                    
+                    const extValue = weightSum > 0 ? sum / weightSum : 0.5;
+                    
+                    cogExtGroup.append('rect')
+                        .attr('x', i * cellW)
+                        .attr('y', j * cellH)
+                        .attr('width', cellW)
+                        .attr('height', cellH)
+                        .attr('fill', d3.interpolateViridis(extValue))
+                        .attr('opacity', 0.4);
+                }
+            }
+        }
+        
+        document.getElementById('btn-add-obs').addEventListener('click', addCogObservation);
+        document.getElementById('btn-clear-obs').addEventListener('click', clearCogObservations);
+        document.getElementById('btn-show-extension').addEventListener('click', function() {
+            if (cogObservations.length >= 2) {
+                updateCogExtension();
+            }
+        });
+        
+        // Add initial observations
+        for (let i = 0; i < 3; i++) {
+            setTimeout(addCogObservation, i * 200);
+        }
+    </script>
+</body>
+</html>

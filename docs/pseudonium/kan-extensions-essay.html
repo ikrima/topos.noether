@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kan Extensions: An Interactive Visual Essay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg: #0a0a0f;
+            --text: #e8e8f0;
+            --text-dim: #888899;
+            --accent: #6366f1;
+            --accent2: #22d3ee;
+            --accent3: #f472b6;
+            --surface: rgba(30, 30, 45, 0.8);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        
+        .essay {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 300;
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-dim);
+            margin-bottom: 60px;
+            font-weight: 300;
+        }
+        
+        h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin: 80px 0 30px;
+            color: var(--accent2);
+        }
+        
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            color: var(--text);
+        }
+        
+        .emphasis {
+            color: var(--accent);
+            font-weight: 500;
+        }
+        
+        .interactive-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 40px 0;
+            border-radius: 16px;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(20,20,35,1), rgba(15,15,25,1));
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        
+        .interactive-container canvas {
+            display: block;
+        }
+        
+        .control-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-label {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .scrubber {
+            position: relative;
+            width: 120px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            cursor: ew-resize;
+        }
+        
+        .scrubber-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 3px;
+            pointer-events: none;
+        }
+        
+        .scrubber-thumb {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        
+        .value-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent2);
+            min-width: 40px;
+        }
+        
+        .insight-box {
+            background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(34,211,238,0.1));
+            border-left: 3px solid var(--accent);
+            padding: 25px 30px;
+            margin: 40px 0;
+            border-radius: 0 12px 12px 0;
+        }
+        
+        .insight-box p {
+            margin-bottom: 0;
+            font-style: italic;
+        }
+        
+        .diagram-label {
+            position: absolute;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .math {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+            color: var(--accent2);
+        }
+        
+        .category-legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.85rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        .hint {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <article class="essay">
+        <h1>Kan Extensions</h1>
+        <p class="subtitle">An interactive journey through category theory's most universal construction</p>
+        
+        <p>
+            Saunders Mac Lane, one of the founders of category theory, famously wrote: 
+            <span class="emphasis">"All concepts are Kan extensions."</span> 
+            This might seem like hyperbole, but it turns out to be remarkably close to the truth.
+        </p>
+        
+        <p>
+            Limits, colimits, adjoints, ends, coends—all of these fundamental categorical constructions 
+            can be expressed as special cases of Kan extensions. Understanding Kan extensions means 
+            understanding the deep structure that unifies all of category theory.
+        </p>
+        
+        <p>
+            But what <em>is</em> a Kan extension? Let's build up the intuition interactively.
+        </p>
+
+        <!-- SECTION 1: Categories as Living Networks -->
+        <h2>I. Categories as Living Networks</h2>
+        
+        <p>
+            A category consists of <span class="emphasis">objects</span> and 
+            <span class="emphasis">morphisms</span> (arrows) between them. 
+            But rather than thinking of this statically, imagine a category as a living network 
+            where information flows along arrows.
+        </p>
+        
+        <p>
+            Drag the objects below. Watch how the morphisms—the arrows—maintain their connections. 
+            This is the essence of categorical structure: the relationships matter more than the objects themselves.
+        </p>
+        
+        <div class="interactive-container" id="category-viz">
+            <div class="category-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #6366f1;"></div>
+                    <span>Objects</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #22d3ee; width: 20px; height: 3px; border-radius: 2px;"></div>
+                    <span>Morphisms</span>
+                </div>
+            </div>
+            <div class="control-panel">
+                <div class="control-group">
+                    <span class="control-label">Objects</span>
+                    <div class="scrubber" id="obj-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="obj-value">5</span>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Connectivity</span>
+                    <div class="scrubber" id="conn-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="conn-value">0.3</span>
+                </div>
+            </div>
+            <p class="hint">Drag objects to explore • Scrub parameters to reshape</p>
+        </div>
+
+        <div class="insight-box">
+            <p>
+                Notice how composition emerges: if there's an arrow A → B and an arrow B → C, 
+                there must be a composite arrow A → C. Categories encode not just relationships, 
+                but the <em>algebra</em> of composing relationships.
+            </p>
+        </div>
+
+        <!-- SECTION 2: Functors -->
+        <h2>II. Functors: Structure-Preserving Maps</h2>
+        
+        <p>
+            A <span class="emphasis">functor</span> is a mapping between categories that preserves all the structure: 
+            it sends objects to objects, morphisms to morphisms, and—crucially—respects composition.
+        </p>
+        
+        <p>
+            In the visualization below, you see two categories: a small <span class="math">C</span> (the source) 
+            and a larger <span class="math">D</span> (the target). The functor <span class="math">F</span> 
+            maps the structure of <span class="math">C</span> into <span class="math">D</span>.
+        </p>
+        
+        <p>
+            Drag objects in the source category and watch how their images move in the target. 
+            The functor preserves the pattern of connections.
+        </p>
+        
+        <div class="interactive-container" id="functor-viz">
+            <div class="category-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #f472b6;"></div>
+                    <span>Category C (source)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #6366f1;"></div>
+                    <span>Category D (target)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #22d3ee; opacity: 0.5;"></div>
+                    <span>F(C) ⊂ D (image)</span>
+                </div>
+            </div>
+            <div class="control-panel">
+                <div class="control-group">
+                    <span class="control-label">Functor Animation</span>
+                    <div class="scrubber" id="functor-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="functor-value">0.5</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: The Extension Problem -->
+        <h2>III. The Extension Problem</h2>
+        
+        <p>
+            Now we arrive at the central question. Suppose we have:
+        </p>
+        
+        <ul style="margin: 20px 0 20px 40px; color: var(--text-dim);">
+            <li>A functor <span class="math">K : C → D</span> (think of it as an "inclusion" of a small category into a larger one)</li>
+            <li>A functor <span class="math">F : C → E</span> (some assignment of values to objects of C)</li>
+        </ul>
+        
+        <p>
+            <span class="emphasis">Question:</span> Can we "extend" <span class="math">F</span> along <span class="math">K</span> 
+            to get a functor <span class="math">G : D → E</span> that agrees with <span class="math">F</span> on the image of <span class="math">K</span>?
+        </p>
+        
+        <p>
+            In other words: if we know the values of F on the small category C, can we extrapolate to the larger category D?
+        </p>
+        
+        <div class="interactive-container" id="extension-viz">
+            <div class="category-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #f472b6;"></div>
+                    <span>C (known)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #6366f1;"></div>
+                    <span>D (to extend to)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #22d3ee;"></div>
+                    <span>E (values)</span>
+                </div>
+            </div>
+            <div class="control-panel">
+                <div class="control-group">
+                    <span class="control-label">Extension Progress</span>
+                    <div class="scrubber" id="extend-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="extend-value">0.0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <p>
+                The Kan extension is the <em>universal</em> solution to this problem. It's not just 
+                <em>any</em> extension—it's the best possible one, characterized by a universal property 
+                that makes it unique up to isomorphism.
+            </p>
+        </div>
+
+        <!-- SECTION 4: Left vs Right -->
+        <h2>IV. Left and Right Kan Extensions</h2>
+        
+        <p>
+            There are actually <em>two</em> canonical ways to extend: the <span class="emphasis">left Kan extension</span> 
+            and the <span class="emphasis">right Kan extension</span>. They correspond to two different 
+            notions of "best approximation."
+        </p>
+        
+        <p>
+            <strong>Left Kan extension (Lan):</strong> The best approximation "from below"—like a colimit, it builds up the extension.
+        </p>
+        
+        <p>
+            <strong>Right Kan extension (Ran):</strong> The best approximation "from above"—like a limit, it constrains from above.
+        </p>
+        
+        <div class="interactive-container" id="leftright-viz">
+            <div class="control-panel">
+                <div class="control-group">
+                    <span class="control-label">Left ← → Right</span>
+                    <div class="scrubber" id="lr-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="lr-value">0.5</span>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Approximation Detail</span>
+                    <div class="scrubber" id="detail-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="detail-value">0.5</span>
+                </div>
+            </div>
+        </div>
+
+        <p>
+            When both the left and right Kan extensions exist and agree, we say the original functor 
+            is <span class="emphasis">Kan extendable</span>—the extension is unique and captures 
+            the essential information of F.
+        </p>
+
+        <!-- SECTION 5: Everything is a Kan Extension -->
+        <h2>V. Everything is a Kan Extension</h2>
+        
+        <p>
+            The power of Kan extensions becomes clear when we see how many familiar constructions 
+            they subsume:
+        </p>
+        
+        <div class="interactive-container" id="everything-viz" style="height: 600px;">
+            <div class="control-panel">
+                <div class="control-group">
+                    <span class="control-label">Construction</span>
+                    <div class="scrubber" id="construct-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="construct-value" style="min-width: 80px;">Limits</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            <p>
+                <strong>Limits</strong> are right Kan extensions along the unique functor to the terminal category.<br>
+                <strong>Colimits</strong> are left Kan extensions along the same.<br>
+                <strong>Adjoints</strong> are Kan extensions of the identity functor.<br>
+                This is why Mac Lane said <em>all concepts are Kan extensions</em>—they really are the universal blueprint.
+            </p>
+        </div>
+
+        <h2>VI. The Universal Property</h2>
+        
+        <p>
+            What makes the Kan extension the "best" solution? It satisfies a <span class="emphasis">universal property</span>: 
+            any other extension factors through it uniquely.
+        </p>
+        
+        <p>
+            For the left Kan extension <span class="math">Lan<sub>K</sub>F</span>, there's a natural transformation 
+            η : F → (Lan<sub>K</sub>F) ∘ K, and for any other functor G : D → E with a transformation F → G ∘ K, 
+            there exists a <em>unique</em> transformation Lan<sub>K</sub>F → G making everything commute.
+        </p>
+        
+        <div class="interactive-container" id="universal-viz">
+            <div class="control-panel">
+                <div class="control-group">
+                    <span class="control-label">Other Extensions</span>
+                    <div class="scrubber" id="other-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="other-value">3</span>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Show Factorization</span>
+                    <div class="scrubber" id="factor-scrubber">
+                        <div class="scrubber-fill"></div>
+                        <div class="scrubber-thumb"></div>
+                    </div>
+                    <span class="value-display" id="factor-value">0.0</span>
+                </div>
+            </div>
+        </div>
+
+        <p style="margin-top: 60px; text-align: center; color: var(--text-dim);">
+            ✧ ✧ ✧
+        </p>
+        
+        <p style="font-size: 1.2rem; text-align: center; margin-top: 40px;">
+            Kan extensions reveal that category theory isn't about any particular structures—it's about 
+            the <span class="emphasis">universal patterns</span> that connect all mathematical structures.
+        </p>
+        
+        <p style="text-align: center; color: var(--text-dim); margin-top: 20px;">
+            Drag, scrub, and explore. The abstractions become concrete through interaction.
+        </p>
+    </article>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+    
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
+    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+    const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    
+    // Color utilities
+    const hexToRgb = hex => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16) / 255,
+            g: parseInt(result[2], 16) / 255,
+            b: parseInt(result[3], 16) / 255
+        } : null;
+    };
+    
+    // ============================================
+    // SCRUBBER CLASS
+    // ============================================
+    
+    class Scrubber {
+        constructor(element, options = {}) {
+            this.element = element;
+            this.fill = element.querySelector('.scrubber-fill');
+            this.thumb = element.querySelector('.scrubber-thumb');
+            this.min = options.min ?? 0;
+            this.max = options.max ?? 1;
+            this.value = options.value ?? (this.min + this.max) / 2;
+            this.step = options.step ?? 0;
+            this.onChange = options.onChange ?? (() => {});
+            
+            this.dragging = false;
+            this.init();
+        }
+        
+        init() {
+            this.updateVisual();
+            
+            this.element.addEventListener('mousedown', this.onStart.bind(this));
+            this.element.addEventListener('touchstart', this.onStart.bind(this), { passive: false });
+            document.addEventListener('mousemove', this.onMove.bind(this));
+            document.addEventListener('touchmove', this.onMove.bind(this), { passive: false });
+            document.addEventListener('mouseup', this.onEnd.bind(this));
+            document.addEventListener('touchend', this.onEnd.bind(this));
+        }
+        
+        onStart(e) {
+            e.preventDefault();
+            this.dragging = true;
+            this.onMove(e);
+        }
+        
+        onMove(e) {
+            if (!this.dragging) return;
+            e.preventDefault();
+            
+            const rect = this.element.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let t = (clientX - rect.left) / rect.width;
+            t = clamp(t, 0, 1);
+            
+            this.value = lerp(this.min, this.max, t);
+            if (this.step > 0) {
+                this.value = Math.round(this.value / this.step) * this.step;
+            }
+            
+            this.updateVisual();
+            this.onChange(this.value);
+        }
+        
+        onEnd() {
+            this.dragging = false;
+        }
+        
+        updateVisual() {
+            const t = (this.value - this.min) / (this.max - this.min);
+            this.fill.style.width = `${t * 100}%`;
+            this.thumb.style.left = `${t * 100}%`;
+        }
+        
+        setValue(v) {
+            this.value = clamp(v, this.min, this.max);
+            this.updateVisual();
+        }
+    }
+    
+    // ============================================
+    // VISUALIZATION 1: CATEGORY
+    // ============================================
+    
+    (function() {
+        const container = document.getElementById('category-viz');
+        const width = container.clientWidth;
+        const height = container.clientHeight - 80;
+        
+        // Create canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        container.insertBefore(canvas, container.firstChild);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        // State
+        let numObjects = 5;
+        let connectivity = 0.3;
+        let objects = [];
+        let morphisms = [];
+        let draggedObject = null;
+        let time = 0;
+        
+        function generateCategory() {
+            objects = [];
+            morphisms = [];
+            
+            // Generate objects in a roughly circular layout
+            const cx = width / 2;
+            const cy = height / 2;
+            const radius = Math.min(width, height) * 0.35;
+            
+            for (let i = 0; i < numObjects; i++) {
+                const angle = (i / numObjects) * Math.PI * 2 - Math.PI / 2;
+                objects.push({
+                    id: i,
+                    x: cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 40,
+                    y: cy + Math.sin(angle) * radius + (Math.random() - 0.5) * 40,
+                    vx: 0,
+                    vy: 0,
+                    targetX: 0,
+                    targetY: 0,
+                    label: String.fromCharCode(65 + i)
+                });
+            }
+            
+            // Generate morphisms based on connectivity
+            for (let i = 0; i < numObjects; i++) {
+                for (let j = 0; j < numObjects; j++) {
+                    if (i !== j && Math.random() < connectivity) {
+                        morphisms.push({ from: i, to: j });
+                    }
+                }
+            }
+            
+            // Ensure composition: if A→B and B→C, add A→C
+            const toAdd = [];
+            for (const m1 of morphisms) {
+                for (const m2 of morphisms) {
+                    if (m1.to === m2.from && m1.from !== m2.to) {
+                        const exists = morphisms.some(m => m.from === m1.from && m.to === m2.to);
+                        if (!exists && !toAdd.some(m => m.from === m1.from && m.to === m2.to)) {
+                            toAdd.push({ from: m1.from, to: m2.to, composite: true });
+                        }
+                    }
+                }
+            }
+            morphisms.push(...toAdd);
+        }
+        
+        function drawArrow(fromX, fromY, toX, toY, color, alpha = 1, composite = false) {
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const nx = dx / len;
+            const ny = dy / len;
+            
+            // Shorten to not overlap with circles
+            const r = 22;
+            const startX = fromX + nx * r;
+            const startY = fromY + ny * r;
+            const endX = toX - nx * (r + 10);
+            const endY = toY - ny * (r + 10);
+            
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = composite ? 1.5 : 2;
+            
+            if (composite) {
+                ctx.setLineDash([5, 5]);
+            } else {
+                ctx.setLineDash([]);
+            }
+            
+            // Curved line
+            const midX = (startX + endX) / 2;
+            const midY = (startY + endY) / 2;
+            const perpX = -ny * 20;
+            const perpY = nx * 20;
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(midX + perpX, midY + perpY, endX, endY);
+            ctx.stroke();
+            
+            // Arrowhead
+            const arrowLen = 10;
+            const arrowAngle = Math.atan2(endY - (midY + perpY), endX - (midX + perpX));
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - arrowLen * Math.cos(arrowAngle - 0.3), endY - arrowLen * Math.sin(arrowAngle - 0.3));
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - arrowLen * Math.cos(arrowAngle + 0.3), endY - arrowLen * Math.sin(arrowAngle + 0.3));
+            ctx.stroke();
+            
+            ctx.globalAlpha = 1;
+            ctx.setLineDash([]);
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw morphisms
+            for (const m of morphisms) {
+                const from = objects[m.from];
+                const to = objects[m.to];
+                const color = m.composite ? '#4ade80' : '#22d3ee';
+                drawArrow(from.x, from.y, to.x, to.y, color, m.composite ? 0.5 : 0.7, m.composite);
+            }
+            
+            // Draw objects
+            for (const obj of objects) {
+                // Glow
+                const gradient = ctx.createRadialGradient(obj.x, obj.y, 0, obj.x, obj.y, 40);
+                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.3)');
+                gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, 40, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Circle
+                ctx.fillStyle = '#6366f1';
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, 18, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Border
+                ctx.strokeStyle = '#818cf8';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.label, obj.x, obj.y);
+            }
+        }
+        
+        function animate() {
+            time += 0.016;
+            
+            // Gentle floating animation
+            for (const obj of objects) {
+                if (obj !== draggedObject) {
+                    obj.x += Math.sin(time + obj.id) * 0.2;
+                    obj.y += Math.cos(time * 0.7 + obj.id * 1.3) * 0.15;
+                }
+            }
+            
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Mouse interaction
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            for (const obj of objects) {
+                const dx = mx - obj.x;
+                const dy = my - obj.y;
+                if (dx * dx + dy * dy < 400) {
+                    draggedObject = obj;
+                    break;
+                }
+            }
+        });
+        
+        canvas.addEventListener('mousemove', e => {
+            if (!draggedObject) return;
+            const rect = canvas.getBoundingClientRect();
+            draggedObject.x = e.clientX - rect.left;
+            draggedObject.y = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            draggedObject = null;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            draggedObject = null;
+        });
+        
+        // Scrubbers
+        new Scrubber(document.getElementById('obj-scrubber'), {
+            min: 3, max: 8, value: 5, step: 1,
+            onChange: v => {
+                numObjects = v;
+                document.getElementById('obj-value').textContent = v;
+                generateCategory();
+            }
+        });
+        
+        new Scrubber(document.getElementById('conn-scrubber'), {
+            min: 0.1, max: 0.6, value: 0.3,
+            onChange: v => {
+                connectivity = v;
+                document.getElementById('conn-value').textContent = v.toFixed(2);
+                generateCategory();
+            }
+        });
+        
+        generateCategory();
+        animate();
+    })();
+    
+    // ============================================
+    // VISUALIZATION 2: FUNCTORS
+    // ============================================
+    
+    (function() {
+        const container = document.getElementById('functor-viz');
+        const width = container.clientWidth;
+        const height = container.clientHeight - 80;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        container.insertBefore(canvas, container.firstChild);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        let functorT = 0.5;
+        let time = 0;
+        
+        // Source category C (small, left side)
+        const sourceObjs = [
+            { id: 0, x: 120, y: 150, label: 'a' },
+            { id: 1, x: 200, y: 250, label: 'b' },
+            { id: 2, x: 80, y: 300, label: 'c' }
+        ];
+        const sourceMorphisms = [
+            { from: 0, to: 1 },
+            { from: 1, to: 2 },
+            { from: 0, to: 2 }
+        ];
+        
+        // Target category D (larger, right side)
+        const targetObjs = [
+            { id: 0, x: 450, y: 80, label: '1' },
+            { id: 1, x: 600, y: 120, label: '2' },
+            { id: 2, x: 700, y: 200, label: '3' },
+            { id: 3, x: 650, y: 320, label: '4' },
+            { id: 4, x: 500, y: 350, label: '5' },
+            { id: 5, x: 400, y: 250, label: '6' }
+        ];
+        
+        // Functor mapping: C → D
+        const functorMap = { 0: 1, 1: 3, 2: 5 };
+        
+        function drawCategory(objs, morphisms, color, alpha, isSource) {
+            ctx.globalAlpha = alpha;
+            
+            // Draw morphisms
+            for (const m of morphisms) {
+                const from = objs[m.from];
+                const to = objs[m.to];
+                drawArrowSimple(from.x, from.y, to.x, to.y, color, alpha * 0.6);
+            }
+            
+            // Draw objects
+            for (const obj of objs) {
+                const gradient = ctx.createRadialGradient(obj.x, obj.y, 0, obj.x, obj.y, 30);
+                const rgb = hexToRgb(color);
+                gradient.addColorStop(0, `rgba(${rgb.r*255}, ${rgb.g*255}, ${rgb.b*255}, 0.3)`);
+                gradient.addColorStop(1, `rgba(${rgb.r*255}, ${rgb.g*255}, ${rgb.b*255}, 0)`);
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, 30, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = isSource ? 'italic 13px Times New Roman' : '12px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.label, obj.x, obj.y);
+            }
+            
+            ctx.globalAlpha = 1;
+        }
+        
+        function drawArrowSimple(fromX, fromY, toX, toY, color, alpha) {
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const nx = dx / len;
+            const ny = dy / len;
+            
+            const r = 18;
+            const startX = fromX + nx * r;
+            const startY = fromY + ny * r;
+            const endX = toX - nx * (r + 8);
+            const endY = toY - ny * (r + 8);
+            
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            
+            const arrowLen = 8;
+            const angle = Math.atan2(dy, dx);
+            ctx.beginPath();
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - arrowLen * Math.cos(angle - 0.4), endY - arrowLen * Math.sin(angle - 0.4));
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - arrowLen * Math.cos(angle + 0.4), endY - arrowLen * Math.sin(angle + 0.4));
+            ctx.stroke();
+            
+            ctx.globalAlpha = 1;
+        }
+        
+        function drawFunctorMappings() {
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#22d3ee';
+            ctx.globalAlpha = 0.4;
+            ctx.lineWidth = 1.5;
+            
+            for (const srcId in functorMap) {
+                const src = sourceObjs[srcId];
+                const tgt = targetObjs[functorMap[srcId]];
+                
+                const t = easeInOutCubic(functorT);
+                const midX = lerp(src.x, tgt.x, 0.5);
+                const midY = lerp(src.y, tgt.y, 0.5) - 30;
+                
+                const endX = lerp(src.x, tgt.x, t);
+                const endY = lerp(src.y, tgt.y, t);
+                
+                ctx.beginPath();
+                ctx.moveTo(src.x, src.y);
+                ctx.quadraticCurveTo(midX, midY, endX, endY);
+                ctx.stroke();
+                
+                // Draw image highlight
+                if (t > 0.8) {
+                    ctx.globalAlpha = (t - 0.8) * 5 * 0.5;
+                    ctx.fillStyle = '#22d3ee';
+                    ctx.beginPath();
+                    ctx.arc(tgt.x, tgt.y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Labels
+            ctx.fillStyle = '#f472b6';
+            ctx.font = 'italic 18px Times New Roman';
+            ctx.fillText('C', 140, 380);
+            
+            ctx.fillStyle = '#6366f1';
+            ctx.fillText('D', 550, 400);
+            
+            // Draw categories
+            drawCategory(targetObjs, [], '#6366f1', 0.4, false);
+            drawFunctorMappings();
+            drawCategory(sourceObjs, sourceMorphisms, '#f472b6', 1, true);
+            
+            // Functor label
+            ctx.fillStyle = '#22d3ee';
+            ctx.font = 'italic 16px Times New Roman';
+            ctx.fillText('F', 300, 180);
+        }
+        
+        function animate() {
+            time += 0.016;
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        new Scrubber(document.getElementById('functor-scrubber'), {
+            min: 0, max: 1, value: 0.5,
+            onChange: v => {
+                functorT = v;
+                document.getElementById('functor-value').textContent = v.toFixed(2);
+            }
+        });
+        
+        animate();
+    })();
+    
+    // ============================================
+    // VISUALIZATION 3: EXTENSION PROBLEM
+    // ============================================
+    
+    (function() {
+        const container = document.getElementById('extension-viz');
+        const width = container.clientWidth;
+        const height = container.clientHeight - 80;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        container.insertBefore(canvas, container.firstChild);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        let extendT = 0;
+        let time = 0;
+        
+        // Three categories arranged in triangle
+        const catC = { x: 200, y: 300, label: 'C', color: '#f472b6' };
+        const catD = { x: 500, y: 300, label: 'D', color: '#6366f1' };
+        const catE = { x: 350, y: 100, label: 'E', color: '#22d3ee' };
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw the three categories as regions
+            for (const cat of [catC, catD, catE]) {
+                const gradient = ctx.createRadialGradient(cat.x, cat.y, 0, cat.x, cat.y, 80);
+                const rgb = hexToRgb(cat.color);
+                gradient.addColorStop(0, `rgba(${rgb.r*255}, ${rgb.g*255}, ${rgb.b*255}, 0.4)`);
+                gradient.addColorStop(1, `rgba(${rgb.r*255}, ${rgb.g*255}, ${rgb.b*255}, 0)`);
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(cat.x, cat.y, 80, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = cat.color;
+                ctx.beginPath();
+                ctx.arc(cat.x, cat.y, 40, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'italic bold 20px Times New Roman';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(cat.label, cat.x, cat.y);
+            }
+            
+            // Draw K: C → D
+            drawFunctorArrow(catC.x + 40, catC.y, catD.x - 40, catD.y, 'K', '#a855f7', 1);
+            
+            // Draw F: C → E
+            drawFunctorArrow(catC.x, catC.y - 40, catE.x - 30, catE.y + 30, 'F', '#fbbf24', 1);
+            
+            // Draw G: D → E (the extension)
+            if (extendT > 0) {
+                const alpha = easeOutCubic(extendT);
+                drawFunctorArrow(catD.x, catD.y - 40, catE.x + 30, catE.y + 30, 'G = Lan_K F', '#4ade80', alpha);
+                
+                // Show "?" becoming "!"
+                if (extendT < 0.5) {
+                    ctx.globalAlpha = 1 - extendT * 2;
+                    ctx.fillStyle = '#888';
+                    ctx.font = '24px Inter';
+                    ctx.fillText('?', 480, 180);
+                    ctx.globalAlpha = 1;
+                }
+            } else {
+                ctx.fillStyle = '#888';
+                ctx.font = '24px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText('?', 480, 180);
+            }
+            
+            // Commutative diagram hint
+            if (extendT > 0.5) {
+                ctx.globalAlpha = (extendT - 0.5) * 2;
+                ctx.fillStyle = '#4ade80';
+                ctx.font = '14px Inter';
+                ctx.fillText('G ∘ K ≅ F', 350, 250);
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        function drawFunctorArrow(x1, y1, x2, y2, label, color, alpha) {
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            
+            // Arrowhead
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const arrowLen = 12;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - arrowLen * Math.cos(angle - 0.3), y2 - arrowLen * Math.sin(angle - 0.3));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - arrowLen * Math.cos(angle + 0.3), y2 - arrowLen * Math.sin(angle + 0.3));
+            ctx.stroke();
+            
+            // Label
+            ctx.fillStyle = color;
+            ctx.font = 'italic 14px Times New Roman';
+            ctx.textAlign = 'center';
+            const perpX = -(y2 - y1) / Math.sqrt((x2-x1)**2 + (y2-y1)**2) * 15;
+            const perpY = (x2 - x1) / Math.sqrt((x2-x1)**2 + (y2-y1)**2) * 15;
+            ctx.fillText(label, midX + perpX, midY + perpY);
+            
+            ctx.globalAlpha = 1;
+        }
+        
+        function animate() {
+            time += 0.016;
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        new Scrubber(document.getElementById('extend-scrubber'), {
+            min: 0, max: 1, value: 0,
+            onChange: v => {
+                extendT = v;
+                document.getElementById('extend-value').textContent = v.toFixed(2);
+            }
+        });
+        
+        animate();
+    })();
+    
+    // ============================================
+    // VISUALIZATION 4: LEFT VS RIGHT
+    // ============================================
+    
+    (function() {
+        const container = document.getElementById('leftright-viz');
+        const width = container.clientWidth;
+        const height = container.clientHeight - 80;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        container.insertBefore(canvas, container.firstChild);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        let lrT = 0.5;
+        let detail = 0.5;
+        let time = 0;
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const cx = width / 2;
+            const cy = height / 2;
+            
+            // Draw the "true" function as a curve
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            for (let x = 100; x < width - 100; x++) {
+                const t = (x - 100) / (width - 200);
+                const y = cy + Math.sin(t * Math.PI * 2) * 80 + Math.cos(t * Math.PI * 3) * 30;
+                if (x === 100) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Known points (from C)
+            const knownPoints = [
+                { t: 0.1, color: '#f472b6' },
+                { t: 0.35, color: '#f472b6' },
+                { t: 0.6, color: '#f472b6' },
+                { t: 0.85, color: '#f472b6' }
+            ];
+            
+            for (const pt of knownPoints) {
+                const x = 100 + pt.t * (width - 200);
+                const y = cy + Math.sin(pt.t * Math.PI * 2) * 80 + Math.cos(pt.t * Math.PI * 3) * 30;
+                
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Left Kan extension (from below - colimit-like)
+            if (lrT < 0.5) {
+                const leftAlpha = 1 - lrT * 2;
+                ctx.strokeStyle = '#4ade80';
+                ctx.globalAlpha = leftAlpha;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                const numSteps = Math.floor(5 + detail * 20);
+                for (let i = 0; i <= numSteps; i++) {
+                    const t = i / numSteps;
+                    const x = 100 + t * (width - 200);
+                    // Left Kan: supremum/colimit - approximates from below
+                    let y = cy + 100; // Start high (remember y increases downward)
+                    for (const pt of knownPoints) {
+                        const dist = Math.abs(t - pt.t);
+                        const influence = Math.exp(-dist * (3 + detail * 5));
+                        const ptY = cy + Math.sin(pt.t * Math.PI * 2) * 80 + Math.cos(pt.t * Math.PI * 3) * 30;
+                        y = Math.min(y, ptY + (1 - influence) * 50);
+                    }
+                    
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Label
+                ctx.fillStyle = '#4ade80';
+                ctx.font = '14px Inter';
+                ctx.fillText('Left Kan (Lan) - colimit-like', 120, 60);
+            }
+            
+            // Right Kan extension (from above - limit-like)
+            if (lrT > 0.5) {
+                const rightAlpha = (lrT - 0.5) * 2;
+                ctx.strokeStyle = '#f97316';
+                ctx.globalAlpha = rightAlpha;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                const numSteps = Math.floor(5 + detail * 20);
+                for (let i = 0; i <= numSteps; i++) {
+                    const t = i / numSteps;
+                    const x = 100 + t * (width - 200);
+                    // Right Kan: infimum/limit - approximates from above
+                    let y = cy - 100;
+                    for (const pt of knownPoints) {
+                        const dist = Math.abs(t - pt.t);
+                        const influence = Math.exp(-dist * (3 + detail * 5));
+                        const ptY = cy + Math.sin(pt.t * Math.PI * 2) * 80 + Math.cos(pt.t * Math.PI * 3) * 30;
+                        y = Math.max(y, ptY - (1 - influence) * 50);
+                    }
+                    
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Label
+                ctx.fillStyle = '#f97316';
+                ctx.font = '14px Inter';
+                ctx.fillText('Right Kan (Ran) - limit-like', 120, 60);
+            }
+            
+            // Both at center
+            if (Math.abs(lrT - 0.5) < 0.1) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '14px Inter';
+                ctx.fillText('When Lan = Ran, the extension is canonical', cx - 140, 60);
+            }
+            
+            // Legend
+            ctx.fillStyle = '#888';
+            ctx.font = '12px Inter';
+            ctx.fillText('— True function (unknown)', width - 200, height - 30);
+            ctx.fillStyle = '#f472b6';
+            ctx.fillText('● Known values from C', width - 200, height - 50);
+        }
+        
+        function animate() {
+            time += 0.016;
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        new Scrubber(document.getElementById('lr-scrubber'), {
+            min: 0, max: 1, value: 0.5,
+            onChange: v => {
+                lrT = v;
+                document.getElementById('lr-value').textContent = v.toFixed(2);
+            }
+        });
+        
+        new Scrubber(document.getElementById('detail-scrubber'), {
+            min: 0, max: 1, value: 0.5,
+            onChange: v => {
+                detail = v;
+                document.getElementById('detail-value').textContent = v.toFixed(2);
+            }
+        });
+        
+        animate();
+    })();
+    
+    // ============================================
+    // VISUALIZATION 5: EVERYTHING IS KAN
+    // ============================================
+    
+    (function() {
+        const container = document.getElementById('everything-viz');
+        const width = container.clientWidth;
+        const height = container.clientHeight - 80;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        container.insertBefore(canvas, container.firstChild);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        let constructionT = 0;
+        let time = 0;
+        
+        const constructions = [
+            { name: 'Limits', desc: 'Ran along ! : J → 1', color: '#f97316' },
+            { name: 'Colimits', desc: 'Lan along ! : J → 1', color: '#4ade80' },
+            { name: 'Adjoints', desc: 'Kan extension of Id', color: '#6366f1' },
+            { name: 'Ends', desc: 'Ran along twisted arrow', color: '#ec4899' },
+            { name: 'Coends', desc: 'Lan along twisted arrow', color: '#22d3ee' }
+        ];
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const idx = Math.floor(constructionT * (constructions.length - 0.01));
+            const localT = (constructionT * constructions.length) % 1;
+            const current = constructions[idx];
+            
+            document.getElementById('construct-value').textContent = current.name;
+            
+            // Central display
+            const cx = width / 2;
+            const cy = height / 2 - 40;
+            
+            // Draw based on construction type
+            if (current.name === 'Limits') {
+                drawLimit(cx, cy, localT);
+            } else if (current.name === 'Colimits') {
+                drawColimit(cx, cy, localT);
+            } else if (current.name === 'Adjoints') {
+                drawAdjoint(cx, cy, localT);
+            } else if (current.name === 'Ends') {
+                drawEnd(cx, cy, localT);
+            } else {
+                drawCoend(cx, cy, localT);
+            }
+            
+            // Title
+            ctx.fillStyle = current.color;
+            ctx.font = 'bold 28px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(current.name, cx, 50);
+            
+            // Description
+            ctx.fillStyle = '#888';
+            ctx.font = '16px Inter';
+            ctx.fillText(current.desc, cx, 80);
+            
+            // Formula
+            ctx.fillStyle = '#fff';
+            ctx.font = 'italic 18px Times New Roman';
+            if (current.name === 'Limits') {
+                ctx.fillText('lim F = Ran_! F', cx, height - 60);
+            } else if (current.name === 'Colimits') {
+                ctx.fillText('colim F = Lan_! F', cx, height - 60);
+            } else if (current.name === 'Adjoints') {
+                ctx.fillText('L ⊣ R  ⟺  Lan_L Id ≅ R', cx, height - 60);
+            }
+        }
+        
+        function drawLimit(cx, cy, t) {
+            // Diagram category J
+            const diagramPts = [];
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2 - Math.PI / 2;
+                diagramPts.push({
+                    x: cx + Math.cos(angle) * 120,
+                    y: cy + Math.sin(angle) * 80 + 50
+                });
+            }
+            
+            // Draw diagram
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < diagramPts.length; i++) {
+                const next = (i + 1) % diagramPts.length;
+                ctx.beginPath();
+                ctx.moveTo(diagramPts[i].x, diagramPts[i].y);
+                ctx.lineTo(diagramPts[next].x, diagramPts[next].y);
+                ctx.stroke();
+            }
+            
+            for (const pt of diagramPts) {
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Limit cone apex
+            const apexY = cy - 80;
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(cx, apexY, 16, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 12px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('lim', cx, apexY + 4);
+            
+            // Cone legs
+            ctx.strokeStyle = '#fbbf24';
+            ctx.globalAlpha = 0.6;
+            ctx.setLineDash([4, 4]);
+            for (const pt of diagramPts) {
+                ctx.beginPath();
+                ctx.moveTo(cx, apexY + 16);
+                ctx.lineTo(pt.x, pt.y - 12);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+            
+            // Terminal category 1
+            ctx.fillStyle = '#666';
+            ctx.font = '14px Inter';
+            ctx.fillText('J', cx + 160, cy + 80);
+            ctx.fillText('1', cx - 160, apexY);
+        }
+        
+        function drawColimit(cx, cy, t) {
+            // Diagram category J
+            const diagramPts = [];
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2 - Math.PI / 2;
+                diagramPts.push({
+                    x: cx + Math.cos(angle) * 120,
+                    y: cy + Math.sin(angle) * 80 - 30
+                });
+            }
+            
+            // Draw diagram
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < diagramPts.length; i++) {
+                const next = (i + 1) % diagramPts.length;
+                ctx.beginPath();
+                ctx.moveTo(diagramPts[i].x, diagramPts[i].y);
+                ctx.lineTo(diagramPts[next].x, diagramPts[next].y);
+                ctx.stroke();
+            }
+            
+            for (const pt of diagramPts) {
+                ctx.fillStyle = '#4ade80';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Colimit cocone nadir
+            const nadirY = cy + 120;
+            ctx.fillStyle = '#86efac';
+            ctx.beginPath();
+            ctx.arc(cx, nadirY, 16, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('colim', cx, nadirY + 4);
+            
+            // Cocone legs
+            ctx.strokeStyle = '#86efac';
+            ctx.globalAlpha = 0.6;
+            ctx.setLineDash([4, 4]);
+            for (const pt of diagramPts) {
+                ctx.beginPath();
+                ctx.moveTo(pt.x, pt.y + 12);
+                ctx.lineTo(cx, nadirY - 16);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+        }
+        
+        function drawAdjoint(cx, cy, t) {
+            // Two categories with adjoint functors
+            const leftCat = { x: cx - 150, y: cy, label: 'C' };
+            const rightCat = { x: cx + 150, y: cy, label: 'D' };
+            
+            // Draw categories
+            for (const cat of [leftCat, rightCat]) {
+                ctx.fillStyle = '#6366f1';
+                ctx.beginPath();
+                ctx.arc(cat.x, cat.y, 40, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'italic 20px Times New Roman';
+                ctx.textAlign = 'center';
+                ctx.fillText(cat.label, cat.x, cat.y + 6);
+            }
+            
+            // L: C → D (top arrow)
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(leftCat.x + 45, leftCat.y - 20);
+            ctx.lineTo(rightCat.x - 45, rightCat.y - 20);
+            ctx.stroke();
+            drawArrowhead(rightCat.x - 45, rightCat.y - 20, 0, '#22d3ee');
+            
+            ctx.fillStyle = '#22d3ee';
+            ctx.font = 'italic 16px Times New Roman';
+            ctx.fillText('L', cx, leftCat.y - 35);
+            
+            // R: D → C (bottom arrow)
+            ctx.strokeStyle = '#f472b6';
+            ctx.beginPath();
+            ctx.moveTo(rightCat.x - 45, rightCat.y + 20);
+            ctx.lineTo(leftCat.x + 45, leftCat.y + 20);
+            ctx.stroke();
+            drawArrowhead(leftCat.x + 45, leftCat.y + 20, Math.PI, '#f472b6');
+            
+            ctx.fillStyle = '#f472b6';
+            ctx.fillText('R', cx, rightCat.y + 45);
+            
+            // Adjunction symbol
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Inter';
+            ctx.fillText('⊣', cx, cy + 5);
+        }
+        
+        function drawEnd(cx, cy, t) {
+            ctx.fillStyle = '#ec4899';
+            ctx.font = '60px Times New Roman';
+            ctx.textAlign = 'center';
+            ctx.fillText('∫', cx - 50, cy + 20);
+            
+            ctx.font = '20px Times New Roman';
+            ctx.fillText('c', cx - 20, cy - 30);
+            
+            ctx.font = '24px Times New Roman';
+            ctx.fillText('F(c, c)', cx + 50, cy + 10);
+        }
+        
+        function drawCoend(cx, cy, t) {
+            ctx.fillStyle = '#22d3ee';
+            ctx.font = '60px Times New Roman';
+            ctx.textAlign = 'center';
+            ctx.fillText('∫', cx - 50, cy + 20);
+            
+            ctx.font = '20px Times New Roman';
+            ctx.fillText('c', cx - 15, cy + 45);
+            
+            ctx.font = '24px Times New Roman';
+            ctx.fillText('F(c, c)', cx + 50, cy + 10);
+        }
+        
+        function drawArrowhead(x, y, angle, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x + 10 * Math.cos(angle), y + 10 * Math.sin(angle));
+            ctx.lineTo(x + 10 * Math.cos(angle + 2.5), y + 10 * Math.sin(angle + 2.5));
+            ctx.lineTo(x + 10 * Math.cos(angle - 2.5), y + 10 * Math.sin(angle - 2.5));
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        function animate() {
+            time += 0.016;
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        new Scrubber(document.getElementById('construct-scrubber'), {
+            min: 0, max: 0.99, value: 0,
+            onChange: v => {
+                constructionT = v;
+            }
+        });
+        
+        animate();
+    })();
+    
+    // ============================================
+    // VISUALIZATION 6: UNIVERSAL PROPERTY
+    // ============================================
+    
+    (function() {
+        const container = document.getElementById('universal-viz');
+        const width = container.clientWidth;
+        const height = container.clientHeight - 80;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width * window.devicePixelRatio;
+        canvas.height = height * window.devicePixelRatio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        container.insertBefore(canvas, container.firstChild);
+        
+        const ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        
+        let numOthers = 3;
+        let factorT = 0;
+        let time = 0;
+        
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const cx = width / 2;
+            const cy = height / 2;
+            
+            // The Kan extension (center, highlighted)
+            const kanX = cx;
+            const kanY = cy - 60;
+            
+            // Glow
+            const gradient = ctx.createRadialGradient(kanX, kanY, 0, kanX, kanY, 80);
+            gradient.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+            gradient.addColorStop(1, 'rgba(34, 211, 238, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(kanX, kanY, 80, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#22d3ee';
+            ctx.beginPath();
+            ctx.arc(kanX, kanY, 35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 11px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Lan_K F', kanX, kanY + 4);
+            
+            // Other extensions (around)
+            const others = [];
+            for (let i = 0; i < numOthers; i++) {
+                const angle = (i / numOthers) * Math.PI + Math.PI / 6;
+                others.push({
+                    x: cx + Math.cos(angle) * 180,
+                    y: cy + Math.sin(angle) * 100 + 40,
+                    label: `G${i + 1}`
+                });
+            }
+            
+            for (const other of others) {
+                ctx.fillStyle = '#6366f1';
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.arc(other.x, other.y, 25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Inter';
+                ctx.fillText(other.label, other.x, other.y + 4);
+            }
+            
+            // Factorization arrows
+            if (factorT > 0) {
+                ctx.strokeStyle = '#4ade80';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.globalAlpha = factorT;
+                
+                for (const other of others) {
+                    const dx = other.x - kanX;
+                    const dy = other.y - kanY;
+                    const len = Math.sqrt(dx * dx + dy * dy);
+                    
+                    const endX = kanX + (dx / len) * (len - 30) * factorT + (dx / len) * 40;
+                    const endY = kanY + (dy / len) * (len - 30) * factorT + (dy / len) * 40;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(kanX + (dx / len) * 40, kanY + (dy / len) * 40);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                }
+                
+                ctx.globalAlpha = 1;
+                ctx.setLineDash([]);
+                
+                // Label
+                ctx.fillStyle = '#4ade80';
+                ctx.font = '14px Inter';
+                ctx.fillText('∃! unique factorization', cx, height - 40);
+            }
+            
+            // Universal property statement
+            ctx.fillStyle = '#888';
+            ctx.font = '13px Inter';
+            ctx.fillText('Any other extension G factors uniquely through Lan_K F', cx, 50);
+        }
+        
+        function animate() {
+            time += 0.016;
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        new Scrubber(document.getElementById('other-scrubber'), {
+            min: 1, max: 6, value: 3, step: 1,
+            onChange: v => {
+                numOthers = v;
+                document.getElementById('other-value').textContent = v;
+            }
+        });
+        
+        new Scrubber(document.getElementById('factor-scrubber'), {
+            min: 0, max: 1, value: 0,
+            onChange: v => {
+                factorT = v;
+                document.getElementById('factor-value').textContent = v.toFixed(2);
+            }
+        });
+        
+        animate();
+    })();
+    
+    </script>
+</body>
+</html>
