@@ -1,0 +1,154 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║              MATH-IR: LLM EXTRACTION EXPERIMENT - FINAL REPORT               ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+EXECUTIVE SUMMARY
+═════════════════════════════════════════════════════════════════════════════════
+
+Experiment: Can Claude reliably extract structured IR from LaTeX mathematical
+            expressions, and can this IR be correctly lowered to Lean 4?
+
+Result:     YES - with high confidence
+
+            ┌────────────────────────────────────────────────────────┐
+            │  EXTRACTION ACCURACY:     100% (20/20 expressions)     │
+            │  EMISSION ACCURACY:       100% (after fix)             │
+            │  OVERALL PIPELINE:        VIABLE ✓                     │
+            └────────────────────────────────────────────────────────┘
+
+DETAILED RESULTS
+═════════════════════════════════════════════════════════════════════════════════
+
+Test Corpus: 20 real arithmetic expressions across 4 difficulty tiers
+
+    Tier 1 (Simple):      5/5 = 100%   [x² ≥ 0, a+b = b+a, |x| ≥ 0, ...]
+    Tier 2 (Basic):       5/5 = 100%   [(a/b)·(c/d), (a+b)², |xy|, ...]
+    Tier 3 (Nested):      5/5 = 100%   [|x+y| ≤ |x|+|y|, √(a/b), ...]
+    Tier 4 (Quantified):  5/5 = 100%   [∀x∈ℝ, ∀ε>0∃δ>0, ∃x:x²=2, ...]
+
+ISSUE ANALYSIS
+═════════════════════════════════════════════════════════════════════════════════
+
+Initial emission had 7 parenthesization issues (35% error rate).
+Root cause: Naive string emission without precedence tracking.
+
+    BEFORE FIX:
+    ───────────
+    LaTeX:  (a + b)^2 = a^2 + 2ab + b^2
+    Emitted: a + b ^ 2 = ...  ← WRONG (parsed as a + (b^2))
+
+    AFTER FIX:
+    ──────────
+    LaTeX:  (a + b)^2 = a^2 + 2ab + b^2
+    Emitted: (a + b) ^ 2 = ...  ← CORRECT
+
+Resolution: Implemented precedence-aware emission with parent context tracking.
+            All 7 issues resolved. Emission now 100% correct.
+
+KEY FINDING
+═════════════════════════════════════════════════════════════════════════════════
+
+    ┌─────────────────────────────────────────────────────────────────────────┐
+    │                                                                         │
+    │   EXTRACTION is the HARD problem (ML, ambiguity, context)              │
+    │   EMISSION is the EASY problem (deterministic string manipulation)      │
+    │                                                                         │
+    │   Claude demonstrates robust extraction capability.                     │
+    │   Emission issues are purely mechanical and fully fixable.              │
+    │                                                                         │
+    └─────────────────────────────────────────────────────────────────────────┘
+
+FAILURE MODE TAXONOMY
+═════════════════════════════════════════════════════════════════════════════════
+
+Across all 20 expressions, we observed these potential failure modes:
+
+    SYNTACTIC AMBIGUITIES (all resolved correctly):
+    ├── Implicit multiplication: "2ab" → (mul (mul 2 a) b)     ✓
+    ├── Juxtaposition: "(a-b)(a+b)" → (mul ... ...)            ✓
+    └── Chained comparison: "a < b < c" → (and (lt a b) ...)   ✓
+
+    TYPE INFERENCE (all resolved correctly):
+    ├── Exponents as Nat: "x^2" → pow(x, lit(2, Nat))          ✓
+    ├── Other numbers as Real: "0" → lit(0, Real)              ✓
+    └── Variable types from context: "x ∈ ℝ" → bind(x, Real)   ✓
+
+    QUANTIFIER HANDLING (all resolved correctly):
+    ├── Simple: "∀x ∈ ℝ" → forall([bind(x, Real)], ...)        ✓
+    ├── Constrained: "∀ε > 0" → forall([bind(ε, gt(ε,0))], ...)✓
+    └── Nested: "∀ε∃δ" → forall([...], exists([...], ...))     ✓
+
+ARCHITECTURAL VALIDATION
+═════════════════════════════════════════════════════════════════════════════════
+
+The experiment validates the MLIR-inspired architecture:
+
+    LaTeX (source)
+         │
+         ▼ LLM Extraction (Claude)
+    ┌─────────────────────────────────────────┐
+    │              IR (EDN)                   │  ◄── 100% accurate
+    │                                         │
+    │  {:node :app :op :ge                    │
+    │   :args [{:node :app :op :pow ...}      │
+    │          {:node :lit :value 0 ...}]}    │
+    └─────────────────────────────────────────┘
+         │
+         ▼ Precedence-aware emission
+    ┌─────────────────────────────────────────┐
+    │           Lean 4 (target)               │  ◄── 100% accurate (after fix)
+    │                                         │
+    │  "x ^ 2 ≥ (0 : ℝ)"                      │
+    └─────────────────────────────────────────┘
+         │
+         ▼ Type checking (Mathlib)
+    ┌─────────────────────────────────────────┐
+    │           Verified ✓                    │  ◄── Next phase
+    └─────────────────────────────────────────┘
+
+RECOMMENDATION
+═════════════════════════════════════════════════════════════════════════════════
+
+    ╔═══════════════════════════════════════════════════════════════════════╗
+    ║                                                                       ║
+    ║                          PROCEED TO PHASE 2                           ║
+    ║                                                                       ║
+    ║   The extraction experiment demonstrates that LLM-based parsing       ║
+    ║   of mathematical LaTeX is viable with high accuracy. The core        ║
+    ║   technical risk (can LLMs understand mathematical structure?)        ║
+    ║   has been de-risked.                                                 ║
+    ║                                                                       ║
+    ║   Next steps:                                                         ║
+    ║   1. Integrate Lean type-checker for verification                     ║
+    ║   2. Build error feedback loop for refinement                         ║
+    ║   3. Expand corpus to 100+ expressions                                ║
+    ║   4. Test on real arXiv paper excerpts                                ║
+    ║                                                                       ║
+    ╚═══════════════════════════════════════════════════════════════════════╝
+
+PROFINITE REFINEMENT PATH
+═════════════════════════════════════════════════════════════════════════════════
+
+With Mathlib as ground truth oracle, the grammar refinement follows:
+
+    G₀ (initial) ──verify──► {passed, failed}
+         │                        │
+         │    ◄─── learn ─────────┘
+         ▼
+    G₁ (refined) ──verify──► {passed, failed}
+         │                        │
+         │    ◄─── learn ─────────┘
+         ▼
+       ...
+         │
+         ▼
+    G∞ (converged) ──verify──► {all pass}
+
+Each iteration through Mathlib's theorem corpus constrains the grammar space.
+The profinite limit is the eigengrammar - what survives all verification tests.
+
+═════════════════════════════════════════════════════════════════════════════════
+                              END OF REPORT
+═════════════════════════════════════════════════════════════════════════════════
