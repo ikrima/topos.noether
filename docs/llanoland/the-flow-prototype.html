@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE FLOW — LLANOLAND Combat Prototype</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --frame-outer: #1a1a2e;
+      --frame-inner: #16213e;
+      --frame-highlight: #4a6fa5;
+      --frame-shadow: #0f0f1a;
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0b0;
+      --answered: #2ecc71;
+      --answered-glow: #27ae6040;
+      --unanswered: #e74c3c;
+      --unanswered-pulse: #c0392b;
+      --warning: #f39c12;
+      --confidence: #9b59b6;
+      --turn-active: #3498db;
+      --dropped-bg: #1a0a0a;
+      --gold: #f1c40f;
+    }
+    
+    body {
+      background: #0a0a12;
+      font-family: 'VT323', monospace;
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    
+    /* CRT Scanline Effect */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+    
+    /* CRT Flicker */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(18, 16, 16, 0.1);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1001;
+      animation: flicker 0.15s infinite;
+    }
+    
+    @keyframes flicker {
+      0% { opacity: 0.27861; }
+      5% { opacity: 0.34769; }
+      10% { opacity: 0.23604; }
+      15% { opacity: 0.90626; }
+      20% { opacity: 0.18128; }
+      25% { opacity: 0.83891; }
+      30% { opacity: 0.65583; }
+      35% { opacity: 0.67807; }
+      40% { opacity: 0.26559; }
+      45% { opacity: 0.84693; }
+      50% { opacity: 0.96019; }
+      55% { opacity: 0.08594; }
+      60% { opacity: 0.20313; }
+      65% { opacity: 0.71988; }
+      70% { opacity: 0.53455; }
+      75% { opacity: 0.37288; }
+      80% { opacity: 0.71428; }
+      85% { opacity: 0.70419; }
+      90% { opacity: 0.7003; }
+      95% { opacity: 0.36108; }
+      100% { opacity: 0.24387; }
+    }
+    
+    .game-container {
+      width: 900px;
+      max-width: 95vw;
+      position: relative;
+    }
+    
+    /* SNES-style frame */
+    .snes-frame {
+      background: linear-gradient(135deg, var(--frame-inner) 0%, var(--frame-outer) 100%);
+      border: 4px solid var(--frame-highlight);
+      border-radius: 8px;
+      box-shadow: 
+        inset 2px 2px 0 var(--frame-highlight),
+        inset -2px -2px 0 var(--frame-shadow),
+        0 0 40px rgba(74, 111, 165, 0.3);
+      padding: 20px;
+      position: relative;
+    }
+    
+    .snes-frame::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      border: 2px solid var(--frame-shadow);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--frame-highlight);
+    }
+    
+    .header h1 {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 24px;
+      color: var(--gold);
+      text-shadow: 
+        2px 2px 0 var(--frame-shadow),
+        0 0 20px rgba(241, 196, 15, 0.5);
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .header .subtitle {
+      font-size: 18px;
+      color: var(--text-secondary);
+      letter-spacing: 2px;
+    }
+    
+    /* Status bars */
+    .status-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-box {
+      flex: 1;
+      background: var(--frame-shadow);
+      border: 2px solid var(--frame-highlight);
+      border-radius: 4px;
+      padding: 10px 15px;
+    }
+    
+    .stat-label {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    
+    .stat-bar-container {
+      height: 20px;
+      background: #0a0a12;
+      border: 2px solid var(--frame-highlight);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .stat-bar {
+      height: 100%;
+      transition: width 0.3s ease, background 0.3s ease;
+      position: relative;
+    }
+    
+    .stat-bar.coherence {
+      background: linear-gradient(90deg, #27ae60, #2ecc71);
+      box-shadow: 0 0 10px var(--answered-glow);
+    }
+    
+    .stat-bar.coherence.low {
+      background: linear-gradient(90deg, #c0392b, #e74c3c);
+      animation: pulse-danger 0.5s infinite;
+    }
+    
+    .stat-bar.confidence {
+      background: linear-gradient(90deg, #8e44ad, #9b59b6);
+    }
+    
+    .stat-bar.turn-time {
+      background: linear-gradient(90deg, #2980b9, #3498db);
+    }
+    
+    .stat-bar.turn-time.urgent {
+      background: linear-gradient(90deg, #c0392b, #e74c3c);
+      animation: pulse-danger 0.3s infinite;
+    }
+    
+    .stat-value {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      color: white;
+      text-shadow: 1px 1px 0 black;
+    }
+    
+    @keyframes pulse-danger {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    /* The Flow Area */
+    .flow-area {
+      display: grid;
+      grid-template-columns: 1fr 80px 1fr;
+      gap: 10px;
+      min-height: 300px;
+    }
+    
+    .flow-column {
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid var(--frame-highlight);
+      border-radius: 4px;
+      padding: 15px;
+    }
+    
+    .flow-column-header {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      text-align: center;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--frame-highlight);
+      letter-spacing: 1px;
+    }
+    
+    .opponent-header { color: var(--unanswered); }
+    .player-header { color: var(--answered); }
+    
+    .flow-connector {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    
+    /* Argument cards */
+    .argument-card {
+      background: var(--frame-inner);
+      border: 2px solid var(--frame-highlight);
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 12px;
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .argument-card:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+    }
+    
+    .argument-card.selected {
+      border-color: var(--gold);
+      box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+      transform: scale(1.02);
+    }
+    
+    .argument-card.unanswered {
+      border-color: var(--unanswered);
+      animation: pulse-border 1s infinite;
+    }
+    
+    .argument-card.answered {
+      border-color: var(--answered);
+      opacity: 0.8;
+    }
+    
+    .argument-card.dropping {
+      border-color: var(--unanswered);
+      animation: shake 0.1s infinite, pulse-border 0.3s infinite;
+    }
+    
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 5px var(--unanswered); }
+      50% { box-shadow: 0 0 20px var(--unanswered); }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+    
+    .arg-number {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    
+    .arg-text {
+      font-size: 18px;
+      line-height: 1.4;
+    }
+    
+    .arg-timer {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+    }
+    
+    .arg-timer.warning { color: var(--warning); }
+    .arg-timer.danger { color: var(--unanswered); animation: blink 0.3s infinite; }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    
+    /* Response options */
+    .response-panel {
+      background: var(--frame-shadow);
+      border: 2px solid var(--frame-highlight);
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    
+    .response-panel-header {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 11px;
+      color: var(--gold);
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .response-options {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    
+    .response-btn {
+      font-family: 'VT323', monospace;
+      font-size: 18px;
+      padding: 12px 8px;
+      background: var(--frame-inner);
+      border: 2px solid var(--frame-highlight);
+      border-radius: 4px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .response-btn:hover:not(:disabled) {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3);
+    }
+    
+    .response-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    
+    .response-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    .response-btn .key-hint {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 8px;
+      color: var(--text-secondary);
+      display: block;
+      margin-top: 4px;
+    }
+    
+    /* Connection lines */
+    .connection-line {
+      position: absolute;
+      height: 2px;
+      background: var(--answered);
+      transform-origin: left center;
+      z-index: 10;
+    }
+    
+    .connection-line.pending {
+      background: var(--warning);
+      animation: dash 0.5s linear infinite;
+    }
+    
+    @keyframes dash {
+      to { background-position: 20px 0; }
+    }
+    
+    /* DROP overlay */
+    .drop-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--dropped-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      animation: drop-shake 0.5s ease-out;
+    }
+    
+    @keyframes drop-shake {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-20px, -10px); }
+      20% { transform: translate(20px, 10px); }
+      30% { transform: translate(-15px, 5px); }
+      40% { transform: translate(15px, -5px); }
+      50% { transform: translate(-10px, 10px); }
+      60% { transform: translate(10px, -10px); }
+      70% { transform: translate(-5px, 5px); }
+      80% { transform: translate(5px, -5px); }
+      90% { transform: translate(-2px, 2px); }
+    }
+    
+    .drop-text {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 64px;
+      color: var(--unanswered);
+      text-shadow: 
+        4px 4px 0 #000,
+        0 0 40px var(--unanswered),
+        0 0 80px var(--unanswered);
+      animation: drop-pulse 0.2s infinite;
+      letter-spacing: 8px;
+    }
+    
+    @keyframes drop-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    .drop-subtext {
+      font-size: 24px;
+      color: var(--text-secondary);
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .drop-damage {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 18px;
+      color: var(--unanswered);
+      margin-top: 30px;
+    }
+    
+    .drop-judge {
+      font-size: 20px;
+      color: var(--warning);
+      margin-top: 15px;
+      font-style: italic;
+    }
+    
+    /* Victory/End states */
+    .result-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+    }
+    
+    .result-title {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 36px;
+      margin-bottom: 30px;
+    }
+    
+    .result-title.victory {
+      color: var(--gold);
+      text-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
+    }
+    
+    .result-title.defeat {
+      color: var(--unanswered);
+    }
+    
+    .result-stats {
+      font-size: 22px;
+      color: var(--text-secondary);
+      text-align: center;
+      line-height: 2;
+    }
+    
+    .restart-btn {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 14px;
+      padding: 15px 30px;
+      margin-top: 40px;
+      background: var(--frame-inner);
+      border: 3px solid var(--gold);
+      border-radius: 4px;
+      color: var(--gold);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .restart-btn:hover {
+      background: var(--gold);
+      color: var(--frame-inner);
+    }
+    
+    /* Start screen */
+    .start-screen {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    
+    .start-screen h2 {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 18px;
+      color: var(--gold);
+      margin-bottom: 30px;
+    }
+    
+    .start-screen p {
+      font-size: 20px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+    
+    .start-screen .controls {
+      background: var(--frame-shadow);
+      border: 2px solid var(--frame-highlight);
+      border-radius: 4px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 500px;
+      text-align: left;
+    }
+    
+    .start-screen .controls h3 {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 12px;
+      color: var(--text-primary);
+      margin-bottom: 15px;
+    }
+    
+    .start-screen .controls li {
+      font-size: 18px;
+      margin-bottom: 10px;
+      list-style: none;
+    }
+    
+    .start-screen .controls li span {
+      color: var(--gold);
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      margin-right: 10px;
+    }
+    
+    .start-btn {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 16px;
+      padding: 20px 40px;
+      background: transparent;
+      border: 3px solid var(--gold);
+      border-radius: 4px;
+      color: var(--gold);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      animation: start-pulse 2s infinite;
+    }
+    
+    @keyframes start-pulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(241, 196, 15, 0.6); }
+    }
+    
+    .start-btn:hover {
+      background: var(--gold);
+      color: var(--frame-inner);
+      animation: none;
+    }
+    
+    /* Turn indicator */
+    .turn-indicator {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    
+    .turn-indicator span {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 12px;
+      color: var(--turn-active);
+      padding: 8px 20px;
+      background: var(--frame-shadow);
+      border: 2px solid var(--turn-active);
+      border-radius: 4px;
+    }
+    
+    /* Response indicator */
+    .response-card {
+      background: var(--frame-inner);
+      border: 2px solid var(--answered);
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .response-card .response-type {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 9px;
+      color: var(--answered);
+      margin-bottom: 4px;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 40px 20px;
+      font-size: 16px;
+      font-style: italic;
+    }
+
+    /* Tick sound simulation via visual */
+    .tick-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 14px;
+      color: var(--warning);
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 100;
+    }
+    
+    .tick-indicator.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+    
+    // Opponent arguments pool - debate-authentic
+    const ARGUMENT_POOL = [
+      { id: 1, text: '"Power inevitably corrupts those who wield it."', source: 'Contention 1' },
+      { id: 2, text: '"The status quo solves—no need for change."', source: 'Observation' },
+      { id: 3, text: '"Their evidence is from 2019—outdated."', source: 'Attack' },
+      { id: 4, text: '"Plan causes economic collapse."', source: 'Disadvantage' },
+      { id: 5, text: '"Topicality: they\'re extra-topical."', source: 'T Violation' },
+      { id: 6, text: '"Fiat isn\'t real—reject the aff."', source: 'Kritik' },
+      { id: 7, text: '"No solvency—plan can\'t fix the problem."', source: 'Solvency' },
+      { id: 8, text: '"Harms are overstated—no extinction."', source: 'Impact Defense' },
+      { id: 9, text: '"Their author is biased—reject the card."', source: 'Indicts' },
+      { id: 10, text: '"Timeframe outweighs—DA is faster."', source: 'Impact Calc' },
+      { id: 11, text: '"Permutation severs the aff."', source: 'Theory' },
+      { id: 12, text: '"No link—plan doesn\'t trigger the DA."', source: 'Link Defense' },
+    ];
+    
+    // Response types
+    const RESPONSES = [
+      { key: 'Q', name: 'QUESTION', desc: 'Probe for weakness', effect: 'Reveals true strength' },
+      { key: 'T', name: 'TURN', desc: 'Redirect their impact', effect: 'Flips argument' },
+      { key: 'A', name: 'ANSWER', desc: 'Direct refutation', effect: 'Standard defense' },
+      { key: 'C', name: 'CONCEDE', desc: 'Strategic yield', effect: 'Saves time, costs coherence' },
+    ];
+    
+    // Judge quotes for drops
+    const JUDGE_QUOTES = [
+      '"Conceded by silence. Flows negative."',
+      '"I had to vote on the dropped argument."',
+      '"You never answered this. That\'s a ballot issue."',
+      '"The 2AR just... didn\'t get to it."',
+      '"Dropped arguments are true arguments."',
+    ];
+    
+    function TheFlowGame() {
+      const [gameState, setGameState] = useState('start'); // start, playing, dropped, victory, defeat
+      const [coherence, setCoherence] = useState(100);
+      const [confidence, setConfidence] = useState(100);
+      const [turn, setTurn] = useState(1);
+      const [turnTime, setTurnTime] = useState(100);
+      const [opponentArgs, setOpponentArgs] = useState([]);
+      const [playerResponses, setPlayerResponses] = useState([]);
+      const [selectedArg, setSelectedArg] = useState(null);
+      const [droppedArg, setDroppedArg] = useState(null);
+      const [argsAnswered, setArgsAnswered] = useState(0);
+      const [argsDropped, setArgsDropped] = useState(0);
+      const [tickVisible, setTickVisible] = useState(false);
+      
+      const gameLoopRef = useRef(null);
+      const tickIntervalRef = useRef(null);
+      
+      // Initialize game
+      const startGame = useCallback(() => {
+        setGameState('playing');
+        setCoherence(100);
+        setConfidence(100);
+        setTurn(1);
+        setTurnTime(100);
+        setOpponentArgs([]);
+        setPlayerResponses([]);
+        setSelectedArg(null);
+        setDroppedArg(null);
+        setArgsAnswered(0);
+        setArgsDropped(0);
+        
+        // Add first argument
+        addNewArgument();
+      }, []);
+      
+      // Add a new opponent argument
+      const addNewArgument = useCallback(() => {
+        const available = ARGUMENT_POOL.filter(
+          a => !opponentArgs.find(o => o.id === a.id)
+        );
+        if (available.length === 0) return;
+        
+        const newArg = available[Math.floor(Math.random() * available.length)];
+        const argWithTimer = {
+          ...newArg,
+          timeLeft: 100,
+          status: 'unanswered', // unanswered, answered, dropping
+          addedAt: Date.now(),
+        };
+        
+        setOpponentArgs(prev => [...prev, argWithTimer]);
+      }, [opponentArgs]);
+      
+      // Handle response selection
+      const handleResponse = useCallback((responseType) => {
+        if (!selectedArg || gameState !== 'playing') return;
+        
+        const arg = opponentArgs.find(a => a.id === selectedArg);
+        if (!arg || arg.status === 'answered') return;
+        
+        // Mark as answered
+        setOpponentArgs(prev => prev.map(a => 
+          a.id === selectedArg ? { ...a, status: 'answered' } : a
+        ));
+        
+        // Add to player responses
+        setPlayerResponses(prev => [...prev, {
+          argId: selectedArg,
+          type: responseType.name,
+          argText: arg.text,
+        }]);
+        
+        // Handle response effects
+        if (responseType.name === 'CONCEDE') {
+          setCoherence(prev => Math.max(0, prev - 10));
+        } else if (responseType.name === 'TURN') {
+          setConfidence(prev => Math.min(100, prev + 5));
+        }
+        
+        setArgsAnswered(prev => prev + 1);
+        setSelectedArg(null);
+        
+        // Check if all current args answered - add new one
+        const unanswered = opponentArgs.filter(a => a.id !== selectedArg && a.status === 'unanswered');
+        if (unanswered.length === 0 && opponentArgs.length < 6) {
+          setTimeout(addNewArgument, 500);
+        }
+      }, [selectedArg, opponentArgs, gameState, addNewArgument]);
+      
+      // Game loop
+      useEffect(() => {
+        if (gameState !== 'playing') return;
+        
+        gameLoopRef.current = setInterval(() => {
+          setTurnTime(prev => {
+            const newTime = prev - 2;
+            
+            if (newTime <= 0) {
+              // End of turn - advance
+              setTurn(t => t + 1);
+              
+              // Add new argument every turn
+              if (opponentArgs.length < 6) {
+                addNewArgument();
+              }
+              
+              return 100;
+            }
+            
+            return newTime;
+          });
+          
+          // Tick down argument timers
+          setOpponentArgs(prev => {
+            let dropped = null;
+            
+            const updated = prev.map(arg => {
+              if (arg.status === 'answered') return arg;
+              
+              const newTime = arg.timeLeft - 1.5;
+              
+              if (newTime <= 0 && arg.status !== 'dropped') {
+                dropped = arg;
+                return { ...arg, status: 'dropped', timeLeft: 0 };
+              }
+              
+              return {
+                ...arg,
+                timeLeft: Math.max(0, newTime),
+                status: newTime < 20 ? 'dropping' : arg.status,
+              };
+            });
+            
+            if (dropped) {
+              // Trigger drop sequence
+              setDroppedArg(dropped);
+              setGameState('dropped');
+              setArgsDropped(p => p + 1);
+              setCoherence(p => Math.max(0, p - 25));
+            }
+            
+            return updated;
+          });
+        }, 100);
+        
+        // Tick sound visual
+        tickIntervalRef.current = setInterval(() => {
+          setTickVisible(true);
+          setTimeout(() => setTickVisible(false), 100);
+        }, 1000);
+        
+        return () => {
+          clearInterval(gameLoopRef.current);
+          clearInterval(tickIntervalRef.current);
+        };
+      }, [gameState, opponentArgs.length, addNewArgument]);
+      
+      // Check win/lose conditions
+      useEffect(() => {
+        if (gameState !== 'playing') return;
+        
+        if (coherence <= 0) {
+          setGameState('defeat');
+        } else if (turn > 4 && argsDropped === 0) {
+          setGameState('victory');
+        }
+      }, [coherence, turn, argsDropped, gameState]);
+      
+      // Handle drop overlay dismiss
+      const dismissDrop = useCallback(() => {
+        setGameState('playing');
+        setDroppedArg(null);
+        
+        // Remove dropped arg and maybe add new one
+        setOpponentArgs(prev => prev.filter(a => a.status !== 'dropped'));
+        
+        if (coherence > 0) {
+          setTimeout(addNewArgument, 300);
+        }
+      }, [coherence, addNewArgument]);
+      
+      // Keyboard controls
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (gameState === 'dropped') {
+            dismissDrop();
+            return;
+          }
+          
+          if (gameState !== 'playing') return;
+          
+          const key = e.key.toUpperCase();
+          const response = RESPONSES.find(r => r.key === key);
+          
+          if (response && selectedArg) {
+            handleResponse(response);
+          }
+          
+          // Number keys to select arguments
+          const num = parseInt(e.key);
+          if (num >= 1 && num <= opponentArgs.length) {
+            const arg = opponentArgs[num - 1];
+            if (arg.status === 'unanswered' || arg.status === 'dropping') {
+              setSelectedArg(arg.id);
+            }
+          }
+        };
+        
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [gameState, selectedArg, opponentArgs, handleResponse, dismissDrop]);
+      
+      // Render start screen
+      if (gameState === 'start') {
+        return (
+          <div className="game-container">
+            <div className="snes-frame">
+              <div className="header">
+                <h1>THE FLOW</h1>
+                <div className="subtitle">LLANOLAND Combat System Prototype</div>
+              </div>
+              
+              <div className="start-screen">
+                <h2>LEARN TO TRACK. LEARN TO RESPOND.</h2>
+                
+                <p>
+                  In debate, The Flow is everything. It's how you track every argument—
+                  what they said, what you answered, and what you <em>forgot</em>.
+                </p>
+                
+                <p>
+                  Opponent arguments appear on the left. Each one has a timer.
+                  If you don't respond before time runs out... <strong>DROP</strong>.
+                </p>
+                
+                <div className="controls">
+                  <h3>CONTROLS</h3>
+                  <ul>
+                    <li><span>1-6</span> Select argument to respond to</li>
+                    <li><span>Q</span> THE QUESTION — Probe for weakness</li>
+                    <li><span>T</span> THE TURN — Redirect their impact</li>
+                    <li><span>A</span> ANSWER — Direct refutation</li>
+                    <li><span>C</span> CONCEDE — Strategic yield (costs coherence)</li>
+                  </ul>
+                </div>
+                
+                <button className="start-btn" onClick={startGame}>
+                  BEGIN ROUND
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      
+      // Render drop overlay
+      if (gameState === 'dropped' && droppedArg) {
+        return (
+          <div className="drop-overlay" onClick={dismissDrop}>
+            <div className="drop-text">DROP</div>
+            <div className="drop-subtext">
+              "{droppedArg.text}"<br/>
+              WAS NOT ANSWERED
+            </div>
+            <div className="drop-damage">COHERENCE -25%</div>
+            <div className="drop-judge">
+              Judge notes: {JUDGE_QUOTES[Math.floor(Math.random() * JUDGE_QUOTES.length)]}
+            </div>
+            <button className="restart-btn" style={{marginTop: '40px'}}>
+              CLICK TO CONTINUE
+            </button>
+          </div>
+        );
+      }
+      
+      // Render victory
+      if (gameState === 'victory') {
+        return (
+          <div className="result-overlay">
+            <div className="result-title victory">ROUND WON</div>
+            <div className="result-stats">
+              Arguments Answered: {argsAnswered}<br/>
+              Arguments Dropped: {argsDropped}<br/>
+              Final Coherence: {coherence}%<br/>
+              <br/>
+              <em>"Clean flow. Good debate."</em>
+            </div>
+            <button className="restart-btn" onClick={startGame}>
+              NEXT ROUND
+            </button>
+          </div>
+        );
+      }
+      
+      // Render defeat
+      if (gameState === 'defeat') {
+        return (
+          <div className="result-overlay">
+            <div className="result-title defeat">BALLOT: NEG</div>
+            <div className="result-stats">
+              Arguments Answered: {argsAnswered}<br/>
+              Arguments Dropped: {argsDropped}<br/>
+              <br/>
+              <em>"Too many drops. Case fell apart."</em>
+            </div>
+            <button className="restart-btn" onClick={startGame}>
+              TRY AGAIN
+            </button>
+          </div>
+        );
+      }
+      
+      // Main game render
+      const unansweredArgs = opponentArgs.filter(a => a.status !== 'answered');
+      
+      return (
+        <div className="game-container">
+          <div className={`tick-indicator ${tickVisible ? 'visible' : ''}`}>TICK</div>
+          
+          <div className="snes-frame">
+            <div className="header">
+              <h1>THE FLOW</h1>
+              <div className="subtitle">Track Every Argument. Answer Everything.</div>
+            </div>
+            
+            {/* Status bars */}
+            <div className="status-row">
+              <div className="stat-box">
+                <div className="stat-label">COHERENCE</div>
+                <div className="stat-bar-container">
+                  <div 
+                    className={`stat-bar coherence ${coherence < 30 ? 'low' : ''}`}
+                    style={{ width: `${coherence}%` }}
+                  />
+                  <span className="stat-value">{coherence}%</span>
+                </div>
+              </div>
+              
+              <div className="stat-box">
+                <div className="stat-label">CONFIDENCE</div>
+                <div className="stat-bar-container">
+                  <div 
+                    className="stat-bar confidence"
+                    style={{ width: `${confidence}%` }}
+                  />
+                  <span className="stat-value">{confidence}%</span>
+                </div>
+              </div>
+              
+              <div className="stat-box">
+                <div className="stat-label">TURN TIME</div>
+                <div className="stat-bar-container">
+                  <div 
+                    className={`stat-bar turn-time ${turnTime < 30 ? 'urgent' : ''}`}
+                    style={{ width: `${turnTime}%` }}
+                  />
+                  <span className="stat-value">Turn {turn}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Turn indicator */}
+            <div className="turn-indicator">
+              <span>YOUR SPEECH: 2AR (FINAL REBUTTAL)</span>
+            </div>
+            
+            {/* The Flow area */}
+            <div className="flow-area">
+              {/* Opponent arguments */}
+              <div className="flow-column">
+                <div className="flow-column-header opponent-header">
+                  THEIR ARGUMENTS
+                </div>
+                
+                {opponentArgs.length === 0 ? (
+                  <div className="empty-state">Waiting for opponent...</div>
+                ) : (
+                  opponentArgs.map((arg, index) => (
+                    <div 
+                      key={arg.id}
+                      className={`argument-card ${arg.status} ${selectedArg === arg.id ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (arg.status !== 'answered') {
+                          setSelectedArg(arg.id);
+                        }
+                      }}
+                    >
+                      <div className="arg-number">[{index + 1}] {arg.source}</div>
+                      <div className="arg-text">{arg.text}</div>
+                      {arg.status !== 'answered' && (
+                        <div className={`arg-timer ${arg.timeLeft < 20 ? 'danger' : arg.timeLeft < 40 ? 'warning' : ''}`}>
+                          {arg.status === 'dropping' ? '⚠ DROPPING' : `${Math.ceil(arg.timeLeft)}%`}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              {/* Connection area */}
+              <div className="flow-connector">
+                <svg width="80" height="300" style={{position: 'absolute'}}>
+                  {/* Connection lines would go here - simplified for prototype */}
+                </svg>
+              </div>
+              
+              {/* Player responses */}
+              <div className="flow-column">
+                <div className="flow-column-header player-header">
+                  YOUR RESPONSES
+                </div>
+                
+                {playerResponses.length === 0 ? (
+                  <div className="empty-state">Select an argument and respond...</div>
+                ) : (
+                  playerResponses.map((resp, index) => (
+                    <div key={index} className="response-card">
+                      <div className="response-type">✓ {resp.type}</div>
+                      <div>→ {resp.argText.substring(0, 30)}...</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            
+            {/* Response panel */}
+            <div className="response-panel">
+              <div className="response-panel-header">
+                {selectedArg 
+                  ? `RESPONDING TO: ${opponentArgs.find(a => a.id === selectedArg)?.text.substring(0, 40)}...`
+                  : 'SELECT AN ARGUMENT TO RESPOND (KEYS 1-6)'
+                }
+              </div>
+              
+              <div className="response-options">
+                {RESPONSES.map(response => (
+                  <button
+                    key={response.key}
+                    className="response-btn"
+                    disabled={!selectedArg}
+                    onClick={() => handleResponse(response)}
+                  >
+                    {response.name}
+                    <span className="key-hint">[{response.key}] {response.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Render app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TheFlowGame />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>THE SPREAD — Tap Battle Debate</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@900&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-mid: #12121a;
+      --neon-blue: #00f0ff;
+      --neon-pink: #ff00aa;
+      --neon-yellow: #ffee00;
+      --neon-green: #00ff88;
+      --neon-red: #ff3366;
+      --neon-purple: #aa00ff;
+      --gold: #ffd700;
+      --white: #ffffff;
+      --gray: #666680;
+    }
+    
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    
+    body {
+      background: var(--bg-dark);
+      font-family: 'Orbitron', sans-serif;
+      color: var(--white);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Animated background grid */
+    .bg-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(var(--neon-blue)10 1px, transparent 1px),
+        linear-gradient(90deg, var(--neon-blue)10 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: grid-scroll 20s linear infinite;
+      opacity: 0.3;
+      z-index: 0;
+    }
+    
+    @keyframes grid-scroll {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+    
+    .game-container {
+      width: 100%;
+      max-width: 480px;
+      height: 100vh;
+      max-height: 900px;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+    }
+    
+    /* HUD */
+    .hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 15px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+      z-index: 100;
+    }
+    
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .combo-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      color: var(--neon-yellow);
+      text-shadow: 0 0 20px var(--neon-yellow), 0 0 40px var(--neon-yellow);
+      transition: transform 0.1s;
+    }
+    
+    .combo-display.pop {
+      transform: scale(1.3);
+    }
+    
+    .combo-label {
+      font-size: 12px;
+      color: var(--gray);
+      letter-spacing: 2px;
+    }
+    
+    .score-display {
+      text-align: right;
+    }
+    
+    .score-value {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--white);
+      text-shadow: 0 0 10px var(--neon-blue);
+    }
+    
+    .score-label {
+      font-size: 10px;
+      color: var(--gray);
+      letter-spacing: 2px;
+    }
+    
+    /* Meters */
+    .meters {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .meter {
+      flex: 1;
+    }
+    
+    .meter-label {
+      font-size: 9px;
+      color: var(--gray);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    
+    .meter-bar {
+      height: 12px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .meter-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.2s ease;
+    }
+    
+    .meter-fill.coherence {
+      background: linear-gradient(90deg, var(--neon-green), var(--neon-blue));
+      box-shadow: 0 0 15px var(--neon-green);
+    }
+    
+    .meter-fill.coherence.low {
+      background: linear-gradient(90deg, var(--neon-red), var(--neon-pink));
+      box-shadow: 0 0 15px var(--neon-red);
+      animation: pulse-bar 0.3s infinite;
+    }
+    
+    .meter-fill.spread {
+      background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+      box-shadow: 0 0 15px var(--neon-purple);
+    }
+    
+    .meter-fill.spread.ready {
+      animation: spread-ready 0.5s infinite;
+    }
+    
+    @keyframes pulse-bar {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    @keyframes spread-ready {
+      0%, 100% { box-shadow: 0 0 15px var(--neon-purple); }
+      50% { box-shadow: 0 0 30px var(--neon-pink), 0 0 60px var(--neon-purple); }
+    }
+    
+    /* Battle area */
+    .battle-area {
+      position: absolute;
+      top: 100px;
+      left: 0;
+      right: 0;
+      bottom: 180px;
+      overflow: hidden;
+    }
+    
+    /* Argument bubbles */
+    .argument {
+      position: absolute;
+      padding: 12px 18px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      animation: float-down linear forwards;
+      z-index: 10;
+      max-width: 200px;
+      text-align: center;
+    }
+    
+    .argument::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 23px;
+      background: inherit;
+      filter: blur(10px);
+      opacity: 0.5;
+      z-index: -1;
+    }
+    
+    .argument.normal {
+      background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+      color: var(--white);
+      box-shadow: 0 0 20px var(--neon-blue);
+    }
+    
+    .argument.attack {
+      background: linear-gradient(135deg, var(--neon-red), var(--neon-pink));
+      color: var(--white);
+      box-shadow: 0 0 20px var(--neon-red);
+    }
+    
+    .argument.kritik {
+      background: linear-gradient(135deg, #000, var(--neon-purple));
+      color: var(--neon-pink);
+      box-shadow: 0 0 30px var(--neon-purple), inset 0 0 20px var(--neon-pink);
+      border: 2px solid var(--neon-pink);
+      font-size: 12px;
+      animation: float-down linear forwards, kritik-pulse 0.5s infinite;
+    }
+    
+    .argument.topicality {
+      background: linear-gradient(135deg, var(--neon-yellow), #ff8800);
+      color: var(--bg-dark);
+      box-shadow: 0 0 25px var(--neon-yellow);
+    }
+    
+    @keyframes float-down {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(calc(100vh - 280px)) rotate(5deg); opacity: 1; }
+    }
+    
+    @keyframes kritik-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    .argument:active {
+      transform: scale(0.9) !important;
+    }
+    
+    /* Response zone */
+    .response-zone {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 180px;
+      background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%);
+      padding: 15px;
+      z-index: 50;
+    }
+    
+    .danger-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, var(--neon-red), transparent);
+      box-shadow: 0 0 20px var(--neon-red);
+      animation: danger-pulse 1s infinite;
+    }
+    
+    @keyframes danger-pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    
+    .response-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .response-btn {
+      padding: 15px 10px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .response-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    
+    .response-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .response-btn.answer {
+      background: linear-gradient(135deg, var(--neon-blue), #0066ff);
+      color: var(--white);
+      box-shadow: 0 4px 20px rgba(0, 240, 255, 0.4);
+    }
+    
+    .response-btn.turn {
+      background: linear-gradient(135deg, var(--neon-green), #00aa44);
+      color: var(--white);
+      box-shadow: 0 4px 20px rgba(0, 255, 136, 0.4);
+    }
+    
+    .response-btn.question {
+      background: linear-gradient(135deg, var(--neon-yellow), #ffaa00);
+      color: var(--bg-dark);
+      box-shadow: 0 4px 20px rgba(255, 238, 0, 0.4);
+    }
+    
+    .response-btn .btn-icon {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    
+    /* Spread button */
+    .spread-btn {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .spread-btn.ready {
+      background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+      color: var(--white);
+      box-shadow: 0 0 30px var(--neon-pink);
+      animation: spread-btn-pulse 0.5s infinite;
+    }
+    
+    .spread-btn.charging {
+      background: var(--gray);
+      color: var(--bg-dark);
+      box-shadow: none;
+    }
+    
+    @keyframes spread-btn-pulse {
+      0%, 100% { box-shadow: 0 0 30px var(--neon-pink); }
+      50% { box-shadow: 0 0 50px var(--neon-purple), 0 0 80px var(--neon-pink); }
+    }
+    
+    .spread-btn:active.ready {
+      transform: scale(0.98);
+    }
+    
+    /* Particle effects */
+    .particle {
+      position: absolute;
+      pointer-events: none;
+      z-index: 200;
+      animation: particle-fly 0.6s ease-out forwards;
+    }
+    
+    .particle.hit {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--neon-blue);
+      box-shadow: 0 0 20px var(--neon-blue);
+    }
+    
+    .particle.score {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      color: var(--neon-yellow);
+      text-shadow: 0 0 10px var(--neon-yellow);
+    }
+    
+    .particle.combo {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--neon-pink);
+      text-shadow: 0 0 20px var(--neon-pink);
+    }
+    
+    @keyframes particle-fly {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.5); }
+    }
+    
+    /* Drop effect */
+    .drop-flash {
+      position: fixed;
+      inset: 0;
+      background: var(--neon-red);
+      z-index: 300;
+      animation: drop-flash 0.3s ease-out forwards;
+      pointer-events: none;
+    }
+    
+    @keyframes drop-flash {
+      0% { opacity: 0.8; }
+      100% { opacity: 0; }
+    }
+    
+    .drop-text {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 80px;
+      color: var(--neon-red);
+      text-shadow: 0 0 40px var(--neon-red);
+      z-index: 301;
+      animation: drop-text 0.8s ease-out forwards;
+      pointer-events: none;
+    }
+    
+    @keyframes drop-text {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+      20% { transform: translate(-50%, -50%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    /* Kritik special effect */
+    .kritik-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, transparent 0%, rgba(0,0,0,0.9) 100%);
+      z-index: 250;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: kritik-in 0.5s ease-out;
+    }
+    
+    @keyframes kritik-in {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    
+    .kritik-kanji {
+      font-family: 'Noto Sans JP', sans-serif;
+      font-size: 120px;
+      font-weight: 900;
+      color: var(--neon-pink);
+      text-shadow: 0 0 60px var(--neon-purple);
+      animation: kritik-kanji 1s ease-out;
+    }
+    
+    @keyframes kritik-kanji {
+      0% { transform: scale(3) rotate(-10deg); opacity: 0; }
+      50% { transform: scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: scale(1.1) rotate(0deg); opacity: 1; }
+    }
+    
+    .kritik-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      color: var(--neon-purple);
+      letter-spacing: 8px;
+      margin-top: 20px;
+      animation: kritik-name 0.5s ease-out 0.3s both;
+    }
+    
+    @keyframes kritik-name {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Spread effect */
+    .spread-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle, var(--neon-pink)20 0%, transparent 70%);
+      z-index: 250;
+      animation: spread-wave 0.8s ease-out forwards;
+      pointer-events: none;
+    }
+    
+    @keyframes spread-wave {
+      0% { transform: scale(0); opacity: 1; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+    
+    /* Start screen */
+    .start-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .start-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 64px;
+      color: var(--neon-pink);
+      text-shadow: 0 0 40px var(--neon-pink);
+      letter-spacing: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .start-subtitle {
+      font-size: 14px;
+      color: var(--gray);
+      letter-spacing: 4px;
+      margin-bottom: 40px;
+    }
+    
+    .start-instructions {
+      color: var(--white);
+      font-size: 14px;
+      line-height: 2;
+      margin-bottom: 40px;
+      max-width: 300px;
+    }
+    
+    .start-instructions strong {
+      color: var(--neon-yellow);
+    }
+    
+    .start-btn {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 6px;
+      padding: 20px 60px;
+      background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+      border: none;
+      border-radius: 12px;
+      color: var(--white);
+      cursor: pointer;
+      box-shadow: 0 0 40px var(--neon-pink);
+      animation: start-pulse 2s infinite;
+    }
+    
+    @keyframes start-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    /* Game over */
+    .gameover-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .gameover-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      margin-bottom: 30px;
+    }
+    
+    .gameover-title.victory {
+      color: var(--gold);
+      text-shadow: 0 0 40px var(--gold);
+    }
+    
+    .gameover-title.defeat {
+      color: var(--neon-red);
+      text-shadow: 0 0 40px var(--neon-red);
+    }
+    
+    .final-score {
+      font-size: 64px;
+      font-weight: 900;
+      color: var(--white);
+      margin-bottom: 10px;
+    }
+    
+    .final-stats {
+      color: var(--gray);
+      font-size: 14px;
+      line-height: 2;
+      margin-bottom: 40px;
+    }
+    
+    .final-stats span {
+      color: var(--neon-blue);
+    }
+    
+    .retry-btn {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 4px;
+      padding: 15px 40px;
+      background: transparent;
+      border: 2px solid var(--neon-pink);
+      border-radius: 8px;
+      color: var(--neon-pink);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .retry-btn:hover {
+      background: var(--neon-pink);
+      color: var(--white);
+    }
+
+    /* Wave indicator */
+    .wave-indicator {
+      position: absolute;
+      top: 110px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      color: var(--neon-purple);
+      text-shadow: 0 0 20px var(--neon-purple);
+      z-index: 100;
+      animation: wave-in 0.5s ease-out;
+    }
+
+    @keyframes wave-in {
+      0% { opacity: 0; transform: translateX(-50%) scale(2); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div id="root"></div>
+  
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+    
+    // Argument types with weights
+    const ARGUMENTS = [
+      { text: "No solvency!", type: "normal", points: 100 },
+      { text: "Harms overstated", type: "normal", points: 100 },
+      { text: "Plan fails", type: "normal", points: 100 },
+      { text: "Status quo solves", type: "normal", points: 100 },
+      { text: "No inherency", type: "normal", points: 100 },
+      { text: "DA: Econ collapse", type: "attack", points: 150 },
+      { text: "DA: Heg decline", type: "attack", points: 150 },
+      { text: "DA: Spending", type: "attack", points: 150 },
+      { text: "T: Extra-topical!", type: "topicality", points: 120 },
+      { text: "T: Effects-T!", type: "topicality", points: 120 },
+      { text: "Cross-apply the card", type: "normal", points: 80 },
+      { text: "Extend our evidence", type: "normal", points: 80 },
+      { text: "Their author indicted", type: "attack", points: 140 },
+      { text: "No link!", type: "normal", points: 100 },
+      { text: "Link turn!", type: "attack", points: 160 },
+      { text: "Impact turn!", type: "attack", points: 180 },
+      { text: "Perm do both", type: "normal", points: 100 },
+      { text: "CP solves better", type: "attack", points: 150 },
+    ];
+    
+    const KRITIKS = [
+      { text: "⚡ CAPITALISM K", kanji: "資本", name: "CAPITALISM KRITIK", points: 500 },
+      { text: "⚡ FOUCAULT K", kanji: "権力", name: "FOUCAULT KRITIK", points: 500 },
+      { text: "⚡ DEATH K", kanji: "死", name: "DEATH KRITIK", points: 600 },
+      { text: "⚡ SECURITY K", kanji: "安全", name: "SECURITY KRITIK", points: 500 },
+      { text: "⚡ BIOPOWER K", kanji: "生", name: "BIOPOWER KRITIK", points: 550 },
+    ];
+    
+    const COMBO_WORDS = ["NICE!", "GREAT!", "EXCELLENT!", "神業!", "PERFECT!", "AMAZING!", "無敵!"];
+    
+    function TapBattleGame() {
+      const [gameState, setGameState] = useState('start');
+      const [score, setScore] = useState(0);
+      const [combo, setCombo] = useState(0);
+      const [maxCombo, setMaxCombo] = useState(0);
+      const [coherence, setCoherence] = useState(100);
+      const [spreadMeter, setSpreadMeter] = useState(0);
+      const [arguments_, setArguments] = useState([]);
+      const [particles, setParticles] = useState([]);
+      const [dropEffect, setDropEffect] = useState(false);
+      const [kritikOverlay, setKritikOverlay] = useState(null);
+      const [spreadEffect, setSpreadEffect] = useState(false);
+      const [wave, setWave] = useState(1);
+      const [waveDisplay, setWaveDisplay] = useState(false);
+      const [argsAnswered, setArgsAnswered] = useState(0);
+      const [argsDropped, setArgsDropped] = useState(0);
+      const [selectedResponse, setSelectedResponse] = useState(null);
+      
+      const gameLoopRef = useRef(null);
+      const spawnRef = useRef(null);
+      const argIdRef = useRef(0);
+      const particleIdRef = useRef(0);
+      
+      // Start game
+      const startGame = useCallback(() => {
+        setGameState('playing');
+        setScore(0);
+        setCombo(0);
+        setMaxCombo(0);
+        setCoherence(100);
+        setSpreadMeter(0);
+        setArguments([]);
+        setParticles([]);
+        setWave(1);
+        setArgsAnswered(0);
+        setArgsDropped(0);
+        setWaveDisplay(true);
+        setTimeout(() => setWaveDisplay(false), 1500);
+        argIdRef.current = 0;
+      }, []);
+      
+      // Spawn argument
+      const spawnArgument = useCallback(() => {
+        const isKritik = Math.random() < 0.08; // 8% chance for kritik
+        const pool = isKritik ? KRITIKS : ARGUMENTS;
+        const template = pool[Math.floor(Math.random() * pool.length)];
+        
+        const arg = {
+          id: argIdRef.current++,
+          ...template,
+          type: isKritik ? 'kritik' : template.type,
+          x: 20 + Math.random() * 60, // Random X position (20-80%)
+          y: -50,
+          duration: isKritik ? 6000 : (4000 - wave * 200), // Gets faster each wave
+          createdAt: Date.now(),
+        };
+        
+        setArguments(prev => [...prev, arg]);
+      }, [wave]);
+      
+      // Handle tap on argument
+      const handleTapArgument = useCallback((arg, responseType) => {
+        if (gameState !== 'playing') return;
+        
+        // Remove argument
+        setArguments(prev => prev.filter(a => a.id !== arg.id));
+        
+        // Calculate points with combo multiplier
+        const comboMultiplier = 1 + (combo * 0.1);
+        let points = Math.floor(arg.points * comboMultiplier);
+        
+        // Bonus for turn response
+        if (responseType === 'turn') {
+          points = Math.floor(points * 1.5);
+        }
+        
+        // Update state
+        setScore(prev => prev + points);
+        setCombo(prev => {
+          const newCombo = prev + 1;
+          setMaxCombo(max => Math.max(max, newCombo));
+          return newCombo;
+        });
+        setSpreadMeter(prev => Math.min(100, prev + 8));
+        setArgsAnswered(prev => prev + 1);
+        
+        // Spawn particles
+        const particleX = arg.x;
+        const particleY = 50;
+        
+        // Score particle
+        setParticles(prev => [...prev, {
+          id: particleIdRef.current++,
+          type: 'score',
+          text: `+${points}`,
+          x: particleX,
+          y: particleY,
+          dx: (Math.random() - 0.5) * 50,
+          dy: -80,
+        }]);
+        
+        // Combo milestone particles
+        if (combo > 0 && combo % 5 === 4) {
+          const word = COMBO_WORDS[Math.floor(Math.random() * COMBO_WORDS.length)];
+          setParticles(prev => [...prev, {
+            id: particleIdRef.current++,
+            type: 'combo',
+            text: word,
+            x: 50,
+            y: 40,
+            dx: 0,
+            dy: -30,
+          }]);
+        }
+        
+        // Kritik special effect
+        if (arg.type === 'kritik') {
+          setKritikOverlay({ kanji: arg.kanji, name: arg.name });
+          setTimeout(() => setKritikOverlay(null), 1200);
+        }
+        
+        // Clear old particles
+        setTimeout(() => {
+          setParticles(prev => prev.slice(-20));
+        }, 600);
+      }, [gameState, combo]);
+      
+      // Handle argument reaching danger zone (drop)
+      const handleDrop = useCallback((arg) => {
+        setArguments(prev => prev.filter(a => a.id !== arg.id));
+        setCombo(0);
+        setCoherence(prev => Math.max(0, prev - (arg.type === 'kritik' ? 30 : 15)));
+        setArgsDropped(prev => prev + 1);
+        setDropEffect(true);
+        setTimeout(() => setDropEffect(false), 300);
+      }, []);
+      
+      // Unleash THE SPREAD
+      const unleashSpread = useCallback(() => {
+        if (spreadMeter < 100 || gameState !== 'playing') return;
+        
+        // Clear all arguments with massive points
+        const clearedArgs = arguments_.length;
+        const bonusPoints = clearedArgs * 200 * (1 + combo * 0.1);
+        
+        setScore(prev => prev + Math.floor(bonusPoints));
+        setArguments([]);
+        setSpreadMeter(0);
+        setCombo(prev => prev + clearedArgs);
+        setSpreadEffect(true);
+        setArgsAnswered(prev => prev + clearedArgs);
+        
+        setTimeout(() => setSpreadEffect(false), 800);
+        
+        // Big combo word
+        setParticles(prev => [...prev, {
+          id: particleIdRef.current++,
+          type: 'combo',
+          text: 'SPREAD!!!',
+          x: 50,
+          y: 50,
+          dx: 0,
+          dy: -50,
+        }]);
+      }, [spreadMeter, gameState, arguments_, combo]);
+      
+      // Game loop
+      useEffect(() => {
+        if (gameState !== 'playing') return;
+        
+        // Argument movement and drop detection
+        gameLoopRef.current = setInterval(() => {
+          setArguments(prev => {
+            const now = Date.now();
+            const updated = [];
+            
+            prev.forEach(arg => {
+              const elapsed = now - arg.createdAt;
+              const progress = elapsed / arg.duration;
+              
+              if (progress >= 1) {
+                // Dropped!
+                handleDrop(arg);
+              } else {
+                updated.push({ ...arg, progress });
+              }
+            });
+            
+            return updated;
+          });
+        }, 50);
+        
+        // Spawn new arguments
+        const baseInterval = Math.max(800, 2000 - wave * 150);
+        spawnRef.current = setInterval(spawnArgument, baseInterval);
+        
+        return () => {
+          clearInterval(gameLoopRef.current);
+          clearInterval(spawnRef.current);
+        };
+      }, [gameState, wave, spawnArgument, handleDrop]);
+      
+      // Wave progression
+      useEffect(() => {
+        if (gameState !== 'playing') return;
+        
+        const waveInterval = setInterval(() => {
+          setWave(prev => {
+            const newWave = prev + 1;
+            if (newWave <= 5) {
+              setWaveDisplay(true);
+              setTimeout(() => setWaveDisplay(false), 1500);
+            }
+            return newWave;
+          });
+        }, 15000); // New wave every 15 seconds
+        
+        return () => clearInterval(waveInterval);
+      }, [gameState]);
+      
+      // Check game over conditions
+      useEffect(() => {
+        if (coherence <= 0 && gameState === 'playing') {
+          setGameState('defeat');
+        } else if (wave > 5 && gameState === 'playing') {
+          setGameState('victory');
+        }
+      }, [coherence, wave, gameState]);
+      
+      // Render start screen
+      if (gameState === 'start') {
+        return (
+          <div className="start-screen">
+            <div className="start-title">THE SPREAD</div>
+            <div className="start-subtitle">TAP BATTLE DEBATE</div>
+            
+            <div className="start-instructions">
+              <strong>Arguments fly at you.</strong><br/>
+              Tap them before they DROP.<br/><br/>
+              <strong>Choose your response:</strong><br/>
+              ⚔️ ANSWER — Standard defense<br/>
+              🔄 TURN — 1.5x points!<br/>
+              ❓ QUESTION — Build combo<br/><br/>
+              <strong>Fill the meter, unleash THE SPREAD!</strong>
+            </div>
+            
+            <button className="start-btn" onClick={startGame}>
+              FLOW
+            </button>
+          </div>
+        );
+      }
+      
+      // Render game over
+      if (gameState === 'victory' || gameState === 'defeat') {
+        return (
+          <div className="gameover-screen">
+            <div className={`gameover-title ${gameState}`}>
+              {gameState === 'victory' ? 'BALLOT: AFF' : 'BALLOT: NEG'}
+            </div>
+            <div className="final-score">{score.toLocaleString()}</div>
+            <div className="final-stats">
+              Max Combo: <span>{maxCombo}x</span><br/>
+              Arguments Answered: <span>{argsAnswered}</span><br/>
+              Drops: <span>{argsDropped}</span><br/>
+              Waves Survived: <span>{Math.min(wave, 5)}/5</span>
+            </div>
+            <button className="retry-btn" onClick={startGame}>
+              RETRY
+            </button>
+          </div>
+        );
+      }
+      
+      // Main game render
+      return (
+        <div className="game-container">
+          {/* HUD */}
+          <div className="hud">
+            <div className="hud-top">
+              <div className="combo-display-container">
+                <div className={`combo-display ${combo > 0 ? 'pop' : ''}`}>
+                  {combo}x
+                </div>
+                <div className="combo-label">COMBO</div>
+              </div>
+              
+              <div className="score-display">
+                <div className="score-value">{score.toLocaleString()}</div>
+                <div className="score-label">SCORE</div>
+              </div>
+            </div>
+            
+            <div className="meters">
+              <div className="meter">
+                <div className="meter-label">COHERENCE</div>
+                <div className="meter-bar">
+                  <div 
+                    className={`meter-fill coherence ${coherence < 30 ? 'low' : ''}`}
+                    style={{ width: `${coherence}%` }}
+                  />
+                </div>
+              </div>
+              
+              <div className="meter">
+                <div className="meter-label">SPREAD</div>
+                <div className="meter-bar">
+                  <div 
+                    className={`meter-fill spread ${spreadMeter >= 100 ? 'ready' : ''}`}
+                    style={{ width: `${spreadMeter}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Wave indicator */}
+          {waveDisplay && (
+            <div className="wave-indicator">WAVE {wave}</div>
+          )}
+          
+          {/* Battle area with arguments */}
+          <div className="battle-area">
+            {arguments_.map(arg => (
+              <div
+                key={arg.id}
+                className={`argument ${arg.type}`}
+                style={{
+                  left: `${arg.x}%`,
+                  top: `${(arg.progress || 0) * 100}%`,
+                  transform: 'translate(-50%, 0)',
+                  animationDuration: `${arg.duration}ms`,
+                  animationPlayState: 'paused',
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedResponse) {
+                    handleTapArgument(arg, selectedResponse);
+                    setSelectedResponse(null);
+                  } else {
+                    handleTapArgument(arg, 'answer');
+                  }
+                }}
+              >
+                {arg.text}
+              </div>
+            ))}
+            
+            {/* Particles */}
+            {particles.map(p => (
+              <div
+                key={p.id}
+                className={`particle ${p.type}`}
+                style={{
+                  left: `${p.x}%`,
+                  top: `${p.y}%`,
+                  '--dx': `${p.dx}px`,
+                  '--dy': `${p.dy}px`,
+                }}
+              >
+                {p.text}
+              </div>
+            ))}
+          </div>
+          
+          {/* Response zone */}
+          <div className="response-zone">
+            <div className="danger-line" />
+            
+            <div className="response-buttons">
+              <button 
+                className={`response-btn answer ${selectedResponse === 'answer' ? 'selected' : ''}`}
+                onClick={() => setSelectedResponse('answer')}
+              >
+                <span className="btn-icon">⚔️</span>
+                ANSWER
+              </button>
+              
+              <button 
+                className={`response-btn turn ${selectedResponse === 'turn' ? 'selected' : ''}`}
+                onClick={() => setSelectedResponse('turn')}
+              >
+                <span className="btn-icon">🔄</span>
+                TURN
+              </button>
+              
+              <button 
+                className={`response-btn question ${selectedResponse === 'question' ? 'selected' : ''}`}
+                onClick={() => setSelectedResponse('question')}
+              >
+                <span className="btn-icon">❓</span>
+                QUESTION
+              </button>
+            </div>
+            
+            <button 
+              className={`spread-btn ${spreadMeter >= 100 ? 'ready' : 'charging'}`}
+              onClick={unleashSpread}
+              disabled={spreadMeter < 100}
+            >
+              {spreadMeter >= 100 ? '🌊 UNLEASH THE SPREAD 🌊' : `CHARGING... ${spreadMeter}%`}
+            </button>
+          </div>
+          
+          {/* Effects */}
+          {dropEffect && (
+            <>
+              <div className="drop-flash" />
+              <div className="drop-text">DROP!</div>
+            </>
+          )}
+          
+          {kritikOverlay && (
+            <div className="kritik-overlay" onClick={() => setKritikOverlay(null)}>
+              <div className="kritik-kanji">{kritikOverlay.kanji}</div>
+              <div className="kritik-name">{kritikOverlay.name}</div>
+            </div>
+          )}
+          
+          {spreadEffect && <div className="spread-overlay" />}
+        </div>
+      );
+    }
+    
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TapBattleGame />);
+  </script>
+</body>
+</html>
