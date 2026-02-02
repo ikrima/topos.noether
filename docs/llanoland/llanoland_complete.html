@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLANOLAND - Complete Experience</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --mm-pink: #ff6b9d;
+            --mm-blue: #6bcfff;
+            --mm-yellow: #ffe66b;
+            --mm-green: #6bffb8;
+            --mm-purple: #b86bff;
+            --mm-orange: #ffb86b;
+            --bg: #0a0810;
+            --panel: #12101a;
+            --card: #1a1525;
+        }
+        
+        body {
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* === IMP CURSOR === */
+        #imp {
+            position: fixed;
+            width: 28px;
+            height: 28px;
+            pointer-events: none;
+            z-index: 10000;
+            transition: transform 0.08s ease-out;
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+            opacity: 0;
+        }
+        
+        body.create-mode { cursor: none; }
+        body.create-mode #imp { opacity: 1; }
+        
+        #imp.grabbing { transform: scale(1.4); }
+        #imp.happy { animation: impHappy 0.3s ease; }
+        
+        @keyframes impHappy {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.3) rotate(-15deg); }
+            75% { transform: scale(1.3) rotate(15deg); }
+        }
+        
+        /* === MAIN LAYOUT === */
+        #app {
+            display: grid;
+            grid-template-columns: 1fr;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* === GAME CANVAS === */
+        #game-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(ellipse at center, #1a1525 0%, #0a0810 70%);
+            position: relative;
+        }
+        
+        #game-canvas {
+            border: 3px solid #2a2540;
+            border-radius: 8px;
+            image-rendering: pixelated;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        body.create-mode #game-canvas {
+            box-shadow: 0 0 0 4px var(--mm-pink), 0 0 40px rgba(255, 107, 157, 0.3);
+        }
+        
+        /* === TOP BAR === */
+        #top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        
+        .top-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        #game-title {
+            font-size: 18px;
+            font-weight: bold;
+            background: linear-gradient(90deg, var(--mm-yellow), var(--mm-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        #room-name {
+            font-size: 12px;
+            color: #666;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+        }
+        
+        .top-center {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .mode-toggle {
+            display: flex;
+            background: #1a1525;
+            border-radius: 24px;
+            padding: 4px;
+            border: 2px solid #2a2540;
+        }
+        
+        .mode-btn {
+            padding: 8px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 20px;
+            color: #666;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .mode-btn:hover { color: #aaa; }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--mm-pink), var(--mm-purple));
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+        }
+        
+        .mode-btn.active.play-mode {
+            background: linear-gradient(135deg, var(--mm-green), #4ade80);
+            box-shadow: 0 4px 12px rgba(107, 255, 184, 0.3);
+        }
+        
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        /* === HUD (Play Mode) === */
+        #hud {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        body.create-mode #hud {
+            opacity: 0.3;
+            transform: translateX(-10px);
+        }
+        
+        .hud-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+        }
+        
+        .hud-icon { font-size: 16px; }
+        
+        .hud-track {
+            width: 100px;
+            height: 8px;
+            background: #1a1525;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .hud-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .hud-fill.confidence { background: linear-gradient(90deg, #336, #66a); }
+        .hud-fill.understanding { background: linear-gradient(90deg, #363, #6a6); }
+        
+        .hud-text {
+            font-size: 10px;
+            color: #888;
+            min-width: 24px;
+        }
+        
+        /* Items */
+        .hud-items {
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 8px;
+        }
+        
+        .hud-item {
+            width: 32px;
+            height: 32px;
+            background: #1a1525;
+            border: 2px solid #2a2540;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            opacity: 0.3;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .hud-item.collected { opacity: 1; }
+        .hud-item.active { border-color: var(--mm-yellow); box-shadow: 0 0 12px rgba(255, 230, 107, 0.4); }
+        
+        /* === CREATE MODE TOOLBOX === */
+        #toolbox {
+            position: absolute;
+            left: 0;
+            top: 56px;
+            bottom: 0;
+            width: 260px;
+            background: linear-gradient(180deg, rgba(18, 16, 26, 0.95) 0%, rgba(10, 8, 16, 0.98) 100%);
+            border-right: 2px solid #2a2540;
+            padding: 16px;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            z-index: 50;
+        }
+        
+        body.create-mode #toolbox {
+            transform: translateX(0);
+        }
+        
+        .toolbox-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .toolbox-title {
+            font-size: 16px;
+            font-weight: bold;
+            background: linear-gradient(90deg, var(--mm-pink), var(--mm-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .toolbox-subtitle {
+            font-size: 10px;
+            color: #555;
+            margin-top: 4px;
+        }
+        
+        .tool-section {
+            margin-bottom: 20px;
+        }
+        
+        .section-label {
+            font-size: 10px;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, #333, transparent);
+        }
+        
+        /* Thing palette */
+        .thing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        
+        .thing {
+            aspect-ratio: 1;
+            background: var(--card);
+            border: 2px solid #2a2540;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-size: 24px;
+        }
+        
+        .thing:hover {
+            transform: scale(1.1) rotate(-5deg);
+            border-color: var(--mm-pink);
+            box-shadow: 0 8px 20px rgba(255, 107, 157, 0.3);
+        }
+        
+        .thing:active { transform: scale(0.95); }
+        
+        .thing span {
+            font-size: 8px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* Behavior chips */
+        .behavior-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .behavior-chip {
+            padding: 6px 10px;
+            background: linear-gradient(135deg, #252035, #1a1525);
+            border: 2px solid #3a3050;
+            border-radius: 16px;
+            font-size: 10px;
+            cursor: grab;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .behavior-chip:hover {
+            transform: translateY(-3px);
+            border-color: var(--mm-blue);
+            box-shadow: 0 6px 12px rgba(107, 207, 255, 0.2);
+        }
+        
+        /* Color blobs */
+        .color-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .color-blob {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3);
+        }
+        
+        .color-blob:hover { transform: scale(1.3); }
+        .color-blob.selected { box-shadow: 0 0 0 3px #fff, inset 0 -3px 6px rgba(0,0,0,0.3); }
+        
+        /* Playful sliders */
+        .playful-slider {
+            margin-bottom: 14px;
+        }
+        
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        .slider-value { color: var(--mm-yellow); font-weight: bold; }
+        
+        .slider-track {
+            height: 20px;
+            background: #1a1525;
+            border-radius: 10px;
+            position: relative;
+            cursor: grab;
+            overflow: hidden;
+        }
+        
+        .slider-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--mm-pink), var(--mm-purple));
+            border-radius: 10px;
+            transition: width 0.1s;
+            position: relative;
+        }
+        
+        .slider-fill::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            height: 6px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.25), transparent);
+            border-radius: 3px;
+        }
+        
+        .slider-thumb {
+            position: absolute;
+            right: -10px;
+            top: -2px;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* === RIGHT PANEL (Properties) === */
+        #properties-panel {
+            position: absolute;
+            right: 0;
+            top: 56px;
+            bottom: 0;
+            width: 280px;
+            background: linear-gradient(180deg, rgba(18, 16, 26, 0.95) 0%, rgba(10, 8, 16, 0.98) 100%);
+            border-left: 2px solid #2a2540;
+            padding: 16px;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            z-index: 50;
+        }
+        
+        body.create-mode #properties-panel {
+            transform: translateX(0);
+        }
+        
+        .props-title {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        
+        /* Selected entity props */
+        .entity-props {
+            background: var(--card);
+            border: 2px solid #2a2540;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .entity-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a2540;
+        }
+        
+        .entity-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .entity-name {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .prop-row {
+            margin-bottom: 10px;
+        }
+        
+        .prop-label {
+            font-size: 9px;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        
+        .prop-input {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg);
+            border: 2px solid #2a2540;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        
+        .prop-input:focus {
+            outline: none;
+            border-color: var(--mm-pink);
+        }
+        
+        .prop-select {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg);
+            border: 2px solid #2a2540;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        
+        /* Attached behaviors */
+        .attached-behaviors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        
+        .attached-behavior {
+            padding: 4px 8px;
+            background: rgba(107, 207, 255, 0.2);
+            border: 1px solid var(--mm-blue);
+            border-radius: 10px;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .attached-behavior .remove {
+            cursor: pointer;
+            opacity: 0.5;
+        }
+        
+        .attached-behavior .remove:hover { opacity: 1; }
+        
+        /* Delete button */
+        .delete-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(200, 60, 60, 0.2);
+            border: 2px solid #c44;
+            border-radius: 8px;
+            color: #f66;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        
+        .delete-btn:hover {
+            background: rgba(200, 60, 60, 0.3);
+        }
+        
+        /* Room stats */
+        .room-stats {
+            background: var(--card);
+            border: 2px solid #2a2540;
+            border-radius: 12px;
+            padding: 12px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 4px 0;
+            border-bottom: 1px solid #1a1525;
+        }
+        
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #666; }
+        .stat-value { color: var(--mm-blue); font-weight: bold; }
+        
+        /* === COMBAT OVERLAY === */
+        #combat-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 8, 16, 0.95);
+            z-index: 200;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        #combat-overlay.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .combat-arena {
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .combatants {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .combatant {
+            text-align: center;
+            width: 45%;
+        }
+        
+        .combatant-sprite {
+            font-size: 64px;
+            margin-bottom: 10px;
+            animation: combatantIdle 2s ease-in-out infinite;
+        }
+        
+        @keyframes combatantIdle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .combatant-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .combatant.player .combatant-name { color: var(--mm-blue); }
+        .combatant.opponent .combatant-name { color: var(--mm-pink); }
+        
+        .combat-bar {
+            height: 16px;
+            background: #1a1525;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 6px;
+            position: relative;
+        }
+        
+        .combat-bar-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .combat-bar-fill.confidence { background: linear-gradient(90deg, #336, #66a); }
+        .combat-bar-fill.coherence { background: linear-gradient(90deg, #633, #a66); }
+        .combat-bar-fill.understanding { background: linear-gradient(90deg, #363, #6a6); }
+        
+        .combat-bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 9px;
+            font-weight: bold;
+        }
+        
+        #combat-message {
+            text-align: center;
+            padding: 16px;
+            background: var(--card);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #combat-moves {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        
+        .move-btn {
+            padding: 12px 8px;
+            background: var(--card);
+            border: 2px solid #3a3050;
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+        
+        .move-btn:hover:not(:disabled) {
+            background: #252035;
+            transform: translateY(-2px);
+            border-color: #5a5070;
+        }
+        
+        .move-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .move-btn small {
+            display: block;
+            font-size: 8px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* === DIALOGUE BOX === */
+        #dialogue-box {
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            background: rgba(26, 21, 37, 0.95);
+            border: 3px solid #4a4a6a;
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 150;
+        }
+        
+        #dialogue-box.active { display: block; }
+        
+        #dialogue-speaker {
+            color: var(--mm-yellow);
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        #dialogue-text {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        #dialogue-prompt {
+            text-align: right;
+            font-size: 10px;
+            color: #555;
+            margin-top: 8px;
+        }
+        
+        /* === SPARKLES === */
+        .sparkle {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            animation: sparkle 0.6s ease-out forwards;
+        }
+        
+        @keyframes sparkle {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: scale(1.5) rotate(180deg); opacity: 0; }
+        }
+        
+        /* === TOAST === */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--mm-pink), var(--mm-purple));
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 8px 24px rgba(255, 107, 157, 0.4);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 10000;
+        }
+        
+        #toast.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        /* === PLACED ENTITIES (Create Mode) === */
+        .placed-entity {
+            position: absolute;
+            cursor: grab;
+            transition: filter 0.2s, box-shadow 0.2s;
+            z-index: 10;
+        }
+        
+        .placed-entity:hover {
+            filter: brightness(1.3);
+        }
+        
+        .placed-entity.selected {
+            box-shadow: 0 0 0 3px var(--mm-yellow), 0 0 20px rgba(255, 230, 107, 0.4);
+            border-radius: 8px;
+        }
+        
+        .placed-entity.dragging {
+            cursor: grabbing;
+            z-index: 100;
+            filter: brightness(1.4);
+        }
+        
+        .entity-body {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            position: relative;
+        }
+        
+        .entity-body.squish {
+            animation: squish 0.2s ease;
+        }
+        
+        @keyframes squish {
+            0%, 100% { transform: scale(1, 1); }
+            50% { transform: scale(1.2, 0.8); }
+        }
+        
+        /* Googly eyes on entities */
+        .googly-container {
+            position: absolute;
+            top: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+        }
+        
+        .googly-eye {
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .googly-eye::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #222;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+        }
+        
+        /* Behavior indicators */
+        .behavior-dots {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2px;
+        }
+        
+        .behavior-dot {
+            width: 4px;
+            height: 4px;
+            background: var(--mm-blue);
+            border-radius: 50%;
+        }
+        
+        /* === CONTROLS HINT === */
+        #controls-hint {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            padding: 10px 14px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 8px;
+            font-size: 10px;
+            color: #555;
+            z-index: 50;
+            transition: opacity 0.3s;
+        }
+        
+        body.create-mode #controls-hint { opacity: 0.5; }
+        
+        #controls-hint kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #222;
+            border-radius: 3px;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- IMP CURSOR -->
+    <svg id="imp" viewBox="0 0 28 28">
+        <defs>
+            <linearGradient id="impGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#ff6b9d"/>
+                <stop offset="100%" style="stop-color:#b86bff"/>
+            </linearGradient>
+        </defs>
+        <ellipse cx="14" cy="16" rx="10" ry="9" fill="url(#impGrad)"/>
+        <circle cx="10" cy="14" r="3.5" fill="#fff"/>
+        <circle cx="18" cy="14" r="3.5" fill="#fff"/>
+        <circle id="imp-pupil-l" cx="11" cy="14" r="1.8" fill="#222"/>
+        <circle id="imp-pupil-r" cx="19" cy="14" r="1.8" fill="#222"/>
+        <ellipse cx="14" cy="19" rx="2.5" ry="1.5" fill="#ff8ab5"/>
+        <path d="M6 8 Q10 4 14 8" stroke="#ff6b9d" stroke-width="2" fill="none"/>
+        <path d="M14 8 Q18 4 22 8" stroke="#ff6b9d" stroke-width="2" fill="none"/>
+    </svg>
+
+    <div id="app">
+        <div id="game-container">
+            <canvas id="game-canvas" width="512" height="384"></canvas>
+            
+            <!-- Placed entities in create mode -->
+            <div id="placed-entities"></div>
+        </div>
+        
+        <!-- TOP BAR -->
+        <div id="top-bar">
+            <div class="top-left">
+                <div id="game-title">✨ LLANOLAND</div>
+                <div id="room-name">Central Chamber</div>
+            </div>
+            
+            <div class="top-center">
+                <div class="mode-toggle">
+                    <button class="mode-btn play-mode active" onclick="Game.setMode('play')">
+                        ▶️ Play
+                    </button>
+                    <button class="mode-btn" onclick="Game.setMode('create')">
+                        ✨ Create
+                    </button>
+                </div>
+            </div>
+            
+            <div class="top-right">
+                <div id="mode-hint" style="font-size: 10px; color: #555;">
+                    Press <kbd>Tab</kbd> to switch modes
+                </div>
+            </div>
+        </div>
+        
+        <!-- HUD (Play Mode) -->
+        <div id="hud">
+            <div class="hud-bar">
+                <span class="hud-icon">💙</span>
+                <div class="hud-track">
+                    <div id="hud-confidence" class="hud-fill confidence" style="width: 100%"></div>
+                </div>
+                <span class="hud-text" id="hud-conf-text">100</span>
+            </div>
+            <div class="hud-bar">
+                <span class="hud-icon">💡</span>
+                <div class="hud-track">
+                    <div id="hud-understanding" class="hud-fill understanding" style="width: 0%"></div>
+                </div>
+                <span class="hud-text" id="hud-und-text">0</span>
+            </div>
+            <div class="hud-items">
+                <div class="hud-item" id="item-lantern" onclick="Game.selectItem('lantern')" title="Lantern [1]">🔦</div>
+                <div class="hud-item" id="item-scroll" onclick="Game.selectItem('scroll')" title="Scroll [2]">📜</div>
+                <div class="hud-item" id="item-forms" onclick="Game.selectItem('forms')" title="Forms Vision [3]">👁️</div>
+            </div>
+        </div>
+        
+        <!-- CREATE MODE TOOLBOX -->
+        <div id="toolbox">
+            <div class="toolbox-header">
+                <div class="toolbox-title">✨ IMP TOOLBOX</div>
+                <div class="toolbox-subtitle">Grab anything. Make it yours.</div>
+            </div>
+            
+            <div class="tool-section">
+                <div class="section-label">🎨 Things</div>
+                <div class="thing-grid">
+                    <div class="thing" data-thing="fire" draggable="true">🔥<span>Fire</span></div>
+                    <div class="thing" data-thing="shadow" draggable="true">👥<span>Shadow</span></div>
+                    <div class="thing" data-thing="chest" draggable="true">📦<span>Chest</span></div>
+                    <div class="thing" data-thing="npc" draggable="true">🧙<span>NPC</span></div>
+                    <div class="thing" data-thing="letter" draggable="true">💌<span>Letter</span></div>
+                    <div class="thing" data-thing="pot" draggable="true">🏺<span>Pot</span></div>
+                    <div class="thing" data-thing="bush" draggable="true">🌿<span>Bush</span></div>
+                    <div class="thing" data-thing="rock" draggable="true">🪨<span>Rock</span></div>
+                    <div class="thing" data-thing="portal" draggable="true">🌀<span>Portal</span></div>
+                </div>
+            </div>
+            
+            <div class="tool-section">
+                <div class="section-label">⚡ Behaviors</div>
+                <div class="behavior-grid">
+                    <div class="behavior-chip" data-behavior="wander" draggable="true">🚶 Wander</div>
+                    <div class="behavior-chip" data-behavior="follow" draggable="true">🎯 Follow</div>
+                    <div class="behavior-chip" data-behavior="flee" draggable="true">💨 Flee</div>
+                    <div class="behavior-chip" data-behavior="bounce" draggable="true">⬆️ Bounce</div>
+                    <div class="behavior-chip" data-behavior="talk" draggable="true">💬 Talk</div>
+                    <div class="behavior-chip" data-behavior="fight" draggable="true">⚔️ Fight</div>
+                </div>
+            </div>
+            
+            <div class="tool-section">
+                <div class="section-label">🎨 Colors</div>
+                <div class="color-row">
+                    <div class="color-blob selected" style="background: #7eb8ff;" data-color="#7eb8ff"></div>
+                    <div class="color-blob" style="background: #ff7eb3;" data-color="#ff7eb3"></div>
+                    <div class="color-blob" style="background: #ffe67e;" data-color="#ffe67e"></div>
+                    <div class="color-blob" style="background: #7eff9e;" data-color="#7eff9e"></div>
+                    <div class="color-blob" style="background: #b87eff;" data-color="#b87eff"></div>
+                </div>
+            </div>
+            
+            <div class="tool-section">
+                <div class="section-label">🎚️ Tuning</div>
+                
+                <div class="playful-slider" data-param="speed">
+                    <div class="slider-header">
+                        <span>Player Speed</span>
+                        <span class="slider-value">3</span>
+                    </div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 37.5%;">
+                            <div class="slider-thumb">🏃</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="playful-slider" data-param="shake">
+                    <div class="slider-header">
+                        <span>Screen Shake</span>
+                        <span class="slider-value">5</span>
+                    </div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 25%;">
+                            <div class="slider-thumb">📳</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="playful-slider" data-param="damage">
+                    <div class="slider-header">
+                        <span>Combat Damage</span>
+                        <span class="slider-value">10</span>
+                    </div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 33%;">
+                            <div class="slider-thumb">⚔️</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PROPERTIES PANEL -->
+        <div id="properties-panel">
+            <div class="props-title">📋 Selected Entity</div>
+            
+            <div class="entity-props" id="entity-props" style="display: none;">
+                <div class="entity-header">
+                    <div class="entity-icon" id="prop-icon">🔥</div>
+                    <div class="entity-name" id="prop-type">Fire</div>
+                </div>
+                
+                <div class="prop-row">
+                    <div class="prop-label">Name</div>
+                    <input class="prop-input" id="prop-name" placeholder="Give it a name...">
+                </div>
+                
+                <div class="prop-row">
+                    <div class="prop-label">Contains Item</div>
+                    <select class="prop-select" id="prop-item">
+                        <option value="">None</option>
+                        <option value="lantern">Lantern</option>
+                        <option value="scroll">Scroll</option>
+                        <option value="forms">Forms Vision</option>
+                        <option value="evidence">Evidence</option>
+                    </select>
+                </div>
+                
+                <div class="prop-row">
+                    <div class="prop-label">AI Pattern</div>
+                    <select class="prop-select" id="prop-pattern">
+                        <option value="socratic">Socratic</option>
+                        <option value="aggressive">Aggressive</option>
+                        <option value="passive">Passive</option>
+                    </select>
+                </div>
+                
+                <div class="prop-row">
+                    <div class="prop-label">Dialogue</div>
+                    <input class="prop-input" id="prop-dialogue" placeholder="What does it say?">
+                </div>
+                
+                <div class="prop-row">
+                    <div class="prop-label">Behaviors</div>
+                    <div class="attached-behaviors" id="attached-behaviors"></div>
+                </div>
+                
+                <button class="delete-btn" onclick="Creator.deleteSelected()">🗑️ Delete</button>
+            </div>
+            
+            <div class="props-title" style="margin-top: 20px;">📊 Room Stats</div>
+            <div class="room-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Entities</span>
+                    <span class="stat-value" id="stat-entities">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">NPCs</span>
+                    <span class="stat-value" id="stat-npcs">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Chests</span>
+                    <span class="stat-value" id="stat-chests">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Fires</span>
+                    <span class="stat-value" id="stat-fires">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- COMBAT OVERLAY -->
+        <div id="combat-overlay">
+            <div class="combat-arena">
+                <div class="combatants">
+                    <div class="combatant player">
+                        <div class="combatant-sprite">🧑‍🎓</div>
+                        <div class="combatant-name">YOU</div>
+                        <div class="combat-bar">
+                            <div id="combat-confidence" class="combat-bar-fill confidence" style="width: 100%"></div>
+                            <span class="combat-bar-text" id="combat-conf-text">100/100</span>
+                        </div>
+                        <div class="combat-bar" style="height: 10px;">
+                            <div id="combat-understanding" class="combat-bar-fill understanding" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="combatant opponent">
+                        <div class="combatant-sprite" id="opponent-sprite">🧙</div>
+                        <div class="combatant-name" id="opponent-name">OPPONENT</div>
+                        <div class="combat-bar">
+                            <div id="combat-coherence" class="combat-bar-fill coherence" style="width: 100%"></div>
+                            <span class="combat-bar-text" id="combat-coh-text">60/60</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="combat-message">The debate begins!</div>
+                
+                <div id="combat-moves">
+                    <button class="move-btn" onclick="Combat.execute('question')">QUESTION<small>+10 Understanding</small></button>
+                    <button class="move-btn" onclick="Combat.execute('statement')">STATEMENT<small>Damage</small></button>
+                    <button class="move-btn" onclick="Combat.execute('evidence')">EVIDENCE<small>Load for 2x</small></button>
+                    <button class="move-btn" onclick="Combat.execute('concede')">CONCEDE<small>Heal</small></button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DIALOGUE BOX -->
+        <div id="dialogue-box">
+            <div id="dialogue-speaker">Speaker</div>
+            <div id="dialogue-text">Text...</div>
+            <div id="dialogue-prompt">▼ SPACE</div>
+        </div>
+    </div>
+    
+    <div id="toast">✨ Created!</div>
+    
+    <div id="controls-hint">
+        <kbd>WASD</kbd> Move
+        <kbd>Space</kbd> Interact
+        <kbd>Tab</kbd> Create Mode
+    </div>
+
+<script>
+// ============ CONSTANTS ============
+const TILE = 32;
+const COLS = 16;
+const ROWS = 12;
+const WIDTH = 512;
+const HEIGHT = 384;
+
+// ============ TUNING ============
+const Tuning = {
+    playerSpeed: 3,
+    screenShake: 5,
+    combatDamage: 10
+};
+
+// ============ IMP ============
+const Imp = {
+    el: document.getElementById('imp'),
+    x: 0, y: 0,
+    
+    init() {
+        document.addEventListener('mousemove', e => {
+            this.x = e.clientX;
+            this.y = e.clientY;
+            this.el.style.left = `${e.clientX - 14}px`;
+            this.el.style.top = `${e.clientY - 14}px`;
+            
+            // Pupils follow cursor direction
+            const vx = Math.min(1.5, Math.max(-1.5, (e.movementX || 0) * 0.2));
+            document.getElementById('imp-pupil-l').setAttribute('cx', 11 + vx);
+            document.getElementById('imp-pupil-r').setAttribute('cx', 19 + vx);
+        });
+    },
+    
+    happy() {
+        this.el.classList.remove('happy');
+        void this.el.offsetWidth;
+        this.el.classList.add('happy');
+        spawnSparkles(this.x, this.y, 6);
+    },
+    
+    grab() { this.el.classList.add('grabbing'); },
+    release() { this.el.classList.remove('grabbing'); }
+};
+
+// ============ SPARKLES ============
+function spawnSparkles(x, y, count) {
+    const colors = ['#ff6b9d', '#6bcfff', '#ffe66b', '#6bffb8', '#b86bff'];
+    for (let i = 0; i < count; i++) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        s.style.left = `${x + (Math.random() - 0.5) * 40}px`;
+        s.style.top = `${y + (Math.random() - 0.5) * 40}px`;
+        s.style.background = colors[Math.floor(Math.random() * colors.length)];
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 600);
+    }
+}
+
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('visible');
+    setTimeout(() => t.classList.remove('visible'), 2000);
+}
+
+// ============ GAME STATE ============
+const Game = {
+    canvas: null,
+    ctx: null,
+    mode: 'play', // 'play' or 'create'
+    
+    player: { x: 7 * TILE, y: 6 * TILE, facing: 'down' },
+    keys: {},
+    
+    confidence: 100,
+    understanding: 0,
+    items: { lantern: false, scroll: false, forms: false },
+    activeItem: null,
+    
+    currentRoom: 'central',
+    rooms: {
+        central: {
+            name: 'Central Chamber',
+            entities: [
+                { id: 1, type: 'fire', x: 7, y: 3, behaviors: [] },
+                { id: 2, type: 'shadow', x: 4, y: 4, behaviors: [] },
+                { id: 3, type: 'shadow', x: 10, y: 4, behaviors: [] },
+                { id: 4, type: 'chest', x: 12, y: 8, item: 'lantern', collected: false, behaviors: [] },
+                { id: 5, type: 'npc', x: 6, y: 8, name: 'Socrates', pattern: 'socratic', dialogue: 'Ah, a seeker emerges!', defeated: false, behaviors: ['talk', 'fight'] }
+            ],
+            tiles: null
+        }
+    },
+    
+    nextEntityId: 100,
+    
+    init() {
+        this.canvas = document.getElementById('game-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Generate tiles
+        this.generateTiles();
+        
+        // Bind input
+        document.addEventListener('keydown', e => {
+            this.keys[e.code] = true;
+            
+            if (e.code === 'Tab') {
+                e.preventDefault();
+                this.setMode(this.mode === 'play' ? 'create' : 'play');
+            }
+            if (e.code === 'Space' && this.mode === 'play') {
+                e.preventDefault();
+                this.interact();
+            }
+            if (e.code === 'Digit1') this.selectItem('lantern');
+            if (e.code === 'Digit2') this.selectItem('scroll');
+            if (e.code === 'Digit3') this.selectItem('forms');
+        });
+        
+        document.addEventListener('keyup', e => {
+            this.keys[e.code] = false;
+        });
+        
+        Imp.init();
+        Creator.init();
+        Sliders.init();
+        
+        this.loop();
+    },
+    
+    generateTiles() {
+        Object.values(this.rooms).forEach(room => {
+            const tiles = [];
+            for (let y = 0; y < ROWS; y++) {
+                const row = [];
+                for (let x = 0; x < COLS; x++) {
+                    row.push(y === 0 || y === ROWS - 1 || x === 0 || x === COLS - 1 ? 1 : 0);
+                }
+                tiles.push(row);
+            }
+            room.tiles = tiles;
+        });
+    },
+    
+    getRoom() {
+        return this.rooms[this.currentRoom];
+    },
+    
+    setMode(mode) {
+        this.mode = mode;
+        document.body.classList.toggle('create-mode', mode === 'create');
+        
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`.mode-btn${mode === 'play' ? '.play-mode' : ':not(.play-mode)'}`).classList.add('active');
+        
+        if (mode === 'create') {
+            Creator.syncEntities();
+            toast('✨ Create Mode!');
+        } else {
+            Creator.applyChanges();
+            toast('▶️ Play Mode!');
+        }
+    },
+    
+    selectItem(itemId) {
+        if (!this.items[itemId]) return;
+        this.activeItem = this.activeItem === itemId ? null : itemId;
+        
+        document.querySelectorAll('.hud-item').forEach(el => el.classList.remove('active'));
+        if (this.activeItem) {
+            document.getElementById(`item-${itemId}`).classList.add('active');
+        }
+    },
+    
+    interact() {
+        if (Dialogue.active) {
+            Dialogue.advance();
+            return;
+        }
+        
+        const room = this.getRoom();
+        const px = this.player.x + 16;
+        const py = this.player.y + 16;
+        
+        for (const entity of room.entities) {
+            const ex = entity.x * TILE + TILE / 2;
+            const ey = entity.y * TILE + TILE / 2;
+            
+            if (Math.hypot(px - ex, py - ey) < TILE * 1.5) {
+                this.interactWith(entity);
+                return;
+            }
+        }
+    },
+    
+    interactWith(entity) {
+        switch (entity.type) {
+            case 'chest':
+                if (!entity.collected && entity.item) {
+                    entity.collected = true;
+                    this.items[entity.item] = true;
+                    document.getElementById(`item-${entity.item}`).classList.add('collected');
+                    toast(`✨ Found: ${entity.item}!`);
+                    Audio.play('item');
+                }
+                break;
+                
+            case 'npc':
+                if (entity.dialogue) {
+                    Dialogue.show(entity.name || 'NPC', [entity.dialogue], () => {
+                        if (entity.behaviors.includes('fight') && !entity.defeated) {
+                            Combat.start(entity);
+                        }
+                    });
+                } else if (entity.behaviors.includes('fight') && !entity.defeated) {
+                    Combat.start(entity);
+                }
+                break;
+                
+            case 'letter':
+                Dialogue.show("Mother's Letter", [
+                    "My dear child...",
+                    "Question everything — even the questioner.",
+                    "With all my love."
+                ]);
+                Audio.play('item');
+                break;
+                
+            case 'pot':
+            case 'bush':
+                // Break it
+                const room = this.getRoom();
+                room.entities = room.entities.filter(e => e !== entity);
+                Audio.play('hit');
+                break;
+        }
+    },
+    
+    update() {
+        if (this.mode !== 'play' || Dialogue.active || Combat.active) return;
+        
+        const speed = Tuning.playerSpeed;
+        let dx = 0, dy = 0;
+        
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) { dx = -speed; this.player.facing = 'left'; }
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) { dx = speed; this.player.facing = 'right'; }
+        if (this.keys['KeyW'] || this.keys['ArrowUp']) { dy = -speed; this.player.facing = 'up'; }
+        if (this.keys['KeyS'] || this.keys['ArrowDown']) { dy = speed; this.player.facing = 'down'; }
+        
+        const newX = this.player.x + dx;
+        const newY = this.player.y + dy;
+        
+        if (!this.collides(newX, this.player.y)) this.player.x = newX;
+        if (!this.collides(this.player.x, newY)) this.player.y = newY;
+    },
+    
+    collides(x, y) {
+        const room = this.getRoom();
+        const corners = [[x + 4, y + 4], [x + 28, y + 4], [x + 4, y + 28], [x + 28, y + 28]];
+        
+        for (const [cx, cy] of corners) {
+            const tx = Math.floor(cx / TILE);
+            const ty = Math.floor(cy / TILE);
+            if (tx < 0 || tx >= COLS || ty < 0 || ty >= ROWS) return true;
+            if (room.tiles[ty][tx] === 1) return true;
+        }
+        return false;
+    },
+    
+    render() {
+        const ctx = this.ctx;
+        const room = this.getRoom();
+        
+        // Clear
+        ctx.fillStyle = '#0a0810';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        
+        // Tiles
+        for (let y = 0; y < ROWS; y++) {
+            for (let x = 0; x < COLS; x++) {
+                const tile = room.tiles[y][x];
+                ctx.fillStyle = tile === 1 ? '#2d2535' : '#1a1520';
+                ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+            }
+        }
+        
+        // Entities (in play mode)
+        if (this.mode === 'play') {
+            for (const entity of room.entities) {
+                this.renderEntity(ctx, entity);
+            }
+        }
+        
+        // Player
+        if (this.mode === 'play') {
+            ctx.fillStyle = '#4a9eff';
+            ctx.fillRect(this.player.x + 4, this.player.y + 2, 24, 28);
+            ctx.fillStyle = '#6ab4ff';
+            ctx.fillRect(this.player.x + 8, this.player.y, 16, 12);
+        }
+        
+        // Lantern glow
+        if (this.activeItem === 'lantern' && this.items.lantern && this.mode === 'play') {
+            const grd = ctx.createRadialGradient(
+                this.player.x + 16, this.player.y + 16, 0,
+                this.player.x + 16, this.player.y + 16, 100
+            );
+            grd.addColorStop(0, 'rgba(255, 220, 150, 0.2)');
+            grd.addColorStop(1, 'transparent');
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        }
+        
+        // Grid in create mode
+        if (this.mode === 'create') {
+            ctx.strokeStyle = 'rgba(100, 100, 150, 0.15)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * TILE, 0);
+                ctx.lineTo(x * TILE, HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * TILE);
+                ctx.lineTo(WIDTH, y * TILE);
+                ctx.stroke();
+            }
+        }
+    },
+    
+    renderEntity(ctx, entity) {
+        const x = entity.x * TILE;
+        const y = entity.y * TILE;
+        
+        const icons = {
+            fire: '🔥', shadow: '👥', chest: '📦', npc: '🧙',
+            letter: '💌', pot: '🏺', bush: '🌿', rock: '🪨', portal: '🌀'
+        };
+        
+        // Fire glow
+        if (entity.type === 'fire') {
+            const grd = ctx.createRadialGradient(x + 16, y + 16, 0, x + 16, y + 16, 50);
+            grd.addColorStop(0, 'rgba(255, 100, 50, 0.4)');
+            grd.addColorStop(1, 'transparent');
+            ctx.fillStyle = grd;
+            ctx.fillRect(x - 34, y - 34, 100, 100);
+        }
+        
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Chest appearance
+        if (entity.type === 'chest' && entity.collected) {
+            ctx.globalAlpha = 0.4;
+        }
+        
+        ctx.fillText(icons[entity.type] || '❓', x + 16, y + 16);
+        ctx.globalAlpha = 1;
+        
+        // NPC name
+        if (entity.type === 'npc' && entity.name) {
+            ctx.fillStyle = '#ffd700';
+            ctx.font = '9px sans-serif';
+            ctx.fillText(entity.name, x + 16, y - 8);
+        }
+    },
+    
+    updateHUD() {
+        document.getElementById('hud-confidence').style.width = `${this.confidence}%`;
+        document.getElementById('hud-conf-text').textContent = this.confidence;
+        document.getElementById('hud-understanding').style.width = `${Math.min(100, this.understanding)}%`;
+        document.getElementById('hud-und-text').textContent = this.understanding;
+    },
+    
+    loop() {
+        this.update();
+        this.render();
+        this.updateHUD();
+        requestAnimationFrame(() => this.loop());
+    }
+};
+
+// ============ CREATOR (IMP MODE) ============
+const Creator = {
+    placedContainer: null,
+    selectedEntity: null,
+    draggedThing: null,
+    draggedBehavior: null,
+    currentColor: '#7eb8ff',
+    
+    init() {
+        this.placedContainer = document.getElementById('placed-entities');
+        
+        // Thing dragging
+        document.querySelectorAll('.thing').forEach(thing => {
+            thing.addEventListener('dragstart', e => {
+                this.draggedThing = thing.dataset.thing;
+                Imp.grab();
+            });
+            thing.addEventListener('dragend', () => {
+                this.draggedThing = null;
+                Imp.release();
+            });
+        });
+        
+        // Behavior dragging
+        document.querySelectorAll('.behavior-chip').forEach(chip => {
+            chip.addEventListener('dragstart', e => {
+                this.draggedBehavior = chip.dataset.behavior;
+                Imp.grab();
+            });
+            chip.addEventListener('dragend', () => {
+                this.draggedBehavior = null;
+                Imp.release();
+            });
+        });
+        
+        // Canvas drop zone
+        const canvas = Game.canvas;
+        canvas.addEventListener('dragover', e => e.preventDefault());
+        canvas.addEventListener('drop', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / TILE);
+            const y = Math.floor((e.clientY - rect.top) / TILE);
+            
+            if (this.draggedThing) {
+                this.createEntity(this.draggedThing, x, y);
+            }
+        });
+        
+        // Color blobs
+        document.querySelectorAll('.color-blob').forEach(blob => {
+            blob.addEventListener('click', () => {
+                document.querySelectorAll('.color-blob').forEach(b => b.classList.remove('selected'));
+                blob.classList.add('selected');
+                this.currentColor = blob.dataset.color;
+                
+                if (this.selectedEntity) {
+                    this.selectedEntity.color = this.currentColor;
+                    const el = document.querySelector(`[data-entity-id="${this.selectedEntity.id}"]`);
+                    if (el) {
+                        el.querySelector('.entity-body').style.background = `${this.currentColor}40`;
+                    }
+                }
+            });
+        });
+        
+        // Property inputs
+        document.getElementById('prop-name').addEventListener('input', e => {
+            if (this.selectedEntity) this.selectedEntity.name = e.target.value;
+        });
+        document.getElementById('prop-item').addEventListener('change', e => {
+            if (this.selectedEntity) this.selectedEntity.item = e.target.value;
+        });
+        document.getElementById('prop-pattern').addEventListener('change', e => {
+            if (this.selectedEntity) this.selectedEntity.pattern = e.target.value;
+        });
+        document.getElementById('prop-dialogue').addEventListener('input', e => {
+            if (this.selectedEntity) this.selectedEntity.dialogue = e.target.value;
+        });
+    },
+    
+    createEntity(type, x, y) {
+        const room = Game.getRoom();
+        const id = Game.nextEntityId++;
+        
+        const entity = {
+            id,
+            type,
+            x, y,
+            name: type === 'npc' ? 'New NPC' : '',
+            item: '',
+            pattern: 'socratic',
+            dialogue: '',
+            behaviors: [],
+            color: this.currentColor,
+            collected: false,
+            defeated: false
+        };
+        
+        room.entities.push(entity);
+        this.createEntityElement(entity);
+        this.updateStats();
+        
+        Imp.happy();
+        toast(`✨ Created ${type}!`);
+        
+        this.selectEntity(entity);
+    },
+    
+    createEntityElement(entity) {
+        const icons = {
+            fire: '🔥', shadow: '👥', chest: '📦', npc: '🧙',
+            letter: '💌', pot: '🏺', bush: '🌿', rock: '🪨', portal: '🌀'
+        };
+        
+        const el = document.createElement('div');
+        el.className = 'placed-entity';
+        el.dataset.entityId = entity.id;
+        
+        const canvasRect = Game.canvas.getBoundingClientRect();
+        const containerRect = this.placedContainer.getBoundingClientRect();
+        
+        el.style.left = `${entity.x * TILE + canvasRect.left - containerRect.left}px`;
+        el.style.top = `${entity.y * TILE + canvasRect.top - containerRect.top}px`;
+        
+        el.innerHTML = `
+            <div class="googly-container">
+                <div class="googly-eye"></div>
+                <div class="googly-eye"></div>
+            </div>
+            <div class="entity-body" style="background: ${entity.color || '#7eb8ff'}40;">
+                ${icons[entity.type] || '❓'}
+            </div>
+            <div class="behavior-dots"></div>
+        `;
+        
+        // Make draggable
+        this.makeEntityDraggable(el, entity);
+        
+        // Click to select
+        el.addEventListener('click', e => {
+            e.stopPropagation();
+            this.selectEntity(entity);
+        });
+        
+        // Behavior drop
+        el.addEventListener('dragover', e => e.preventDefault());
+        el.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.draggedBehavior) {
+                this.addBehavior(entity, this.draggedBehavior);
+            }
+        });
+        
+        this.placedContainer.appendChild(el);
+        this.updateBehaviorDots(el, entity);
+        
+        // Squish animation
+        el.querySelector('.entity-body').classList.add('squish');
+        setTimeout(() => el.querySelector('.entity-body').classList.remove('squish'), 200);
+    },
+    
+    makeEntityDraggable(el, entity) {
+        let startX, startY, origX, origY;
+        
+        el.addEventListener('mousedown', e => {
+            if (e.button !== 0 || Game.mode !== 'create') return;
+            e.preventDefault();
+            
+            el.classList.add('dragging');
+            Imp.grab();
+            
+            const rect = el.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            origX = rect.left - this.placedContainer.getBoundingClientRect().left;
+            origY = rect.top - this.placedContainer.getBoundingClientRect().top;
+            
+            const onMove = e => {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                el.style.left = `${origX + dx}px`;
+                el.style.top = `${origY + dy}px`;
+            };
+            
+            const onUp = e => {
+                el.classList.remove('dragging');
+                Imp.release();
+                
+                // Snap to grid
+                const canvasRect = Game.canvas.getBoundingClientRect();
+                const containerRect = this.placedContainer.getBoundingClientRect();
+                const relX = parseFloat(el.style.left) + containerRect.left - canvasRect.left;
+                const relY = parseFloat(el.style.top) + containerRect.top - canvasRect.top;
+                
+                entity.x = Math.floor(relX / TILE);
+                entity.y = Math.floor(relY / TILE);
+                
+                entity.x = Math.max(1, Math.min(COLS - 2, entity.x));
+                entity.y = Math.max(1, Math.min(ROWS - 2, entity.y));
+                
+                el.style.left = `${entity.x * TILE + canvasRect.left - containerRect.left}px`;
+                el.style.top = `${entity.y * TILE + canvasRect.top - containerRect.top}px`;
+                
+                // Squish
+                el.querySelector('.entity-body').classList.add('squish');
+                setTimeout(() => el.querySelector('.entity-body').classList.remove('squish'), 200);
+                
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    },
+    
+    selectEntity(entity) {
+        // Deselect previous
+        document.querySelectorAll('.placed-entity').forEach(el => el.classList.remove('selected'));
+        
+        this.selectedEntity = entity;
+        
+        const el = document.querySelector(`[data-entity-id="${entity.id}"]`);
+        if (el) el.classList.add('selected');
+        
+        // Show properties
+        const props = document.getElementById('entity-props');
+        props.style.display = 'block';
+        
+        const icons = {
+            fire: '🔥', shadow: '👥', chest: '📦', npc: '🧙',
+            letter: '💌', pot: '🏺', bush: '🌿', rock: '🪨', portal: '🌀'
+        };
+        
+        document.getElementById('prop-icon').textContent = icons[entity.type] || '❓';
+        document.getElementById('prop-type').textContent = entity.type.charAt(0).toUpperCase() + entity.type.slice(1);
+        document.getElementById('prop-name').value = entity.name || '';
+        document.getElementById('prop-item').value = entity.item || '';
+        document.getElementById('prop-pattern').value = entity.pattern || 'socratic';
+        document.getElementById('prop-dialogue').value = entity.dialogue || '';
+        
+        this.updateAttachedBehaviors(entity);
+    },
+    
+    addBehavior(entity, behavior) {
+        if (!entity.behaviors.includes(behavior)) {
+            entity.behaviors.push(behavior);
+            
+            const el = document.querySelector(`[data-entity-id="${entity.id}"]`);
+            if (el) {
+                this.updateBehaviorDots(el, entity);
+                el.querySelector('.entity-body').classList.add('squish');
+                setTimeout(() => el.querySelector('.entity-body').classList.remove('squish'), 200);
+            }
+            
+            if (this.selectedEntity === entity) {
+                this.updateAttachedBehaviors(entity);
+            }
+            
+            Imp.happy();
+            toast(`⚡ Added ${behavior}!`);
+        }
+    },
+    
+    removeBehavior(entity, behavior) {
+        entity.behaviors = entity.behaviors.filter(b => b !== behavior);
+        
+        const el = document.querySelector(`[data-entity-id="${entity.id}"]`);
+        if (el) this.updateBehaviorDots(el, entity);
+        
+        if (this.selectedEntity === entity) {
+            this.updateAttachedBehaviors(entity);
+        }
+    },
+    
+    updateBehaviorDots(el, entity) {
+        const dots = el.querySelector('.behavior-dots');
+        dots.innerHTML = entity.behaviors.map(() => '<div class="behavior-dot"></div>').join('');
+    },
+    
+    updateAttachedBehaviors(entity) {
+        const container = document.getElementById('attached-behaviors');
+        container.innerHTML = entity.behaviors.map(b => `
+            <div class="attached-behavior">
+                ${b}
+                <span class="remove" onclick="Creator.removeBehavior(Creator.selectedEntity, '${b}')">×</span>
+            </div>
+        `).join('');
+    },
+    
+    deleteSelected() {
+        if (!this.selectedEntity) return;
+        
+        const room = Game.getRoom();
+        room.entities = room.entities.filter(e => e !== this.selectedEntity);
+        
+        const el = document.querySelector(`[data-entity-id="${this.selectedEntity.id}"]`);
+        if (el) el.remove();
+        
+        this.selectedEntity = null;
+        document.getElementById('entity-props').style.display = 'none';
+        
+        this.updateStats();
+        toast('🗑️ Deleted!');
+    },
+    
+    syncEntities() {
+        // Clear existing
+        this.placedContainer.innerHTML = '';
+        
+        // Create elements for all entities
+        const room = Game.getRoom();
+        room.entities.forEach(entity => {
+            this.createEntityElement(entity);
+        });
+        
+        this.updateStats();
+    },
+    
+    applyChanges() {
+        // Hide placed entities (they're rendered on canvas in play mode)
+        this.placedContainer.innerHTML = '';
+        this.selectedEntity = null;
+        document.getElementById('entity-props').style.display = 'none';
+    },
+    
+    updateStats() {
+        const room = Game.getRoom();
+        const entities = room.entities;
+        
+        document.getElementById('stat-entities').textContent = entities.length;
+        document.getElementById('stat-npcs').textContent = entities.filter(e => e.type === 'npc').length;
+        document.getElementById('stat-chests').textContent = entities.filter(e => e.type === 'chest').length;
+        document.getElementById('stat-fires').textContent = entities.filter(e => e.type === 'fire').length;
+    }
+};
+
+// ============ SLIDERS ============
+const Sliders = {
+    active: null,
+    
+    init() {
+        document.querySelectorAll('.playful-slider').forEach(slider => {
+            const track = slider.querySelector('.slider-track');
+            track.addEventListener('mousedown', e => this.start(e, slider));
+        });
+        
+        document.addEventListener('mousemove', e => this.move(e));
+        document.addEventListener('mouseup', () => this.stop());
+    },
+    
+    start(e, slider) {
+        this.active = slider;
+        this.move(e);
+    },
+    
+    move(e) {
+        if (!this.active) return;
+        
+        const track = this.active.querySelector('.slider-track');
+        const fill = this.active.querySelector('.slider-fill');
+        const value = this.active.querySelector('.slider-value');
+        const param = this.active.dataset.param;
+        
+        const rect = track.getBoundingClientRect();
+        let pct = ((e.clientX - rect.left) / rect.width) * 100;
+        pct = Math.max(0, Math.min(100, pct));
+        
+        fill.style.width = `${pct}%`;
+        
+        // Map to actual values
+        let val;
+        switch (param) {
+            case 'speed':
+                val = Math.round(1 + (pct / 100) * 7);
+                Tuning.playerSpeed = val;
+                break;
+            case 'shake':
+                val = Math.round((pct / 100) * 20);
+                Tuning.screenShake = val;
+                break;
+            case 'damage':
+                val = Math.round(5 + (pct / 100) * 25);
+                Tuning.combatDamage = val;
+                break;
+        }
+        
+        value.textContent = val;
+    },
+    
+    stop() {
+        this.active = null;
+    }
+};
+
+// ============ DIALOGUE ============
+const Dialogue = {
+    active: false,
+    queue: [],
+    callback: null,
+    
+    show(speaker, lines, callback = null) {
+        this.active = true;
+        this.queue = [...lines];
+        this.callback = callback;
+        
+        document.getElementById('dialogue-speaker').textContent = speaker;
+        document.getElementById('dialogue-box').classList.add('active');
+        this.showNext();
+    },
+    
+    showNext() {
+        if (this.queue.length === 0) {
+            this.close();
+            return;
+        }
+        
+        const line = this.queue.shift();
+        const textEl = document.getElementById('dialogue-text');
+        textEl.textContent = '';
+        
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < line.length) {
+                textEl.textContent += line[i];
+                if (Math.random() < 0.3) Audio.play('talk');
+                i++;
+            } else {
+                clearInterval(interval);
+            }
+        }, 25);
+    },
+    
+    advance() {
+        if (this.queue.length === 0) {
+            this.close();
+        } else {
+            this.showNext();
+        }
+    },
+    
+    close() {
+        this.active = false;
+        document.getElementById('dialogue-box').classList.remove('active');
+        
+        if (this.callback) {
+            const cb = this.callback;
+            this.callback = null;
+            setTimeout(cb, 100);
+        }
+    }
+};
+
+// ============ COMBAT ============
+const Combat = {
+    active: false,
+    entity: null,
+    
+    state: {
+        playerConf: 100,
+        playerUnd: 0,
+        enemyCoh: 60,
+        maxCoh: 60,
+        evidence: false
+    },
+    
+    start(entity) {
+        this.active = true;
+        this.entity = entity;
+        
+        this.state = {
+            playerConf: Game.confidence,
+            playerUnd: Game.understanding,
+            enemyCoh: 60,
+            maxCoh: 60,
+            evidence: false
+        };
+        
+        document.getElementById('opponent-name').textContent = entity.name || 'OPPONENT';
+        document.getElementById('opponent-sprite').textContent = '🧙';
+        document.getElementById('combat-overlay').classList.add('active');
+        
+        this.updateUI();
+        this.setMessage('The debate begins!');
+        this.enableButtons(true);
+    },
+    
+    execute(move) {
+        if (!this.active) return;
+        
+        const s = this.state;
+        let msg = '';
+        
+        switch (move) {
+            case 'question':
+                s.enemyCoh = Math.max(0, s.enemyCoh - 5);
+                s.playerUnd += 10;
+                msg = 'Your question probes their logic! [-5 Coherence, +10 Understanding]';
+                Audio.play('hit');
+                break;
+                
+            case 'statement':
+                let dmg = Tuning.combatDamage;
+                if (s.evidence) {
+                    dmg *= 2;
+                    s.evidence = false;
+                }
+                s.enemyCoh = Math.max(0, s.enemyCoh - dmg);
+                msg = `Statement lands! [-${dmg} Coherence]`;
+                Audio.play('hit');
+                this.screenShake();
+                break;
+                
+            case 'evidence':
+                s.evidence = true;
+                msg = 'Evidence loaded! Next Statement deals 2x damage.';
+                break;
+                
+            case 'concede':
+                s.playerConf = Math.min(100, s.playerConf + 15);
+                s.enemyCoh = Math.min(s.maxCoh, s.enemyCoh + 5);
+                msg = 'Strategic retreat... [+15 Confidence, +5 enemy Coherence]';
+                break;
+        }
+        
+        this.setMessage(msg);
+        this.updateUI();
+        
+        if (s.enemyCoh <= 0) {
+            this.victory();
+            return;
+        }
+        
+        // Enemy turn
+        this.enableButtons(false);
+        setTimeout(() => this.enemyTurn(), 1000);
+    },
+    
+    enemyTurn() {
+        const s = this.state;
+        const dmg = Math.floor(8 + Math.random() * 8);
+        s.playerConf = Math.max(0, s.playerConf - dmg);
+        
+        this.setMessage(`${this.entity.name || 'Opponent'} argues forcefully! [-${dmg} Confidence]`);
+        this.updateUI();
+        Audio.play('hit');
+        
+        if (s.playerConf <= 0) {
+            this.defeat();
+            return;
+        }
+        
+        this.enableButtons(true);
+    },
+    
+    victory() {
+        this.setMessage('VICTORY! Their coherence collapsed!');
+        this.entity.defeated = true;
+        Audio.play('victory');
+        
+        setTimeout(() => this.end(), 2000);
+    },
+    
+    defeat() {
+        this.setMessage('DEFEAT... Your confidence shattered.');
+        Audio.play('defeat');
+        
+        this.state.playerConf = 50;
+        setTimeout(() => this.end(), 2000);
+    },
+    
+    end() {
+        this.active = false;
+        Game.confidence = this.state.playerConf;
+        Game.understanding = Math.max(Game.understanding, this.state.playerUnd);
+        
+        document.getElementById('combat-overlay').classList.remove('active');
+    },
+    
+    updateUI() {
+        const s = this.state;
+        
+        document.getElementById('combat-confidence').style.width = `${s.playerConf}%`;
+        document.getElementById('combat-conf-text').textContent = `${s.playerConf}/100`;
+        document.getElementById('combat-understanding').style.width = `${Math.min(100, s.playerUnd)}%`;
+        document.getElementById('combat-coherence').style.width = `${(s.enemyCoh / s.maxCoh) * 100}%`;
+        document.getElementById('combat-coh-text').textContent = `${s.enemyCoh}/${s.maxCoh}`;
+    },
+    
+    setMessage(msg) {
+        document.getElementById('combat-message').textContent = msg;
+    },
+    
+    enableButtons(enabled) {
+        document.querySelectorAll('.move-btn').forEach(btn => btn.disabled = !enabled);
+    },
+    
+    screenShake() {
+        const intensity = Tuning.screenShake;
+        const canvas = Game.canvas;
+        let shakes = 0;
+        
+        const shake = setInterval(() => {
+            const dx = (Math.random() - 0.5) * intensity;
+            const dy = (Math.random() - 0.5) * intensity;
+            canvas.style.transform = `translate(${dx}px, ${dy}px)`;
+            shakes++;
+            if (shakes > 6) {
+                clearInterval(shake);
+                canvas.style.transform = '';
+            }
+        }, 50);
+    }
+};
+
+// ============ AUDIO ============
+const Audio = {
+    ctx: null,
+    
+    init() {
+        document.addEventListener('click', () => {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }, { once: true });
+    },
+    
+    play(type) {
+        if (!this.ctx) return;
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        switch (type) {
+            case 'hit':
+                osc.frequency.value = 150;
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+                break;
+                
+            case 'item':
+                [523, 659, 784, 1047].forEach((f, i) => {
+                    setTimeout(() => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.connect(g); g.connect(this.ctx.destination);
+                        o.frequency.value = f;
+                        o.type = 'triangle';
+                        g.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                        o.start();
+                        o.stop(this.ctx.currentTime + 0.2);
+                    }, i * 80);
+                });
+                break;
+                
+            case 'talk':
+                osc.frequency.value = 180 + Math.random() * 80;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.03);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.03);
+                break;
+                
+            case 'victory':
+                [523, 659, 784, 1047].forEach((f, i) => {
+                    setTimeout(() => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.connect(g); g.connect(this.ctx.destination);
+                        o.frequency.value = f;
+                        o.type = 'triangle';
+                        g.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                        o.start();
+                        o.stop(this.ctx.currentTime + 0.3);
+                    }, i * 100);
+                });
+                break;
+                
+            case 'defeat':
+                [330, 294, 262, 220].forEach((f, i) => {
+                    setTimeout(() => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.connect(g); g.connect(this.ctx.destination);
+                        o.frequency.value = f;
+                        o.type = 'triangle';
+                        g.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                        o.start();
+                        o.stop(this.ctx.currentTime + 0.4);
+                    }, i * 150);
+                });
+                break;
+        }
+    }
+};
+
+// ============ INIT ============
+Audio.init();
+Game.init();
+</script>
+</body>
+</html>
