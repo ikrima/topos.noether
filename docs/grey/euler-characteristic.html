@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Euler Characteristic Explorer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'monospace'],
+      },
+      colors: {
+        surface: '#0f1117',
+        card: '#1a1d27',
+        cardHover: '#222633',
+        accent: '#6c5ce7',
+        accentLight: '#a29bfe',
+        teal: '#00cec9',
+        coral: '#e17055',
+        gold: '#fdcb6e',
+        mint: '#55efc4',
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; }
+  body { background: #0f1117; }
+  
+  .formula-glow {
+    text-shadow: 0 0 20px rgba(108,92,231,0.5), 0 0 40px rgba(108,92,231,0.2);
+  }
+
+  .card-glass {
+    background: linear-gradient(135deg, rgba(26,29,39,0.9), rgba(34,38,51,0.7));
+    border: 1px solid rgba(108,92,231,0.15);
+    backdrop-filter: blur(10px);
+  }
+
+  .die-face {
+    width: 48px; height: 48px;
+    background: white;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+    transition: all 0.3s ease;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    background: #1a1d27;
+    border-radius: 50%;
+  }
+
+  .counter-value {
+    font-variant-numeric: tabular-nums;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .counter-value.changed {
+    transform: scale(1.3);
+    color: #fdcb6e;
+  }
+
+  .step-indicator {
+    transition: all 0.4s ease;
+  }
+
+  .step-indicator.active {
+    background: #6c5ce7;
+    box-shadow: 0 0 15px rgba(108,92,231,0.5);
+  }
+
+  .step-indicator.completed {
+    background: #55efc4;
+    box-shadow: 0 0 10px rgba(85,239,196,0.3);
+  }
+
+  .euler-badge {
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .euler-badge.highlight {
+    transform: scale(1.2);
+    box-shadow: 0 0 30px rgba(108,92,231,0.6);
+  }
+
+  canvas { display: block; }
+
+  .polyhedron-btn {
+    transition: all 0.2s ease;
+    border: 1px solid rgba(108,92,231,0.2);
+  }
+  .polyhedron-btn:hover {
+    border-color: rgba(108,92,231,0.6);
+    background: rgba(108,92,231,0.1);
+  }
+  .polyhedron-btn.active {
+    border-color: #6c5ce7;
+    background: rgba(108,92,231,0.2);
+    box-shadow: 0 0 12px rgba(108,92,231,0.3);
+  }
+
+  .topo-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .topo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(108,92,231,0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(108,92,231,0); }
+    100% { box-shadow: 0 0 0 0 rgba(108,92,231,0); }
+  }
+
+  .pulse { animation: pulse-ring 2s infinite; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  .float-anim { animation: float 3s ease-in-out infinite; }
+
+  .slider-custom::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #6c5ce7;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(108,92,231,0.5);
+  }
+  .slider-custom::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(108,92,231,0.3);
+  }
+  .slider-custom { -webkit-appearance: none; width: 100%; background: transparent; }
+
+  .dice-scene {
+    perspective: 600px;
+  }
+
+  .dice-3d {
+    width: 50px; height: 50px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s ease;
+  }
+
+  .dice-3d .face {
+    position: absolute;
+    width: 50px; height: 50px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+  }
+
+  .dice-3d .face.front  { transform: translateZ(25px); }
+  .dice-3d .face.back   { transform: rotateY(180deg) translateZ(25px); }
+  .dice-3d .face.left   { transform: rotateY(-90deg) translateZ(25px); }
+  .dice-3d .face.right  { transform: rotateY(90deg) translateZ(25px); }
+  .dice-3d .face.top    { transform: rotateX(90deg) translateZ(25px); }
+  .dice-3d .face.bottom { transform: rotateX(-90deg) translateZ(25px); }
+
+  .scroll-hide::-webkit-scrollbar { display: none; }
+  .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+<body class="font-sans text-gray-200 min-h-screen">
+
+<!-- Hero Section -->
+<header class="relative overflow-hidden py-16 md:py-24 px-4">
+  <div class="absolute inset-0 opacity-30">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-accent/20 rounded-full blur-[100px]"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-teal/10 rounded-full blur-[120px]"></div>
+  </div>
+  <div class="relative max-w-5xl mx-auto text-center">
+    <p class="text-accentLight font-mono text-sm tracking-widest uppercase mb-4">Topology Explorer</p>
+    <h1 class="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
+      Euler Characteristic
+    </h1>
+    <div class="inline-block bg-card/80 border border-accent/30 rounded-2xl px-8 py-5 mb-6">
+      <span class="text-3xl md:text-5xl font-mono font-semibold formula-glow">
+        <span class="text-teal">V</span>
+        <span class="text-gray-400 mx-1">−</span>
+        <span class="text-coral">E</span>
+        <span class="text-gray-400 mx-1">+</span>
+        <span class="text-gold">F</span>
+        <span class="text-gray-400 mx-2">=</span>
+        <span class="text-accent">χ</span>
+      </span>
+    </div>
+    <p class="text-gray-400 max-w-2xl mx-auto text-lg">
+      Discover how vertices, edges, and faces combine into a powerful topological invariant — illustrated with dice.
+    </p>
+  </div>
+</header>
+
+<!-- Interactive Dice Builder -->
+<section class="max-w-6xl mx-auto px-4 mb-20">
+  <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 text-center">Build with Dice</h2>
+  <p class="text-gray-400 text-center mb-10 max-w-xl mx-auto">Add dice one by one and watch how V, E, F change. Close the loop to form a torus and see the Euler characteristic shift.</p>
+
+  <!-- Step indicators -->
+  <div class="flex justify-center items-center gap-2 mb-8 flex-wrap">
+    <div id="step-0" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(0)">1</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-1" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(1)">2</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-2" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(2)">3</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-3" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(3)">4</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-4" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(4)">5</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-5" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(5)">6</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-6" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(6)">7</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-7" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(7)">8</div>
+    <div class="w-6 h-px bg-gray-700"></div>
+    <div id="step-8" class="step-indicator w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-gray-700 text-gray-400 cursor-pointer" onclick="goToStep(8)">⟳</div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6">
+    <!-- Dice Visualization -->
+    <div class="card-glass rounded-2xl p-6 min-h-[350px] flex flex-col">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-semibold text-white text-lg">Dice Configuration</h3>
+        <span id="dice-count-label" class="font-mono text-accentLight text-sm">0 dice</span>
+      </div>
+      <div class="flex-1 flex items-center justify-center">
+        <canvas id="diceCanvas" width="440" height="260"></canvas>
+      </div>
+    </div>
+
+    <!-- Counters + Controls -->
+    <div class="flex flex-col gap-4">
+      <!-- V E F counters -->
+      <div class="card-glass rounded-2xl p-6">
+        <div class="grid grid-cols-4 gap-3 text-center">
+          <div>
+            <div class="text-teal text-xs font-mono uppercase tracking-wider mb-1">Vertices</div>
+            <div id="v-count" class="counter-value text-4xl font-bold text-teal font-mono">0</div>
+          </div>
+          <div>
+            <div class="text-coral text-xs font-mono uppercase tracking-wider mb-1">Edges</div>
+            <div id="e-count" class="counter-value text-4xl font-bold text-coral font-mono">0</div>
+          </div>
+          <div>
+            <div class="text-gold text-xs font-mono uppercase tracking-wider mb-1">Faces</div>
+            <div id="f-count" class="counter-value text-4xl font-bold text-gold font-mono">0</div>
+          </div>
+          <div>
+            <div class="text-accent text-xs font-mono uppercase tracking-wider mb-1">χ</div>
+            <div id="euler-count" class="euler-badge counter-value text-4xl font-bold text-accent font-mono inline-block px-3 py-1 rounded-xl bg-accent/10">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explanation -->
+      <div class="card-glass rounded-2xl p-6 flex-1">
+        <h3 class="font-semibold text-white mb-2 text-sm uppercase tracking-wider font-mono">What's happening</h3>
+        <p id="step-explanation" class="text-gray-400 text-sm leading-relaxed">Press "Add Die" to begin building the configuration step by step.</p>
+      </div>
+
+      <!-- Delta display -->
+      <div id="delta-display" class="card-glass rounded-2xl p-4 hidden">
+        <div class="grid grid-cols-4 gap-2 text-center text-sm font-mono">
+          <div><span class="text-gray-500">ΔV</span> <span id="dv" class="text-teal ml-1">0</span></div>
+          <div><span class="text-gray-500">ΔE</span> <span id="de" class="text-coral ml-1">0</span></div>
+          <div><span class="text-gray-500">ΔF</span> <span id="df" class="text-gold ml-1">0</span></div>
+          <div><span class="text-gray-500">Δχ</span> <span id="dchi" class="text-accent ml-1">0</span></div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3">
+        <button id="btn-prev" onclick="prevStep()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition disabled:opacity-30 disabled:cursor-not-allowed" disabled>← Previous</button>
+        <button id="btn-next" onclick="nextStep()" class="flex-1 bg-accent hover:bg-accent/80 text-white font-semibold py-3 rounded-xl transition pulse">Add Die →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Interactive Polyhedron Explorer -->
+<section class="max-w-6xl mx-auto px-4 mb-20">
+  <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 text-center">Polyhedron Explorer</h2>
+  <p class="text-gray-400 text-center mb-10 max-w-xl mx-auto">Examine the five Platonic solids. Rotate them by dragging and verify the Euler characteristic for each.</p>
+  
+  <div class="grid md:grid-cols-3 gap-6">
+    <!-- 3D Canvas -->
+    <div class="md:col-span-2 card-glass rounded-2xl p-6">
+      <canvas id="polyCanvas" class="w-full rounded-xl cursor-grab active:cursor-grabbing" style="height: 400px;"></canvas>
+    </div>
+
+    <!-- Selector + Info -->
+    <div class="flex flex-col gap-4">
+      <div class="card-glass rounded-2xl p-5">
+        <h3 class="font-semibold text-white mb-3 text-sm uppercase tracking-wider font-mono">Select Solid</h3>
+        <div class="flex flex-col gap-2" id="poly-buttons">
+          <button class="polyhedron-btn active rounded-xl px-4 py-3 text-left" data-poly="tetrahedron">
+            <span class="font-semibold text-white">Tetrahedron</span>
+            <span class="text-gray-500 text-xs ml-2">4 faces</span>
+          </button>
+          <button class="polyhedron-btn rounded-xl px-4 py-3 text-left" data-poly="cube">
+            <span class="font-semibold text-white">Cube</span>
+            <span class="text-gray-500 text-xs ml-2">6 faces</span>
+          </button>
+          <button class="polyhedron-btn rounded-xl px-4 py-3 text-left" data-poly="octahedron">
+            <span class="font-semibold text-white">Octahedron</span>
+            <span class="text-gray-500 text-xs ml-2">8 faces</span>
+          </button>
+          <button class="polyhedron-btn rounded-xl px-4 py-3 text-left" data-poly="dodecahedron">
+            <span class="font-semibold text-white">Dodecahedron</span>
+            <span class="text-gray-500 text-xs ml-2">12 faces</span>
+          </button>
+          <button class="polyhedron-btn rounded-xl px-4 py-3 text-left" data-poly="icosahedron">
+            <span class="font-semibold text-white">Icosahedron</span>
+            <span class="text-gray-500 text-xs ml-2">20 faces</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card-glass rounded-2xl p-5">
+        <h3 class="font-semibold text-white mb-3 text-sm uppercase tracking-wider font-mono">Properties</h3>
+        <div class="grid grid-cols-2 gap-3 text-center mb-4">
+          <div class="bg-surface rounded-lg py-2">
+            <div class="text-teal text-xs font-mono">V</div>
+            <div id="poly-v" class="text-2xl font-bold text-teal font-mono">4</div>
+          </div>
+          <div class="bg-surface rounded-lg py-2">
+            <div class="text-coral text-xs font-mono">E</div>
+            <div id="poly-e" class="text-2xl font-bold text-coral font-mono">6</div>
+          </div>
+          <div class="bg-surface rounded-lg py-2">
+            <div class="text-gold text-xs font-mono">F</div>
+            <div id="poly-f" class="text-2xl font-bold text-gold font-mono">4</div>
+          </div>
+          <div class="bg-surface rounded-lg py-2">
+            <div class="text-accent text-xs font-mono">χ</div>
+            <div id="poly-chi" class="text-2xl font-bold text-accent font-mono">2</div>
+          </div>
+        </div>
+        <div class="text-center">
+          <span class="font-mono text-sm text-gray-400">
+            <span class="text-teal" id="poly-formula-v">4</span> − <span class="text-coral" id="poly-formula-e">6</span> + <span class="text-gold" id="poly-formula-f">4</span> = <span class="text-accent font-bold" id="poly-formula-chi">2</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-glass rounded-2xl p-4 text-center">
+        <p class="text-gray-500 text-xs font-mono">Drag to rotate · All convex polyhedra have χ = 2</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Topology Gallery -->
+<section class="max-w-6xl mx-auto px-4 mb-20">
+  <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 text-center">Surfaces & Their χ</h2>
+  <p class="text-gray-400 text-center mb-10 max-w-xl mx-auto">The Euler characteristic is a topological invariant — it stays the same no matter how you deform the surface (without cutting or gluing).</p>
+
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    <!-- Sphere -->
+    <div class="topo-card card-glass rounded-2xl p-5 text-center" onclick="showTopoDetail('sphere')">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-teal/40 to-accent/40 flex items-center justify-center">
+        <canvas id="topo-sphere" width="60" height="60"></canvas>
+      </div>
+      <h4 class="font-bold text-white text-lg mb-1">Sphere</h4>
+      <div class="text-3xl font-mono font-bold text-accent mb-2">χ = 2</div>
+      <p class="text-gray-500 text-xs">0 holes</p>
+    </div>
+
+    <!-- Torus -->
+    <div class="topo-card card-glass rounded-2xl p-5 text-center" onclick="showTopoDetail('torus')">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral/40 to-gold/40 flex items-center justify-center">
+        <canvas id="topo-torus" width="60" height="60"></canvas>
+      </div>
+      <h4 class="font-bold text-white text-lg mb-1">Torus</h4>
+      <div class="text-3xl font-mono font-bold text-accent mb-2">χ = 0</div>
+      <p class="text-gray-500 text-xs">1 hole (genus 1)</p>
+    </div>
+
+    <!-- Double Torus -->
+    <div class="topo-card card-glass rounded-2xl p-5 text-center" onclick="showTopoDetail('double')">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-gold/40 to-mint/40 flex items-center justify-center">
+        <canvas id="topo-double" width="60" height="60"></canvas>
+      </div>
+      <h4 class="font-bold text-white text-lg mb-1">Double Torus</h4>
+      <div class="text-3xl font-mono font-bold text-accent mb-2">χ = −2</div>
+      <p class="text-gray-500 text-xs">2 holes (genus 2)</p>
+    </div>
+
+    <!-- Triple Torus -->
+    <div class="topo-card card-glass rounded-2xl p-5 text-center" onclick="showTopoDetail('triple')">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-mint/40 to-teal/40 flex items-center justify-center">
+        <canvas id="topo-triple" width="60" height="60"></canvas>
+      </div>
+      <h4 class="font-bold text-white text-lg mb-1">Triple Torus</h4>
+      <div class="text-3xl font-mono font-bold text-accent mb-2">χ = −4</div>
+      <p class="text-gray-500 text-xs">3 holes (genus 3)</p>
+    </div>
+  </div>
+
+  <!-- Formula -->
+  <div class="mt-8 text-center card-glass rounded-2xl p-6 max-w-md mx-auto">
+    <p class="text-gray-400 text-sm mb-2">General formula for an orientable surface of genus <em>g</em>:</p>
+    <div class="text-2xl font-mono font-bold formula-glow">
+      <span class="text-accent">χ</span>
+      <span class="text-gray-400"> = 2 − 2</span><span class="text-mint">g</span>
+    </div>
+    <div class="mt-4">
+      <label class="text-gray-500 text-xs font-mono">Genus (number of holes)</label>
+      <div class="flex items-center gap-4 mt-2 justify-center">
+        <input type="range" id="genus-slider" min="0" max="10" value="0" class="slider-custom w-48" oninput="updateGenus()">
+        <span class="font-mono text-mint text-lg w-8" id="genus-val">0</span>
+        <span class="text-gray-500 mx-1">→</span>
+        <span class="font-mono text-accent text-lg font-bold" id="genus-chi">2</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Interactive Exercise -->
+<section class="max-w-4xl mx-auto px-4 mb-20">
+  <div class="card-glass rounded-2xl p-8">
+    <h2 class="text-xl font-bold text-white mb-2">🧩 Exercise: Two-Holed Torus</h2>
+    <p class="text-gray-400 mb-6 text-sm">Following the dice method from the blog post: if 8 dice in a ring make a 1-hole torus (χ=0), how many dice and what arrangement would you need for a 2-hole torus? Calculate its Euler characteristic.</p>
+    
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <label class="text-gray-500 text-xs font-mono uppercase tracking-wider">Your answer for χ</label>
+        <div class="flex items-center gap-3 mt-2">
+          <button onclick="setAnswer(-2)" id="ans-neg2" class="px-5 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 font-mono font-bold text-lg transition">−2</button>
+          <button onclick="setAnswer(0)" id="ans-0" class="px-5 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 font-mono font-bold text-lg transition">0</button>
+          <button onclick="setAnswer(2)" id="ans-2" class="px-5 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 font-mono font-bold text-lg transition">2</button>
+          <button onclick="setAnswer(-4)" id="ans-neg4" class="px-5 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 font-mono font-bold text-lg transition">−4</button>
+        </div>
+      </div>
+      <div id="answer-feedback" class="flex items-center justify-center text-center">
+        <p class="text-gray-500 text-sm">Select your answer</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Credit -->
+<footer class="text-center py-10 px-4">
+  <p class="text-gray-600 text-sm">Based on <a href="https://www.johndcook.com/blog/2012/10/30/euler-characteristic/" target="_blank" class="text-accentLight hover:underline">John D. Cook's blog post</a> on illustrating Euler characteristic with dice.</p>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ===================== DICE BUILDER =====================
+  const steps = [
+    { dice: 0, V: 0, E: 0, F: 0, label: 'Start', text: 'Press "Add Die" to place the first die and begin exploring how the Euler characteristic works.' },
+    { dice: 1, V: 8, E: 12, F: 6, label: '1 Die', text: 'A single die has 8 vertices, 12 edges, and 6 faces. V − E + F = 8 − 12 + 6 = 2. This is a convex solid, topologically a sphere.' },
+    { dice: 2, V: 12, E: 20, F: 10, label: '2 Dice', text: 'Joining two dice merges 4 vertex pairs (−4V), 4 edge pairs (−4E), and removes 2 shared faces (−2F). Net: ΔV=+4, ΔE=+8, ΔF=+4. Still χ = 2.' },
+    { dice: 3, V: 16, E: 28, F: 14, label: '3 Dice', text: 'Each new die adds 4 vertices, 8 edges, and 4 faces (after accounting for shared elements). ΔV − ΔE + ΔF = 4 − 8 + 4 = 0, so χ stays at 2.' },
+    { dice: 4, V: 20, E: 36, F: 18, label: '4 Dice', text: 'Four dice in an L-shape. Same pattern: +4V, +8E, +4F. The Euler characteristic is invariant to this type of joining.' },
+    { dice: 5, V: 24, E: 44, F: 22, label: '5 Dice', text: 'Five dice. We\'re building toward a ring shape. Still χ = 2 — the topology hasn\'t changed yet.' },
+    { dice: 6, V: 28, E: 52, F: 26, label: '6 Dice', text: 'Six dice, curving into a U-shape. Each join preserves the Euler characteristic because ΔV − ΔE + ΔF = 0.' },
+    { dice: 7, V: 32, E: 60, F: 30, label: '7 Dice', text: 'Seven dice in a horseshoe. One more die will close the loop — but this final join is different!' },
+    { dice: 8, V: 32, E: 64, F: 32, label: '8 Dice (Torus!)', text: 'The final die shares ALL its vertices with existing ones (ΔV=0), adds 4 new edges (ΔE=+4), and adds 4 faces but removes 2 (ΔF=+2). Net: 0 − 4 + 2 = −2. The Euler characteristic drops from 2 to 0 — we\'ve created a torus!' },
+  ];
+
+  let currentStep = 0;
+  const diceCanvas = document.getElementById('diceCanvas');
+  const ctx = diceCanvas.getContext('2d');
+
+  function goToStep(s) {
+    if (s < 0 || s > 8) return;
+    const prev = steps[currentStep];
+    currentStep = s;
+    const curr = steps[currentStep];
+    updateUI(prev, curr);
+  }
+  window.goToStep = goToStep;
+
+  function nextStep() { goToStep(currentStep + 1); }
+  function prevStep() { goToStep(currentStep - 1); }
+  window.nextStep = nextStep;
+  window.prevStep = prevStep;
+
+  function updateUI(prev, curr) {
+    // Update counters with animation
+    animateCounter('v-count', curr.V);
+    animateCounter('e-count', curr.E);
+    animateCounter('f-count', curr.F);
+    const chi = curr.V - curr.E + curr.F;
+    animateCounter('euler-count', chi);
+
+    // Delta display
+    const dd = document.getElementById('delta-display');
+    if (currentStep > 0) {
+      dd.classList.remove('hidden');
+      const dv = curr.V - prev.V;
+      const de = curr.E - prev.E;
+      const df = curr.F - prev.F;
+      const dc = (curr.V - curr.E + curr.F) - (prev.V - prev.E + prev.F);
+      document.getElementById('dv').textContent = (dv >= 0 ? '+' : '') + dv;
+      document.getElementById('de').textContent = (de >= 0 ? '+' : '') + de;
+      document.getElementById('df').textContent = (df >= 0 ? '+' : '') + df;
+      document.getElementById('dchi').textContent = (dc >= 0 ? '+' : '') + dc;
+    } else {
+      dd.classList.add('hidden');
+    }
+
+    // Euler badge highlight
+    const eb = document.getElementById('euler-count');
+    if (currentStep === 8) {
+      eb.classList.add('highlight');
+    } else {
+      eb.classList.remove('highlight');
+    }
+
+    // Step indicators
+    for (let i = 0; i <= 8; i++) {
+      const el = document.getElementById('step-' + i);
+      el.classList.remove('active', 'completed');
+      if (i === currentStep) el.classList.add('active');
+      else if (i < currentStep) el.classList.add('completed');
+    }
+
+    // Explanation
+    document.getElementById('step-explanation').textContent = curr.text;
+
+    // Label
+    document.getElementById('dice-count-label').textContent = curr.dice + (curr.dice === 1 ? ' die' : ' dice');
+
+    // Buttons
+    document.getElementById('btn-prev').disabled = currentStep === 0;
+    const btnNext = document.getElementById('btn-next');
+    if (currentStep === 8) {
+      btnNext.textContent = 'Done ✓';
+      btnNext.disabled = true;
+      btnNext.classList.remove('pulse');
+      btnNext.classList.add('bg-mint', 'text-surface');
+      btnNext.classList.remove('bg-accent');
+    } else {
+      btnNext.textContent = currentStep === 7 ? 'Close Loop! →' : 'Add Die →';
+      btnNext.disabled = false;
+      btnNext.classList.remove('bg-mint', 'text-surface');
+      btnNext.classList.add('bg-accent');
+      if (currentStep === 7) btnNext.classList.add('pulse');
+      else btnNext.classList.remove('pulse');
+    }
+
+    drawDice(curr.dice, currentStep === 8);
+  }
+
+  function animateCounter(id, value) {
+    const el = document.getElementById(id);
+    el.textContent = value;
+    el.classList.add('changed');
+    setTimeout(() => el.classList.remove('changed'), 400);
+  }
+
+  // Dice arrangement drawing
+  function drawDice(count, isTorus) {
+    const w = diceCanvas.width;
+    const h = diceCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    if (count === 0) {
+      ctx.fillStyle = '#4a5568';
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No dice yet', w/2, h/2);
+      return;
+    }
+
+    // Positions for dice in a ring layout
+    const positions = getDicePositions(count, w, h, isTorus);
+
+    positions.forEach((pos, i) => {
+      drawSingleDie(pos.x, pos.y, pos.size, i, count, isTorus && i === count - 1);
+    });
+
+    // Draw connections
+    if (count > 1) {
+      ctx.strokeStyle = 'rgba(108,92,231,0.4)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < count - 1; i++) {
+        ctx.beginPath();
+        const a = positions[i], b = positions[i+1];
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      if (isTorus) {
+        ctx.strokeStyle = 'rgba(85,239,196,0.6)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(positions[count-1].x, positions[count-1].y);
+        ctx.lineTo(positions[0].x, positions[0].y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+  }
+
+  function getDicePositions(count, w, h, isTorus) {
+    const cx = w / 2, cy = h / 2;
+    if (count === 1) return [{ x: cx, y: cy, size: 50 }];
+    if (count <= 4) {
+      const spacing = 65;
+      const startX = cx - (count - 1) * spacing / 2;
+      return Array.from({length: count}, (_, i) => ({ x: startX + i * spacing, y: cy, size: 44 }));
+    }
+    // Arrange in ring/horseshoe for 5-8
+    const radius = Math.min(w, h) * 0.32;
+    const size = 38;
+    const angleStart = Math.PI;
+    const angleRange = isTorus ? Math.PI * 2 : Math.PI * 2 * (count - 1) / count;
+    return Array.from({length: count}, (_, i) => {
+      const angle = angleStart + (i / (isTorus ? count : count)) * (isTorus ? Math.PI * 2 : angleRange);
+      return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius * 0.7, size };
+    });
+  }
+
+  function drawSingleDie(x, y, size, index, total, isClosing) {
+    const half = size / 2;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    roundRect(ctx, x - half + 3, y - half + 3, size, size, 6, true, false);
+    // Body
+    const grad = ctx.createLinearGradient(x - half, y - half, x + half, y + half);
+    if (isClosing) {
+      grad.addColorStop(0, '#55efc4');
+      grad.addColorStop(1, '#00b894');
+    } else {
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(1, '#e0e0e0');
+    }
+    ctx.fillStyle = grad;
+    roundRect(ctx, x - half, y - half, size, size, 6, true, false);
+    // Border
+    ctx.strokeStyle = isClosing ? 'rgba(85,239,196,0.8)' : 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, x - half, y - half, size, size, 6, false, true);
+    // Dots (show face based on index)
+    const face = (index % 6) + 1;
+    drawDots(ctx, x, y, size * 0.6, face, isClosing ? '#1a1d27' : '#1a1d27');
+  }
+
+  function drawDots(ctx, cx, cy, area, count, color) {
+    const r = area * 0.1;
+    const off = area * 0.28;
+    ctx.fillStyle = color;
+    const positions = {
+      1: [[0, 0]],
+      2: [[-off, -off], [off, off]],
+      3: [[-off, -off], [0, 0], [off, off]],
+      4: [[-off, -off], [off, -off], [-off, off], [off, off]],
+      5: [[-off, -off], [off, -off], [0, 0], [-off, off], [off, off]],
+      6: [[-off, -off], [off, -off], [-off, 0], [off, 0], [-off, off], [off, off]],
+    };
+    (positions[count] || []).forEach(([dx, dy]) => {
+      ctx.beginPath();
+      ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  // Initialize
+  updateUI(steps[0], steps[0]);
+
+  // ===================== POLYHEDRON EXPLORER =====================
+  const polyhedra = {
+    tetrahedron: {
+      V: 4, E: 6, F: 4,
+      vertices: [[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]].map(v => {
+        const l = Math.sqrt(3);
+        return v.map(c => c / l);
+      }),
+      edges: [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],
+      faces: [[0,1,2],[0,1,3],[0,2,3],[1,2,3]],
+      color: '#00cec9'
+    },
+    cube: {
+      V: 8, E: 12, F: 6,
+      vertices: [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]].map(v => v.map(c => c * 0.7)),
+      edges: [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
+      faces: [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[0,3,7,4],[1,2,6,5]],
+      color: '#6c5ce7'
+    },
+    octahedron: {
+      V: 6, E: 12, F: 8,
+      vertices: [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],
+      edges: [[0,2],[0,3],[0,4],[0,5],[1,2],[1,3],[1,4],[1,5],[2,4],[2,5],[3,4],[3,5]],
+      faces: [[0,2,4],[0,4,3],[0,3,5],[0,5,2],[1,2,4],[1,4,3],[1,3,5],[1,5,2]],
+      color: '#e17055'
+    },
+    dodecahedron: {
+      V: 20, E: 30, F: 12,
+      vertices: (() => {
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const verts = [];
+        for (let i of [-1, 1]) for (let j of [-1, 1]) for (let k of [-1, 1]) verts.push([i, j, k]);
+        for (let i of [-1, 1]) for (let j of [-1, 1]) { verts.push([0, i * phi, j / phi]); verts.push([j / phi, 0, i * phi]); verts.push([i * phi, j / phi, 0]); }
+        return verts.map(v => v.map(c => c * 0.55));
+      })(),
+      edges: (() => {
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const verts = [];
+        for (let i of [-1, 1]) for (let j of [-1, 1]) for (let k of [-1, 1]) verts.push([i, j, k]);
+        for (let i of [-1, 1]) for (let j of [-1, 1]) { verts.push([0, i * phi, j / phi]); verts.push([j / phi, 0, i * phi]); verts.push([i * phi, j / phi, 0]); }
+        const edges = [];
+        const threshold = 2 / phi + 0.01;
+        for (let i = 0; i < verts.length; i++) {
+          for (let j = i + 1; j < verts.length; j++) {
+            const d = Math.sqrt(verts[i].reduce((s, c, k) => s + (c - verts[j][k]) ** 2, 0));
+            if (d < threshold) edges.push([i, j]);
+          }
+        }
+        return edges;
+      })(),
+      faces: [],
+      color: '#fdcb6e'
+    },
+    icosahedron: {
+      V: 12, E: 30, F: 20,
+      vertices: (() => {
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const verts = [];
+        for (let i of [-1, 1]) for (let j of [-1, 1]) {
+          verts.push([0, i, j * phi]);
+          verts.push([j * phi, 0, i]);
+          verts.push([i, j * phi, 0]);
+        }
+        const l = Math.sqrt(1 + phi * phi);
+        return verts.map(v => v.map(c => c / l));
+      })(),
+      edges: (() => {
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const verts = [];
+        for (let i of [-1, 1]) for (let j of [-1, 1]) {
+          verts.push([0, i, j * phi]);
+          verts.push([j * phi, 0, i]);
+          verts.push([i, j * phi, 0]);
+        }
+        const l = Math.sqrt(1 + phi * phi);
+        const normVerts = verts.map(v => v.map(c => c / l));
+        const edges = [];
+        for (let i = 0; i < normVerts.length; i++) {
+          for (let j = i + 1; j < normVerts.length; j++) {
+            const d = Math.sqrt(normVerts[i].reduce((s, c, k) => s + (c - normVerts[j][k]) ** 2, 0));
+            if (d < 2 / l + 0.1) edges.push([i, j]);
+          }
+        }
+        return edges;
+      })(),
+      faces: [],
+      color: '#55efc4'
+    }
+  };
+
+  const polyCanvas = document.getElementById('polyCanvas');
+  const pctx = polyCanvas.getContext('2d');
+  let currentPoly = 'tetrahedron';
+  let rotX = 0.4, rotY = 0.6;
+  let dragging = false, lastMX = 0, lastMY = 0;
+  let autoRotate = true;
+
+  function resizePolyCanvas() {
+    const rect = polyCanvas.parentElement.getBoundingClientRect();
+    polyCanvas.width = rect.width - 48;
+    polyCanvas.height = 400;
+  }
+  resizePolyCanvas();
+  window.addEventListener('resize', resizePolyCanvas);
+
+  polyCanvas.addEventListener('mousedown', e => { dragging = true; lastMX = e.clientX; lastMY = e.clientY; autoRotate = false; });
+  polyCanvas.addEventListener('touchstart', e => { dragging = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY; autoRotate = false; }, { passive: true });
+  window.addEventListener('mouseup', () => dragging = false);
+  window.addEventListener('touchend', () => dragging = false);
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    rotY += (e.clientX - lastMX) * 0.01;
+    rotX += (e.clientY - lastMY) * 0.01;
+    lastMX = e.clientX; lastMY = e.clientY;
+  });
+  window.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    rotY += (e.touches[0].clientX - lastMX) * 0.01;
+    rotX += (e.touches[0].clientY - lastMY) * 0.01;
+    lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+  }, { passive: true });
+
+  function project(v, w, h) {
+    let [x, y, z] = v;
+    // Rotate Y
+    let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+    let x1 = x * cosY - z * sinY, z1 = x * sinY + z * cosY;
+    // Rotate X
+    let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+    let y1 = y * cosX - z1 * sinX, z2 = y * sinX + z1 * cosX;
+    const scale = 140;
+    const perspective = 4 / (4 + z2);
+    return { x: w / 2 + x1 * scale * perspective, y: h / 2 + y1 * scale * perspective, z: z2 };
+  }
+
+  function renderPoly() {
+    const w = polyCanvas.width, h = polyCanvas.height;
+    pctx.clearRect(0, 0, w, h);
+
+    if (autoRotate) { rotY += 0.005; }
+
+    const poly = polyhedra[currentPoly];
+    const projected = poly.vertices.map(v => project(v, w, h));
+
+    // Draw edges
+    pctx.strokeStyle = poly.color + '80';
+    pctx.lineWidth = 1.5;
+    poly.edges.forEach(([a, b]) => {
+      pctx.beginPath();
+      pctx.moveTo(projected[a].x, projected[a].y);
+      pctx.lineTo(projected[b].x, projected[b].y);
+      pctx.stroke();
+    });
+
+    // Draw vertices sorted by z for depth
+    const sorted = projected.map((p, i) => ({ ...p, i })).sort((a, b) => a.z - b.z);
+    sorted.forEach(p => {
+      const size = 4 + (p.z + 1.5) * 2;
+      const alpha = 0.4 + (p.z + 1.5) * 0.2;
+      pctx.beginPath();
+      pctx.arc(p.x, p.y, Math.max(2, size), 0, Math.PI * 2);
+      pctx.fillStyle = poly.color;
+      pctx.globalAlpha = Math.min(1, Math.max(0.3, alpha));
+      pctx.fill();
+      pctx.globalAlpha = 1;
+      // Glow
+      pctx.beginPath();
+      pctx.arc(p.x, p.y, size + 3, 0, Math.PI * 2);
+      pctx.fillStyle = poly.color + '30';
+      pctx.fill();
+    });
+
+    requestAnimationFrame(renderPoly);
+  }
+  renderPoly();
+
+  // Poly buttons
+  document.querySelectorAll('#poly-buttons .polyhedron-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#poly-buttons .polyhedron-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPoly = btn.dataset.poly;
+      autoRotate = true;
+      rotX = 0.4; rotY = 0.6;
+      updatePolyInfo();
+    });
+  });
+
+  function updatePolyInfo() {
+    const p = polyhedra[currentPoly];
+    document.getElementById('poly-v').textContent = p.V;
+    document.getElementById('poly-e').textContent = p.E;
+    document.getElementById('poly-f').textContent = p.F;
+    const chi = p.V - p.E + p.F;
+    document.getElementById('poly-chi').textContent = chi;
+    document.getElementById('poly-formula-v').textContent = p.V;
+    document.getElementById('poly-formula-e').textContent = p.E;
+    document.getElementById('poly-formula-f').textContent = p.F;
+    document.getElementById('poly-formula-chi').textContent = chi;
+  }
+  updatePolyInfo();
+
+  // ===================== TOPO MINI CANVASES =====================
+  function drawMiniSphere(canvasId) {
+    const c = document.getElementById(canvasId);
+    const ctx = c.getContext('2d');
+    const cx = 30, cy = 30, r = 22;
+    const grad = ctx.createRadialGradient(cx - 6, cy - 6, 2, cx, cy, r);
+    grad.addColorStop(0, '#00cec980');
+    grad.addColorStop(1, '#00cec920');
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = '#00cec960';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function drawMiniTorus(canvasId) {
+    const c = document.getElementById(canvasId);
+    const ctx = c.getContext('2d');
+    ctx.strokeStyle = '#e1705580';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.ellipse(30, 30, 20, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#e17055';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(30, 30, 20, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawMiniDouble(canvasId) {
+    const c = document.getElementById(canvasId);
+    const ctx = c.getContext('2d');
+    ctx.strokeStyle = '#fdcb6e80';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.ellipse(20, 30, 12, 8, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(40, 30, 12, 8, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#fdcb6e';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(20, 30, 12, 8, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(40, 30, 12, 8, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  function drawMiniTriple(canvasId) {
+    const c = document.getElementById(canvasId);
+    const ctx = c.getContext('2d');
+    ctx.strokeStyle = '#55efc480';
+    ctx.lineWidth = 5;
+    [14, 30, 46].forEach(x => {
+      ctx.beginPath(); ctx.ellipse(x, 30, 9, 7, 0, 0, Math.PI * 2); ctx.stroke();
+    });
+    ctx.strokeStyle = '#55efc4';
+    ctx.lineWidth = 1.5;
+    [14, 30, 46].forEach(x => {
+      ctx.beginPath(); ctx.ellipse(x, 30, 9, 7, 0, 0, Math.PI * 2); ctx.stroke();
+    });
+  }
+
+  drawMiniSphere('topo-sphere');
+  drawMiniTorus('topo-torus');
+  drawMiniDouble('topo-double');
+  drawMiniTriple('topo-triple');
+
+  // ===================== GENUS SLIDER =====================
+  window.updateGenus = function() {
+    const g = parseInt(document.getElementById('genus-slider').value);
+    document.getElementById('genus-val').textContent = g;
+    document.getElementById('genus-chi').textContent = 2 - 2 * g;
+  };
+
+  // ===================== EXERCISE =====================
+  window.setAnswer = function(val) {
+    const feedback = document.getElementById('answer-feedback');
+    document.querySelectorAll('[id^="ans-"]').forEach(b => {
+      b.classList.remove('bg-mint', 'text-surface', 'bg-red-500/30', 'ring-2', 'ring-mint', 'ring-red-500');
+      b.classList.add('bg-gray-700');
+    });
+
+    if (val === -2) {
+      document.getElementById('ans-neg2').classList.remove('bg-gray-700');
+      document.getElementById('ans-neg2').classList.add('bg-mint', 'text-surface', 'ring-2', 'ring-mint');
+      feedback.innerHTML = '<div><p class="text-mint font-bold text-lg mb-1">✓ Correct!</p><p class="text-gray-400 text-sm">A double torus has genus 2, so χ = 2 − 2(2) = −2. You can build it with two rings of dice sharing a common edge — closing the second loop drops χ by another 2.</p></div>';
+    } else {
+      const btnId = val === 0 ? 'ans-0' : val === 2 ? 'ans-2' : 'ans-neg4';
+      document.getElementById(btnId).classList.remove('bg-gray-700');
+      document.getElementById(btnId).classList.add('bg-red-500/30', 'ring-2', 'ring-red-500');
+      feedback.innerHTML = '<div><p class="text-red-400 font-bold text-lg mb-1">✗ Not quite</p><p class="text-gray-400 text-sm">Hint: use the formula χ = 2 − 2g, where g is the number of holes (genus). A double torus has g = 2.</p></div>';
+    }
+  };
+
+  window.showTopoDetail = function(type) {
+    // Visual feedback on click
+    const cards = document.querySelectorAll('.topo-card');
+    cards.forEach(c => c.style.borderColor = 'transparent');
+  };
+});
+</script>
+</body>
+</html>
