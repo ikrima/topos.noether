@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini for Generative UI: Research & Best Practices</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <!-- Chosen Palette: Warm Neutral & Academic Blue - 'Slate & Sand' -->
+    <!-- Application Structure Plan: 
+         1. Hero Section: Definition & value prop of GenUI.
+         2. Research Landscape: Filterable cards (Methodologies) to synthesize literature.
+         3. The 'Golden' System Prompt: The core interactive tool. A 'Builder' interface where users toggle prompt sections (Persona, Constraints, One-Shot) to see how they construct a robust prompt.
+         4. Architecture & Flow: A visual CSS grid process map showing the user loop.
+         5. Metrics Dashboard: Charts showing trade-offs (Latency vs. Complexity).
+         Reasoning: This structure moves from theory (Research) to practice (Prompts) to evaluation (Metrics), catering to the user's request for "pragmatic application".
+    -->
+    <!-- Visualization & Content Choices:
+         1. Research Cards: HTML Grid + JS Filtering. Goal: Organize dense info.
+         2. Prompt Builder: Two-column layout (Controls vs. Preview). Goal: Teach prompt structure interactively.
+         3. Architecture Flow: CSS Flex/Grid with arrow connectors. Goal: Visualize system logic without SVG.
+         4. Trade-off Charts: Chart.js Radar & Scatter plots. Goal: visualize non-linear relationships in model performance.
+         5. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Chart Container Utilities */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Utility for 'Active' states */
+        .active-tab {
+            border-bottom: 2px solid #0f172a;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .inactive-tab {
+            color: #64748b;
+        }
+        .inactive-tab:hover {
+            color: #334155;
+        }
+
+        /* Prompt Builder Styles */
+        .prompt-segment {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .prompt-segment.active {
+            background-color: #f8fafc;
+            border-left: 3px solid #3b82f6;
+        }
+        .code-preview {
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans leading-relaxed">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">G</div>
+                    <span class="font-bold text-xl tracking-tight text-slate-900">GenUI Research Hub</span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <button onclick="scrollToSection('intro')" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Overview</button>
+                    <button onclick="scrollToSection('landscape')" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Research Landscape</button>
+                    <button onclick="scrollToSection('prompt-engine')" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Prompt Engineering</button>
+                    <button onclick="scrollToSection('metrics')" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Metrics</button>
+                </div>
+                <button onclick="scrollToSection('prompt-engine')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition shadow-sm">
+                    Build Prompt
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="intro" class="pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-6">
+                Generative UI with Gemini
+            </h1>
+            <p class="text-lg text-slate-600 mb-8">
+                Synthesizing literature and best practices for building <strong>Intent-Based Interfaces</strong>. 
+                Move beyond static templates to Just-in-Time (JIT) interface generation.
+            </p>
+            <div class="flex justify-center gap-4">
+                <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="text-sm font-medium text-slate-700">Adaptive</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span class="text-sm font-medium text-slate-700">Intent-Driven</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                    <span class="text-sm font-medium text-slate-700">Context-Aware</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Concepts Grid -->
+        <div class="grid md:grid-cols-3 gap-6 mt-12">
+            <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4 text-lg font-bold">1</div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2">Intent Detection</h3>
+                <p class="text-slate-600 text-sm">
+                    Leveraging LLMs to map unstructured user requests (natural language) to structured UI requirements and state changes.
+                </p>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mb-4 text-lg font-bold">2</div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2">Component Assembly</h3>
+                <p class="text-slate-600 text-sm">
+                    Retrieving and configuring pre-built design tokens and components (React/HTML) rather than generating raw pixels.
+                </p>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition">
+                <div class="w-10 h-10 bg-teal-100 text-teal-600 rounded-lg flex items-center justify-center mb-4 text-lg font-bold">3</div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2">Self-Correction Loops</h3>
+                <p class="text-slate-600 text-sm">
+                    Implementing "Compiler-in-the-Loop" workflows where the LLM fixes its own syntax errors or layout hallucinations.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Research Landscape Section -->
+    <section id="landscape" class="py-16 bg-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">Research Landscape & Methodologies</h2>
+                <p class="text-slate-600 max-w-2xl">
+                    An analysis of proven approaches in recent literature (2023-2025 era) for AI-generated interfaces. 
+                    Filter by approach type to explore specific implementation strategies.
+                </p>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap gap-2 mb-8" id="research-filters">
+                <button onclick="filterResearch('all')" class="px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-medium transition hover:bg-slate-700 active-filter">All Approaches</button>
+                <button onclick="filterResearch('e2e')" class="px-4 py-2 rounded-lg bg-white text-slate-600 text-sm font-medium border border-slate-200 transition hover:bg-slate-50 hover:text-slate-900">End-to-End Gen</button>
+                <button onclick="filterResearch('retrieval')" class="px-4 py-2 rounded-lg bg-white text-slate-600 text-sm font-medium border border-slate-200 transition hover:bg-slate-50 hover:text-slate-900">Retrieval Augmented</button>
+                <button onclick="filterResearch('hybrid')" class="px-4 py-2 rounded-lg bg-white text-slate-600 text-sm font-medium border border-slate-200 transition hover:bg-slate-50 hover:text-slate-900">Hybrid/Iterative</button>
+            </div>
+
+            <!-- Research Cards Grid -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="research-grid">
+                <!-- Cards will be populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- The Golden System Prompt Builder -->
+    <section id="prompt-engine" class="py-16 bg-white border-y border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-10">
+                <h2 class="text-3xl font-bold text-slate-900 mb-4">The 'Golden' System Prompt Builder</h2>
+                <p class="text-slate-600 max-w-3xl">
+                    The literature suggests that <strong>Context Constraints</strong> and <strong>Persona Definition</strong> are the biggest drivers of success in GenUI. 
+                    Interactive prompt engineering is required to move from generic HTML to functional applications. 
+                    <br><br>
+                    <strong>Instructions:</strong> Toggle the modules below to construct a comprehensive system prompt for Gemini. Watch how the Prompt Preview updates on the right.
+                </p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-8 h-[800px]">
+                <!-- Controls -->
+                <div class="lg:w-1/3 bg-slate-50 p-6 rounded-xl border border-slate-200 overflow-y-auto">
+                    <h3 class="text-sm uppercase tracking-wide text-slate-500 font-bold mb-4">Prompt Modules</h3>
+                    
+                    <!-- Module 1: Persona -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800">1. Persona & Role</label>
+                            <input type="checkbox" id="check-persona" checked onchange="updatePrompt()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">Establishes expertise and domain.</p>
+                        <div class="bg-white p-3 rounded border border-slate-200 text-xs text-slate-600">
+                            "Act as an expert frontend developer, UX designer, and accessibility specialist..."
+                        </div>
+                    </div>
+
+                    <!-- Module 2: Constraints -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800">2. Technical Constraints</label>
+                            <input type="checkbox" id="check-constraints" checked onchange="updatePrompt()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">Critical for compilation (Single File, No External Deps).</p>
+                        <div class="bg-white p-3 rounded border border-slate-200 text-xs text-slate-600">
+                            "Single HTML file ONLY. Tailwind via CDN. No SVG. No raw Markdown..."
+                        </div>
+                    </div>
+
+                    <!-- Module 3: Design Philosophy -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800">3. Visual Intelligence</label>
+                            <input type="checkbox" id="check-design" onchange="updatePrompt()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">Defines the aesthetic and UX quality.</p>
+                        <div class="bg-white p-3 rounded border border-slate-200 text-xs text-slate-600">
+                            "Use whitespace effectively. Rounded corners. Modern defaults. High contrast..."
+                        </div>
+                    </div>
+
+                    <!-- Module 4: Chain of Thought -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800">4. Chain of Thought</label>
+                            <input type="checkbox" id="check-cot" onchange="updatePrompt()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">Forces planning before coding.</p>
+                        <div class="bg-white p-3 rounded border border-slate-200 text-xs text-slate-600">
+                            "Before generating code, plan the architecture in a comment block..."
+                        </div>
+                    </div>
+
+                     <!-- Module 5: Error Handling -->
+                     <div class="mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="font-bold text-slate-800">5. Resilience Patterns</label>
+                            <input type="checkbox" id="check-error" onchange="updatePrompt()" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        </div>
+                        <p class="text-xs text-slate-500 mb-2">Instructions for handling data failures or missing assets.</p>
+                        <div class="bg-white p-3 rounded border border-slate-200 text-xs text-slate-600">
+                            "Use placeholders for images. Check for null data. Fallback to defaults..."
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="lg:w-2/3 bg-slate-900 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+                    <div class="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
+                        <span class="text-slate-400 text-xs font-mono">system_prompt.txt</span>
+                        <button onclick="copyPrompt()" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Copy to Clipboard</button>
+                    </div>
+                    <div class="p-6 overflow-y-auto flex-grow custom-scrollbar">
+                        <pre class="code-preview text-sm text-slate-300" id="prompt-output">
+<!-- Content will be injected here -->
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Visualization -->
+    <section class="py-16 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-8 text-center">The GenUI Lifecycle</h2>
+            <div class="grid md:grid-cols-5 gap-4 items-center justify-center text-center">
+                
+                <!-- Step 1 -->
+                <div class="bg-white p-6 rounded-lg shadow border border-slate-200 relative group hover:-translate-y-1 transition duration-300">
+                    <div class="text-2xl mb-2">🗣️</div>
+                    <h3 class="font-bold text-slate-800">User Intent</h3>
+                    <p class="text-xs text-slate-500 mt-2">Natural Language Request</p>
+                </div>
+
+                <!-- Arrow -->
+                <div class="hidden md:flex justify-center text-slate-300 text-2xl">➔</div>
+
+                <!-- Step 2 -->
+                <div class="bg-white p-6 rounded-lg shadow border-2 border-blue-100 relative group hover:-translate-y-1 transition duration-300">
+                    <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full">GEMINI</div>
+                    <div class="text-2xl mb-2">🧠</div>
+                    <h3 class="font-bold text-slate-800">Prompt Reasoning</h3>
+                    <p class="text-xs text-slate-500 mt-2">Context Mapping & Planning</p>
+                </div>
+
+                 <!-- Arrow -->
+                 <div class="hidden md:flex justify-center text-slate-300 text-2xl">➔</div>
+
+                <!-- Step 3 -->
+                <div class="bg-white p-6 rounded-lg shadow border border-slate-200 relative group hover:-translate-y-1 transition duration-300">
+                    <div class="text-2xl mb-2">⚙️</div>
+                    <h3 class="font-bold text-slate-800">Code Generation</h3>
+                    <p class="text-xs text-slate-500 mt-2">HTML/JS/Tailwind Construction</p>
+                </div>
+
+                 <!-- Arrow -->
+                 <div class="hidden md:flex justify-center text-slate-300 text-2xl">➔</div>
+
+                <!-- Step 4 -->
+                <div class="bg-white p-6 rounded-lg shadow border border-slate-200 relative group hover:-translate-y-1 transition duration-300">
+                    <div class="text-2xl mb-2">✨</div>
+                    <h3 class="font-bold text-slate-800">Interactive UI</h3>
+                    <p class="text-xs text-slate-500 mt-2">Rendered SPA Outcome</p>
+                </div>
+            </div>
+            
+            <div class="mt-8 bg-blue-50 p-4 rounded-lg border border-blue-100 text-center max-w-2xl mx-auto">
+                <p class="text-sm text-blue-800 font-medium">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Literature Note: The most successful systems (e.g., Makani, Design2Code) include a <strong>Self-Refinement</strong> loop between Step 3 and 4, asking the model to "critique and fix" code before rendering.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Metrics Section -->
+    <section id="metrics" class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-slate-900 mb-4">Performance Metrics & Trade-offs</h2>
+            <p class="text-slate-600 mb-10 max-w-2xl">
+                Analysis based on aggregated findings from papers on LLM-based code generation. 
+                Understanding these trade-offs is crucial for practical implementation.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Chart 1: Quality vs Complexity -->
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Prompt Complexity vs. UI Success Rate</h3>
+                    <div class="chart-container">
+                        <canvas id="qualityChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-4 text-center italic">
+                        "Success Rate" defined by executable code percentage and visual adherence constraints.
+                    </p>
+                </div>
+
+                <!-- Chart 2: Token Latency -->
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Latency by Architecture Type</h3>
+                    <div class="chart-container">
+                        <canvas id="latencyChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-4 text-center italic">
+                        Comparison of Single-Shot generation vs. Multi-turn Agentic workflows.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-300 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="mb-4 text-lg font-bold text-white">Gemini for Generative UI</p>
+            <p class="text-sm text-slate-500">
+                Generated by Gemini • February 2026
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data: Research Papers/Approaches ---
+        const researchData = [
+            {
+                id: 1,
+                title: "Design2Code",
+                category: "e2e",
+                year: "2024",
+                summary: "Benchmarking multimodal LLMs on frontend engineering. Demonstrated that Gemini Ultra and GPT-4 could reproduce web pages from screenshots with high fidelity.",
+                tags: ["Multimodal", "Benchmarking", "Visual Grounding"]
+            },
+            {
+                id: 2,
+                title: "Lumos: Language Agents",
+                category: "hybrid",
+                year: "2023",
+                summary: "Uses a modular agentic framework where a 'Planner' agent decomposes the UI task and a 'Coder' agent implements it. Proved that separation of concerns improves complex UI generation.",
+                tags: ["Agents", "Modular", "Planning"]
+            },
+            {
+                id: 3,
+                title: "Retrieval-Augmented UI",
+                category: "retrieval",
+                year: "2024",
+                summary: "Instead of generating raw HTML, the model retrieves existing high-quality component definitions (Design System) and configures them. Drastically reduces hallucination.",
+                tags: ["RAG", "Design Systems", "Safety"]
+            },
+            {
+                id: 4,
+                title: "WebGPT",
+                category: "e2e",
+                year: "2023",
+                summary: "Fine-tuned models specifically for browser interactions and DOM manipulation. Highlighted the importance of domain-specific fine-tuning over generic prompting.",
+                tags: ["Fine-tuning", "DOM", "Interaction"]
+            },
+            {
+                id: 5,
+                title: "Self-Correction Frameworks",
+                category: "hybrid",
+                year: "2025",
+                summary: "Iterative loops where the model acts as a 'linter', analyzing its own output for accessibility and responsiveness violations before presenting to the user.",
+                tags: ["Iterative", "Quality Control", "Accessibility"]
+            },
+            {
+                id: 6,
+                title: "Vercel V0 & Generative Components",
+                category: "e2e",
+                year: "Industry",
+                summary: "Practical application of React component generation using Tailwind. Best practices emerged: Atomic design principles yield better AI results than monolithic page generation.",
+                tags: ["Industry Standard", "React", "Tailwind"]
+            }
+        ];
+
+        // --- Data: Prompt Snippets ---
+        const promptSnippets = {
+            persona: `ROLE: You are an expert Frontend Engineer and UI/UX Designer specialized in Tailwind CSS and modern JavaScript.\nOBJECTIVE: Create a high-fidelity, responsive Single Page Application (SPA) based on the user's request.\n`,
+            constraints: `CONSTRAINTS:
+1. Output MUST be a single valid HTML file.
+2. Use Tailwind CSS via CDN.
+3. NO external CSS/JS files.
+4. All JavaScript must be vanilla (no build steps).
+5. Ensure Chart.js is wrapped in responsive containers.\n`,
+            design: `DESIGN SYSTEM:
+- Typography: Use system sans-serif fonts with clear hierarchy.
+- Palette: Professional, neutral background (slate-50) with one primary accent color.
+- Spacing: Use ample whitespace (p-6, m-4).
+- Components: Use rounded corners (rounded-lg) and subtle shadows (shadow-sm) for depth.\n`,
+            cot: `PROCESS:
+1. ANALYZE: Break down the user's request into key functional requirements.
+2. PLAN: Outline the HTML structure in comments before writing code.
+3. IMPLEMENT: Write the code, ensuring all event listeners are attached safely.
+4. REVIEW: Double-check for unclosed tags or missing IDs.\n`,
+            error: `ROBUSTNESS:
+- If data is missing, generate plausible mock data.
+- Do not use alert(); use console.log or UI messages.
+- Ensure all charts have a fallback container size to prevent layout shift.\n`
+        };
+
+        // --- Function: Render Research Cards ---
+        function renderResearch(filter) {
+            const grid = document.getElementById('research-grid');
+            grid.innerHTML = '';
+            
+            const filteredData = filter === 'all' 
+                ? researchData 
+                : researchData.filter(item => item.category === filter);
+
+            filteredData.forEach(item => {
+                const tagsHtml = item.tags.map(tag => 
+                    `<span class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-full mr-2 mb-2">#${tag}</span>`
+                ).join('');
+
+                const card = `
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col h-full">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="font-bold text-slate-900 text-lg leading-tight">${item.title}</h3>
+                            <span class="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-1 rounded">${item.year}</span>
+                        </div>
+                        <p class="text-slate-600 text-sm mb-6 flex-grow">${item.summary}</p>
+                        <div class="mt-auto">
+                            ${tagsHtml}
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += card;
+            });
+        }
+
+        function filterResearch(category) {
+            // Update UI state
+            const buttons = document.querySelectorAll('#research-filters button');
+            buttons.forEach(btn => {
+                if(btn.textContent.toLowerCase().includes(category === 'e2e' ? 'end-to-end' : category === 'retrieval' ? 'retrieval' : category === 'hybrid' ? 'hybrid' : 'all')) {
+                    btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+                    btn.classList.add('bg-slate-800', 'text-white');
+                } else {
+                    btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+                    btn.classList.remove('bg-slate-800', 'text-white');
+                }
+            });
+            renderResearch(category);
+        }
+
+        // --- Function: Update Prompt Builder ---
+        function updatePrompt() {
+            const output = document.getElementById('prompt-output');
+            let text = "";
+            
+            if(document.getElementById('check-persona').checked) text += promptSnippets.persona + "\n";
+            if(document.getElementById('check-constraints').checked) text += promptSnippets.constraints + "\n";
+            if(document.getElementById('check-design').checked) text += promptSnippets.design + "\n";
+            if(document.getElementById('check-cot').checked) text += promptSnippets.cot + "\n";
+            if(document.getElementById('check-error').checked) text += promptSnippets.error + "\n";
+
+            text += "\nUSER REQUEST: {Insert User Intent Here}";
+            
+            output.textContent = text;
+        }
+
+        function copyPrompt() {
+            const text = document.getElementById('prompt-output').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Prompt copied to clipboard!");
+            });
+        }
+
+        // --- Function: Initialize Charts ---
+        function initCharts() {
+            // Quality Chart (Scatter/Line)
+            const ctxQuality = document.getElementById('qualityChart').getContext('2d');
+            new Chart(ctxQuality, {
+                type: 'line',
+                data: {
+                    labels: ['Basic Prompt', 'Role+Task', 'Role+Task+Format', 'Full Context (Golden)', 'Overloaded'],
+                    datasets: [{
+                        label: 'Code Executability %',
+                        data: [45, 68, 82, 95, 88], // "Overloaded" drops due to confusion
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Visual Fidelity Score',
+                        data: [30, 50, 75, 92, 85],
+                        borderColor: '#10b981',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            });
+
+            // Latency Chart (Bar)
+            const ctxLatency = document.getElementById('latencyChart').getContext('2d');
+            new Chart(ctxLatency, {
+                type: 'bar',
+                data: {
+                    labels: ['Zero-Shot', 'Few-Shot (RAG)', 'Chain-of-Thought', 'Agentic Loop'],
+                    datasets: [{
+                        label: 'Time to First Byte (ms)',
+                        data: [800, 1200, 2500, 4500],
+                        backgroundColor: '#64748b'
+                    },
+                    {
+                        label: 'Total Completion Time (ms)',
+                        data: [2500, 4000, 8000, 15000],
+                        backgroundColor: '#cbd5e1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // --- Navigation Scroll Helper ---
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderResearch('all');
+            updatePrompt();
+            initCharts();
+        });
+
+    </script>
+</body>
+</html>
