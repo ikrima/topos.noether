@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Mathematics of Tuning Systems</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Source+Sans+3:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f1a;
+  --bg-elevated: #111827;
+  --bg-interactive: #141c2e;
+  --text: #cdc5b8;
+  --text-dim: #7a7468;
+  --text-bright: #ede6da;
+  --gold: #c8a44e;
+  --gold-dim: #8a7235;
+  --blue: #5b8ec4;
+  --blue-dim: #3a5f8a;
+  --red: #c75050;
+  --green: #5aad6a;
+  --purple: #9b7ec8;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+}
+
+body {
+  font-family: 'Source Sans 3', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.75;
+  font-weight: 300;
+  font-size: 17px;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.essay-container {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+h1, h2, h3 {
+  font-family: 'Newsreader', serif;
+  color: var(--text-bright);
+  font-weight: 400;
+}
+
+h2 {
+  font-size: 2rem;
+  margin: 4rem 0 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-size: 1.35rem;
+  margin: 2.5rem 0 1rem;
+  color: var(--gold);
+}
+
+p {
+  margin-bottom: 1.25rem;
+}
+
+.lead {
+  font-size: 1.15rem;
+  color: var(--text-bright);
+  line-height: 1.8;
+}
+
+em { color: var(--gold); font-style: italic; font-family: 'Newsreader', serif; }
+
+strong { color: var(--text-bright); font-weight: 500; }
+
+.fraction {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--gold);
+  font-size: 0.95em;
+  background: rgba(200, 164, 78, 0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.interactive-block {
+  background: var(--bg-interactive);
+  border: 1px solid rgba(200, 164, 78, 0.12);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 2rem -12px;
+  position: relative;
+}
+
+.interactive-block canvas {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.interactive-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold-dim);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.ctrl-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.ctrl-btn {
+  background: rgba(200, 164, 78, 0.1);
+  border: 1px solid rgba(200, 164, 78, 0.2);
+  color: var(--gold);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: 'Source Sans 3', sans-serif;
+  transition: all 0.2s;
+}
+.ctrl-btn:hover { background: rgba(200, 164, 78, 0.2); }
+.ctrl-btn.active {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.ctrl-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(200, 164, 78, 0.15);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  flex: 1;
+  min-width: 100px;
+}
+.ctrl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+}
+
+.slider-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--gold);
+  min-width: 60px;
+  text-align: right;
+}
+
+.note-badge {
+  display: inline-block;
+  width: 32px; height: 32px;
+  line-height: 32px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(91, 142, 196, 0.15);
+  color: var(--blue);
+  border: 1px solid rgba(91, 142, 196, 0.25);
+}
+
+.hero {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 24px;
+  position: relative;
+}
+
+.hero h1 {
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.hero .subtitle {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  max-width: 500px;
+  line-height: 1.7;
+}
+
+.hero .attribution {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.hero .attribution a {
+  color: var(--gold-dim);
+  text-decoration: none;
+}
+
+.separator {
+  width: 40px;
+  height: 1px;
+  background: var(--gold-dim);
+  margin: 3rem auto;
+}
+
+.math {
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  color: var(--text-bright);
+}
+
+.piano-key {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.piano-key:hover { opacity: 0.85; }
+
+.quote-block {
+  border-left: 2px solid var(--gold-dim);
+  padding-left: 20px;
+  margin: 2rem 0;
+  color: var(--text-dim);
+  font-family: 'Newsreader', serif;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+footer {
+  text-align: center;
+  padding: 4rem 24px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+footer a { color: var(--gold-dim); text-decoration: none; }
+
+@media (max-width: 640px) {
+  .interactive-block { padding: 16px; margin: 1.5rem -8px; }
+  h2 { font-size: 1.6rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============== HERO ============== -->
+<header class="hero" id="heroCanvas">
+  <canvas id="heroWaveCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0.25;"></canvas>
+  <div style="position:relative;z-index:1;">
+    <h1>The Mathematics<br>of Tuning Systems</h1>
+    <p class="subtitle">An interactive exploration of why we have twelve notes, how simple fractions shape harmony, and the ancient battle between mathematical purity and musical pragmatism.</p>
+    <p class="attribution">Based on <a href="https://math.ucr.edu/home/baez/tuning_talk/" target="_blank">John Baez's talk</a> at Claremont McKenna College, January 2026</p>
+  </div>
+</header>
+
+<main class="essay-container">
+
+<!-- ============== SECTION 1: THE KEYBOARD ============== -->
+<div class="separator"></div>
+
+<h2>The Keyboard and the Twelve</h2>
+
+<p class="lead">Look at a piano keyboard. You'll notice a pattern: groups of two black keys alternate with groups of three. Count the notes in one repeating cycle — five black, seven white, twelve in total. This pattern is not arbitrary. It encodes centuries of mathematical discovery about the nature of sound.</p>
+
+<p>When you press a key, a hammer strikes a string that vibrates at a particular frequency — the number of times per second the air pressure oscillates. The relationships between these frequencies determine whether two notes sound harmonious or discordant when played together.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · The Piano Keyboard</div>
+  <canvas id="pianoCanvas" height="200"></canvas>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Click any key to hear it. The frequency ratio relative to C is shown below each white key.</p>
+</div>
+
+<p>Starting at any note and counting up twelve keys — white and black together — you arrive at a note whose frequency is <em>exactly double</em> the starting note. We call this interval an <em>octave</em>. A note at double the frequency sounds like "the same note, only higher," a phenomenon so fundamental that nearly every musical culture on Earth recognizes it.</p>
+
+<p>But between that starting note and its octave, we must choose where to place the remaining eleven notes. This is the problem of <em>tuning</em>, and it has occupied mathematicians and musicians for over two thousand years.</p>
+
+<!-- ============== SECTION 2: FREQUENCY AND CONSONANCE ============== -->
+<div class="separator"></div>
+
+<h2>The Sound of Simple Fractions</h2>
+
+<p>When two notes are played simultaneously, you hear <em>beats</em> — a pulsing in the volume caused by the waves drifting in and out of phase. The simpler the frequency ratio between two notes, the slower and smoother these beats become. At the very simplest ratios, the beats vanish entirely, and the two notes fuse into a single, luminous sound.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · Waveform Interference</div>
+  <canvas id="waveCanvas" height="220"></canvas>
+  <div class="ctrl-row" style="margin-top:16px;">
+    <span style="font-size:0.8rem; color:var(--text-dim);">Ratio:</span>
+    <input type="range" class="ctrl-slider" id="waveRatioSlider" min="1" max="2" step="0.001" value="1.5">
+    <span class="slider-label" id="waveRatioLabel">3 : 2</span>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn" data-ratio="1" data-label="1 : 1">Unison</button>
+    <button class="ctrl-btn" data-ratio="1.25" data-label="5 : 4">Major 3rd</button>
+    <button class="ctrl-btn" data-ratio="1.3333" data-label="4 : 3">Perfect 4th</button>
+    <button class="ctrl-btn active" data-ratio="1.5" data-label="3 : 2">Perfect 5th</button>
+    <button class="ctrl-btn" data-ratio="1.4142" data-label="√2">Tritone</button>
+    <button class="ctrl-btn" data-ratio="1.6667" data-label="5 : 3">Major 6th</button>
+    <button class="ctrl-btn" data-ratio="2" data-label="2 : 1">Octave</button>
+  </div>
+  <div class="ctrl-row" style="margin-top:8px;">
+    <button class="ctrl-btn" id="wavePlayBtn" style="background:var(--gold);color:var(--bg);">▶ Play</button>
+    <button class="ctrl-btn" id="waveStopBtn">◼ Stop</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">The top two waves are individual tones. The bottom wave shows their sum — notice how simple ratios produce clean, periodic patterns, while irrational ratios create restless, never-repeating interference.</p>
+</div>
+
+<p>The interval with ratio <span class="fraction">3:2</span> is called the <em>perfect fifth</em>. It is, after the octave itself, the most consonant interval in music. The <span class="fraction">5:4</span> ratio gives us the <em>major third</em>, warm and bright. The <span class="fraction">4:3</span> yields the <em>perfect fourth</em>, open and expectant.</p>
+
+<p>These simple fractions — built from the smallest prime numbers 2, 3, and 5 — form the backbone of Western harmony. The entire history of tuning systems is, in essence, the story of how we try to fit these beautiful ratios onto a finite keyboard.</p>
+
+<!-- ============== SECTION 3: WHY TWELVE ============== -->
+<div class="separator"></div>
+
+<h2>Why Twelve?</h2>
+
+<p>In the modern system called <em>12-tone equal temperament</em>, we divide the octave into twelve exactly equal steps. Each note vibrates <span class="fraction">2<sup>1/12</sup></span> ≈ 1.05946 times faster than the note below it. This means that every interval except the octave is irrational — a fact that would have horrified the Pythagoreans.</p>
+
+<p>But why twelve steps, and not ten, or fifteen, or some other number? The answer emerges when we ask: <strong>of all equal divisions of the octave, which ones best approximate the perfect fifth?</strong></p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · Approximating the Perfect Fifth in N-Tone Equal Temperament</div>
+  <canvas id="ntetCanvas" height="360"></canvas>
+  <div class="ctrl-row">
+    <span style="font-size:0.8rem; color:var(--text-dim);">Range:</span>
+    <input type="range" class="ctrl-slider" id="ntetRange" min="12" max="53" step="1" value="35">
+    <span class="slider-label" id="ntetRangeLabel">up to 35</span>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Each bar shows how closely <span class="math">N</span>-tone equal temperament can approximate the ratio 3:2. Gold bars mark the "record-holders" — values of <span class="math">N</span> that beat all smaller values. Hover or tap for details.</p>
+</div>
+
+<p>The numbers <strong>5</strong>, <strong>7</strong>, and <strong>12</strong> are the first three record-holders: each approximates <span class="fraction">3:2</span> more closely than any smaller equal division. And 12 is extraordinary — to beat it, you must go all the way to <strong>29</strong>, and even 29 is only slightly better. These are not coincidences. They are the numbers 5, 7, and 12 that appear on our piano keyboards as black keys, white keys, and total keys.</p>
+
+<p>The mathematical reason involves <em>continued fractions</em>. The quantity log<sub>2</sub>(3/2) ≈ 0.58496 has a continued fraction expansion whose convergents yield exactly these record-breaking values of <span class="math">N</span>.</p>
+
+<!-- ============== SECTION 4: CIRCLE OF FIFTHS ============== -->
+<div class="separator"></div>
+
+<h2>The Circle of Fifths</h2>
+
+<p>Arrange twelve equally-spaced notes around a circle. Starting at C and jumping up by a fifth each time — seven semitones in equal temperament — you visit every note exactly once before returning to C. This is the <em>circle of fifths</em>, the organizing principle of Western music theory.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · The Circle of Fifths</div>
+  <canvas id="circleCanvas" height="440"></canvas>
+  <div class="ctrl-row">
+    <button class="ctrl-btn active" id="circShowNotes">Notes</button>
+    <button class="ctrl-btn" id="circShowStar">Star of Fifths</button>
+    <button class="ctrl-btn" id="circPlayFifths">▶ Walk the Circle</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Click any note to hear it. Toggle "Star of Fifths" to see the path traced by successive fifths. "Walk the Circle" plays each fifth in sequence.</p>
+</div>
+
+<p>In equal temperament, every fifth is identical — each one multiplies the frequency by exactly <span class="fraction">2<sup>7/12</sup></span> ≈ 1.4983. This is close to <span class="fraction">3/2</span> = 1.5, but not exact. The error is tiny, roughly 2 cents (a cent is one hundredth of a semitone). Most ears cannot detect it.</p>
+
+<p>But the Pythagoreans wanted <em>exact</em> fifths. And this desire, as we shall see, unleashes the devil in music.</p>
+
+<!-- ============== SECTION 5: PYTHAGOREAN TUNING ============== -->
+<div class="separator"></div>
+
+<h2>Pythagorean Tuning</h2>
+
+<p>Start at some note and multiply its frequency by <span class="fraction">3/2</span>, then multiply that result by <span class="fraction">3/2</span>, and again, twelve times in total. If the musical universe were kind, you would arrive back at a note exactly seven octaves higher. But <span class="fraction">(3/2)<sup>12</sup></span> = 129.746…, while <span class="fraction">2<sup>7</sup></span> = 128. The spiral of fifths does not quite close.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · The Pythagorean Comma</div>
+  <canvas id="commaCanvas" height="400"></canvas>
+  <div class="ctrl-row">
+    <button class="ctrl-btn" id="commaAnimate">▶ Stack Twelve Fifths</button>
+    <button class="ctrl-btn" id="commaReset">Reset</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Watch as twelve perfect fifths are stacked. The spiral shows the cumulative frequency; the dashed ring shows seven octaves. The gap between them is the Pythagorean comma: <span class="fraction">(3/2)<sup>12</sup> / 2<sup>7</sup></span> ≈ 1.01364.</p>
+</div>
+
+<p>The ratio <span class="fraction">3<sup>12</sup> / 2<sup>19</sup></span> ≈ 1.01364 is called the <em>Pythagorean comma</em>. It is small — about a quarter of a semitone — but unmistakable to a trained ear. It is the "lump in the carpet" of Pythagorean tuning: you can push it around, but you cannot eliminate it.</p>
+
+<p>In practice, medieval musicians hid this comma in the <em>wolf fifth</em> — a single fifth that was noticeably smaller than the rest. They placed it between notes they rarely used. You could play beautifully in certain keys, but stray too far and you would hear the wolf howl.</p>
+
+<!-- ============== SECTION 6: THE DEVIL IN MUSIC ============== -->
+<div class="separator"></div>
+
+<h2>The Devil in Music</h2>
+
+<p>The interval exactly halfway through the octave is called the <em>tritone</em> — so named because it spans three whole tones. In equal temperament, it multiplies the frequency by <span class="fraction">√2</span>, the very number that ancient legend says got the Pythagorean Hippasus thrown overboard for discovering its irrationality.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · The Tritone — Four Approximations</div>
+  <canvas id="tritoneCanvas" height="260"></canvas>
+  <div class="ctrl-row">
+    <button class="ctrl-btn tritone-btn active" data-val="1.41421" data-name="√2 (Equal Temp)">√2 ≈ 1.4142</button>
+    <button class="ctrl-btn tritone-btn" data-val="1.40466" data-name="1024/729 (♯4)">1024/729 ≈ 1.4047</button>
+    <button class="ctrl-btn tritone-btn" data-val="1.42382" data-name="729/512 (♭5)">729/512 ≈ 1.4238</button>
+    <button class="ctrl-btn tritone-btn" data-val="1.4" data-name="7/5 (Septimal)">7/5 = 1.4</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">In Pythagorean tuning, the tritone can be approximated from above (♭5 = 729/512) or below (♯4 = 1024/729). The gap between them is exactly the Pythagorean comma. Click each to hear and see the waveform.</p>
+</div>
+
+<p>The tritone was sometimes called <em>diabolus in musica</em>. The story that the medieval Church banned it is a myth, but the mathematics behind its unease is real: <span class="fraction">√2</span> cannot be expressed as a ratio of integers. In any system built from powers of 2 and 3, we must choose an imperfect approximation — and the gap between the two best Pythagorean approximations is, again, the Pythagorean comma.</p>
+
+<!-- ============== SECTION 7: JUST INTONATION ============== -->
+<div class="separator"></div>
+
+<h2>Just Intonation and the Tonnetz</h2>
+
+<p>By the 1300s, thirds were becoming central to Western harmony, and Pythagorean tuning's <span class="fraction">81/64</span> — an ugly approximation to the pure <span class="fraction">5/4</span> third — was no longer acceptable. Musicians adopted a system now called <em>just intonation</em>, in which the simplest intervals are mathematically exact.</p>
+
+<p>We can visualize this system using a remarkable structure called the <em>Tonnetz</em> (German for "tone network"). Imagine an infinite grid where moving right multiplies the frequency by <span class="fraction">3/2</span>, and moving diagonally up-right multiplies by <span class="fraction">5/4</span>.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · The Tonnetz</div>
+  <canvas id="tonnetzCanvas" height="380"></canvas>
+  <div class="ctrl-row">
+    <button class="ctrl-btn" id="tonnetzTriad">Highlight Major Triads</button>
+    <button class="ctrl-btn" id="tonnetzPlayTriad">▶ Play C Major Triad</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Click nodes to hear their frequency. Each horizontal step is a perfect fifth (×3/2); each diagonal step is a major third (×5/4). The highlighted parallelogram contains exactly the notes needed for a 12-note scale.</p>
+</div>
+
+<p>Cut a parallelogram from this grid, fold its edges together, and you get a torus with exactly twelve notes — just right for a scale. This is a remarkable geometric coincidence, arising because the numbers 2, 3, and 5 have logarithms that are <em>nearly</em> commensurable.</p>
+
+<h3>The Beauty of Triads</h3>
+
+<p>In just intonation, the white notes of the major scale form three perfect <em>major triads</em> — groups of three notes with frequencies in the ratio <span class="fraction">4 : 5 : 6</span>. This is the bread and butter of Western harmony: the C major chord (C–E–G), the F major chord (F–A–C), and the G major chord (G–B–D).</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · Triads: Just Intonation vs. Equal Temperament</div>
+  <canvas id="triadCanvas" height="200"></canvas>
+  <div class="ctrl-row">
+    <button class="ctrl-btn" id="triadJust">▶ Just Intonation (4:5:6)</button>
+    <button class="ctrl-btn" id="triadET">▶ Equal Temperament</button>
+    <button class="ctrl-btn" id="triadStop">◼ Stop</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">In just intonation, the triad is perfectly periodic — a clean, fused sound. In equal temperament, the waveform drifts slowly, creating gentle beating. Most people find just intonation more serene, but equal temperament more versatile.</p>
+</div>
+
+<p>Listen carefully and you will hear the difference. The just triad is luminous and still. The equal-tempered triad shimmers slightly, as though seen through moving water — the notes drift in and out of phase about once per second. Neither is wrong, but they are different experiences.</p>
+
+<!-- ============== SECTION 8: THE COMMAS ============== -->
+<div class="separator"></div>
+
+<h2>The Commas</h2>
+
+<p>Just intonation is beautiful within a single key, but it harbors hidden defects — tiny discrepancies called <em>commas</em> that surface whenever you try to change keys.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · The Fundamental Commas</div>
+  <canvas id="commasCanvas" height="300"></canvas>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Three commas arise from near-coincidences among powers of 2, 3, and 5. The syntonic comma is why the "circle of fifths" never perfectly aligns with pure thirds. The lesser diesis is why three major thirds don't quite make an octave.</p>
+</div>
+
+<p>The <em>syntonic comma</em>, <span class="fraction">81/80</span>, measures the gap between a "Pythagorean third" (<span class="fraction">81/64</span> = four perfect fifths folded down) and a "just third" (<span class="fraction">5/4</span>). It tells us that the worlds of 3 and 5 do not perfectly align.</p>
+
+<p>The <em>lesser diesis</em>, <span class="fraction">128/125</span>, arises because three major thirds (<span class="fraction">5/4</span> × <span class="fraction">5/4</span> × <span class="fraction">5/4</span> = <span class="fraction">125/64</span>) fall just short of an octave (<span class="fraction">128/64</span> = 2). If they matched, the Tonnetz would close up perfectly into a torus with no seams.</p>
+
+<p>These commas are not defects in any particular tuning system. They are <em>facts about arithmetic</em> — about the way prime numbers 2, 3, and 5 relate to each other. No tuning system can make them disappear. Every system must decide how to distribute them.</p>
+
+<!-- ============== SECTION 9: THE DEMOCRATIC COMPROMISE ============== -->
+<div class="separator"></div>
+
+<h2>The Democratic Compromise</h2>
+
+<p>Equal temperament resolves all of these problems by brute force: it spreads the error equally across every interval. No key is favored, no wolf fifth howls, no comma lurks beneath any particular chord change. The cost is that <em>no interval is perfectly pure</em> — every fifth is slightly flat, every third is slightly sharp.</p>
+
+<div class="interactive-block">
+  <div class="interactive-label">Interactive · Three Tuning Systems Compared</div>
+  <canvas id="compCanvas" height="320"></canvas>
+  <div class="ctrl-row">
+    <span style="font-size:0.8rem; color:var(--text-dim);">Interval:</span>
+    <button class="ctrl-btn comp-btn active" data-idx="0">Unison</button>
+    <button class="ctrl-btn comp-btn" data-idx="1">Min 2nd</button>
+    <button class="ctrl-btn comp-btn" data-idx="2">Maj 2nd</button>
+    <button class="ctrl-btn comp-btn" data-idx="3">Min 3rd</button>
+    <button class="ctrl-btn comp-btn" data-idx="4">Maj 3rd</button>
+    <button class="ctrl-btn comp-btn" data-idx="5">Perf 4th</button>
+    <button class="ctrl-btn comp-btn" data-idx="7">Perf 5th</button>
+    <button class="ctrl-btn comp-btn" data-idx="11">Maj 7th</button>
+  </div>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:10px;">Compare the frequency ratios for each interval across three tuning systems. The gold line shows the "ideal" simple ratio. Equal temperament is always close but never exact; Pythagorean tuning nails the fifth but mangles the third; just intonation offers pure intervals but at the cost of an uneven keyboard.</p>
+</div>
+
+<p>Since roughly 1850, equal temperament has been the dominant system for keyboard instruments. It is, mathematically, the <em>least interesting</em> of the great historical tuning systems — but also the most practical. It allows pianists to play in any key, to modulate freely, to perform the music of every era without retuning.</p>
+
+<div class="quote-block">
+"Music is the pleasure the human mind experiences from counting without being aware that it is counting."<br>
+<span style="color:var(--text-dim); font-size:0.9rem;">— Gottfried Wilhelm Leibniz</span>
+</div>
+
+<p>But the history of music is not over. Computers have made it easier than ever to explore alternative tuning systems in real time. Microtonal music is thriving. The mathematical frontier — with its continued fractions, its lattices of primes, its commas and dieses — remains as rich and strange as ever. What will come next is up to us.</p>
+
+<div class="separator"></div>
+
+</main>
+
+<footer>
+  <p>Based on <a href="https://math.ucr.edu/home/baez/tuning_talk/" target="_blank">The Mathematics of Tuning Systems</a> by <a href="https://math.ucr.edu/home/baez/" target="_blank">John Baez</a>.</p>
+  <p style="margin-top:0.5rem;">An interactive essay in the spirit of explorable explanations.</p>
+</footer>
+
+<script>
+// ============================
+// AUDIO ENGINE
+// ============================
+let audioCtx = null;
+const activeOscillators = [];
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, duration = 0.6, gain = 0.15) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(gain, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration);
+}
+
+function playChord(freqs, duration = 1.5, gain = 0.1) {
+  freqs.forEach(f => playTone(f, duration, gain));
+}
+
+function startDrone(freq, gain = 0.12) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  g.gain.value = gain;
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start();
+  return { osc, gain: g, stop() { g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); osc.stop(ctx.currentTime + 0.35); }};
+}
+
+function stopAllDrones() {
+  while (activeOscillators.length) activeOscillators.pop().stop();
+}
+
+// ============================
+// NOTE DATA
+// ============================
+const NOTE_NAMES = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const NOTE_NAMES_FLAT = ['C','D♭','D','E♭','E','F','G♭','G','A♭','A','B♭','B'];
+const BASE_FREQ = 261.63; // middle C
+
+function etFreq(semitones) { return BASE_FREQ * Math.pow(2, semitones / 12); }
+
+const JUST_RATIOS = [1, 16/15, 9/8, 6/5, 5/4, 4/3, 45/32, 3/2, 8/5, 5/3, 9/5, 15/8];
+const PYTH_RATIOS = [1, 256/243, 9/8, 32/27, 81/64, 4/3, 729/512, 3/2, 128/81, 27/16, 16/9, 243/128];
+const ET_RATIOS = Array.from({length:12}, (_,i) => Math.pow(2, i/12));
+
+// ============================
+// UTILITY
+// ============================
+function dpr() { return window.devicePixelRatio || 1; }
+
+function setupCanvas(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const d = dpr();
+  canvas.width = rect.width * d;
+  canvas.height = rect.height * d;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(d, d);
+  return { ctx, w: rect.width, h: rect.height };
+}
+
+// ============================
+// HERO WAVE ANIMATION
+// ============================
+(function() {
+  const canvas = document.getElementById('heroWaveCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let t = 0;
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const cols = ['rgba(200,164,78,0.3)', 'rgba(91,142,196,0.25)', 'rgba(155,126,200,0.2)'];
+    const freqs = [0.008, 0.012, 0.006];
+    const speeds = [0.015, 0.022, 0.01];
+    const amps = [h*0.06, h*0.045, h*0.05];
+
+    for (let k = 0; k < 3; k++) {
+      ctx.beginPath();
+      ctx.strokeStyle = cols[k];
+      ctx.lineWidth = 1.5;
+      for (let x = 0; x <= w; x += 2) {
+        const y = h/2 + Math.sin(x * freqs[k] + t * speeds[k]) * amps[k]
+                      + Math.sin(x * freqs[k] * 1.7 + t * speeds[k] * 0.7) * amps[k] * 0.5;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    t++;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => ({ ctx, w, h } = setupCanvas(canvas)));
+  draw();
+})();
+
+// ============================
+// PIANO KEYBOARD
+// ============================
+(function() {
+  const canvas = document.getElementById('pianoCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+
+  const whiteW = w / 14;
+  const blackW = whiteW * 0.6;
+  const blackH = h * 0.58;
+  const whiteH = h * 0.82;
+
+  // Two octaves: 0-23
+  const blackIndices = new Set([1,3,6,8,10,13,15,18,20,22]);
+  const whiteLetters = ['C','D','E','F','G','A','B','C','D','E','F','G','A','B'];
+  const whiteRatios = ['1','9/8','5/4','4/3','3/2','5/3','15/8','2'];
+
+  function getWhiteKeys() {
+    const keys = [];
+    for (let i = 0; i < 14; i++) {
+      keys.push({ x: i * whiteW, y: 0, w: whiteW - 1, h: whiteH, white: true, idx: i });
+    }
+    return keys;
+  }
+
+  function getBlackKeys() {
+    const keys = [];
+    const blackPos = [0.65, 1.75, 3.6, 4.65, 5.72, 7.65, 8.75, 10.6, 11.65, 12.72];
+    for (let i = 0; i < blackPos.length; i++) {
+      keys.push({ x: blackPos[i] * whiteW, y: 0, w: blackW, h: blackH, white: false, idx: i });
+    }
+    return keys;
+  }
+
+  const whiteKeys = getWhiteKeys();
+  const blackKeys = getBlackKeys();
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // White keys
+    whiteKeys.forEach((k, i) => {
+      ctx.fillStyle = '#e8e0d4';
+      ctx.fillRect(k.x, k.y, k.w, k.h);
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(k.x, k.y, k.w, k.h);
+
+      // Letter
+      ctx.fillStyle = '#333';
+      ctx.font = '11px Source Sans 3';
+      ctx.textAlign = 'center';
+      ctx.fillText(whiteLetters[i], k.x + k.w/2, k.h - 8);
+
+      // Ratio (first octave only)
+      if (i < 8) {
+        ctx.fillStyle = 'var(--text-dim)';
+        ctx.font = '9px JetBrains Mono';
+        ctx.fillText(whiteRatios[i] || '', k.x + k.w/2, k.h + 16);
+      }
+    });
+
+    // Black keys
+    blackKeys.forEach(k => {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(k.x, k.y, k.w, k.h);
+    });
+  }
+
+  // Map white key index to semitone
+  const whiteToSemi = [0,2,4,5,7,9,11,12,14,16,17,19,21,23];
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // Check black keys first (they're on top)
+    const blackToSemi = [1,3,6,8,10,13,15,18,20,22];
+    for (const k of blackKeys) {
+      if (mx >= k.x && mx <= k.x+k.w && my >= k.y && my <= k.y+k.h) {
+        playTone(BASE_FREQ * Math.pow(2, blackToSemi[k.idx]/12), 0.8, 0.18);
+        return;
+      }
+    }
+    for (const k of whiteKeys) {
+      if (mx >= k.x && mx <= k.x+k.w && my >= k.y && my <= k.y+k.h) {
+        playTone(BASE_FREQ * Math.pow(2, whiteToSemi[k.idx]/12), 0.8, 0.18);
+        return;
+      }
+    }
+  });
+
+  window.addEventListener('resize', () => { ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// WAVEFORM INTERFERENCE
+// ============================
+(function() {
+  const canvas = document.getElementById('waveCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  const slider = document.getElementById('waveRatioSlider');
+  const label = document.getElementById('waveRatioLabel');
+  let ratio = 1.5;
+  let phase = 0;
+  let animId;
+  let drones = [];
+
+  const presets = {
+    '1': '1 : 1', '1.25': '5 : 4', '1.3333': '4 : 3',
+    '1.5': '3 : 2', '1.4142': '√2', '1.6667': '5 : 3', '2': '2 : 1'
+  };
+
+  function closestLabel(r) {
+    let best = '', bestD = Infinity;
+    for (const [k,v] of Object.entries(presets)) {
+      const d = Math.abs(r - parseFloat(k));
+      if (d < bestD) { bestD = d; best = v; }
+    }
+    return bestD < 0.015 ? best : r.toFixed(4);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const third = h / 3;
+    const amp = third * 0.35;
+    const freq1 = 3;
+    const freq2 = freq1 * ratio;
+
+    // Wave 1
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(91,142,196,0.7)';
+    ctx.lineWidth = 1.5;
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y = third * 0.5 + Math.sin(2 * Math.PI * (freq1 * t + phase)) * amp;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Wave 2
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(200,164,78,0.7)';
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y = third * 1.5 + Math.sin(2 * Math.PI * (freq2 * t + phase * ratio)) * amp;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Combined
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(220,210,195,0.8)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y1 = Math.sin(2 * Math.PI * (freq1 * t + phase));
+      const y2 = Math.sin(2 * Math.PI * (freq2 * t + phase * ratio));
+      const y = third * 2.5 + (y1 + y2) * amp * 0.7;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Labels
+    ctx.font = '10px Source Sans 3';
+    ctx.fillStyle = 'rgba(91,142,196,0.5)';
+    ctx.fillText('Tone 1', 8, third * 0.5 - amp - 4);
+    ctx.fillStyle = 'rgba(200,164,78,0.5)';
+    ctx.fillText('Tone 2', 8, third * 1.5 - amp - 4);
+    ctx.fillStyle = 'rgba(220,210,195,0.5)';
+    ctx.fillText('Combined', 8, third * 2.5 - amp - 4);
+
+    // Dividers
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    [1,2].forEach(i => { ctx.beginPath(); ctx.moveTo(0, third*i); ctx.lineTo(w, third*i); ctx.stroke(); });
+
+    phase += 0.008;
+    animId = requestAnimationFrame(draw);
+  }
+
+  slider.addEventListener('input', () => {
+    ratio = parseFloat(slider.value);
+    label.textContent = closestLabel(ratio);
+    // Update active button
+    document.querySelectorAll('.ctrl-btn[data-ratio]').forEach(b => {
+      b.classList.toggle('active', Math.abs(parseFloat(b.dataset.ratio) - ratio) < 0.005);
+    });
+    // Update drones if playing
+    if (drones.length === 2) {
+      drones[1].osc.frequency.value = 261.63 * ratio;
+    }
+  });
+
+  document.querySelectorAll('.ctrl-btn[data-ratio]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ratio = parseFloat(btn.dataset.ratio);
+      slider.value = ratio;
+      label.textContent = btn.dataset.label;
+      document.querySelectorAll('.ctrl-btn[data-ratio]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (drones.length === 2) drones[1].osc.frequency.value = 261.63 * ratio;
+    });
+  });
+
+  document.getElementById('wavePlayBtn').addEventListener('click', () => {
+    stopAllDrones();
+    drones = [];
+    const d1 = startDrone(261.63, 0.1);
+    const d2 = startDrone(261.63 * ratio, 0.1);
+    drones = [d1, d2];
+    activeOscillators.push(d1, d2);
+  });
+
+  document.getElementById('waveStopBtn').addEventListener('click', () => {
+    stopAllDrones();
+    drones = [];
+  });
+
+  window.addEventListener('resize', () => { cancelAnimationFrame(animId); ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// N-TET APPROXIMATION CHART
+// ============================
+(function() {
+  const canvas = document.getElementById('ntetCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  const rangeSlider = document.getElementById('ntetRange');
+  const rangeLabel = document.getElementById('ntetRangeLabel');
+  let maxN = 35;
+  let hoverN = -1;
+
+  function bestFifthError(n) {
+    // Find the step k in n-TET that best approximates log2(3/2)
+    const target = Math.log2(3/2); // ~0.58496
+    let bestK = Math.round(target * n);
+    if (bestK < 1) bestK = 1;
+    if (bestK >= n) bestK = n - 1;
+    const approx = bestK / n;
+    return Math.abs(approx - target);
+  }
+
+  function isRecordHolder(n) {
+    const err = bestFifthError(n);
+    for (let m = 1; m < n; m++) {
+      if (bestFifthError(m) <= err) return false;
+    }
+    return true;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const pad = { l: 42, r: 16, t: 20, b: 48 };
+    const cw = w - pad.l - pad.r;
+    const ch = h - pad.t - pad.b;
+
+    // Compute data
+    const data = [];
+    let maxErr = 0;
+    for (let n = 1; n <= maxN; n++) {
+      const err = bestFifthError(n);
+      if (err > maxErr) maxErr = err;
+      data.push({ n, err, record: isRecordHolder(n) });
+    }
+
+    const barW = Math.max(2, (cw / maxN) - 2);
+    const gap = cw / maxN;
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.t + (ch / 4) * i;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    }
+
+    // Bars
+    data.forEach((d, i) => {
+      const x = pad.l + i * gap + gap/2 - barW/2;
+      const barH = (d.err / maxErr) * ch;
+      const y = pad.t + ch - barH;
+
+      if (d.n === hoverN) {
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(pad.l + i * gap, pad.t, gap, ch);
+      }
+
+      ctx.fillStyle = d.record ? '#c8a44e' : 'rgba(91,142,196,0.4)';
+      if ([5,7,12].includes(d.n)) ctx.fillStyle = '#c8a44e';
+
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, [2, 2, 0, 0]);
+      ctx.fill();
+
+      // N label
+      if (maxN <= 40 || d.n % 2 === 0 || d.record) {
+        ctx.fillStyle = d.record || [5,7,12].includes(d.n) ? '#c8a44e' : 'rgba(255,255,255,0.3)';
+        ctx.font = (maxN > 40 ? '8' : '10') + 'px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText(d.n, pad.l + i * gap + gap/2, pad.t + ch + 16);
+      }
+
+      // Record marker
+      if (d.record) {
+        ctx.fillStyle = '#c8a44e';
+        ctx.beginPath();
+        ctx.arc(pad.l + i * gap + gap/2, y - 6, 2.5, 0, Math.PI*2);
+        ctx.fill();
+      }
+    });
+
+    // Y axis label
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '10px Source Sans 3';
+    ctx.translate(14, pad.t + ch/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center';
+    ctx.fillText('Error from 3:2', 0, 0);
+    ctx.restore();
+
+    // X axis label
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '10px Source Sans 3';
+    ctx.textAlign = 'center';
+    ctx.fillText('N (number of equal divisions)', pad.l + cw/2, h - 6);
+
+    // Hover info
+    if (hoverN > 0 && hoverN <= maxN) {
+      const d = data[hoverN - 1];
+      const bestK = Math.round(Math.log2(3/2) * d.n);
+      const approxRatio = Math.pow(2, bestK / d.n);
+      const cents = Math.abs(1200 * Math.log2(approxRatio / 1.5));
+
+      ctx.fillStyle = 'rgba(17,24,39,0.9)';
+      ctx.strokeStyle = 'rgba(200,164,78,0.3)';
+      ctx.lineWidth = 1;
+      const tw = 180, th = 58;
+      const tx = Math.min(w - tw - 10, Math.max(10, pad.l + (hoverN-1) * gap));
+      ctx.beginPath(); ctx.roundRect(tx, pad.t + 4, tw, th, 6); ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle = '#ede6da';
+      ctx.font = '12px Source Sans 3';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${d.n}-TET${d.record ? ' ★ record' : ''}`, tx + 8, pad.t + 20);
+      ctx.font = '11px JetBrains Mono';
+      ctx.fillStyle = '#c8a44e';
+      ctx.fillText(`Best fifth: 2^(${bestK}/${d.n})`, tx + 8, pad.t + 36);
+      ctx.fillText(`Error: ${cents.toFixed(2)} cents`, tx + 8, pad.t + 52);
+    }
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const pad = { l: 42, r: 16 };
+    const cw = w - pad.l - pad.r;
+    const gap = cw / maxN;
+    hoverN = Math.floor((mx - pad.l) / gap) + 1;
+    if (hoverN < 1 || hoverN > maxN) hoverN = -1;
+    draw();
+  });
+
+  canvas.addEventListener('mouseleave', () => { hoverN = -1; draw(); });
+
+  canvas.addEventListener('click', (e) => {
+    if (hoverN > 0) {
+      const bestK = Math.round(Math.log2(3/2) * hoverN);
+      const freq = BASE_FREQ * Math.pow(2, bestK / hoverN);
+      playTone(BASE_FREQ, 0.8, 0.12);
+      setTimeout(() => playTone(freq, 0.8, 0.12), 100);
+    }
+  });
+
+  rangeSlider.addEventListener('input', () => {
+    maxN = parseInt(rangeSlider.value);
+    rangeLabel.textContent = `up to ${maxN}`;
+    draw();
+  });
+
+  window.addEventListener('resize', () => { ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// CIRCLE OF FIFTHS
+// ============================
+(function() {
+  const canvas = document.getElementById('circleCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let showStar = false;
+  let highlightIdx = -1;
+  let walkPhase = -1;
+
+  const names = ['C','G','D','A','E','B','F♯/G♭','D♭','A♭','E♭','B♭','F'];
+  const semiFromC = [0,7,2,9,4,11,6,1,8,3,10,5]; // fifths order in semitones
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const cx = w/2, cy = h/2;
+    const R = Math.min(cx, cy) - 50;
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Star of fifths
+    if (showStar) {
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(200,164,78,0.25)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i <= 12; i++) {
+        const idx = i % 12;
+        const angle = -Math.PI/2 + (idx * Math.PI * 2 / 12);
+        const x = cx + Math.cos(angle) * R;
+        const y = cy + Math.sin(angle) * R;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Nodes
+    for (let i = 0; i < 12; i++) {
+      const angle = -Math.PI/2 + (i * Math.PI * 2 / 12);
+      const x = cx + Math.cos(angle) * R;
+      const y = cy + Math.sin(angle) * R;
+
+      const isHighlight = i === highlightIdx || (walkPhase >= 0 && i <= walkPhase);
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(x, y, isHighlight ? 22 : 18, 0, Math.PI*2);
+      ctx.fillStyle = isHighlight ? 'rgba(200,164,78,0.3)' : 'rgba(91,142,196,0.12)';
+      ctx.fill();
+      ctx.strokeStyle = isHighlight ? '#c8a44e' : 'rgba(91,142,196,0.3)';
+      ctx.lineWidth = isHighlight ? 2 : 1;
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = isHighlight ? '#c8a44e' : '#8aa8cc';
+      ctx.font = (isHighlight ? '600 13' : '12') + 'px Source Sans 3';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(names[i], x, y);
+    }
+
+    // Center info
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '11px Source Sans 3';
+    ctx.textAlign = 'center';
+    ctx.fillText('Circle of Fifths', cx, cy - 8);
+    ctx.fillText('Each step = × 2^(7/12)', cx, cy + 8);
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (walkPhase >= 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const cx = w/2, cy = h/2;
+    const R = Math.min(cx, cy) - 50;
+
+    highlightIdx = -1;
+    for (let i = 0; i < 12; i++) {
+      const angle = -Math.PI/2 + (i * Math.PI * 2 / 12);
+      const x = cx + Math.cos(angle) * R;
+      const y = cy + Math.sin(angle) * R;
+      if (Math.hypot(mx - x, my - y) < 24) { highlightIdx = i; break; }
+    }
+    draw();
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (highlightIdx >= 0) {
+      playTone(BASE_FREQ * Math.pow(2, semiFromC[highlightIdx] / 12), 0.8, 0.18);
+    }
+  });
+
+  document.getElementById('circShowNotes').addEventListener('click', function() {
+    showStar = false;
+    this.classList.add('active');
+    document.getElementById('circShowStar').classList.remove('active');
+    draw();
+  });
+
+  document.getElementById('circShowStar').addEventListener('click', function() {
+    showStar = true;
+    this.classList.add('active');
+    document.getElementById('circShowNotes').classList.remove('active');
+    draw();
+  });
+
+  document.getElementById('circPlayFifths').addEventListener('click', () => {
+    walkPhase = 0;
+    draw();
+    const interval = setInterval(() => {
+      playTone(BASE_FREQ * Math.pow(2, semiFromC[walkPhase] / 12), 0.5, 0.15);
+      walkPhase++;
+      draw();
+      if (walkPhase >= 12) {
+        clearInterval(interval);
+        setTimeout(() => { walkPhase = -1; draw(); }, 800);
+      }
+    }, 400);
+  });
+
+  window.addEventListener('resize', () => { ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// PYTHAGOREAN COMMA SPIRAL
+// ============================
+(function() {
+  const canvas = document.getElementById('commaCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let fifthsStacked = 0;
+  let animating = false;
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const cx = w/2, cy = h/2;
+    const maxR = Math.min(cx, cy) - 30;
+
+    // The idea: show a spiral where each revolution = 1 octave
+    // 12 fifths = log2((3/2)^12) = 12*log2(3/2) ≈ 7.0196 octaves
+    // 7 octaves exactly = 7.0000
+
+    const octavesPerFifth = Math.log2(3/2); // ~0.58496
+    const totalAngle = fifthsStacked * octavesPerFifth * Math.PI * 2; // full rotations = octaves
+    const totalOctaves = fifthsStacked * octavesPerFifth;
+
+    // Draw octave rings (7)
+    for (let oct = 1; oct <= 7; oct++) {
+      const r = (oct / 7.5) * maxR;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = oct <= Math.floor(totalOctaves + 0.1) ? 'rgba(91,142,196,0.2)' : 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Label
+      if (oct <= 7) {
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.font = '9px JetBrains Mono';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${oct} oct`, cx + r + 4, cy + 3);
+      }
+    }
+
+    // Draw spiral path
+    if (fifthsStacked > 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#c8a44e';
+      ctx.lineWidth = 2;
+      const steps = 500;
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps; // 0..1
+        const octNow = t * totalOctaves;
+        const angle = -Math.PI/2 + t * totalAngle;
+        const r = (octNow / 7.5) * maxR;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Mark each fifth
+      for (let f = 0; f <= fifthsStacked; f++) {
+        const octNow = f * octavesPerFifth;
+        const angle = -Math.PI/2 + f * octavesPerFifth * Math.PI * 2;
+        const r = (octNow / 7.5) * maxR;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#c8a44e';
+        ctx.fill();
+
+        if (f === 0 || f === fifthsStacked || f === 6) {
+          ctx.fillStyle = '#ede6da';
+          ctx.font = '10px Source Sans 3';
+          ctx.textAlign = 'center';
+          const lx = x + Math.cos(angle) * 16;
+          const ly = y + Math.sin(angle) * 16;
+          ctx.fillText(f === 0 ? 'Start' : `${f}th fifth`, lx, ly);
+        }
+      }
+
+      // Show comma
+      if (fifthsStacked >= 12) {
+        const octExact = 7;
+        const octActual = 12 * octavesPerFifth;
+        const angleExact = -Math.PI/2 + octExact * Math.PI * 2;
+        const angleActual = -Math.PI/2 + octActual * Math.PI * 2;
+        const rExact = (octExact / 7.5) * maxR;
+        const rActual = (octActual / 7.5) * maxR;
+
+        // 7 octaves marker
+        ctx.beginPath();
+        ctx.arc(cx + Math.cos(angleExact) * rExact, cy + Math.sin(angleExact) * rExact, 5, 0, Math.PI*2);
+        ctx.strokeStyle = '#5b8ec4';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#5b8ec4';
+        ctx.font = '11px Source Sans 3';
+        ctx.textAlign = 'center';
+        ctx.fillText('7 octaves = 128×', cx, h - 10);
+
+        ctx.fillStyle = '#c8a44e';
+        ctx.fillText('12 fifths = 129.746×', cx, h - 26);
+
+        ctx.fillStyle = '#c75050';
+        ctx.font = '600 12px Source Sans 3';
+        ctx.fillText('Comma ≈ 1.364%', cx, h - 44);
+      }
+    }
+
+    // Center
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#5b8ec4';
+    ctx.fill();
+  }
+
+  document.getElementById('commaAnimate').addEventListener('click', () => {
+    if (animating) return;
+    animating = true;
+    fifthsStacked = 0;
+    draw();
+    const interval = setInterval(() => {
+      fifthsStacked++;
+      playTone(BASE_FREQ * Math.pow(3/2, fifthsStacked) / Math.pow(2, Math.floor(fifthsStacked * Math.log2(3/2))), 0.4, 0.1);
+      draw();
+      if (fifthsStacked >= 12) {
+        clearInterval(interval);
+        animating = false;
+      }
+    }, 500);
+  });
+
+  document.getElementById('commaReset').addEventListener('click', () => {
+    fifthsStacked = 0;
+    animating = false;
+    draw();
+  });
+
+  window.addEventListener('resize', () => { ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// TRITONE VISUALIZATION
+// ============================
+(function() {
+  const canvas = document.getElementById('tritoneCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let currentVal = Math.sqrt(2);
+  let currentName = '√2 (Equal Temp)';
+  let phase = 0;
+  let animId;
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const half = h / 2;
+    const amp = half * 0.35;
+
+    // Base tone
+    const freq1 = 3;
+    const freq2 = freq1 * currentVal;
+
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(91,142,196,0.6)';
+    ctx.lineWidth = 1.5;
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y = half * 0.5 + Math.sin(2 * Math.PI * (freq1 * t + phase)) * amp;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Combined
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(200,164,78,0.8)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      const y1 = Math.sin(2 * Math.PI * (freq1 * t + phase));
+      const y2 = Math.sin(2 * Math.PI * (freq2 * t + phase * currentVal));
+      const y = half * 1.5 + (y1 + y2) * amp * 0.7;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#c8a44e';
+    ctx.font = '600 13px Source Sans 3';
+    ctx.textAlign = 'center';
+    ctx.fillText(currentName, w/2, 18);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '10px Source Sans 3';
+    ctx.fillText('Base tone + Tritone combined', w/2, half + 18);
+
+    phase += 0.006;
+    animId = requestAnimationFrame(draw);
+  }
+
+  document.querySelectorAll('.tritone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tritone-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentVal = parseFloat(btn.dataset.val);
+      currentName = btn.dataset.name;
+      playTone(BASE_FREQ, 0.8, 0.1);
+      playTone(BASE_FREQ * currentVal, 0.8, 0.1);
+    });
+  });
+
+  window.addEventListener('resize', () => { cancelAnimationFrame(animId); ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// TONNETZ
+// ============================
+(function() {
+  const canvas = document.getElementById('tonnetzCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let showTriads = false;
+  let hoverNode = null;
+
+  // Tonnetz: horizontal = fifth (3/2), diagonal up-right = major third (5/4)
+  // We'll create a grid of nodes
+  const cols = 7, rows = 4;
+  const noteLabels = ['C','G','D','A','E','B','F♯','C♯'];
+
+  function getNodes() {
+    const nodes = [];
+    const spacingX = w / (cols + 1);
+    const spacingY = h / (rows + 1.5);
+    const offsetX = spacingX * 0.3;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = spacingX * (c + 1) + r * offsetX;
+        const y = spacingY * (rows - r) + spacingY * 0.25;
+
+        // Frequency: start from C=1, right = ×3/2, up = ×5/4
+        const rawFreq = Math.pow(3/2, c) * Math.pow(5/4, r);
+        // Fold into one octave
+        let freq = rawFreq;
+        while (freq >= 2) freq /= 2;
+        while (freq < 1) freq *= 2;
+
+        // Name: determine from position
+        const semiFromC = Math.round(12 * Math.log2(freq)) % 12;
+        const name = NOTE_NAMES[semiFromC] || '?';
+
+        nodes.push({ x, y, r: 18, freq, semiFromC, name, row: r, col: c, rawFreq });
+      }
+    }
+    return nodes;
+  }
+
+  let nodes = getNodes();
+
+  // Major triad triangles: (col, row), (col, row+1), (col+1, row)
+  function getTriads() {
+    const triads = [];
+    for (let r = 0; r < rows - 1; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        const n1 = nodes[r * cols + c];
+        const n2 = nodes[(r + 1) * cols + c];
+        const n3 = nodes[r * cols + c + 1];
+        triads.push([n1, n2, n3]);
+      }
+    }
+    return triads;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw connections
+    nodes.forEach((n, i) => {
+      const r = n.row, c = n.col;
+      // Right neighbor
+      if (c < cols - 1) {
+        const nb = nodes[r * cols + c + 1];
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(nb.x, nb.y);
+        ctx.strokeStyle = 'rgba(91,142,196,0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // Up neighbor
+      if (r < rows - 1) {
+        const nb = nodes[(r + 1) * cols + c];
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(nb.x, nb.y);
+        ctx.strokeStyle = 'rgba(200,164,78,0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // Diagonal
+      if (c < cols - 1 && r < rows - 1) {
+        const nb = nodes[(r+1) * cols + c + 1];
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y);
+        ctx.lineTo(nb.x, nb.y);
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    });
+
+    // Draw triads
+    if (showTriads) {
+      getTriads().forEach(([a, b, c]) => {
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(200,164,78,0.06)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(200,164,78,0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+
+    // Draw nodes
+    nodes.forEach(n => {
+      const isHover = hoverNode === n;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, isHover ? 22 : n.r, 0, Math.PI * 2);
+      ctx.fillStyle = isHover ? 'rgba(200,164,78,0.35)' : 'rgba(20,28,46,0.9)';
+      ctx.fill();
+      ctx.strokeStyle = isHover ? '#c8a44e' : 'rgba(91,142,196,0.3)';
+      ctx.lineWidth = isHover ? 2 : 1;
+      ctx.stroke();
+
+      ctx.fillStyle = isHover ? '#c8a44e' : '#8aa8cc';
+      ctx.font = (isHover ? '600 12' : '11') + 'px Source Sans 3';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.name, n.x, n.y);
+    });
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(91,142,196,0.4)';
+    ctx.font = '10px Source Sans 3';
+    ctx.textAlign = 'center';
+    ctx.fillText('→ × 3/2 (perfect fifth)', w/2, h - 6);
+
+    ctx.save();
+    ctx.translate(14, h/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillStyle = 'rgba(200,164,78,0.4)';
+    ctx.fillText('↑ × 5/4 (major third)', 0, 0);
+    ctx.restore();
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    hoverNode = null;
+    for (const n of nodes) {
+      if (Math.hypot(mx - n.x, my - n.y) < 24) { hoverNode = n; break; }
+    }
+    canvas.style.cursor = hoverNode ? 'pointer' : 'default';
+    draw();
+  });
+
+  canvas.addEventListener('click', () => {
+    if (hoverNode) {
+      playTone(BASE_FREQ * hoverNode.freq, 0.8, 0.18);
+    }
+  });
+
+  document.getElementById('tonnetzTriad').addEventListener('click', function() {
+    showTriads = !showTriads;
+    this.classList.toggle('active', showTriads);
+    draw();
+  });
+
+  document.getElementById('tonnetzPlayTriad').addEventListener('click', () => {
+    // Play C major: C (1), E (5/4), G (3/2)
+    playChord([BASE_FREQ, BASE_FREQ * 5/4, BASE_FREQ * 3/2], 2, 0.12);
+  });
+
+  window.addEventListener('resize', () => {
+    ({ ctx, w, h } = setupCanvas(canvas));
+    nodes = getNodes();
+    draw();
+  });
+  draw();
+})();
+
+// ============================
+// TRIAD COMPARISON
+// ============================
+(function() {
+  const canvas = document.getElementById('triadCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let mode = null; // 'just' or 'et'
+  let phase = 0;
+  let animId;
+
+  const justTriad = [1, 5/4, 3/2];
+  const etTriad = [1, Math.pow(2, 4/12), Math.pow(2, 7/12)];
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const amp = h * 0.3;
+    const freqs = mode === 'just' ? justTriad : (mode === 'et' ? etTriad : justTriad);
+    const baseF = 2.5;
+
+    // Draw combined waveform
+    ctx.beginPath();
+    const col = mode === 'just' ? 'rgba(91,142,196,0.8)' : (mode === 'et' ? 'rgba(200,164,78,0.8)' : 'rgba(255,255,255,0.2)');
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+
+    for (let x = 0; x < w; x++) {
+      const t = x / w;
+      let sum = 0;
+      freqs.forEach(f => {
+        sum += Math.sin(2 * Math.PI * (baseF * f * t + phase * f));
+      });
+      const y = h/2 + sum * amp / 3;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = col;
+    ctx.font = '600 12px Source Sans 3';
+    ctx.textAlign = 'center';
+    if (mode === 'just') ctx.fillText('Just Intonation: C=1 · E=5/4 · G=3/2 → ratio 4:5:6', w/2, 20);
+    else if (mode === 'et') ctx.fillText('Equal Temperament: C=1 · E=2^(4/12) · G=2^(7/12)', w/2, 20);
+    else ctx.fillText('Click a button below to compare', w/2, 20);
+
+    phase += 0.005;
+    animId = requestAnimationFrame(draw);
+  }
+
+  document.getElementById('triadJust').addEventListener('click', () => {
+    mode = 'just';
+    stopAllDrones();
+    playChord(justTriad.map(r => BASE_FREQ * r), 2.5, 0.1);
+  });
+
+  document.getElementById('triadET').addEventListener('click', () => {
+    mode = 'et';
+    stopAllDrones();
+    playChord(etTriad.map(r => BASE_FREQ * r), 2.5, 0.1);
+  });
+
+  document.getElementById('triadStop').addEventListener('click', () => {
+    stopAllDrones();
+  });
+
+  window.addEventListener('resize', () => { cancelAnimationFrame(animId); ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// COMMAS VISUALIZATION
+// ============================
+(function() {
+  const canvas = document.getElementById('commasCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+
+  const commas = [
+    { name: 'Pythagorean Comma', ratio: '3¹²/2¹⁹', decimal: Math.pow(3,12)/Math.pow(2,19), cents: 23.46, desc: '12 fifths vs 7 octaves', color: '#c8a44e' },
+    { name: 'Syntonic Comma', ratio: '81/80', decimal: 81/80, cents: 21.51, desc: '4 fifths vs 1 third + 2 octaves', color: '#5b8ec4' },
+    { name: 'Lesser Diesis', ratio: '128/125', decimal: 128/125, cents: 41.06, desc: '3 major thirds vs 1 octave', color: '#9b7ec8' },
+  ];
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const rowH = h / 3;
+    const pad = 20;
+
+    commas.forEach((c, i) => {
+      const y = i * rowH;
+
+      // Bar representing the comma size (in cents, normalized to 50 cents max)
+      const barMaxW = w - 200;
+      const barW = (c.cents / 50) * barMaxW;
+
+      // Background
+      ctx.fillStyle = `${c.color}08`;
+      ctx.fillRect(0, y, w, rowH - 4);
+
+      // Name
+      ctx.fillStyle = c.color;
+      ctx.font = '600 14px Source Sans 3';
+      ctx.textAlign = 'left';
+      ctx.fillText(c.name, pad, y + 24);
+
+      // Ratio
+      ctx.font = '13px JetBrains Mono';
+      ctx.fillText(c.ratio + ` = ${c.decimal.toFixed(5)}`, pad, y + 44);
+
+      // Description
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '11px Source Sans 3';
+      ctx.fillText(c.desc, pad, y + 62);
+
+      // Bar
+      const barX = 200;
+      const barY = y + 30;
+      const barH = 20;
+
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      ctx.fillRect(barX, barY, barMaxW, barH);
+
+      ctx.fillStyle = c.color + '40';
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW, barH, 4);
+      ctx.fill();
+
+      ctx.strokeStyle = c.color + '80';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(barX, barY, barW, barH, 4);
+      ctx.stroke();
+
+      // Cents label
+      ctx.fillStyle = c.color;
+      ctx.font = '600 11px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${c.cents.toFixed(1)}¢`, barX + barW + 8, barY + 14);
+
+      // Scale reference
+      if (i === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.font = '9px Source Sans 3';
+        ctx.textAlign = 'right';
+        ctx.fillText('1 semitone = 100¢', w - pad, barY + 14);
+      }
+    });
+
+    // Relation arrow
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = 'italic 11px Newsreader';
+    ctx.textAlign = 'center';
+    ctx.fillText('Pythagorean comma ≈ syntonic comma + schisma (≈ 2 cents)', w/2, h - 8);
+  }
+
+  window.addEventListener('resize', () => { ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+// ============================
+// TUNING COMPARISON CHART
+// ============================
+(function() {
+  const canvas = document.getElementById('compCanvas');
+  let { ctx, w, h } = setupCanvas(canvas);
+  let selectedIdx = 0;
+
+  const intervalNames = ['Unison','Min 2nd','Maj 2nd','Min 3rd','Maj 3rd','Perf 4th','Tritone','Perf 5th','Min 6th','Maj 6th','Min 7th','Maj 7th'];
+  const idealRatios = [1, 16/15, 9/8, 6/5, 5/4, 4/3, Math.sqrt(2), 3/2, 8/5, 5/3, 9/5, 15/8];
+  const idealLabels = ['1','16/15','9/8','6/5','5/4','4/3','√2','3/2','8/5','5/3','9/5','15/8'];
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const pad = { l: 80, r: 30, t: 30, b: 50 };
+    const cw = w - pad.l - pad.r;
+    const ch = h - pad.t - pad.b;
+
+    // Show all 12 intervals as dots on three horizontal lines
+    const systems = [
+      { name: 'Equal Temperament', ratios: ET_RATIOS, color: '#c75050', y: 0 },
+      { name: 'Pythagorean', ratios: PYTH_RATIOS, color: '#5b8ec4', y: 1 },
+      { name: 'Just Intonation', ratios: JUST_RATIOS, color: '#5aad6a', y: 2 },
+    ];
+
+    const rowH = ch / 3;
+
+    // For selected interval, show detailed comparison
+    const selET = ET_RATIOS[selectedIdx];
+    const selPy = PYTH_RATIOS[selectedIdx];
+    const selJI = JUST_RATIOS[selectedIdx];
+    const selIdeal = idealRatios[selectedIdx];
+
+    // Find range for visualization
+    const allVals = [selET, selPy, selJI, selIdeal];
+    const minV = Math.min(...allVals) * 0.998;
+    const maxV = Math.max(...allVals) * 1.002;
+    const range = maxV - minV || 0.01;
+
+    // Background
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(pad.l, pad.t, cw, ch);
+
+    // Title
+    ctx.fillStyle = '#ede6da';
+    ctx.font = '600 14px Source Sans 3';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${intervalNames[selectedIdx]} — Ideal ratio: ${idealLabels[selectedIdx]} = ${selIdeal.toFixed(5)}`, w/2, pad.t - 10);
+
+    // Ideal line
+    const idealX = pad.l + ((selIdeal - minV) / range) * cw;
+    ctx.beginPath();
+    ctx.moveTo(idealX, pad.t);
+    ctx.lineTo(idealX, pad.t + ch);
+    ctx.strokeStyle = 'rgba(200,164,78,0.5)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#c8a44e';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('ideal', idealX, pad.t + ch + 14);
+
+    // Each system
+    systems.forEach((sys, si) => {
+      const val = sys.ratios[selectedIdx];
+      const x = pad.l + ((val - minV) / range) * cw;
+      const y = pad.t + rowH * si + rowH / 2;
+      const cents = 1200 * Math.log2(val / selIdeal);
+
+      // Label
+      ctx.fillStyle = sys.color;
+      ctx.font = '12px Source Sans 3';
+      ctx.textAlign = 'right';
+      ctx.fillText(sys.name, pad.l - 8, y + 4);
+
+      // Horizontal guide
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + cw, y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Error bar
+      ctx.beginPath();
+      ctx.moveTo(idealX, y);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = sys.color + '60';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Dot
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = sys.color;
+      ctx.fill();
+
+      // Value and cents
+      ctx.font = '10px JetBrains Mono';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = sys.color;
+      const sign = cents > 0 ? '+' : '';
+      ctx.fillText(`${val.toFixed(5)} (${sign}${cents.toFixed(1)}¢)`, x + 12, y + 4);
+    });
+
+    // Bottom axis
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '10px Source Sans 3';
+    ctx.textAlign = 'center';
+    ctx.fillText('← lower                frequency ratio                higher →', w/2, h - 8);
+  }
+
+  document.querySelectorAll('.comp-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.comp-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedIdx = parseInt(btn.dataset.idx);
+      draw();
+
+      // Play all three
+      const f0 = BASE_FREQ;
+      playTone(f0, 0.6, 0.08);
+      setTimeout(() => {
+        playTone(f0 * ET_RATIOS[selectedIdx], 0.8, 0.1);
+      }, 50);
+    });
+  });
+
+  window.addEventListener('resize', () => { ({ ctx, w, h } = setupCanvas(canvas)); draw(); });
+  draw();
+})();
+
+</script>
+</body>
+</html>
