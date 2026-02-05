@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phosphor Instrument — Gesture → Objects → Field</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    .glass {
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 20px 70px rgba(0,0,0,0.45);
+      backdrop-filter: blur(14px);
+    }
+    .soft-border {
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .noise::before{
+      content:"";
+      position:absolute; inset:0;
+      background-image: url("/gen?prompt=very%20subtle%20film%20grain%20texture%2C%20fine%20noise%2C%20dark%2C%20minimal%2C%20no%20text&aspect=16:9");
+      opacity: 0.08;
+      mix-blend-mode: overlay;
+      pointer-events:none;
+      border-radius: 1.25rem;
+    }
+    .bg-anim{
+      background-size: 200% 200%;
+      animation: bgmove 14s ease-in-out infinite;
+    }
+    @keyframes bgmove {
+      0%{ background-position: 0% 50%; }
+      50%{ background-position: 100% 50%; }
+      100%{ background-position: 0% 50%; }
+    }
+    .mono { font-variant-ligatures: none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .btn {
+      transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .range {
+      accent-color: rgb(99, 102, 241);
+    }
+    canvas { touch-action: none; }
+    .kbd {
+      border: 1px solid rgba(148,163,184,.25);
+      background: rgba(2,6,23,.55);
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.45rem;
+      font-size: 0.75rem;
+    }
+    .pulse-dot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: rgb(34 197 94);
+      box-shadow: 0 0 0 0 rgba(34,197,94,.45);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse{
+      0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+      70% { box-shadow: 0 0 0 10px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+    .warn-dot{
+      background: rgb(245 158 11);
+      box-shadow: 0 0 0 0 rgba(245,158,11,.45);
+      animation: pulseWarn 1.6s ease-in-out infinite;
+    }
+    @keyframes pulseWarn{
+      0% { box-shadow: 0 0 0 0 rgba(245,158,11,.55); }
+      70% { box-shadow: 0 0 0 10px rgba(245,158,11,0); }
+      100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="fixed inset-0 -z-10 bg-anim" style="background-image: radial-gradient(1200px 700px at 20% 20%, rgba(99,102,241,.25), transparent 55%), radial-gradient(1000px 700px at 85% 30%, rgba(34,211,238,.18), transparent 55%), radial-gradient(900px 650px at 60% 85%, rgba(244,114,182,.14), transparent 60%);"></div>
+
+  <header class="px-4 md:px-6 pt-4 md:pt-6">
+    <div class="glass noise relative rounded-2xl px-4 md:px-6 py-4 md:py-5 flex flex-col gap-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <div class="relative">
+            <div class="w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-gradient-to-br from-indigo-400/90 via-cyan-300/70 to-fuchsia-300/70 flex items-center justify-center shadow-lg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2c3.2 0 5.6 2.7 5.6 5.9 0 3.8-2.7 7.1-5.6 10.1C9.1 15 6.4 11.7 6.4 7.9 6.4 4.7 8.8 2 12 2Z" stroke="rgba(2,6,23,.9)" stroke-width="1.4"/>
+                <path d="M12 6.2c1.4 0 2.6 1.2 2.6 2.6S13.4 11.4 12 11.4 9.4 10.2 9.4 8.8 10.6 6.2 12 6.2Z" fill="rgba(2,6,23,.9)"/>
+                <path d="M4 21c2.7-1.7 5.3-2.6 8-2.6s5.3.9 8 2.6" stroke="rgba(2,6,23,.9)" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-xl md:text-2xl font-semibold tracking-tight">
+                Phosphor Instrument
+              </h1>
+              <div class="hidden md:flex items-center gap-2 text-xs text-slate-200/80">
+                <span class="kbd">Draw</span>
+                <span class="text-slate-400">→</span>
+                <span class="kbd">Recognize</span>
+                <span class="text-slate-400">→</span>
+                <span class="kbd">Edit</span>
+                <span class="text-slate-400">→</span>
+                <span class="kbd">Field</span>
+                <span class="text-slate-400">→</span>
+                <span class="kbd">Replay</span>
+              </div>
+            </div>
+            <p class="text-sm md:text-base text-slate-200/80 max-w-3xl">
+              Draw strokes; the instrument tries to promote them into editable mathematical objects (line / circle / sine).
+              Visualize a scalar field induced by those objects, and replay the whole gesture timeline.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end gap-2">
+          <div class="flex items-center gap-2">
+            <div id="liveBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/55 soft-border">
+              <div id="liveDot" class="pulse-dot"></div>
+              <span id="liveText" class="text-xs font-medium text-slate-100">Live</span>
+              <span class="text-xs text-slate-300/70">•</span>
+              <span id="clockText" class="text-xs text-slate-200/80 mono"></span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnClear" class="btn px-3 py-2 rounded-xl bg-slate-900/55 hover:bg-slate-900/70 soft-border text-sm">
+              Clear
+            </button>
+            <button id="btnExport" class="btn px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/28 soft-border text-sm">
+              Export JSON
+            </button>
+            <label class="btn px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/22 soft-border text-sm cursor-pointer">
+              Import
+              <input id="fileImport" type="file" accept="application/json" class="hidden">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/45 soft-border">
+            <span class="text-xs text-slate-300/80">Mode</span>
+            <div class="flex items-center gap-1">
+              <button data-mode="draw" class="modeBtn btn px-2.5 py-1 rounded-lg text-xs bg-indigo-500/20 soft-border hover:bg-indigo-500/25">Draw</button>
+              <button data-mode="erase" class="modeBtn btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55">Erase</button>
+              <button data-mode="select" class="modeBtn btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55">Select</button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/45 soft-border">
+            <span class="text-xs text-slate-300/80">Field</span>
+            <button id="btnField" class="btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55">
+              Off
+            </button>
+            <span class="text-xs text-slate-400">•</span>
+            <span id="fieldStatus" class="text-xs text-slate-200/70">No objects</span>
+          </div>
+
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/45 soft-border">
+            <span class="text-xs text-slate-300/80">Audio</span>
+            <button id="btnAudio" class="btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55">
+              Off
+            </button>
+            <span class="text-xs text-slate-400">•</span>
+            <span class="text-xs text-slate-200/70">gesture synth</span>
+          </div>
+
+          <div class="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/45 soft-border">
+            <span class="text-xs text-slate-300/80">Shortcuts</span>
+            <span class="kbd">D</span><span class="kbd">E</span><span class="kbd">S</span>
+            <span class="text-xs text-slate-400">•</span>
+            <span class="kbd">Space</span>
+            <span class="text-xs text-slate-200/70">toggle replay</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/45 soft-border">
+            <span class="text-xs text-slate-300/80">Session</span>
+            <span id="statStrokes" class="text-xs text-slate-200/80 mono">0</span>
+            <span class="text-xs text-slate-400">strokes</span>
+            <span class="text-xs text-slate-400">•</span>
+            <span id="statObjects" class="text-xs text-slate-200/80 mono">0</span>
+            <span class="text-xs text-slate-400">objects</span>
+            <span class="text-xs text-slate-400">•</span>
+            <span id="statEvents" class="text-xs text-slate-200/80 mono">0</span>
+            <span class="text-xs text-slate-400">events</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-4 md:px-6 pb-6 pt-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- LEFT PANEL -->
+      <aside class="lg:col-span-4 xl:col-span-3">
+        <div class="glass noise relative rounded-2xl p-3 md:p-4 flex flex-col gap-3">
+          <div class="flex items-center gap-2">
+            <button data-tab="brush" class="tabBtn btn flex-1 px-3 py-2 rounded-xl bg-slate-900/45 soft-border text-sm hover:bg-slate-900/60">Brush</button>
+            <button data-tab="objects" class="tabBtn btn flex-1 px-3 py-2 rounded-xl bg-slate-900/25 soft-border text-sm hover:bg-slate-900/45">Objects</button>
+            <button data-tab="replay" class="tabBtn btn flex-1 px-3 py-2 rounded-xl bg-slate-900/25 soft-border text-sm hover:bg-slate-900/45">Replay</button>
+            <button data-tab="sources" class="tabBtn btn flex-1 px-3 py-2 rounded-xl bg-slate-900/25 soft-border text-sm hover:bg-slate-900/45">Sources</button>
+          </div>
+
+          <!-- BRUSH TAB -->
+          <section id="tab_brush" class="flex flex-col gap-3">
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-semibold">Brush</h2>
+                  <p class="text-xs text-slate-300/75">Stamp-based, low-latency ink. Size/softness are in CSS pixels.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input id="brushColor" type="color" value="#60a5fa" class="w-10 h-10 rounded-xl bg-transparent soft-border cursor-pointer" aria-label="Brush color">
+                </div>
+              </div>
+
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="brushSize">Size</label>
+                    <span id="brushSizeVal" class="text-xs mono text-slate-200/80">18</span>
+                  </div>
+                  <input id="brushSize" class="range w-full mt-2" type="range" min="4" max="64" step="1" value="18">
+                </div>
+
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="brushSoft">Softness</label>
+                    <span id="brushSoftVal" class="text-xs mono text-slate-200/80">0.65</span>
+                  </div>
+                  <input id="brushSoft" class="range w-full mt-2" type="range" min="0" max="1" step="0.01" value="0.65">
+                </div>
+
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="brushSpacing">Spacing</label>
+                    <span id="brushSpacingVal" class="text-xs mono text-slate-200/80">0.35×</span>
+                  </div>
+                  <input id="brushSpacing" class="range w-full mt-2" type="range" min="0.15" max="0.8" step="0.01" value="0.35">
+                  <p class="mt-2 text-[11px] text-slate-400/80">Lower = denser stamps, smoother curves.</p>
+                </div>
+
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="glowAmt">Glow</label>
+                    <span id="glowAmtVal" class="text-xs mono text-slate-200/80">0.35</span>
+                  </div>
+                  <input id="glowAmt" class="range w-full mt-2" type="range" min="0" max="1" step="0.01" value="0.35">
+                  <p class="mt-2 text-[11px] text-slate-400/80">Post blur on ink layer (GPU-friendly drawImage blur).</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-semibold">Recognition</h3>
+                  <p class="text-xs text-slate-300/75">On stroke end, try to promote it into a vector object.</p>
+                </div>
+                <button id="btnRecognize" class="btn px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/28 soft-border text-sm">
+                  Analyze last stroke
+                </button>
+              </div>
+
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="recStrict">Strictness</label>
+                    <span id="recStrictVal" class="text-xs mono text-slate-200/80">0.55</span>
+                  </div>
+                  <input id="recStrict" class="range w-full mt-2" type="range" min="0.2" max="0.9" step="0.01" value="0.55">
+                  <p class="mt-2 text-[11px] text-slate-400/80">Higher = fewer promotions, cleaner matches.</p>
+                </div>
+
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="autoPromote">Auto</label>
+                    <span id="autoPromoteVal" class="text-xs mono text-slate-200/80">On</span>
+                  </div>
+                  <input id="autoPromote" class="range w-full mt-2" type="range" min="0" max="1" step="1" value="1">
+                  <p class="mt-2 text-[11px] text-slate-400/80">Auto-promote on stroke end.</p>
+                </div>
+              </div>
+
+              <div class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-xs text-slate-300/80">Last analysis</span>
+                  <span id="analysisBadge" class="text-xs px-2 py-1 rounded-lg bg-slate-900/55 soft-border text-slate-200/75">—</span>
+                </div>
+                <div id="analysisText" class="mt-2 text-sm text-slate-100/90 leading-snug">
+                  Draw something and end the stroke to see recognition results.
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <h3 class="text-sm font-semibold">Hints</h3>
+              <ul class="mt-2 text-xs text-slate-300/80 space-y-2">
+                <li class="flex gap-2">
+                  <span class="text-slate-400">•</span>
+                  <span>Circle: close the loop cleanly.</span>
+                </li>
+                <li class="flex gap-2">
+                  <span class="text-slate-400">•</span>
+                  <span>Line: draw fast and straight; use <span class="kbd">Select</span> to move endpoints.</span>
+                </li>
+                <li class="flex gap-2">
+                  <span class="text-slate-400">•</span>
+                  <span>Sine: a few smooth oscillations across the screen (works best with 2–6 cycles).</span>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <!-- OBJECTS TAB -->
+          <section id="tab_objects" class="hidden flex flex-col gap-3">
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-semibold">Objects</h2>
+                  <p class="text-xs text-slate-300/75">Editable vector layer with handles + equations.</p>
+                </div>
+                <button id="btnDeleteObj" class="btn px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/22 soft-border text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                  Delete selected
+                </button>
+              </div>
+
+              <div class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-300/80">Selected</span>
+                  <span id="selectedType" class="text-xs px-2 py-1 rounded-lg bg-slate-900/55 soft-border text-slate-200/75">None</span>
+                </div>
+                <div id="selectedEq" class="mt-2 text-sm text-slate-100/90 mono break-words">—</div>
+
+                <div class="mt-3 flex items-center gap-2">
+                  <button id="btnSpeakEq" class="btn px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/22 soft-border text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    Speak equation
+                  </button>
+                  <button id="btnCopyEq" class="btn px-3 py-2 rounded-xl bg-slate-900/45 hover:bg-slate-900/60 soft-border text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold">List</h3>
+                <button id="btnFocusObj" class="btn px-3 py-2 rounded-xl bg-slate-900/45 hover:bg-slate-900/60 soft-border text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                  Focus
+                </button>
+              </div>
+              <div id="objectList" class="mt-3 flex flex-col gap-2"></div>
+              <div id="objectEmpty" class="mt-3 text-sm text-slate-300/75">
+                No objects yet. Draw something and let the instrument promote it.
+              </div>
+            </div>
+
+            <div id="editPanel" class="rounded-2xl bg-slate-900/35 soft-border p-3 hidden">
+              <h3 class="text-sm font-semibold">Edit</h3>
+              <div id="editControls" class="mt-3 grid grid-cols-1 gap-3"></div>
+              <p class="mt-2 text-[11px] text-slate-400/80">Tip: In <span class="kbd">Select</span> mode, drag handles on-canvas.</p>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <h3 class="text-sm font-semibold">Field influence</h3>
+              <p class="mt-1 text-xs text-slate-300/75">Field is a scalar sum of Gaussian kernels on distance-to-curve.</p>
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="fieldSigma">Sigma</label>
+                    <span id="fieldSigmaVal" class="text-xs mono text-slate-200/80">26</span>
+                  </div>
+                  <input id="fieldSigma" class="range w-full mt-2" type="range" min="6" max="70" step="1" value="26">
+                </div>
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="fieldRes">Resolution</label>
+                    <span id="fieldResVal" class="text-xs mono text-slate-200/80">128</span>
+                  </div>
+                  <input id="fieldRes" class="range w-full mt-2" type="range" min="72" max="220" step="8" value="128">
+                </div>
+              </div>
+              <div class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs text-slate-300/80" for="fieldAlpha">Overlay alpha</label>
+                  <span id="fieldAlphaVal" class="text-xs mono text-slate-200/80">0.55</span>
+                </div>
+                <input id="fieldAlpha" class="range w-full mt-2" type="range" min="0.1" max="0.9" step="0.01" value="0.55">
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <h3 class="text-sm font-semibold">Next curiosities</h3>
+              <div class="mt-2 text-sm text-slate-200/90 space-y-2">
+                <div><b>Q1</b> What should count as a “primitive” gesture—raw points, splines, or recognized objects—if you want reversible transformations?</div>
+                <div><b>Q2</b> If you treat recognition as a functor Stroke → Shape, what are the invariants that must be preserved across revisions?</div>
+                <div><b>Q3</b> Where do you want the “truth values” to live: confidence per object, per parameter, or per pixel of the field?</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- REPLAY TAB -->
+          <section id="tab_replay" class="hidden flex flex-col gap-3">
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-semibold">Replay</h2>
+                  <p class="text-xs text-slate-300/75">Scrub time; strokes reconstruct deterministically (no storage used).</p>
+                </div>
+                <button id="btnToggleReplay" class="btn px-3 py-2 rounded-xl bg-slate-900/45 hover:bg-slate-900/60 soft-border text-sm">
+                  Start
+                </button>
+              </div>
+
+              <div class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-300/80">Time</span>
+                  <span id="replayTimeLabel" class="text-xs mono text-slate-200/80">0.00s</span>
+                </div>
+                <input id="replayScrub" class="range w-full mt-2" type="range" min="0" max="0" step="1" value="0" disabled>
+                <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400/80">
+                  <span>0s</span>
+                  <span id="replayMaxLabel">0s</span>
+                </div>
+              </div>
+
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="replaySpeed">Speed</label>
+                    <span id="replaySpeedVal" class="text-xs mono text-slate-200/80">1.0×</span>
+                  </div>
+                  <input id="replaySpeed" class="range w-full mt-2" type="range" min="0.25" max="2.5" step="0.05" value="1">
+                </div>
+
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-slate-300/80" for="replayVectors">Vectors</label>
+                    <span id="replayVectorsVal" class="text-xs mono text-slate-200/80">On</span>
+                  </div>
+                  <input id="replayVectors" class="range w-full mt-2" type="range" min="0" max="1" step="1" value="1">
+                  <p class="mt-2 text-[11px] text-slate-400/80">Show objects as they appear.</p>
+                </div>
+              </div>
+
+              <div class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-300/80">Status</span>
+                  <span id="replayStatus" class="text-xs px-2 py-1 rounded-lg bg-slate-900/55 soft-border text-slate-200/75">Idle</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-300/80">Tip: hit <span class="kbd">Space</span> to toggle replay.</p>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <h3 class="text-sm font-semibold">Event log</h3>
+              <p class="mt-1 text-xs text-slate-300/75">A compact stream: down/move/up + mode metadata.</p>
+              <div id="eventPreview" class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3 mono text-xs text-slate-200/80 whitespace-pre-wrap break-words min-h-[112px]">
+              </div>
+            </div>
+          </section>
+
+          <!-- SOURCES TAB -->
+          <section id="tab_sources" class="hidden flex flex-col gap-3">
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <h2 class="text-sm font-semibold">Inspiration & verified references</h2>
+              <p class="mt-1 text-xs text-slate-300/75">These links are included to anchor the design lineage to real sources.</p>
+
+              <div class="mt-3 grid grid-cols-1 gap-3">
+                <div class="rounded-2xl bg-slate-950/35 soft-border p-3 flex gap-3">
+                  <img class="w-16 h-16 rounded-xl soft-border object-cover" src="/image?query=ciechanow.ski%20interactive%20articles%20screenshot" alt="Thumbnail: ciechanow.ski interactive articles">
+                  <div class="flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <div class="text-sm font-semibold">ciechanow.ski — interactive articles</div>
+                        <div class="text-xs text-slate-300/80">A site of interactive, explorable articles by Bartosz Ciechanowski.</div>
+                      </div>
+                      <a href="https://ciechanow.ski/" target="_blank" rel="noopener noreferrer" class="text-xs px-2 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/22 soft-border">
+                        Open
+                      </a>
+                    </div>
+                    <div class="mt-2 text-[11px] text-slate-400/80">
+                      Source: https://ciechanow.ski/
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-2xl bg-slate-950/35 soft-border p-3 flex gap-3">
+                  <img class="w-16 h-16 rounded-xl soft-border object-cover" src="/image?query=Bret%20Victor%20Explorable%20Explanations%20worrydream%20screenshot" alt="Thumbnail: Explorable Explanations by Bret Victor">
+                  <div class="flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <div class="text-sm font-semibold">Bret Victor — “Explorable Explanations”</div>
+                        <div class="text-xs text-slate-300/80">An essay advocating interactive, dynamic media for understanding.</div>
+                      </div>
+                      <a href="https://worrydream.com/ExplorableExplanations/" target="_blank" rel="noopener noreferrer" class="text-xs px-2 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/22 soft-border">
+                        Open
+                      </a>
+                    </div>
+                    <div class="mt-2 text-[11px] text-slate-400/80">
+                      Source: https://worrydream.com/ExplorableExplanations/
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-2xl bg-slate-950/35 soft-border p-3 flex gap-3">
+                  <img class="w-16 h-16 rounded-xl soft-border object-cover" src="/image?query=TouchDesigner%20Derivative%20logo%20screenshot" alt="Thumbnail: TouchDesigner by Derivative">
+                  <div class="flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <div class="text-sm font-semibold">TouchDesigner (Derivative)</div>
+                        <div class="text-xs text-slate-300/80">A node-based visual programming environment for real-time interactive multimedia.</div>
+                      </div>
+                      <a href="http://derivative.ca/" target="_blank" rel="noopener noreferrer" class="text-xs px-2 py-1 rounded-lg bg-fuchsia-500/15 hover:bg-fuchsia-500/22 soft-border">
+                        Open
+                      </a>
+                    </div>
+                    <div class="mt-2 text-[11px] text-slate-400/80">
+                      Source: https://en.wikipedia.org/wiki/TouchDesigner
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-3 rounded-xl bg-slate-950/35 soft-border p-3">
+                <div class="text-sm font-semibold">What’s “verified” here?</div>
+                <p class="mt-1 text-xs text-slate-300/80">
+                  Only the existence and basic descriptions of the linked references above. Everything else in this page is self-contained behavior
+                  (gesture capture, analysis, replay, field visualization) implemented locally in JavaScript.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </aside>
+
+      <!-- CANVAS AREA -->
+      <section class="lg:col-span-8 xl:col-span-9">
+        <div class="glass noise relative rounded-2xl p-3 md:p-4">
+          <div class="relative rounded-2xl overflow-hidden soft-border bg-slate-950/30">
+            <canvas id="mainCanvas" class="block w-full h-[62vh] md:h-[72vh]"></canvas>
+
+            <!-- HUD -->
+            <div class="pointer-events-none absolute inset-0">
+              <div class="absolute left-3 top-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-950/40 soft-border">
+                <div class="text-xs text-slate-300/80">Mode</div>
+                <div id="hudMode" class="text-xs font-semibold">Draw</div>
+                <div class="text-xs text-slate-400">•</div>
+                <div class="text-xs text-slate-300/80">Selected</div>
+                <div id="hudSelected" class="text-xs font-semibold">None</div>
+              </div>
+
+              <div class="absolute right-3 top-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-950/40 soft-border">
+                <div class="text-xs text-slate-300/80">Pointer</div>
+                <div id="hudPointer" class="text-xs mono text-slate-200/80">—</div>
+              </div>
+
+              <div id="emptyOverlay" class="absolute inset-0 flex items-center justify-center">
+                <div class="max-w-xl mx-6 rounded-2xl bg-slate-950/40 soft-border p-4 md:p-5">
+                  <div class="text-base md:text-lg font-semibold">Start drawing</div>
+                  <div class="mt-1 text-sm text-slate-200/80">
+                    Use <span class="kbd">Draw</span> to ink.
+                    End the stroke to auto-recognize objects.
+                    Switch to <span class="kbd">Select</span> to drag handles.
+                    Toggle <span class="kbd">Field</span> for a distance-based scalar overlay.
+                  </div>
+                  <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                    <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                      <div class="font-semibold">Circle</div>
+                      <div class="text-slate-300/75 mt-1">close loop cleanly</div>
+                    </div>
+                    <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                      <div class="font-semibold">Line</div>
+                      <div class="text-slate-300/75 mt-1">fast, straight stroke</div>
+                    </div>
+                    <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                      <div class="font-semibold">Sine</div>
+                      <div class="text-slate-300/75 mt-1">2–6 smooth cycles</div>
+                    </div>
+                  </div>
+                  <div class="mt-3 text-xs text-slate-300/75">
+                    On iOS: a stylus works well. Audio requires a tap to enable.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selection hint -->
+            <div id="selectHint" class="hidden absolute bottom-3 left-3 right-3 md:right-auto md:max-w-lg px-3 py-2 rounded-xl bg-slate-950/45 soft-border">
+              <div class="text-xs text-slate-200/85">
+                <span class="font-semibold">Select:</span> click an object; drag its handles.
+                <span class="text-slate-400">•</span>
+                <span class="mono text-slate-200/80">Shift</span> while dragging snaps angles on lines.
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold">Telemetry</div>
+                <div id="perfBadge" class="text-xs px-2 py-1 rounded-lg bg-slate-900/55 soft-border text-slate-200/75">ok</div>
+              </div>
+              <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="text-slate-300/75">FPS</div>
+                  <div id="statFps" class="mono text-slate-200/85 mt-1">—</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="text-slate-300/75">Ink ops</div>
+                  <div id="statInkOps" class="mono text-slate-200/85 mt-1">0</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="text-slate-300/75">Field ms</div>
+                  <div id="statFieldMs" class="mono text-slate-200/85 mt-1">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="text-sm font-semibold">Layer toggles</div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <button id="btnShowInk" class="btn px-3 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/28 soft-border text-sm">Ink: On</button>
+                <button id="btnShowVectors" class="btn px-3 py-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/22 soft-border text-sm">Vectors: On</button>
+                <button id="btnShowHandles" class="btn px-3 py-2 rounded-xl bg-slate-900/45 hover:bg-slate-900/60 soft-border text-sm">Handles: On</button>
+              </div>
+              <p class="mt-2 text-xs text-slate-300/75">Useful for isolating recognition vs raw gestures.</p>
+            </div>
+
+            <div class="rounded-2xl bg-slate-900/35 soft-border p-3">
+              <div class="text-sm font-semibold">Canvas</div>
+              <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="text-slate-300/75">Size</div>
+                  <div id="statCanvas" class="mono text-slate-200/85 mt-1">—</div>
+                </div>
+                <div class="rounded-xl bg-slate-950/35 soft-border p-3">
+                  <div class="text-slate-300/75">DPR</div>
+                  <div id="statDpr" class="mono text-slate-200/85 mt-1">—</div>
+                </div>
+              </div>
+              <p class="mt-2 text-xs text-slate-300/75">Stroke points are stored in CSS pixels; raster ink is drawn in device pixels.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      "use strict";
+
+      // ---------- Utilities ----------
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+      const lerp = (a,b,t)=> a+(b-a)*t;
+      const dist = (ax,ay,bx,by)=> Math.hypot(ax-bx, ay-by);
+      const now = ()=> performance.now();
+
+      function fmt(n, digits=2){ return Number.isFinite(n) ? n.toFixed(digits) : "—"; }
+      function safeText(el, txt){ if(el) el.textContent = String(txt); }
+
+      function downloadJSON(obj, filename){
+        const blob = new Blob([JSON.stringify(obj, null, 2)], {type:"application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 1000);
+      }
+
+      function copyToClipboard(text){
+        try{
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly","");
+          ta.style.position="fixed";
+          ta.style.opacity="0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+          return true;
+        }catch(e){
+          console.error(e);
+          return false;
+        }
+      }
+
+      function speak(text){
+        try{
+          if(!("speechSynthesis" in window)) return;
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.rate = 1.0;
+          u.pitch = 1.0;
+          u.volume = 0.95;
+          window.speechSynthesis.speak(u);
+        }catch(e){ console.error(e); }
+      }
+
+      // ---------- DOM ----------
+      const els = {
+        clockText: document.getElementById("clockText"),
+        liveDot: document.getElementById("liveDot"),
+        liveText: document.getElementById("liveText"),
+        btnClear: document.getElementById("btnClear"),
+        btnExport: document.getElementById("btnExport"),
+        fileImport: document.getElementById("fileImport"),
+        modeBtns: Array.from(document.querySelectorAll(".modeBtn")),
+        tabBtns: Array.from(document.querySelectorAll(".tabBtn")),
+        tabs: {
+          brush: document.getElementById("tab_brush"),
+          objects: document.getElementById("tab_objects"),
+          replay: document.getElementById("tab_replay"),
+          sources: document.getElementById("tab_sources"),
+        },
+
+        mainCanvas: document.getElementById("mainCanvas"),
+        hudMode: document.getElementById("hudMode"),
+        hudSelected: document.getElementById("hudSelected"),
+        hudPointer: document.getElementById("hudPointer"),
+        emptyOverlay: document.getElementById("emptyOverlay"),
+        selectHint: document.getElementById("selectHint"),
+
+        brushColor: document.getElementById("brushColor"),
+        brushSize: document.getElementById("brushSize"),
+        brushSizeVal: document.getElementById("brushSizeVal"),
+        brushSoft: document.getElementById("brushSoft"),
+        brushSoftVal: document.getElementById("brushSoftVal"),
+        brushSpacing: document.getElementById("brushSpacing"),
+        brushSpacingVal: document.getElementById("brushSpacingVal"),
+        glowAmt: document.getElementById("glowAmt"),
+        glowAmtVal: document.getElementById("glowAmtVal"),
+
+        recStrict: document.getElementById("recStrict"),
+        recStrictVal: document.getElementById("recStrictVal"),
+        autoPromote: document.getElementById("autoPromote"),
+        autoPromoteVal: document.getElementById("autoPromoteVal"),
+        btnRecognize: document.getElementById("btnRecognize"),
+        analysisBadge: document.getElementById("analysisBadge"),
+        analysisText: document.getElementById("analysisText"),
+
+        statStrokes: document.getElementById("statStrokes"),
+        statObjects: document.getElementById("statObjects"),
+        statEvents: document.getElementById("statEvents"),
+
+        // objects tab
+        btnDeleteObj: document.getElementById("btnDeleteObj"),
+        selectedType: document.getElementById("selectedType"),
+        selectedEq: document.getElementById("selectedEq"),
+        btnSpeakEq: document.getElementById("btnSpeakEq"),
+        btnCopyEq: document.getElementById("btnCopyEq"),
+        btnFocusObj: document.getElementById("btnFocusObj"),
+        objectList: document.getElementById("objectList"),
+        objectEmpty: document.getElementById("objectEmpty"),
+        editPanel: document.getElementById("editPanel"),
+        editControls: document.getElementById("editControls"),
+
+        // field controls
+        btnField: document.getElementById("btnField"),
+        fieldStatus: document.getElementById("fieldStatus"),
+        fieldSigma: document.getElementById("fieldSigma"),
+        fieldSigmaVal: document.getElementById("fieldSigmaVal"),
+        fieldRes: document.getElementById("fieldRes"),
+        fieldResVal: document.getElementById("fieldResVal"),
+        fieldAlpha: document.getElementById("fieldAlpha"),
+        fieldAlphaVal: document.getElementById("fieldAlphaVal"),
+
+        // replay
+        btnToggleReplay: document.getElementById("btnToggleReplay"),
+        replayScrub: document.getElementById("replayScrub"),
+        replayTimeLabel: document.getElementById("replayTimeLabel"),
+        replayMaxLabel: document.getElementById("replayMaxLabel"),
+        replayStatus: document.getElementById("replayStatus"),
+        replaySpeed: document.getElementById("replaySpeed"),
+        replaySpeedVal: document.getElementById("replaySpeedVal"),
+        replayVectors: document.getElementById("replayVectors"),
+        replayVectorsVal: document.getElementById("replayVectorsVal"),
+        eventPreview: document.getElementById("eventPreview"),
+
+        // perf
+        perfBadge: document.getElementById("perfBadge"),
+        statFps: document.getElementById("statFps"),
+        statInkOps: document.getElementById("statInkOps"),
+        statFieldMs: document.getElementById("statFieldMs"),
+        statCanvas: document.getElementById("statCanvas"),
+        statDpr: document.getElementById("statDpr"),
+
+        // layer toggles
+        btnShowInk: document.getElementById("btnShowInk"),
+        btnShowVectors: document.getElementById("btnShowVectors"),
+        btnShowHandles: document.getElementById("btnShowHandles"),
+
+        // audio
+        btnAudio: document.getElementById("btnAudio"),
+      };
+
+      // ---------- State ----------
+      const state = {
+        mode: "draw", // draw|erase|select
+        showInk: true,
+        showVectors: true,
+        showHandles: true,
+
+        brush: {
+          color: els.brushColor.value || "#60a5fa",
+          size: Number(els.brushSize.value || 18),
+          softness: Number(els.brushSoft.value || 0.65),
+          spacingMul: Number(els.brushSpacing.value || 0.35),
+          glow: Number(els.glowAmt.value || 0.35),
+        },
+
+        recognition: {
+          strictness: Number(els.recStrict.value || 0.55),
+          auto: Number(els.autoPromote.value || 1) > 0.5,
+        },
+
+        field: {
+          enabled: false,
+          sigma: Number(els.fieldSigma.value || 26),
+          res: Number(els.fieldRes.value || 128),
+          alpha: Number(els.fieldAlpha.value || 0.55),
+          lastMs: 0,
+          dirty: true
+        },
+
+        audio: {
+          enabled: false,
+          started: false,
+          lastToneAt: 0
+        },
+
+        dpr: Math.max(1, Math.min(3, window.devicePixelRatio || 1)),
+
+        strokes: [],
+        lastStroke: null,
+
+        objects: [],
+        selectedId: null,
+
+        events: [],
+        sessionT0: now(),
+
+        replay: {
+          active: false,
+          t: 0,
+          maxT: 0,
+          speed: 1.0,
+          showVectors: true,
+          rafId: 0,
+          lastTick: 0,
+        },
+
+        inkOps: 0,
+        fps: { last: now(), frames: 0, value: 0 }
+      };
+
+      // ---------- Canvases ----------
+      const main = els.mainCanvas;
+      const mainCtx = main.getContext("2d", {alpha: true, desynchronized: true});
+
+      const inkCanvas = document.createElement("canvas");
+      const inkCtx = inkCanvas.getContext("2d", {alpha: true, desynchronized: true});
+
+      const blurCanvas = document.createElement("canvas");
+      const blurCtx = blurCanvas.getContext("2d", {alpha: true, desynchronized: true});
+
+      const fieldCanvas = document.createElement("canvas");
+      const fieldCtx = fieldCanvas.getContext("2d", {alpha: true, desynchronized: true});
+
+      // Brush stamp buffer
+      const brushCanvas = document.createElement("canvas");
+      const brushCtx = brushCanvas.getContext("2d");
+
+      function resizeAll(){
+        const rect = main.getBoundingClientRect();
+        const w = Math.max(2, Math.floor(rect.width * state.dpr));
+        const h = Math.max(2, Math.floor(rect.height * state.dpr));
+
+        for(const c of [main, inkCanvas, blurCanvas, fieldCanvas]){
+          c.width = w;
+          c.height = h;
+        }
+        state.field.dirty = true;
+
+        safeText(els.statCanvas, `${Math.floor(rect.width)}×${Math.floor(rect.height)}`);
+        safeText(els.statDpr, `${state.dpr.toFixed(2)}`);
+        renderFrame();
+      }
+
+      function setCompositeForMode(ctx, mode){
+        if(mode === "erase"){
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.globalAlpha = 1.0;
+        } else {
+          ctx.globalCompositeOperation = "source-over";
+          ctx.globalAlpha = 1.0;
+        }
+      }
+
+      function makeBrush(){
+        const cssSize = state.brush.size;
+        const px = Math.max(2, Math.floor(cssSize * state.dpr));
+        const pad = Math.ceil(px * 0.6);
+        const dim = px + pad*2;
+
+        brushCanvas.width = dim;
+        brushCanvas.height = dim;
+
+        const cx = dim/2, cy = dim/2;
+        const r = px/2;
+        const soft = clamp(state.brush.softness, 0, 1);
+
+        brushCtx.clearRect(0,0,dim,dim);
+
+        // Radial falloff: inner sharp core then smooth fade
+        const grad = brushCtx.createRadialGradient(cx, cy, r * (1 - soft*0.65), cx, cy, r);
+        grad.addColorStop(0, state.brush.color);
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        brushCtx.fillStyle = grad;
+        brushCtx.beginPath();
+        brushCtx.arc(cx, cy, r, 0, Math.PI*2);
+        brushCtx.fill();
+
+        // Add a subtle brighter core for "phosphor"
+        brushCtx.globalCompositeOperation = "lighter";
+        brushCtx.globalAlpha = 0.22 + 0.35*(1-soft);
+        brushCtx.fillStyle = state.brush.color;
+        brushCtx.beginPath();
+        brushCtx.arc(cx, cy, r*(0.35 + 0.25*(1-soft)), 0, Math.PI*2);
+        brushCtx.fill();
+        brushCtx.globalAlpha = 1;
+        brushCtx.globalCompositeOperation = "source-over";
+      }
+
+      makeBrush();
+
+      function cssToPx(xCss, yCss){
+        return { x: xCss * state.dpr, y: yCss * state.dpr };
+      }
+
+      function getCanvasPoint(evt){
+        const rect = main.getBoundingClientRect();
+        const xCss = evt.clientX - rect.left;
+        const yCss = evt.clientY - rect.top;
+        return { xCss, yCss, ...cssToPx(xCss, yCss) };
+      }
+
+      // ---------- Ink Drawing ----------
+      function stampAt(x, y, mode){
+        setCompositeForMode(inkCtx, mode);
+        const dim = brushCanvas.width;
+        inkCtx.drawImage(brushCanvas, x - dim/2, y - dim/2);
+        state.inkOps++;
+      }
+
+      function drawSegment(a, b, mode){
+        const spacing = Math.max(1, (state.brush.size * state.dpr) * state.brush.spacingMul);
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.hypot(dx,dy);
+        if(len < 0.01){
+          stampAt(b.x, b.y, mode);
+          return;
+        }
+        const steps = Math.max(1, Math.floor(len / spacing));
+        for(let i=1;i<=steps;i++){
+          const t = i/steps;
+          const x = a.x + dx*t;
+          const y = a.y + dy*t;
+          stampAt(x,y,mode);
+        }
+      }
+
+      function clearInk(){
+        inkCtx.clearRect(0,0,inkCanvas.width, inkCanvas.height);
+        blurCtx.clearRect(0,0,blurCanvas.width, blurCanvas.height);
+        state.inkOps = 0;
+      }
+
+      // ---------- Vector Objects ----------
+      // Types: circle, line, sine
+      // Each object has: id, type, params, createdAt(ms since session start), color
+      let uid = 1;
+      const newId = ()=> `o${uid++}`;
+
+      function objEq(obj){
+        const p = obj.p;
+        if(obj.type === "circle"){
+          return `(x - ${fmt(p.cx,1)})² + (y - ${fmt(p.cy,1)})² = ${fmt(p.r,1)}²`;
+        }
+        if(obj.type === "line"){
+          // line through A,B: show y = mx+b when not vertical
+          const dx = p.x2 - p.x1, dy = p.y2 - p.y1;
+          if(Math.abs(dx) < 1e-6){
+            return `x = ${fmt(p.x1,1)}`;
+          }
+          const m = dy/dx;
+          const b = p.y1 - m*p.x1;
+          return `y = ${fmt(m,3)}x + ${fmt(b,1)}`;
+        }
+        if(obj.type === "sine"){
+          // sine in local coords along axis u: v = A sin(ω(u - u0) + φ) + c
+          const A = p.A, w = p.w, phi = p.phi, c = p.c;
+          return `v = ${fmt(A,1)}·sin(${fmt(w,3)}·u + ${fmt(phi,2)}) + ${fmt(c,1)} (local)`;
+        }
+        return "—";
+      }
+
+      function renderVectors(ctx, tCss, opts){
+        const { showHandles, selectedId } = opts;
+        const dpr = state.dpr;
+
+        for(const obj of state.objects){
+          if(state.replay.active && obj.createdAt > tCss) continue;
+
+          ctx.save();
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+
+          const isSel = obj.id === selectedId;
+          const base = obj.color || "rgba(96,165,250,0.95)";
+          const stroke = isSel ? "rgba(34,211,238,0.95)" : base;
+
+          // glow stroke
+          ctx.shadowColor = stroke;
+          ctx.shadowBlur = isSel ? 18*dpr : 10*dpr;
+
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = (isSel ? 2.6 : 2.0) * dpr;
+
+          if(obj.type === "circle"){
+            const {cx,cy,r} = obj.p;
+            ctx.beginPath();
+            ctx.arc(cx*dpr, cy*dpr, r*dpr, 0, Math.PI*2);
+            ctx.stroke();
+
+            if(showHandles){
+              drawHandle(ctx, cx, cy, isSel);
+              drawHandle(ctx, cx + r, cy, isSel, true);
+            }
+          } else if(obj.type === "line"){
+            const {x1,y1,x2,y2} = obj.p;
+            ctx.beginPath();
+            ctx.moveTo(x1*dpr, y1*dpr);
+            ctx.lineTo(x2*dpr, y2*dpr);
+            ctx.stroke();
+
+            if(showHandles){
+              drawHandle(ctx, x1, y1, isSel, true);
+              drawHandle(ctx, x2, y2, isSel, true);
+            }
+          } else if(obj.type === "sine"){
+            // sample in local u-axis between endpoints; transform to world
+            const { ax, ay, bx, by, A, w, phi, c } = obj.p;
+            const ux = bx - ax, uy = by - ay;
+            const L = Math.hypot(ux,uy) || 1;
+            const ex = ux/L, ey = uy/L;
+            const nx = -ey, ny = ex;
+
+            const steps = 220;
+            ctx.beginPath();
+            for(let i=0;i<=steps;i++){
+              const t = i/steps;
+              const u = (t*L);
+              const v = A*Math.sin(w*u + phi) + c;
+              const x = ax + ex*u + nx*v;
+              const y = ay + ey*u + ny*v;
+              if(i===0) ctx.moveTo(x*dpr, y*dpr);
+              else ctx.lineTo(x*dpr, y*dpr);
+            }
+            ctx.stroke();
+
+            if(showHandles){
+              drawHandle(ctx, ax, ay, isSel, true);
+              drawHandle(ctx, bx, by, isSel, true);
+              // amplitude handle at midpoint
+              const midu = 0.5*L;
+              const midx = ax + ex*midu + nx*(c);
+              const midy = ay + ey*midu + ny*(c);
+              drawHandle(ctx, midx + nx*A, midy + ny*A, isSel, true);
+            }
+          }
+
+          ctx.restore();
+        }
+      }
+
+      function drawHandle(ctx, xCss, yCss, selected, solid=false){
+        const dpr = state.dpr;
+        const r = (solid ? 6.5 : 5.5) * dpr;
+        ctx.save();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(xCss*dpr, yCss*dpr, r, 0, Math.PI*2);
+        ctx.fillStyle = selected ? "rgba(34,211,238,0.95)" : "rgba(148,163,184,0.9)";
+        ctx.fill();
+        ctx.lineWidth = 1.5*dpr;
+        ctx.strokeStyle = "rgba(2,6,23,0.85)";
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // ---------- Hit testing ----------
+      function hitTestObject(xCss, yCss){
+        const handleR = 14; // CSS px
+        // Return {obj, handle} where handle is string
+        for(let i=state.objects.length-1;i>=0;i--){
+          const obj = state.objects[i];
+          if(state.replay.active && obj.createdAt > state.replay.t) continue;
+
+          if(obj.type === "circle"){
+            const {cx,cy,r} = obj.p;
+            if(dist(xCss,yCss,cx,cy) <= handleR) return {obj, handle:"center"};
+            if(dist(xCss,yCss,cx+r,cy) <= handleR) return {obj, handle:"radius"};
+            // edge
+            const d = Math.abs(dist(xCss,yCss,cx,cy) - r);
+            if(d <= 10) return {obj, handle:"edge"};
+          } else if(obj.type === "line"){
+            const {x1,y1,x2,y2} = obj.p;
+            if(dist(xCss,yCss,x1,y1) <= handleR) return {obj, handle:"a"};
+            if(dist(xCss,yCss,x2,y2) <= handleR) return {obj, handle:"b"};
+            // distance to segment
+            const d = distanceToSegment(xCss,yCss,x1,y1,x2,y2);
+            if(d <= 10) return {obj, handle:"seg"};
+          } else if(obj.type === "sine"){
+            const {ax,ay,bx,by,A,c} = obj.p;
+            if(dist(xCss,yCss,ax,ay) <= handleR) return {obj, handle:"a"};
+            if(dist(xCss,yCss,bx,by) <= handleR) return {obj, handle:"b"};
+            // amplitude handle
+            const ux = bx-ax, uy = by-ay;
+            const L = Math.hypot(ux,uy) || 1;
+            const ex=ux/L, ey=uy/L, nx=-ey, ny=ex;
+            const midu = 0.5*L;
+            const midx = ax + ex*midu + nx*(c);
+            const midy = ay + ey*midu + ny*(c);
+            const hx = midx + nx*A, hy = midy + ny*A;
+            if(dist(xCss,yCss,hx,hy) <= handleR) return {obj, handle:"amp"};
+            // approximate curve distance by sampling few points near projection
+            const d = approxDistanceToSine(xCss,yCss,obj.p);
+            if(d <= 10) return {obj, handle:"curve"};
+          }
+        }
+        return null;
+      }
+
+      function distanceToSegment(px,py,x1,y1,x2,y2){
+        const vx = x2-x1, vy = y2-y1;
+        const wx = px-x1, wy = py-y1;
+        const c1 = vx*wx + vy*wy;
+        if(c1 <= 0) return Math.hypot(px-x1, py-y1);
+        const c2 = vx*vx + vy*vy;
+        if(c2 <= c1) return Math.hypot(px-x2, py-y2);
+        const t = c1/c2;
+        const bx = x1 + t*vx, by = y1 + t*vy;
+        return Math.hypot(px-bx, py-by);
+      }
+
+      function approxDistanceToSine(x,y,p){
+        const {ax,ay,bx,by,A,w,phi,c} = p;
+        const ux = bx-ax, uy = by-ay;
+        const L = Math.hypot(ux,uy) || 1;
+        const ex=ux/L, ey=uy/L, nx=-ey, ny=ex;
+
+        // project point onto local coordinates (u,v)
+        const rx = x-ax, ry = y-ay;
+        const u = rx*ex + ry*ey;
+        const v = rx*nx + ry*ny;
+
+        // clamp u to segment
+        const uc = clamp(u, 0, L);
+
+        // sample a few points around uc to approximate min distance
+        let best = Infinity;
+        for(let i=-3;i<=3;i++){
+          const uu = clamp(uc + i*(L/120), 0, L);
+          const vv = A*Math.sin(w*uu + phi) + c;
+          const dx = uu - u;
+          const dy = vv - v;
+          best = Math.min(best, Math.hypot(dx,dy));
+        }
+        return best;
+      }
+
+      // ---------- Recognition ----------
+      function analyzeStroke(pointsCss){
+        // pointsCss: [{x,y,t}]
+        // returns {kind, score, obj?}
+        if(!pointsCss || pointsCss.length < 10){
+          return {kind:"none", score:0, note:"Too few points"};
+        }
+
+        // length + bbox
+        let len = 0;
+        let minx=Infinity, miny=Infinity, maxx=-Infinity, maxy=-Infinity;
+        for(let i=1;i<pointsCss.length;i++){
+          const a=pointsCss[i-1], b=pointsCss[i];
+          len += dist(a.x,a.y,b.x,b.y);
+        }
+        for(const p of pointsCss){
+          minx = Math.min(minx, p.x); miny = Math.min(miny, p.y);
+          maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y);
+        }
+        const w = maxx-minx, h = maxy-miny;
+        const diag = Math.hypot(w,h);
+        if(diag < 18 || len < 50) return {kind:"none", score:0, note:"Stroke too small"};
+
+        const first = pointsCss[0];
+        const last = pointsCss[pointsCss.length-1];
+        const closedDist = dist(first.x,first.y,last.x,last.y);
+        const closeThresh = Math.max(10, Math.min(26, diag*0.12));
+
+        // strictness affects thresholds
+        const s = state.recognition.strictness; // 0.2..0.9
+        const strict = clamp(s, 0.2, 0.9);
+
+        // Try circle if closed
+        if(closedDist <= closeThresh){
+          // center = mean
+          let cx=0, cy=0;
+          for(const p of pointsCss){ cx += p.x; cy += p.y; }
+          cx /= pointsCss.length; cy /= pointsCss.length;
+
+          // radius stats
+          let rMean=0;
+          const rs = [];
+          for(const p of pointsCss){
+            const r = dist(p.x,p.y,cx,cy);
+            rs.push(r);
+            rMean += r;
+          }
+          rMean /= rs.length;
+          let varSum=0;
+          for(const r of rs) varSum += (r-rMean)*(r-rMean);
+          const rStd = Math.sqrt(varSum/rs.length);
+
+          const roundness = rStd / (rMean + 1e-6);
+          const aspect = Math.min(w,h) / Math.max(w,h);
+
+          // thresholds
+          const maxRound = lerp(0.22, 0.10, (strict-0.2)/0.7);
+          const minAspect = lerp(0.55, 0.80, (strict-0.2)/0.7);
+
+          if(roundness <= maxRound && aspect >= minAspect){
+            const score = clamp(1.0 - (roundness/maxRound)*0.55 - (1-aspect)*(1-minAspect)*0.7, 0, 1);
+            return {
+              kind:"circle",
+              score,
+              note:`Closed loop; roundness ${fmt(roundness,3)}, aspect ${fmt(aspect,2)}`,
+              obj: {
+                id: newId(),
+                type:"circle",
+                p:{cx,cy,r:rMean},
+                createdAt: (last.t - state.sessionT0),
+                color: state.brush.color
+              }
+            };
+          }
+        }
+
+        // Try line
+        // Fit line via PCA: use principal direction; compute orthogonal RMS
+        const pca = pca2(pointsCss);
+        const {mx, my, ex, ey, nx, ny, projU, projV, uMin, uMax} = pca;
+
+        const rms = Math.sqrt(projV.reduce((a,v)=>a+v*v,0)/projV.length);
+        const lineTol = lerp(10.5, 5.5, (strict-0.2)/0.7); // CSS px
+        if(rms <= lineTol){
+          const ax = mx + ex*uMin, ay = my + ey*uMin;
+          const bx = mx + ex*uMax, by = my + ey*uMax;
+
+          // ensure segment length isn't tiny
+          const segLen = dist(ax,ay,bx,by);
+          if(segLen > 40){
+            const score = clamp(1.0 - (rms/lineTol)*0.75, 0, 1);
+            return {
+              kind:"line",
+              score,
+              note:`PCA fit; RMS ${fmt(rms,2)}px`,
+              obj: {
+                id: newId(),
+                type:"line",
+                p:{x1:ax,y1:ay,x2:bx,y2:by},
+                createdAt: (last.t - state.sessionT0),
+                color: state.brush.color
+              }
+            };
+          }
+        }
+
+        // Try sine (in PCA-aligned coords)
+        // v(u) ~ A sin(w u + phi) + c
+        const uRange = (uMax-uMin);
+        if(uRange > 80){
+          // sort by u
+          const idx = projU.map((u,i)=>({u,i})).sort((a,b)=>a.u-b.u).map(o=>o.i);
+          const uSorted = idx.map(i=>projU[i]);
+          const vSorted = idx.map(i=>projV[i]);
+
+          // Smooth a bit
+          const vSm = smooth1D(vSorted, 7);
+
+          const vMean = vSm.reduce((a,b)=>a+b,0)/vSm.length;
+          // zero crossings
+          let zc = 0;
+          for(let i=1;i<vSm.length;i++){
+            const a = vSm[i-1]-vMean;
+            const b = vSm[i]-vMean;
+            if((a<=0 && b>0) || (a>=0 && b<0)) zc++;
+          }
+          const cyclesEst = zc/2;
+          if(cyclesEst >= 1.2 && cyclesEst <= 10){
+            const wEst = (Math.PI * zc) / (uRange + 1e-6); // rad per unit u
+            const fit = fitSine(uSorted, vSm, wEst);
+
+            // Evaluate quality (R^2)
+            const r2 = fit.r2;
+            const minR2 = lerp(0.72, 0.86, (strict-0.2)/0.7);
+            const minA = lerp(10, 18, (strict-0.2)/0.7);
+
+            if(r2 >= minR2 && Math.abs(fit.A) >= minA){
+              // Choose endpoints along u
+              const ax = mx + ex*uMin, ay = my + ey*uMin;
+              const bx = mx + ex*uMax, by = my + ey*uMax;
+
+              const score = clamp((r2 - minR2) / (1 - minR2), 0, 1);
+              return {
+                kind:"sine",
+                score,
+                note:`Sine fit; cycles≈${fmt(cyclesEst,1)}, R² ${fmt(r2,3)}`,
+                obj: {
+                  id: newId(),
+                  type:"sine",
+                  p:{
+                    ax,ay,bx,by,
+                    A: fit.A,
+                    w: wEst,
+                    phi: fit.phi,
+                    c: fit.c
+                  },
+                  createdAt: (last.t - state.sessionT0),
+                  color: state.brush.color
+                }
+              };
+            }
+          }
+        }
+
+        return {kind:"none", score:0, note:"No confident match"};
+      }
+
+      function smooth1D(arr, win){
+        const w = Math.max(3, win|0);
+        const r = (w-1)/2;
+        const out = new Array(arr.length);
+        for(let i=0;i<arr.length;i++){
+          let s=0, c=0;
+          for(let k=-r;k<=r;k++){
+            const j = i+k;
+            if(j>=0 && j<arr.length){
+              s += arr[j];
+              c++;
+            }
+          }
+          out[i] = s/(c||1);
+        }
+        return out;
+      }
+
+      function fitSine(u, v, w){
+        // v ≈ a*sin(wu) + b*cos(wu) + c
+        let Sss=0, Scc=0, Ssc=0, Ss1=0, Sc1=0, S11=u.length;
+        let Svs=0, Svc=0, Sv1=0;
+
+        for(let i=0;i<u.length;i++){
+          const s = Math.sin(w*u[i]);
+          const c = Math.cos(w*u[i]);
+          const y = v[i];
+          Sss += s*s;
+          Scc += c*c;
+          Ssc += s*c;
+          Ss1 += s;
+          Sc1 += c;
+          Svs += y*s;
+          Svc += y*c;
+          Sv1 += y;
+        }
+
+        // Solve 3x3: [Sss Ssc Ss1][a]=[Svs]
+        //           [Ssc Scc Sc1][b]=[Svc]
+        //           [Ss1 Sc1 S11][c]=[Sv1]
+        const M = [
+          [Sss, Ssc, Ss1],
+          [Ssc, Scc, Sc1],
+          [Ss1, Sc1, S11]
+        ];
+        const B = [Svs, Svc, Sv1];
+
+        const X = solve3(M,B) || [0,0,0];
+        const a = X[0], b = X[1], c0 = X[2];
+
+        const A = Math.hypot(a,b);
+        const phi = Math.atan2(b, a); // since a*sin + b*cos = A*sin(wu + phi)
+        // compute r2
+        const yMean = Sv1/(u.length||1);
+        let ssTot=0, ssRes=0;
+        for(let i=0;i<u.length;i++){
+          const y = v[i];
+          const yhat = a*Math.sin(w*u[i]) + b*Math.cos(w*u[i]) + c0;
+          ssTot += (y-yMean)*(y-yMean);
+          ssRes += (y-yhat)*(y-yhat);
+        }
+        const r2 = ssTot > 1e-9 ? (1 - ssRes/ssTot) : 0;
+
+        return {A, phi, c:c0, r2};
+      }
+
+      function solve3(M, B){
+        // Gaussian elimination with partial pivoting for 3x3
+        try{
+          const A = M.map(r=>r.slice());
+          const x = B.slice();
+
+          for(let i=0;i<3;i++){
+            // pivot
+            let piv=i, best=Math.abs(A[i][i]);
+            for(let r=i+1;r<3;r++){
+              const v = Math.abs(A[r][i]);
+              if(v>best){best=v; piv=r;}
+            }
+            if(best < 1e-12) return null;
+            if(piv!==i){
+              [A[i],A[piv]]=[A[piv],A[i]];
+              [x[i],x[piv]]=[x[piv],x[i]];
+            }
+            // eliminate
+            const diag = A[i][i];
+            for(let c=i;c<3;c++) A[i][c] /= diag;
+            x[i] /= diag;
+
+            for(let r=0;r<3;r++){
+              if(r===i) continue;
+              const f = A[r][i];
+              for(let c=i;c<3;c++) A[r][c] -= f*A[i][c];
+              x[r] -= f*x[i];
+            }
+          }
+          return x;
+        }catch(e){
+          console.error(e);
+          return null;
+        }
+      }
+
+      function pca2(points){
+        // returns mean (mx,my), principal axis (ex,ey), normal (nx,ny)
+        let mx=0,my=0;
+        for(const p of points){ mx+=p.x; my+=p.y; }
+        mx/=points.length; my/=points.length;
+
+        // covariance
+        let sxx=0, sxy=0, syy=0;
+        for(const p of points){
+          const dx=p.x-mx, dy=p.y-my;
+          sxx += dx*dx;
+          sxy += dx*dy;
+          syy += dy*dy;
+        }
+        sxx/=points.length; sxy/=points.length; syy/=points.length;
+
+        // eigenvector of largest eigenvalue for 2x2
+        const tr = sxx+syy;
+        const det = sxx*syy - sxy*sxy;
+        const disc = Math.sqrt(Math.max(0, tr*tr/4 - det));
+        const l1 = tr/2 + disc;
+
+        let ex=1, ey=0;
+        if(Math.abs(sxy) > 1e-9 || Math.abs(sxx-l1) > 1e-9){
+          ex = sxy;
+          ey = l1 - sxx;
+          const n = Math.hypot(ex,ey) || 1;
+          ex/=n; ey/=n;
+        }
+        const nx = -ey, ny = ex;
+
+        const projU = [];
+        const projV = [];
+        let uMin=Infinity, uMax=-Infinity;
+        for(const p of points){
+          const dx=p.x-mx, dy=p.y-my;
+          const u = dx*ex + dy*ey;
+          const v = dx*nx + dy*ny;
+          projU.push(u); projV.push(v);
+          uMin=Math.min(uMin,u); uMax=Math.max(uMax,u);
+        }
+
+        return {mx,my,ex,ey,nx,ny,projU,projV,uMin,uMax};
+      }
+
+      function promoteFromStroke(stroke){
+        try{
+          const res = analyzeStroke(stroke.points);
+          showAnalysis(res);
+          if(res.kind !== "none" && res.obj){
+            addObject(res.obj);
+            state.field.dirty = true;
+            return true;
+          }
+          return false;
+        }catch(e){
+          console.error(e);
+          showAnalysis({kind:"none", score:0, note:"Analysis error"});
+          return false;
+        }
+      }
+
+      function showAnalysis(res){
+        const kind = res.kind || "none";
+        const score = res.score || 0;
+        const note = res.note || "—";
+
+        const label = kind === "none" ? "No match" : `${kind.toUpperCase()} • ${Math.round(score*100)}%`;
+        safeText(els.analysisBadge, label);
+
+        if(kind === "none"){
+          els.analysisBadge.className = "text-xs px-2 py-1 rounded-lg bg-slate-900/55 soft-border text-slate-200/75";
+        }else{
+          els.analysisBadge.className = "text-xs px-2 py-1 rounded-lg bg-indigo-500/18 soft-border text-slate-100/85";
+        }
+
+        safeText(els.analysisText, note);
+      }
+
+      // ---------- Object management ----------
+      function addObject(obj){
+        state.objects.push(obj);
+        setSelected(obj.id);
+        rebuildObjectList();
+        updateStats();
+        updateFieldStatus();
+      }
+
+      function deleteSelected(){
+        if(!state.selectedId) return;
+        const i = state.objects.findIndex(o=>o.id===state.selectedId);
+        if(i>=0){
+          state.objects.splice(i,1);
+          state.selectedId = null;
+          rebuildObjectList();
+          rebuildEditPanel();
+          updateStats();
+          updateFieldStatus();
+          state.field.dirty = true;
+        }
+      }
+
+      function setSelected(id){
+        state.selectedId = id;
+        const obj = state.objects.find(o=>o.id===id) || null;
+
+        if(obj){
+          safeText(els.selectedType, obj.type.toUpperCase());
+          safeText(els.selectedEq, objEq(obj));
+          safeText(els.hudSelected, obj.type);
+          els.btnDeleteObj.disabled = false;
+          els.btnSpeakEq.disabled = false;
+          els.btnCopyEq.disabled = false;
+          els.btnFocusObj.disabled = false;
+          els.editPanel.classList.remove("hidden");
+        } else {
+          safeText(els.selectedType, "None");
+          safeText(els.selectedEq, "—");
+          safeText(els.hudSelected, "None");
+          els.btnDeleteObj.disabled = true;
+          els.btnSpeakEq.disabled = true;
+          els.btnCopyEq.disabled = true;
+          els.btnFocusObj.disabled = true;
+          els.editPanel.classList.add("hidden");
+        }
+        rebuildEditPanel();
+        renderFrame();
+      }
+
+      function rebuildObjectList(){
+        const list = els.objectList;
+        list.innerHTML = "";
+        if(state.objects.length === 0){
+          els.objectEmpty.classList.remove("hidden");
+          return;
+        }
+        els.objectEmpty.classList.add("hidden");
+
+        for(const obj of state.objects){
+          const isSel = obj.id === state.selectedId;
+
+          const card = document.createElement("button");
+          card.className = "btn text-left w-full rounded-2xl bg-slate-950/35 soft-border p-3 hover:bg-slate-950/45";
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="text-sm font-semibold">${obj.type.toUpperCase()}</div>
+                <div class="text-xs text-slate-300/75 mono mt-1 break-words">${escapeHtml(objEq(obj))}</div>
+              </div>
+              <div class="text-xs px-2 py-1 rounded-lg ${isSel ? "bg-cyan-500/18" : "bg-slate-900/55"} soft-border text-slate-200/75">${obj.id}</div>
+            </div>
+          `;
+          card.addEventListener("click", ()=> setSelected(obj.id));
+          list.appendChild(card);
+        }
+      }
+
+      function escapeHtml(s){
+        return String(s)
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#039;");
+      }
+
+      function rebuildEditPanel(){
+        const panel = els.editControls;
+        panel.innerHTML = "";
+        const obj = state.objects.find(o=>o.id===state.selectedId);
+        if(!obj){
+          els.editPanel.classList.add("hidden");
+          return;
+        }
+        els.editPanel.classList.remove("hidden");
+
+        if(obj.type === "circle"){
+          panel.appendChild(rangeControl("Radius", obj.p.r, 10, 420, 1, (v)=>{ obj.p.r=v; state.field.dirty=true; renderFrame(); }, "px"));
+          panel.appendChild(numberPair("Center", obj.p.cx, obj.p.cy, (x,y)=>{ obj.p.cx=x; obj.p.cy=y; state.field.dirty=true; renderFrame(); }));
+        } else if(obj.type === "line"){
+          panel.appendChild(numberPair("A", obj.p.x1, obj.p.y1, (x,y)=>{ obj.p.x1=x; obj.p.y1=y; state.field.dirty=true; renderFrame(); }, "x1","y1"));
+          panel.appendChild(numberPair("B", obj.p.x2, obj.p.y2, (x,y)=>{ obj.p.x2=x; obj.p.y2=y; state.field.dirty=true; renderFrame(); }, "x2","y2"));
+        } else if(obj.type === "sine"){
+          panel.appendChild(rangeControl("Amplitude", obj.p.A, 5, 220, 1, (v)=>{ obj.p.A=v; state.field.dirty=true; renderFrame(); }, "px"));
+          panel.appendChild(rangeControl("Phase", obj.p.phi, -Math.PI, Math.PI, 0.01, (v)=>{ obj.p.phi=v; state.field.dirty=true; renderFrame(); }, "rad"));
+          panel.appendChild(rangeControl("Offset (c)", obj.p.c, -160, 160, 1, (v)=>{ obj.p.c=v; state.field.dirty=true; renderFrame(); }, "px"));
+          panel.appendChild(rangeControl("Frequency ω", obj.p.w, 0.005, 0.22, 0.001, (v)=>{ obj.p.w=v; state.field.dirty=true; renderFrame(); }, "rad/px"));
+          panel.appendChild(numberPair("A endpoint", obj.p.ax, obj.p.ay, (x,y)=>{ obj.p.ax=x; obj.p.ay=y; state.field.dirty=true; renderFrame(); }, "ax","ay"));
+          panel.appendChild(numberPair("B endpoint", obj.p.bx, obj.p.by, (x,y)=>{ obj.p.bx=x; obj.p.by=y; state.field.dirty=true; renderFrame(); }, "bx","by"));
+        }
+      }
+
+      function rangeControl(label, value, min, max, step, onInput, unit=""){
+        const wrap = document.createElement("div");
+        wrap.className = "rounded-2xl bg-slate-950/35 soft-border p-3";
+        const id = `rng_${Math.random().toString(16).slice(2)}`;
+        wrap.innerHTML = `
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-slate-300/80" for="${id}">${label}</label>
+            <span class="text-xs mono text-slate-200/80" id="${id}_v">${fmt(value, unit==="rad/px" ? 3 : 1)}${unit ? " "+unit : ""}</span>
+          </div>
+          <input id="${id}" class="range w-full mt-2" type="range" min="${min}" max="${max}" step="${step}" value="${value}">
+        `;
+        const input = wrap.querySelector(`#${id}`);
+        const valEl = wrap.querySelector(`#${id}_v`);
+        input.addEventListener("input", ()=>{
+          const v = Number(input.value);
+          valEl.textContent = `${fmt(v, unit==="rad/px" ? 3 : 1)}${unit ? " "+unit : ""}`;
+          onInput(v);
+        });
+        return wrap;
+      }
+
+      function numberPair(label, x, y, onChange, xLabel="x", yLabel="y"){
+        const wrap = document.createElement("div");
+        wrap.className = "rounded-2xl bg-slate-950/35 soft-border p-3";
+        const idx = `np_${Math.random().toString(16).slice(2)}`;
+        wrap.innerHTML = `
+          <div class="text-xs text-slate-300/80">${label}</div>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <label class="rounded-xl bg-slate-900/40 soft-border p-2 flex items-center gap-2">
+              <span class="text-[11px] text-slate-300/70 mono">${xLabel}</span>
+              <input id="${idx}_x" class="w-full bg-transparent outline-none text-sm mono" type="number" step="0.5" value="${x}">
+            </label>
+            <label class="rounded-xl bg-slate-900/40 soft-border p-2 flex items-center gap-2">
+              <span class="text-[11px] text-slate-300/70 mono">${yLabel}</span>
+              <input id="${idx}_y" class="w-full bg-transparent outline-none text-sm mono" type="number" step="0.5" value="${y}">
+            </label>
+          </div>
+        `;
+        const ix = wrap.querySelector(`#${idx}_x`);
+        const iy = wrap.querySelector(`#${idx}_y`);
+        const commit = ()=>{
+          const nx = Number(ix.value);
+          const ny = Number(iy.value);
+          if(Number.isFinite(nx) && Number.isFinite(ny)){
+            onChange(nx, ny);
+          }
+        };
+        ix.addEventListener("change", commit);
+        iy.addEventListener("change", commit);
+        ix.addEventListener("input", ()=> { if(ix.value !== "") commit(); });
+        iy.addEventListener("input", ()=> { if(iy.value !== "") commit(); });
+        return wrap;
+      }
+
+      function updateStats(){
+        safeText(els.statStrokes, state.strokes.length);
+        safeText(els.statObjects, state.objects.length);
+        safeText(els.statEvents, state.events.length);
+        safeText(els.statInkOps, state.inkOps);
+      }
+
+      function updateFieldStatus(){
+        if(state.objects.length === 0){
+          safeText(els.fieldStatus, "No objects");
+        } else {
+          safeText(els.fieldStatus, `${state.objects.length} object(s)`);
+        }
+      }
+
+      // ---------- Field Visualization ----------
+      function fieldColor(v){
+        // v in [0..1], map to a vivid but dark-friendly palette.
+        // Use HSL: 260 (indigo) -> 170 (cyan) -> 320 (fuchsia)
+        const t = clamp(v, 0, 1);
+        let h;
+        if(t < 0.5){
+          h = lerp(260, 180, t/0.5);
+        } else {
+          h = lerp(180, 320, (t-0.5)/0.5);
+        }
+        const s = 90;
+        const l = lerp(18, 62, Math.pow(t, 0.6));
+        return `hsl(${h} ${s}% ${l}%)`;
+      }
+
+      function drawField(){
+        const t0 = now();
+        const res = Math.floor(state.field.res);
+        const sigma = Math.max(3, state.field.sigma);
+        const w = fieldCanvas.width, h = fieldCanvas.height;
+
+        fieldCanvas.width = w;
+        fieldCanvas.height = h;
+
+        // compute at low-res grid in CSS space
+        const img = fieldCtx.createImageData(res, res);
+        const data = img.data;
+
+        const rect = main.getBoundingClientRect();
+        const wCss = rect.width, hCss = rect.height;
+
+        // sample center of each cell in CSS pixels
+        for(let j=0;j<res;j++){
+          for(let i=0;i<res;i++){
+            const xCss = (i + 0.5) / res * wCss;
+            const yCss = (j + 0.5) / res * hCss;
+
+            let sum = 0;
+            for(const obj of state.objects){
+              if(state.replay.active && obj.createdAt > state.replay.t) continue;
+              const d = distanceToObject(xCss, yCss, obj);
+              const g = Math.exp(-(d*d) / (2*sigma*sigma));
+              sum += g;
+            }
+            // normalize: soft saturation
+            const v = 1 - Math.exp(-sum * 0.9);
+
+            const col = fieldColor(v);
+            // parse hsl -> rgb quick by drawing 1px on offscreen? expensive.
+            // Instead: approximate via HSL->RGB math.
+            const rgb = hslToRgbFromCss(col);
+            const idx = (j*res + i)*4;
+            data[idx+0] = rgb[0];
+            data[idx+1] = rgb[1];
+            data[idx+2] = rgb[2];
+            data[idx+3] = Math.floor(255 * clamp(state.field.alpha, 0.05, 0.95));
+          }
+        }
+
+        // put image and scale up smoothly
+        fieldCtx.clearRect(0,0,w,h);
+        const tmp = document.createElement("canvas");
+        tmp.width = res;
+        tmp.height = res;
+        const tctx = tmp.getContext("2d");
+        tctx.putImageData(img, 0, 0);
+
+        fieldCtx.imageSmoothingEnabled = true;
+        fieldCtx.drawImage(tmp, 0, 0, w, h);
+
+        // contour lines (cheap): draw a few thresholds
+        fieldCtx.globalCompositeOperation = "overlay";
+        fieldCtx.globalAlpha = 0.35;
+        for(const thr of [0.25, 0.45, 0.65, 0.82]){
+          drawContoursFromTmp(fieldCtx, tmp, thr);
+        }
+        fieldCtx.globalAlpha = 1;
+        fieldCtx.globalCompositeOperation = "source-over";
+
+        state.field.lastMs = now() - t0;
+        safeText(els.statFieldMs, `${fmt(state.field.lastMs,1)}`);
+        state.field.dirty = false;
+      }
+
+      function drawContoursFromTmp(ctx, tmp, thr){
+        const w = tmp.width, h = tmp.height;
+        const tctx = tmp.getContext("2d");
+        const img = tctx.getImageData(0,0,w,h).data;
+
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.45)";
+        ctx.lineWidth = 1 * state.dpr;
+        ctx.beginPath();
+
+        const rect = main.getBoundingClientRect();
+        const sx = rect.width * state.dpr / w;
+        const sy = rect.height * state.dpr / h;
+
+        // marching squares-lite (very simplified): draw edges where alpha crosses threshold.
+        // We used uniform alpha; so use brightness from rgb to approximate v.
+        function brightnessAt(i,j){
+          const idx = (j*w + i)*4;
+          const r = img[idx], g = img[idx+1], b = img[idx+2];
+          // perceptual
+          return (0.2126*r + 0.7152*g + 0.0722*b)/255;
+        }
+
+        for(let j=0;j<h-1;j++){
+          for(let i=0;i<w-1;i++){
+            const a = brightnessAt(i,j) > thr ? 1 : 0;
+            const b = brightnessAt(i+1,j) > thr ? 1 : 0;
+            const c = brightnessAt(i+1,j+1) > thr ? 1 : 0;
+            const d = brightnessAt(i,j+1) > thr ? 1 : 0;
+            const code = a*1 + b*2 + c*4 + d*8;
+
+            const x = i*sx, y = j*sy;
+
+            // handle only a subset of cases to keep fast; still looks good.
+            if(code === 0 || code === 15) continue;
+
+            // midpoints
+            const xm = x + sx*0.5, ym = y + sy*0.5;
+
+            if(code === 1 || code === 14){
+              ctx.moveTo(x, ym); ctx.lineTo(xm, y);
+            } else if(code === 2 || code === 13){
+              ctx.moveTo(xm, y); ctx.lineTo(x+sx, ym);
+            } else if(code === 4 || code === 11){
+              ctx.moveTo(x+sx, ym); ctx.lineTo(xm, y+sy);
+            } else if(code === 8 || code === 7){
+              ctx.moveTo(xm, y+sy); ctx.lineTo(x, ym);
+            } else {
+              // generic: draw a short segment through center
+              ctx.moveTo(x, ym); ctx.lineTo(x+sx, ym);
+            }
+          }
+        }
+
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function hslToRgbFromCss(hsl){
+        // parse "hsl(H S% L%)"
+        const m = /hsl\(([-\d.]+)\s+([-\d.]+)%\s+([-\d.]+)%\)/.exec(hsl);
+        if(!m) return [180, 200, 255];
+        let h = ((+m[1])%360 + 360)%360;
+        const s = clamp(+m[2]/100, 0, 1);
+        const l = clamp(+m[3]/100, 0, 1);
+
+        const c = (1 - Math.abs(2*l - 1))*s;
+        const hp = h/60;
+        const x = c*(1 - Math.abs((hp%2)-1));
+
+        let r1=0,g1=0,b1=0;
+        if(hp>=0 && hp<1){ r1=c; g1=x; b1=0; }
+        else if(hp<2){ r1=x; g1=c; b1=0; }
+        else if(hp<3){ r1=0; g1=c; b1=x; }
+        else if(hp<4){ r1=0; g1=x; b1=c; }
+        else if(hp<5){ r1=x; g1=0; b1=c; }
+        else { r1=c; g1=0; b1=x; }
+
+        const m0 = l - c/2;
+        const r = Math.round((r1+m0)*255);
+        const g = Math.round((g1+m0)*255);
+        const b = Math.round((b1+m0)*255);
+        return [clamp(r,0,255), clamp(g,0,255), clamp(b,0,255)];
+      }
+
+      function distanceToObject(x,y,obj){
+        if(obj.type === "circle"){
+          const {cx,cy,r} = obj.p;
+          return Math.abs(dist(x,y,cx,cy) - r);
+        }
+        if(obj.type === "line"){
+          const {x1,y1,x2,y2} = obj.p;
+          return distanceToSegment(x,y,x1,y1,x2,y2);
+        }
+        if(obj.type === "sine"){
+          return approxDistanceToSine(x,y,obj.p);
+        }
+        return 999;
+      }
+
+      // ---------- Rendering ----------
+      function renderInkToMain(){
+        if(!state.showInk) return;
+
+        // glow: draw a blurred copy then the crisp ink
+        if(state.brush.glow > 0.01){
+          blurCtx.clearRect(0,0,blurCanvas.width, blurCanvas.height);
+          const blurPx = (state.brush.glow * 14) * state.dpr;
+          blurCtx.filter = `blur(${blurPx.toFixed(1)}px)`;
+          blurCtx.globalAlpha = 0.65;
+          blurCtx.drawImage(inkCanvas, 0, 0);
+          blurCtx.filter = "none";
+          blurCtx.globalAlpha = 1;
+
+          mainCtx.globalAlpha = 0.85;
+          mainCtx.globalCompositeOperation = "screen";
+          mainCtx.drawImage(blurCanvas, 0, 0);
+          mainCtx.globalCompositeOperation = "source-over";
+          mainCtx.globalAlpha = 1;
+        }
+
+        mainCtx.drawImage(inkCanvas, 0, 0);
+      }
+
+      function renderFrame(){
+        // bg clear
+        mainCtx.clearRect(0,0,main.width, main.height);
+
+        // subtle background vignette
+        mainCtx.save();
+        const g = mainCtx.createRadialGradient(main.width*0.5, main.height*0.45, 0, main.width*0.5, main.height*0.45, Math.max(main.width, main.height)*0.75);
+        g.addColorStop(0, "rgba(2,6,23,0.0)");
+        g.addColorStop(1, "rgba(2,6,23,0.55)");
+        mainCtx.fillStyle = g;
+        mainCtx.fillRect(0,0,main.width, main.height);
+        mainCtx.restore();
+
+        renderInkToMain();
+
+        // vectors
+        if(state.showVectors){
+          const tCss = state.replay.active ? state.replay.t : Infinity;
+          renderVectors(mainCtx, tCss, {showHandles: state.showHandles && state.mode==="select", selectedId: state.selectedId});
+        }
+
+        // field overlay
+        if(state.field.enabled && state.objects.length > 0){
+          if(state.field.dirty) drawField();
+          mainCtx.save();
+          mainCtx.globalCompositeOperation = "screen";
+          mainCtx.globalAlpha = 1.0;
+          mainCtx.drawImage(fieldCanvas, 0, 0);
+          mainCtx.restore();
+        }
+
+        // selection hint
+        if(state.mode === "select"){
+          els.selectHint.classList.remove("hidden");
+        } else {
+          els.selectHint.classList.add("hidden");
+        }
+
+        // empty overlay visibility
+        const hasInk = state.inkOps > 0;
+        const hasObj = state.objects.length > 0;
+        els.emptyOverlay.style.display = (!hasInk && !hasObj) ? "flex" : "none";
+      }
+
+      // ---------- Event log / replay ----------
+      function logEvent(type, payload){
+        const t = now() - state.sessionT0;
+        state.events.push({t, type, ...payload});
+        updateStats();
+        updateEventPreview();
+        state.replay.maxT = Math.max(state.replay.maxT, t);
+        updateReplayUI();
+      }
+
+      function updateEventPreview(){
+        const tail = state.events.slice(-28);
+        const lines = tail.map(e=>{
+          if(e.type === "down") return `${fmt(e.t/1000,2)} down  (${fmt(e.x,1)},${fmt(e.y,1)}) mode=${e.mode}`;
+          if(e.type === "move") return `${fmt(e.t/1000,2)} move  (${fmt(e.x,1)},${fmt(e.y,1)})`;
+          if(e.type === "up") return `${fmt(e.t/1000,2)} up    (${fmt(e.x,1)},${fmt(e.y,1)}) pts=${e.n||0}`;
+          if(e.type === "promote") return `${fmt(e.t/1000,2)} promote ${e.kind} score=${Math.round((e.score||0)*100)}% id=${e.id||"?"}`;
+          if(e.type === "delete") return `${fmt(e.t/1000,2)} delete id=${e.id||"?"}`;
+          if(e.type === "clear") return `${fmt(e.t/1000,2)} clear`;
+          return `${fmt(e.t/1000,2)} ${e.type}`;
+        });
+        els.eventPreview.textContent = lines.join("\n");
+      }
+
+      function updateReplayUI(){
+        const maxMs = Math.max(0, Math.floor(state.replay.maxT));
+        els.replayScrub.max = String(maxMs);
+        els.replayScrub.disabled = maxMs <= 0;
+        safeText(els.replayMaxLabel, `${fmt(maxMs/1000,2)}s`);
+        if(!state.replay.active){
+          els.replayScrub.value = String(Math.min(maxMs, Math.floor(state.replay.t)));
+          safeText(els.replayTimeLabel, `${fmt((state.replay.t||0)/1000,2)}s`);
+        }
+      }
+
+      function setReplayActive(on){
+        state.replay.active = on;
+        if(on){
+          state.replay.t = 0;
+          state.replay.lastTick = now();
+          clearInk();
+          renderFrame();
+          els.btnToggleReplay.textContent = "Stop";
+          els.replayStatus.textContent = "Playing";
+          els.liveText.textContent = "Replay";
+          els.liveDot.className = "pulse-dot warn-dot";
+          els.btnField.disabled = true;
+          state.field.enabled = false;
+          els.btnField.textContent = "Off";
+          els.btnField.className = "btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55";
+          setMode("select"); // safe: no drawing
+          tickReplay();
+        }else{
+          state.replay.active = false;
+          els.btnToggleReplay.textContent = "Start";
+          els.replayStatus.textContent = "Idle";
+          els.liveText.textContent = "Live";
+          els.liveDot.className = "pulse-dot";
+          els.btnField.disabled = false;
+          state.replay.rafId && cancelAnimationFrame(state.replay.rafId);
+          state.replay.rafId = 0;
+          renderFrame();
+        }
+      }
+
+      function tickReplay(){
+        if(!state.replay.active) return;
+        const tNow = now();
+        const dt = (tNow - state.replay.lastTick) * state.replay.speed;
+        state.replay.lastTick = tNow;
+
+        state.replay.t = clamp(state.replay.t + dt, 0, state.replay.maxT);
+        els.replayScrub.value = String(Math.floor(state.replay.t));
+        safeText(els.replayTimeLabel, `${fmt(state.replay.t/1000,2)}s`);
+
+        // rebuild ink deterministically from events up to t
+        rebuildInkFromEvents(state.replay.t);
+
+        renderFrame();
+
+        if(state.replay.t >= state.replay.maxT){
+          els.replayStatus.textContent = "Ended";
+        } else {
+          els.replayStatus.textContent = "Playing";
+        }
+
+        state.replay.rafId = requestAnimationFrame(tickReplay);
+      }
+
+      function rebuildInkFromEvents(tMs){
+        clearInk();
+        // local brush snapshot per event stream: we only log points for draw/erase in CSS px
+        let last = null;
+        let mode = "draw";
+        for(const e of state.events){
+          if(e.t > tMs) break;
+          if(e.type === "down"){
+            mode = e.mode;
+            last = {x: e.x*state.dpr, y: e.y*state.dpr};
+            stampAt(last.x, last.y, mode);
+          } else if(e.type === "move"){
+            if(!last) continue;
+            const cur = {x: e.x*state.dpr, y: e.y*state.dpr};
+            drawSegment(last, cur, mode);
+            last = cur;
+          } else if(e.type === "up"){
+            last = null;
+          } else if(e.type === "clear"){
+            clearInk();
+            last = null;
+          }
+        }
+      }
+
+      // ---------- Interaction (drawing + selecting) ----------
+      let drawing = null; // {points:[], lastPx:{x,y}, pointerId}
+      let dragging = null; // {objId, handle, offset}
+
+      function setMode(m){
+        state.mode = m;
+        safeText(els.hudMode, m.charAt(0).toUpperCase()+m.slice(1));
+        for(const b of els.modeBtns){
+          const active = b.dataset.mode === m;
+          b.className = "modeBtn btn px-2.5 py-1 rounded-lg text-xs soft-border hover:bg-slate-900/55 " + (active ? "bg-indigo-500/20" : "bg-slate-900/40");
+        }
+        if(m !== "select") dragging = null;
+        renderFrame();
+      }
+
+      function onPointerDown(evt){
+        if(state.replay.active) return;
+        try{
+          main.setPointerCapture(evt.pointerId);
+        }catch(_){}
+
+        // audio start on first gesture
+        if(state.audio.enabled && !state.audio.started){
+          try{
+            Tone.start();
+            state.audio.started = true;
+          }catch(e){ console.error(e); }
+        }
+
+        const p = getCanvasPoint(evt);
+        safeText(els.hudPointer, `${fmt(p.xCss,1)},${fmt(p.yCss,1)}`);
+
+        if(state.mode === "select"){
+          const hit = hitTestObject(p.xCss, p.yCss);
+          if(hit){
+            setSelected(hit.obj.id);
+            dragging = {objId: hit.obj.id, handle: hit.handle, start: {x:p.xCss,y:p.yCss}, shift: evt.shiftKey};
+            renderFrame();
+          } else {
+            setSelected(null);
+          }
+          return;
+        }
+
+        // draw/erase
+        drawing = {
+          pointerId: evt.pointerId,
+          points: [{x:p.xCss, y:p.yCss, t: now()}],
+          lastPx: {x:p.x, y:p.y}
+        };
+        stampAt(p.x, p.y, state.mode);
+        logEvent("down", {x:p.xCss, y:p.yCss, mode: state.mode});
+
+        renderFrame();
+      }
+
+      function onPointerMove(evt){
+        const p = getCanvasPoint(evt);
+        safeText(els.hudPointer, `${fmt(p.xCss,1)},${fmt(p.yCss,1)}`);
+
+        if(state.mode === "select" && dragging){
+          const obj = state.objects.find(o=>o.id===dragging.objId);
+          if(!obj) return;
+
+          const dx = p.xCss - dragging.start.x;
+          const dy = p.yCss - dragging.start.y;
+
+          // Update based on handle
+          if(obj.type === "circle"){
+            if(dragging.handle === "center"){
+              obj.p.cx += dx;
+              obj.p.cy += dy;
+              dragging.start = {x:p.xCss, y:p.yCss};
+            } else if(dragging.handle === "radius" || dragging.handle === "edge"){
+              const r = dist(p.xCss, p.yCss, obj.p.cx, obj.p.cy);
+              obj.p.r = clamp(r, 8, 800);
+            }
+          } else if(obj.type === "line"){
+            if(dragging.handle === "a"){
+              obj.p.x1 = p.xCss; obj.p.y1 = p.yCss;
+              if(evt.shiftKey) snapLine(obj);
+            } else if(dragging.handle === "b"){
+              obj.p.x2 = p.xCss; obj.p.y2 = p.yCss;
+              if(evt.shiftKey) snapLine(obj);
+            } else {
+              // translate segment
+              obj.p.x1 += dx; obj.p.y1 += dy;
+              obj.p.x2 += dx; obj.p.y2 += dy;
+              dragging.start = {x:p.xCss, y:p.yCss};
+            }
+          } else if(obj.type === "sine"){
+            if(dragging.handle === "a"){
+              obj.p.ax = p.xCss; obj.p.ay = p.yCss;
+              if(evt.shiftKey) snapSineAxis(obj);
+            } else if(dragging.handle === "b"){
+              obj.p.bx = p.xCss; obj.p.by = p.yCss;
+              if(evt.shiftKey) snapSineAxis(obj);
+            } else if(dragging.handle === "amp"){
+              // set amplitude based on distance from midline
+              const {ax,ay,bx,by,c} = obj.p;
+              const ux = bx-ax, uy = by-ay;
+              const L = Math.hypot(ux,uy) || 1;
+              const ex=ux/L, ey=uy/L, nx=-ey, ny=ex;
+              const midu = 0.5*L;
+              const midx = ax + ex*midu + nx*(c);
+              const midy = ay + ey*midu + ny*(c);
+              const dv = (p.xCss - midx)*nx + (p.yCss - midy)*ny;
+              obj.p.A = clamp(dv, 5, 800);
+            } else {
+              // translate sine axis by dx,dy
+              obj.p.ax += dx; obj.p.ay += dy;
+              obj.p.bx += dx; obj.p.by += dy;
+              dragging.start = {x:p.xCss, y:p.yCss};
+            }
+          }
+
+          state.field.dirty = true;
+          rebuildEditPanel();
+          safeText(els.selectedEq, objEq(obj));
+          renderFrame();
+          return;
+        }
+
+        if(!drawing || evt.pointerId !== drawing.pointerId) return;
+        if(state.replay.active) return;
+
+        const last = drawing.lastPx;
+        const cur = {x:p.x, y:p.y};
+        drawSegment(last, cur, state.mode);
+        drawing.lastPx = cur;
+        drawing.points.push({x:p.xCss, y:p.yCss, t: now()});
+        logEvent("move", {x:p.xCss, y:p.yCss});
+
+        // audio synth
+        if(state.audio.enabled && state.audio.started){
+          playGestureTone(last, cur);
+        }
+
+        renderFrame();
+      }
+
+      function onPointerUp(evt){
+        const p = getCanvasPoint(evt);
+        safeText(els.hudPointer, `${fmt(p.xCss,1)},${fmt(p.yCss,1)}`);
+
+        if(state.mode === "select"){
+          dragging = null;
+          return;
+        }
+
+        if(!drawing || evt.pointerId !== drawing.pointerId) return;
+
+        // finish stroke
+        const stroke = {
+          id: `s${state.strokes.length+1}`,
+          mode: state.mode,
+          color: state.brush.color,
+          size: state.brush.size,
+          softness: state.brush.softness,
+          spacingMul: state.brush.spacingMul,
+          points: drawing.points.slice()
+        };
+        state.strokes.push(stroke);
+        state.lastStroke = stroke;
+
+        logEvent("up", {x:p.xCss, y:p.yCss, n: stroke.points.length});
+        updateStats();
+
+        drawing = null;
+
+        // auto promote
+        if(state.recognition.auto && state.mode === "draw"){
+          const before = state.objects.length;
+          const ok = promoteFromStroke(stroke);
+          if(ok){
+            const obj = state.objects[state.objects.length-1];
+            logEvent("promote", {kind: obj.type, score: 1, id: obj.id});
+            if(before !== state.objects.length){
+              rebuildObjectList();
+            }
+          }
+        }
+
+        state.field.dirty = true;
+        updateFieldStatus();
+        renderFrame();
+      }
+
+      function snapLine(obj){
+        // snap to 0/45/90 relative angles around point A
+        const dx = obj.p.x2 - obj.p.x1;
+        const dy = obj.p.y2 - obj.p.y1;
+        const ang = Math.atan2(dy, dx);
+        const snap = Math.PI/4;
+        const a2 = Math.round(ang/snap)*snap;
+        const L = Math.hypot(dx,dy);
+        obj.p.x2 = obj.p.x1 + Math.cos(a2)*L;
+        obj.p.y2 = obj.p.y1 + Math.sin(a2)*L;
+      }
+
+      function snapSineAxis(obj){
+        // snap axis angle similarly
+        const dx = obj.p.bx - obj.p.ax;
+        const dy = obj.p.by - obj.p.ay;
+        const ang = Math.atan2(dy, dx);
+        const snap = Math.PI/8;
+        const a2 = Math.round(ang/snap)*snap;
+        const L = Math.hypot(dx,dy);
+        obj.p.bx = obj.p.ax + Math.cos(a2)*L;
+        obj.p.by = obj.p.ay + Math.sin(a2)*L;
+      }
+
+      // ---------- Audio ----------
+      let synth = null;
+      let noise = null;
+      let filter = null;
+
+      function ensureSynth(){
+        if(synth) return;
+        try{
+          synth = new Tone.MonoSynth({
+            oscillator: { type: "triangle" },
+            envelope: { attack: 0.006, decay: 0.12, sustain: 0.0, release: 0.12 },
+            filterEnvelope: { attack: 0.005, decay: 0.09, sustain: 0.0, release: 0.08, baseFrequency: 220, octaves: 2.2 }
+          }).toDestination();
+          synth.volume.value = -16;
+
+          filter = new Tone.AutoFilter(2.2).toDestination();
+          filter.wet.value = 0.25;
+          filter.start();
+
+          noise = new Tone.NoiseSynth({
+            noise: { type: "pink" },
+            envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.02 }
+          }).connect(filter);
+          noise.volume.value = -28;
+        }catch(e){
+          console.error(e);
+        }
+      }
+
+      function playGestureTone(aPx, bPx){
+        const t = now();
+        if(t - state.audio.lastToneAt < 30) return;
+        state.audio.lastToneAt = t;
+
+        ensureSynth();
+        if(!synth) return;
+
+        const dx = bPx.x - aPx.x;
+        const dy = bPx.y - aPx.y;
+        const v = Math.hypot(dx,dy);
+
+        // Map speed to frequency + loudness
+        const freq = clamp(140 + v*0.9, 140, 820);
+        const vel = clamp(0.08 + v/90, 0.08, 0.65);
+
+        try{
+          synth.triggerAttackRelease(freq, 0.03, undefined, vel);
+          if(noise && v > 10) noise.triggerAttackRelease(0.01);
+        }catch(e){ console.error(e); }
+      }
+
+      function setAudio(on){
+        state.audio.enabled = on;
+        if(on){
+          els.btnAudio.textContent = "On";
+          els.btnAudio.className = "btn px-2.5 py-1 rounded-lg text-xs bg-cyan-500/15 hover:bg-cyan-500/22 soft-border";
+        } else {
+          els.btnAudio.textContent = "Off";
+          els.btnAudio.className = "btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55";
+        }
+      }
+
+      // ---------- Tabs ----------
+      function setTab(name){
+        for(const [k,sec] of Object.entries(els.tabs)){
+          if(k === name) sec.classList.remove("hidden");
+          else sec.classList.add("hidden");
+        }
+        for(const b of els.tabBtns){
+          const active = b.dataset.tab === name;
+          b.className = "tabBtn btn flex-1 px-3 py-2 rounded-xl soft-border text-sm hover:bg-slate-900/45 " + (active ? "bg-slate-900/45" : "bg-slate-900/25");
+        }
+      }
+
+      // ---------- Field toggle ----------
+      function setFieldEnabled(on){
+        state.field.enabled = on;
+        if(on){
+          els.btnField.textContent = "On";
+          els.btnField.className = "btn px-2.5 py-1 rounded-lg text-xs bg-indigo-500/20 soft-border hover:bg-indigo-500/25";
+          state.field.dirty = true;
+        } else {
+          els.btnField.textContent = "Off";
+          els.btnField.className = "btn px-2.5 py-1 rounded-lg text-xs bg-slate-900/40 soft-border hover:bg-slate-900/55";
+        }
+        renderFrame();
+      }
+
+      // ---------- Clock ----------
+      function tickClock(){
+        try{
+          const d = new Date();
+          const fmtAustin = new Intl.DateTimeFormat(undefined, { timeZone: "America/Chicago", hour:"2-digit", minute:"2-digit", second:"2-digit" }).format(d);
+          const date = new Intl.DateTimeFormat(undefined, { timeZone: "America/Chicago", weekday:"short", month:"short", day:"2-digit" }).format(d);
+          safeText(els.clockText, `Austin • ${date} • ${fmtAustin}`);
+        }catch(e){
+          // fallback
+          const d = new Date();
+          safeText(els.clockText, d.toLocaleTimeString());
+        }
+      }
+
+      // ---------- Layer toggles ----------
+      function setToggleBtn(btn, on, labelOn, labelOff, theme){
+        btn.textContent = on ? labelOn : labelOff;
+        if(on){
+          btn.className = `btn px-3 py-2 rounded-xl ${theme}/20 hover:${theme}/28 soft-border text-sm`;
+        }else{
+          btn.className = `btn px-3 py-2 rounded-xl bg-slate-900/45 hover:bg-slate-900/60 soft-border text-sm`;
+        }
+      }
+
+      // ---------- Performance meter ----------
+      function tickFps(){
+        state.fps.frames++;
+        const t = now();
+        const dt = t - state.fps.last;
+        if(dt >= 650){
+          state.fps.value = (state.fps.frames / dt) * 1000;
+          state.fps.frames = 0;
+          state.fps.last = t;
+          safeText(els.statFps, `${Math.round(state.fps.value)}`);
+          // badge
+          const v = state.fps.value;
+          if(v >= 50){
+            els.perfBadge.textContent = "ok";
+            els.perfBadge.className = "text-xs px-2 py-1 rounded-lg bg-emerald-500/12 soft-border text-slate-100/85";
+          }else if(v >= 35){
+            els.perfBadge.textContent = "warm";
+            els.perfBadge.className = "text-xs px-2 py-1 rounded-lg bg-amber-500/12 soft-border text-slate-100/85";
+          }else{
+            els.perfBadge.textContent = "hot";
+            els.perfBadge.className = "text-xs px-2 py-1 rounded-lg bg-rose-500/12 soft-border text-slate-100/85";
+          }
+        }
+      }
+
+      function animLoop(){
+        tickFps();
+        updateStats();
+        requestAnimationFrame(animLoop);
+      }
+
+      // ---------- Wiring ----------
+      window.addEventListener("resize", ()=> {
+        state.dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+        resizeAll();
+      });
+
+      main.addEventListener("pointerdown", onPointerDown);
+      main.addEventListener("pointermove", onPointerMove);
+      main.addEventListener("pointerup", onPointerUp);
+      main.addEventListener("pointercancel", onPointerUp);
+
+      els.modeBtns.forEach(b=> b.addEventListener("click", ()=> setMode(b.dataset.mode)));
+      els.tabBtns.forEach(b=> b.addEventListener("click", ()=> setTab(b.dataset.tab)));
+
+      els.btnClear.addEventListener("click", ()=>{
+        clearInk();
+        state.strokes = [];
+        state.lastStroke = null;
+        state.objects = [];
+        state.selectedId = null;
+        state.events = [];
+        state.sessionT0 = now();
+        state.replay.maxT = 0;
+        state.replay.t = 0;
+        updateStats();
+        rebuildObjectList();
+        rebuildEditPanel();
+        showAnalysis({kind:"none", score:0, note:"—"});
+        updateEventPreview();
+        updateReplayUI();
+        updateFieldStatus();
+        setFieldEnabled(false);
+        logEvent("clear", {});
+        renderFrame();
+      });
+
+      els.btnExport.addEventListener("click", ()=>{
+        const rect = main.getBoundingClientRect();
+        const payload = {
+          meta: {
+            createdAtISO: new Date().toISOString(),
+            canvasCss: { w: rect.width, h: rect.height },
+            dpr: state.dpr,
+            note: "Phosphor Instrument session export (events + objects)."
+          },
+          brush: {...state.brush},
+          recognition: {...state.recognition},
+          field: {...state.field, enabled: false},
+          events: state.events.slice(),
+          objects: state.objects.slice()
+        };
+        downloadJSON(payload, `phosphor_session_${new Date().toISOString().replace(/[:.]/g,"-")}.json`);
+      });
+
+      els.fileImport.addEventListener("change", async ()=>{
+        const f = els.fileImport.files && els.fileImport.files[0];
+        if(!f) return;
+        try{
+          const txt = await f.text();
+          const data = JSON.parse(txt);
+          // load objects + events; rebuild
+          clearInk();
+          state.objects = Array.isArray(data.objects) ? data.objects : [];
+          state.events = Array.isArray(data.events) ? data.events : [];
+          state.strokes = []; // derived
+          state.lastStroke = null;
+          state.selectedId = null;
+          state.sessionT0 = now(); // new timeline base; event timestamps remain relative for replay
+          // compute maxT
+          state.replay.maxT = state.events.reduce((m,e)=>Math.max(m, e.t||0), 0);
+          state.replay.t = 0;
+
+          // restore some controls if present
+          if(data.brush){
+            state.brush.color = data.brush.color || state.brush.color;
+            state.brush.size = Number(data.brush.size || state.brush.size);
+            state.brush.softness = Number(data.brush.softness || state.brush.softness);
+            state.brush.spacingMul = Number(data.brush.spacingMul || state.brush.spacingMul);
+            state.brush.glow = Number(data.brush.glow || state.brush.glow);
+          }
+          // sync UI
+          els.brushColor.value = state.brush.color;
+          els.brushSize.value = String(state.brush.size);
+          els.brushSoft.value = String(state.brush.softness);
+          els.brushSpacing.value = String(state.brush.spacingMul);
+          els.glowAmt.value = String(state.brush.glow);
+          makeBrush();
+
+          safeText(els.brushSizeVal, state.brush.size);
+          safeText(els.brushSoftVal, fmt(state.brush.softness,2));
+          safeText(els.brushSpacingVal, `${fmt(state.brush.spacingMul,2)}×`);
+          safeText(els.glowAmtVal, fmt(state.brush.glow,2));
+
+          rebuildObjectList();
+          rebuildEditPanel();
+          updateStats();
+          updateEventPreview();
+          updateReplayUI();
+          updateFieldStatus();
+          state.field.dirty = true;
+          renderFrame();
+
+          // Clear file input so re-import works
+          els.fileImport.value = "";
+        }catch(e){
+          console.error(e);
+          els.fileImport.value = "";
+        }
+      });
+
+      // Brush controls
+      function syncBrushUI(){
+        safeText(els.brushSizeVal, state.brush.size);
+        safeText(els.brushSoftVal, fmt(state.brush.softness,2));
+        safeText(els.brushSpacingVal, `${fmt(state.brush.spacingMul,2)}×`);
+        safeText(els.glowAmtVal, fmt(state.brush.glow,2));
+        makeBrush();
+      }
+
+      els.brushColor.addEventListener("input", ()=>{
+        state.brush.color = els.brushColor.value;
+        syncBrushUI();
+      });
+      els.brushSize.addEventListener("input", ()=>{
+        state.brush.size = Number(els.brushSize.value);
+        syncBrushUI();
+      });
+      els.brushSoft.addEventListener("input", ()=>{
+        state.brush.softness = Number(els.brushSoft.value);
+        syncBrushUI();
+      });
+      els.brushSpacing.addEventListener("input", ()=>{
+        state.brush.spacingMul = Number(els.brushSpacing.value);
+        syncBrushUI();
+      });
+      els.glowAmt.addEventListener("input", ()=>{
+        state.brush.glow = Number(els.glowAmt.value);
+        syncBrushUI();
+      });
+
+      // Recognition controls
+      els.recStrict.addEventListener("input", ()=>{
+        state.recognition.strictness = Number(els.recStrict.value);
+        safeText(els.recStrictVal, fmt(state.recognition.strictness,2));
+      });
+      els.autoPromote.addEventListener("input", ()=>{
+        state.recognition.auto = Number(els.autoPromote.value) > 0.5;
+        safeText(els.autoPromoteVal, state.recognition.auto ? "On" : "Off");
+      });
+
+      els.btnRecognize.addEventListener("click", ()=>{
+        if(!state.lastStroke){
+          showAnalysis({kind:"none", score:0, note:"No stroke yet"});
+          return;
+        }
+        if(state.mode !== "draw") setMode("draw");
+        const ok = promoteFromStroke(state.lastStroke);
+        if(ok){
+          const obj = state.objects[state.objects.length-1];
+          logEvent("promote", {kind: obj.type, score: 1, id: obj.id});
+        }
+        rebuildObjectList();
+        renderFrame();
+      });
+
+      // Objects tab buttons
+      els.btnDeleteObj.addEventListener("click", ()=>{
+        if(!state.selectedId) return;
+        logEvent("delete", {id: state.selectedId});
+        deleteSelected();
+        renderFrame();
+      });
+
+      els.btnSpeakEq.addEventListener("click", ()=>{
+        const obj = state.objects.find(o=>o.id===state.selectedId);
+        if(!obj) return;
+        speak(objEq(obj));
+      });
+
+      els.btnCopyEq.addEventListener("click", ()=>{
+        const obj = state.objects.find(o=>o.id===state.selectedId);
+        if(!obj) return;
+        copyToClipboard(objEq(obj));
+      });
+
+      els.btnFocusObj.addEventListener("click", ()=>{
+        // Minimal "focus": flash selection by toggling handles
+        if(!state.selectedId) return;
+        state.showHandles = true;
+        renderFrame();
+      });
+
+      // Field controls
+      els.btnField.addEventListener("click", ()=>{
+        if(state.replay.active) return;
+        if(state.objects.length === 0){
+          safeText(els.fieldStatus, "No objects");
+          return;
+        }
+        setFieldEnabled(!state.field.enabled);
+      });
+
+      els.fieldSigma.addEventListener("input", ()=>{
+        state.field.sigma = Number(els.fieldSigma.value);
+        safeText(els.fieldSigmaVal, String(Math.round(state.field.sigma)));
+        state.field.dirty = true;
+        if(state.field.enabled) renderFrame();
+      });
+
+      els.fieldRes.addEventListener("input", ()=>{
+        state.field.res = Number(els.fieldRes.value);
+        safeText(els.fieldResVal, String(Math.round(state.field.res)));
+        state.field.dirty = true;
+        if(state.field.enabled) renderFrame();
+      });
+
+      els.fieldAlpha.addEventListener("input", ()=>{
+        state.field.alpha = Number(els.fieldAlpha.value);
+        safeText(els.fieldAlphaVal, fmt(state.field.alpha,2));
+        state.field.dirty = true;
+        if(state.field.enabled) renderFrame();
+      });
+
+      // Replay
+      els.btnToggleReplay.addEventListener("click", ()=>{
+        if(state.events.length === 0){
+          els.replayStatus.textContent = "No events";
+          return;
+        }
+        setReplayActive(!state.replay.active);
+      });
+
+      els.replayScrub.addEventListener("input", ()=>{
+        if(!state.replay.active){
+          state.replay.t = Number(els.replayScrub.value);
+          rebuildInkFromEvents(state.replay.t);
+          safeText(els.replayTimeLabel, `${fmt(state.replay.t/1000,2)}s`);
+          renderFrame();
+        } else {
+          state.replay.t = Number(els.replayScrub.value);
+          rebuildInkFromEvents(state.replay.t);
+          safeText(els.replayTimeLabel, `${fmt(state.replay.t/1000,2)}s`);
+          renderFrame();
+        }
+      });
+
+      els.replaySpeed.addEventListener("input", ()=>{
+        state.replay.speed = Number(els.replaySpeed.value);
+        safeText(els.replaySpeedVal, `${fmt(state.replay.speed,2)}×`);
+      });
+
+      els.replayVectors.addEventListener("input", ()=>{
+        state.replay.showVectors = Number(els.replayVectors.value) > 0.5;
+        safeText(els.replayVectorsVal, state.replay.showVectors ? "On" : "Off");
+        state.showVectors = state.replay.showVectors;
+        renderFrame();
+      });
+
+      // Layer toggles
+      els.btnShowInk.addEventListener("click", ()=>{
+        state.showInk = !state.showInk;
+        els.btnShowInk.textContent = `Ink: ${state.showInk ? "On" : "Off"}`;
+        renderFrame();
+      });
+
+      els.btnShowVectors.addEventListener("click", ()=>{
+        state.showVectors = !state.showVectors;
+        els.btnShowVectors.textContent = `Vectors: ${state.showVectors ? "On" : "Off"}`;
+        renderFrame();
+      });
+
+      els.btnShowHandles.addEventListener("click", ()=>{
+        state.showHandles = !state.showHandles;
+        els.btnShowHandles.textContent = `Handles: ${state.showHandles ? "On" : "Off"}`;
+        renderFrame();
+      });
+
+      // Audio toggle
+      els.btnAudio.addEventListener("click", ()=>{
+        setAudio(!state.audio.enabled);
+      });
+
+      // Keyboard shortcuts
+      window.addEventListener("keydown", (e)=>{
+        if(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+        const k = e.key.toLowerCase();
+        if(k === "d") setMode("draw");
+        if(k === "e") setMode("erase");
+        if(k === "s") setMode("select");
+        if(k === " "){
+          e.preventDefault();
+          if(state.events.length > 0) setReplayActive(!state.replay.active);
+        }
+      });
+
+      // ---------- Init ----------
+      function init(){
+        setTab("brush");
+        setMode("draw");
+
+        safeText(els.brushSizeVal, state.brush.size);
+        safeText(els.brushSoftVal, fmt(state.brush.softness,2));
+        safeText(els.brushSpacingVal, `${fmt(state.brush.spacingMul,2)}×`);
+        safeText(els.glowAmtVal, fmt(state.brush.glow,2));
+        safeText(els.recStrictVal, fmt(state.recognition.strictness,2));
+        safeText(els.autoPromoteVal, state.recognition.auto ? "On" : "Off");
+        safeText(els.fieldSigmaVal, String(Math.round(state.field.sigma)));
+        safeText(els.fieldResVal, String(Math.round(state.field.res)));
+        safeText(els.fieldAlphaVal, fmt(state.field.alpha,2));
+        updateFieldStatus();
+        updateStats();
+        updateEventPreview();
+        updateReplayUI();
+        setAudio(false);
+
+        resizeAll();
+        tickClock();
+        setInterval(tickClock, 250);
+        requestAnimationFrame(animLoop);
+      }
+
+      // Make sure UI shows strictness changes
+      els.recStrict.addEventListener("input", ()=> safeText(els.recStrictVal, fmt(Number(els.recStrict.value),2)));
+      els.autoPromote.addEventListener("input", ()=> safeText(els.autoPromoteVal, Number(els.autoPromote.value)>0.5 ? "On" : "Off"));
+
+      init();
+    })();
+  </script>
+</body>
+</html>
