@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Council of Seven Paths</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f17;
+  --bg-card: #16161f;
+  --bg-elevated: #1e1e2a;
+  --text: #d4d0c8;
+  --text-dim: #8a8680;
+  --text-bright: #f0ece4;
+  --plato: #e8b931;
+  --aristotle: #3bbfa0;
+  --laozi: #5b8def;
+  --suntzu: #d94f4f;
+  --musashi: #8899aa;
+  --marcus: #a87cdb;
+  --tsunetomo: #c44040;
+  --accent: #e8b931;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #333 var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 19px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(232,185,49,0.3);
+  color: var(--text-bright);
+}
+
+.font-sans { font-family: 'DM Sans', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Scroll-triggered fade-in */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Canvas styling */
+canvas {
+  display: block;
+}
+
+/* Custom scrollbar for webkit */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+/* Philosopher node pulse */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* Glow effect */
+.glow {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Section divider */
+.section-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(232,185,49,0.3), transparent);
+}
+
+/* Interactive hint animation */
+@keyframes hint-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.hint { animation: hint-bob 2s ease-in-out infinite; }
+
+/* Quote styling */
+.quote-mark {
+  font-size: 4rem;
+  line-height: 1;
+  opacity: 0.2;
+  font-family: Georgia, serif;
+}
+
+/* Asymptote canvas interaction cursor */
+.canvas-interactive { cursor: crosshair; }
+
+/* Tab buttons */
+.phil-tab {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: transparent;
+  color: var(--text-dim);
+}
+.phil-tab:hover {
+  color: var(--text);
+  background: var(--bg-elevated);
+}
+.phil-tab.active {
+  color: var(--text-bright);
+  border-color: currentColor;
+}
+
+/* Debate flow */
+.debate-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 24px 28px;
+  transition: all 0.4s ease;
+  cursor: pointer;
+}
+.debate-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  background: var(--bg-elevated);
+}
+.debate-card.expanded {
+  border-color: rgba(255,255,255,0.15);
+}
+
+/* Signature move viz */
+.sig-viz {
+  width: 100%;
+  height: 160px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Tractability bar */
+.tract-bar {
+  height: 6px;
+  border-radius: 3px;
+  transition: width 1s ease;
+}
+
+/* Relationship grid */
+.rel-cell {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  font-style: italic;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: all 0.4s ease;
+  cursor: default;
+}
+.rel-cell.show {
+  opacity: 1;
+  transform: scale(1);
+}
+.rel-cell:hover {
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* Smooth expand */
+.expandable {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, opacity 0.4s ease;
+  opacity: 0;
+}
+.expandable.open {
+  opacity: 1;
+}
+
+@keyframes float-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="min-h-screen flex flex-col items-center justify-center px-6 relative">
+  <div class="absolute inset-0 overflow-hidden">
+    <canvas id="heroCanvas" class="w-full h-full"></canvas>
+  </div>
+  <div class="relative z-10 text-center max-w-3xl">
+    <p class="font-sans text-xs tracking-[0.3em] uppercase mb-8 opacity-40">A Structured Dialectic on the Moduli Space of Understanding</p>
+    <h1 class="text-5xl md:text-7xl font-light leading-[1.15] mb-6" style="color:var(--text-bright)">
+      The Council of<br><span class="italic" style="color:var(--accent)">Seven Paths</span>
+    </h1>
+    <p class="text-lg opacity-50 max-w-md mx-auto mt-6 leading-relaxed">
+      Seven thinkers. One question. An explorable journey through the architecture of understanding.
+    </p>
+    <div class="mt-16 hint">
+      <svg width="24" height="24" class="mx-auto opacity-30" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 4v14M5 13l7 7 7-7"/>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════ THE SEVEN ═══════════════ -->
+<section class="py-32 px-6" id="seven">
+  <div class="max-w-6xl mx-auto">
+    <div class="reveal mb-20 text-center">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Part I</p>
+      <h2 class="text-3xl md:text-4xl font-light" style="color:var(--text-bright)">The Pedagogical Signatures</h2>
+      <p class="mt-4 opacity-50 max-w-lg mx-auto font-sans text-sm">Their methods are not accidents — they are responses to crises. Click each node to explore.</p>
+    </div>
+
+    <div class="reveal relative" style="height:600px" id="constellationWrap">
+      <canvas id="constellation" class="w-full h-full canvas-interactive"></canvas>
+      <!-- Info panel (hidden initially) -->
+      <div id="philPanel" class="absolute top-0 right-0 w-full md:w-[420px] h-full overflow-y-auto p-8 transition-all duration-500 opacity-0 pointer-events-none" style="background:linear-gradient(135deg, var(--bg-card) 0%, var(--bg) 100%); border-left:1px solid rgba(255,255,255,0.06); border-radius:12px;">
+        <button id="panelClose" class="font-sans text-xs tracking-widest uppercase opacity-40 hover:opacity-80 mb-6 cursor-pointer transition-opacity">✕ Close</button>
+        <div id="panelContent"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-line max-w-4xl mx-auto"></div>
+
+<!-- ═══════════════ THE CENTRAL QUESTION ═══════════════ -->
+<section class="py-32 px-6" id="question">
+  <div class="max-w-3xl mx-auto">
+    <div class="reveal text-center mb-20">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">The Central Question</p>
+      <blockquote class="text-2xl md:text-3xl font-light italic leading-relaxed" style="color:var(--text-bright)">
+        Can we access ontological reality, or only asymptotic approximations?
+      </blockquote>
+      <p class="mt-6 opacity-50 max-w-md mx-auto">And if asymptotic, what is the nature of the approach — individual, collective, or both?</p>
+    </div>
+  </div>
+
+  <!-- ASYMPTOTE EXPLORER -->
+  <div class="max-w-5xl mx-auto reveal">
+    <div class="rounded-2xl p-6 md:p-10" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.06);">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <div>
+          <h3 class="font-sans text-sm font-medium tracking-wide" style="color:var(--text-bright)">The Asymptote Explorer</h3>
+          <p class="font-sans text-xs opacity-40 mt-1">Each thinker reshapes the curve. Select a lens below.</p>
+        </div>
+        <div class="font-sans text-xs opacity-30 hint">← drag to explore →</div>
+      </div>
+      
+      <canvas id="asymptoteCanvas" class="w-full canvas-interactive rounded-lg" style="height:360px; background:#0c0c14;"></canvas>
+      
+      <div class="flex flex-wrap gap-2 mt-6 justify-center" id="asymptoteTabs">
+        <button class="phil-tab active" data-phil="plato" style="--c:var(--plato)">Plato</button>
+        <button class="phil-tab" data-phil="laozi" style="--c:var(--laozi)">Laozi</button>
+        <button class="phil-tab" data-phil="aristotle" style="--c:var(--aristotle)">Aristotle</button>
+        <button class="phil-tab" data-phil="suntzu" style="--c:var(--suntzu)">Sun Tzu</button>
+        <button class="phil-tab" data-phil="musashi" style="--c:var(--musashi)">Musashi</button>
+        <button class="phil-tab" data-phil="marcus" style="--c:var(--marcus)">Marcus Aurelius</button>
+        <button class="phil-tab" data-phil="tsunetomo" style="--c:var(--tsunetomo)">Tsunetomo</button>
+      </div>
+
+      <div id="asymptoteDesc" class="mt-6 text-center font-sans text-sm opacity-60 min-h-[60px] transition-all duration-300">
+        <strong class="block mb-1" style="color:var(--plato)">Access is achievable through reason</strong>
+        The soul, properly prepared through dialectic, can complete the approach. The asymptote is contingent — not a feature of reality, but of embodiment.
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-line max-w-4xl mx-auto"></div>
+
+<!-- ═══════════════ THE DEBATE ═══════════════ -->
+<section class="py-32 px-6" id="debate">
+  <div class="max-w-4xl mx-auto">
+    <div class="reveal text-center mb-16">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Part II — The Council Convenes</p>
+      <h2 class="text-3xl md:text-4xl font-light" style="color:var(--text-bright)">Round One: The Dialectical Engine</h2>
+      <p class="mt-4 opacity-50 max-w-lg mx-auto font-sans text-sm">Each philosopher takes a role. Click to expand their argument.</p>
+    </div>
+
+    <div class="space-y-4" id="debateCards">
+      <!-- Cards generated by JS -->
+    </div>
+  </div>
+</section>
+
+<div class="section-line max-w-4xl mx-auto"></div>
+
+<!-- ═══════════════ SIGNATURE MOVES ═══════════════ -->
+<section class="py-32 px-6" id="signatures">
+  <div class="max-w-5xl mx-auto">
+    <div class="reveal text-center mb-16">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Part III</p>
+      <h2 class="text-3xl md:text-4xl font-light" style="color:var(--text-bright)">When Confused…</h2>
+      <p class="mt-4 opacity-50 max-w-lg mx-auto font-sans text-sm">Each thinker's signature move — their instinctive response to disorientation.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="sigCards">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+</section>
+
+<div class="section-line max-w-4xl mx-auto"></div>
+
+<!-- ═══════════════ ROUND TWO: COUPLED ASYMPTOTES ═══════════════ -->
+<section class="py-32 px-6" id="round2">
+  <div class="max-w-4xl mx-auto">
+    <div class="reveal text-center mb-16">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Round Two</p>
+      <h2 class="text-3xl md:text-4xl font-light" style="color:var(--text-bright)">The Coupled Asymptotes</h2>
+      <blockquote class="mt-6 text-lg italic opacity-60 max-w-xl mx-auto">
+        Given that we are mortal, what is the relationship between the epistemic asymptote and the mortal asymptote? Are they the same limit or different?
+      </blockquote>
+    </div>
+
+    <div class="reveal">
+      <div class="rounded-2xl p-6 md:p-10" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.06);">
+        <canvas id="coupledCanvas" class="w-full canvas-interactive rounded-lg" style="height:320px; background:#0c0c14;"></canvas>
+        <div class="flex items-center gap-6 mt-6 font-sans text-xs">
+          <label class="flex items-center gap-3 flex-1">
+            <span class="opacity-50 whitespace-nowrap">Mortality</span>
+            <input type="range" id="mortalSlider" min="20" max="95" value="70" class="flex-1 accent-yellow-500">
+          </label>
+          <label class="flex items-center gap-3 flex-1">
+            <span class="opacity-50 whitespace-nowrap">Grasping Mode</span>
+            <input type="range" id="graspSlider" min="0" max="100" value="50" class="flex-1 accent-blue-400">
+          </label>
+        </div>
+        <p class="font-sans text-xs opacity-40 mt-4 text-center">Adjust mortality (when the vertical cut falls) and grasping mode (from yielding to grasping) to see how the asymptotes couple.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-line max-w-4xl mx-auto"></div>
+
+<!-- ═══════════════ OPEN QUESTIONS ═══════════════ -->
+<section class="py-32 px-6" id="open">
+  <div class="max-w-3xl mx-auto">
+    <div class="reveal text-center mb-16">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Toward Synthesis</p>
+      <h2 class="text-3xl md:text-4xl font-light" style="color:var(--text-bright)">Open Questions</h2>
+      <p class="mt-4 opacity-50 font-sans text-sm">Ranked by tractability. The council generated more than it resolved.</p>
+    </div>
+
+    <div class="space-y-6" id="openQuestions">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+</section>
+
+<div class="section-line max-w-4xl mx-auto"></div>
+
+<!-- ═══════════════ ON EACH OTHER ═══════════════ -->
+<section class="py-32 px-6" id="mutual">
+  <div class="max-w-5xl mx-auto">
+    <div class="reveal text-center mb-16">
+      <p class="font-sans text-xs tracking-[0.3em] uppercase opacity-40 mb-4">Appendix</p>
+      <h2 class="text-3xl md:text-4xl font-light" style="color:var(--text-bright)">The Philosophers on Each Other</h2>
+      <p class="mt-4 opacity-50 font-sans text-sm">Hover to reveal each observation.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="relGrid">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="py-20 px-6 text-center">
+  <p class="italic opacity-30 text-lg">The council adjourns. The question remains open. The practices continue.</p>
+  <div class="section-line max-w-xs mx-auto mt-8"></div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const PHILOSOPHERS = {
+  plato: {
+    name: 'Plato',
+    dates: '428–348 BCE',
+    epithet: 'The Traumatized Idealist',
+    color: '#e8b931',
+    crisis: 'Watched Athens execute Socrates through democratic vote. The "wisdom of crowds" killed the wisest man he knew.',
+    epistemology: 'Deep distrust of <em>doxa</em>. Truth must be anchored in Forms that cannot be voted away or killed by a mob.',
+    methods: ['Dialectic — rigorous Q&A exposing contradictions', 'Mathematics as preparation — geometry trains the soul', 'Allegory and myth — the Cave, the Allegory of Er', 'The turn (periagoge) — reorienting the soul toward light'],
+    move: 'Ascend',
+    moveDesc: 'Move from particulars to universals, from shadows to Forms, from becoming to Being.',
+    angle: -90
+  },
+  aristotle: {
+    name: 'Aristotle',
+    dates: '384–322 BCE',
+    epithet: 'The Physician\'s Son',
+    color: '#3bbfa0',
+    crisis: 'Father was court physician. Absorbed the medical tradition of careful observation, classification, dissection.',
+    epistemology: 'Truth is embedded in particulars, not floating above them. Begin with reputable opinions and refine toward first principles.',
+    methods: ['Peripatetic inquiry — walking while thinking', 'Classification and differentiation — finding natural kinds', 'The four causes — material, formal, efficient, final', 'Observation before theory — dissected 500+ species'],
+    move: 'Descend',
+    moveDesc: 'Return to the phenomena. What do we actually observe? What do wise people actually say?',
+    angle: -38
+  },
+  laozi: {
+    name: 'Laozi',
+    dates: 'c. 6th century BCE',
+    epithet: 'The Archivist Who Walked Away',
+    color: '#5b8def',
+    crisis: 'The Late Zhou Dynasty was fragmenting. Confucian scholars built elaborate systems trying to hold things together through structure.',
+    epistemology: 'The more you systematize, the further you get from the Way. The Tao that can be named is not the eternal Tao.',
+    methods: ['Paradox — "The highest good is like water"', 'Negation (apophasis) — define by what something is NOT', 'Poetic compression — 81 brief chapters, dense with resonance', 'Wu wei — action without forcing'],
+    move: 'Let go',
+    moveDesc: 'Stop grasping. The answer is not found by seeking harder but by ceasing to obstruct.',
+    angle: 14
+  },
+  suntzu: {
+    name: 'Sun Tzu',
+    dates: 'c. 544–496 BCE',
+    epithet: 'The Strategic Realist',
+    color: '#d94f4f',
+    crisis: 'The Spring and Autumn Period — constant interstate warfare. Resources finite. Victory had to be efficient.',
+    epistemology: 'Truth is relational and positional. No abstract "best strategy" — only the best strategy given terrain, timing, and self-knowledge.',
+    methods: ['Conditional aphorisms — "If you know the enemy and yourself…"', 'Terrain analysis — all situations have topography', 'Layered principles — surface tactics nest inside deeper strategy', 'Deception as truth — appearance and reality are tools'],
+    move: 'Map',
+    moveDesc: 'What is the terrain? What does the enemy see? Where is the point of leverage?',
+    angle: 65
+  },
+  musashi: {
+    name: 'Miyamoto Musashi',
+    dates: '1584–1645',
+    epithet: 'The Ronin at the End of War',
+    color: '#8899aa',
+    crisis: 'Born into civil war, lived into peace. Wrote the Book of Five Rings in a cave: What principle remains when the killing stops?',
+    epistemology: 'Truth is tested in action but transcends action. The ultimate swordsmanship is no-swordsmanship.',
+    methods: ['Learning by body — cut 10,000 times', 'Cross-training — painting, calligraphy, sculpture', 'The void (ku) — where technique dissolves into presence', 'Minimal verbal instruction — show, don\'t explain'],
+    move: 'Act',
+    moveDesc: 'Enter the situation fully. Understanding follows engagement. Then stop and see: what remains when technique falls away?',
+    angle: 116
+  },
+  marcus: {
+    name: 'Marcus Aurelius',
+    dates: '121–180 CE',
+    epithet: 'The Emperor Who Wanted to Be a Student',
+    color: '#a87cdb',
+    crisis: 'Philosopher-king by accident. Spent his reign on the Danube frontier, managing plague and war. His Meditations were never meant for publication.',
+    epistemology: 'There is a logos — a rational order — governing all things. We cannot control it, but we can align with it.',
+    methods: ['Hypomnemata — self-addressed daily reminders', 'View from above — imagine seeing Earth from the stars', 'Memento mori — "You could leave life right now"', 'Discipline of assent — examine impressions before reacting'],
+    move: 'Contract',
+    moveDesc: 'Return to what is in your control. Strip the situation to its bare elements. What is actually happening, minus your story about it?',
+    angle: 167
+  },
+  tsunetomo: {
+    name: 'Yamamoto Tsunetomo',
+    dates: '1659–1719',
+    epithet: 'The Samurai Without a War',
+    color: '#c44040',
+    crisis: 'Warriors with no wars. His master died; he was forbidden to follow in death. Dictated Hagakure — a text hidden for over a century.',
+    epistemology: 'If you settle the matter of death each morning — truly accept that you are already dead — you can act without hesitation or fear.',
+    methods: ['Anecdote and exemplar — stories for imitation', 'Repetition — "The Way of the Samurai is found in death"', 'Paradox — certainty is error', 'Secret transmission — only for those ready'],
+    move: 'Die',
+    moveDesc: 'Let go of the self that is confused. From the vantage of death, what matters? Act from there.',
+    angle: 218
+  }
+};
+
+const DEBATE_DATA = [
+  {
+    role: 'Moderator',
+    phil: 'suntzu',
+    name: 'Sun Tzu',
+    summary: 'Frames three fronts: Is there reality independent of access? Is the limit actual, ideal, or impossible? Does understanding aggregate across the filtration?',
+    text: 'The question before us has three fronts. <strong>First:</strong> Is there an ontological reality independent of our access? <strong>Second:</strong> If access is asymptotic, is the limit actual, ideal, or impossible? <strong>Third:</strong> Does understanding aggregate? Can a collective know what no individual knows?<br><br><em>He arranges small stones on the ground — a terrain map of conceptual space.</em>'
+  },
+  {
+    role: 'Thesis Champion',
+    phil: 'plato',
+    name: 'Plato',
+    summary: 'Reality is accessible to reason. The asymptote is contingent, not necessary — a feature of embodiment, not of truth itself.',
+    text: 'When the geometer proves that the diagonal is incommensurable with its side, does he approach this truth asymptotically? No. He <em>possesses</em> it. The proof is complete. The Form is grasped wholly.<br><br>The soul, before its embodiment, knew the Forms directly. Our "learning" is <em>anamnesis</em> — recollection. The asymptote you perceive is not a feature of reality but of <strong>embodiment</strong>.<br><br>The philosopher who exits the cave does so alone. He returns to teach, yes, but the vision of the Good cannot be delegated.'
+  },
+  {
+    role: 'Antithesis Champion',
+    phil: 'laozi',
+    name: 'Laozi',
+    summary: 'The access IS the asymptote. The hand that grasps cannot hold water. The proof is a net — reality is not a fish.',
+    text: 'The hand that grasps cannot hold water. The mind that grasps cannot hold the Tao.<br><br>You say the geometer possesses the truth of the diagonal. I say: he possesses a <em>name</em>, a <em>structure</em>, a game he has invented. The proof is a net. Reality is not a fish.<br><br><strong>The asymptote IS the structure of authentic relationship to the whole.</strong> The moment you fix the Tao in concept, you have created a second thing — Tao-as-concept — and the living Tao has moved on.'
+  },
+  {
+    role: 'Historical Witness',
+    phil: 'marcus',
+    name: 'Marcus Aurelius',
+    summary: 'Rome aggregated knowledge that served power, not truth. But small chains of teacher-student transmission carried genuine signal.',
+    text: 'I ruled an empire of fifty million souls. If collective understanding aggregates, Rome should have been wise.<br><br>We learned to build aqueducts and deploy legions. This knowledge was <strong>distributed</strong>. But did Rome approach ontological truth? I confess: I do not think so. Our vast system served <strong>power</strong>, not truth.<br><br>And yet — in the Stoic schools, in the letters of Seneca, in the teachings of Epictetus (who was a slave!) — truth passed from person to person. <strong>The empire is noise. The lineage is signal.</strong>'
+  },
+  {
+    role: 'Method Critic',
+    phil: 'aristotle',
+    name: 'Aristotle',
+    summary: 'The question is malformed. "Reality" and "access" are ambiguous. Plato and Laozi use the same words for different things.',
+    text: 'You are all speaking as if "ontological reality" were well-defined and "access" a single relation. But these are <strong>ambiguous terms</strong>.<br><br><strong>"Reality"</strong> as substance? As unconcealment? As essence? As the totality of facts?<br><strong>"Access"</strong> as perception? As intellectual intuition? As practical wisdom? As distributed cognition?<br><br>Plato\'s Forms are objects of intellectual intuition. Laozi\'s Tao is the process of processing. They are <strong>not disagreeing about reality</strong> — they are using the same words for different things.'
+  },
+  {
+    role: 'Synthesis Weaver',
+    phil: 'musashi',
+    name: 'Musashi',
+    summary: 'The asymptote inverts. The Form is the pattern of the Tao; the Tao is the movement of the Form. The individual approaches; the species becomes.',
+    text: 'When I was young, I sought the perfect cut — Plato\'s path. When older, I understood there is no perfect cut, only this cut — Laozi\'s path.<br><br>But when I was old, I saw both were true and partial. <strong>The Form is the pattern of the Tao; the Tao is the movement of the Form.</strong><br><br>In early training, you approach the ideal — you see the gap. But through ten thousand cuts, <strong>the asymptote inverts.</strong> You stop approaching from outside. You become the movement that generates ideals. The gap is not closed; it is dissolved.'
+  },
+  {
+    role: 'Devil\'s Advocate',
+    phil: 'tsunetomo',
+    name: 'Tsunetomo',
+    summary: 'Death erases all syntheses. The asymptote is not epistemic — it is mortal. Freedom is in the release of the need to complete the path.',
+    text: 'Musashi-sensei speaks of the asymptote dissolving through mastery. But he died alone in that cave, his body failing. Where is the "becoming" now?<br><br><strong>Death erases all syntheses.</strong><br><br>The question is not "can we reach the limit?" The question is: <strong>can we die well before we reach it?</strong> The one who has settled the matter of death can act without asymptote. Not because they have accessed reality — but because they have stopped caring about access. <strong>You will die before you understand. What then?</strong>'
+  }
+];
+
+const SIGNATURES = [
+  { key:'plato', move:'Ascend', icon:'↑', desc:'Move from particulars to universals, from shadows to Forms.' },
+  { key:'aristotle', move:'Descend', icon:'↓', desc:'Return to the phenomena. What do we actually observe?' },
+  { key:'laozi', move:'Let go', icon:'〇', desc:'Stop grasping. Cease to obstruct. The Way flows.' },
+  { key:'suntzu', move:'Map', icon:'⊞', desc:'What is the terrain? Where is the point of leverage?' },
+  { key:'musashi', move:'Act', icon:'⚔', desc:'Enter fully. Understanding follows engagement.' },
+  { key:'marcus', move:'Contract', icon:'◎', desc:'Return to what is in your control. Strip to bare elements.' },
+  { key:'tsunetomo', move:'Die', icon:'☾', desc:'Let go of the confused self. From death\'s vantage, act.' },
+];
+
+const OPEN_Q = [
+  { tractability:85, label:'The practice question', from:'Musashi', q:'Can each tradition specify a concrete daily practice? Can these practices be compared?' },
+  { tractability:75, label:'The lineage question', from:'Marcus', q:'Is small-chain transmission structurally different from large-scale cultural filtration?' },
+  { tractability:50, label:'The disambiguation problem', from:'Aristotle', q:'Which senses of "reality" and "access" matter? Is the plurality irreducible?' },
+  { tractability:40, label:'Survival vs. truth', from:'Sun Tzu', q:'Does species-level filtration select for truth or for fitness? Can these converge?' },
+  { tractability:20, label:'Mode-dependence', from:'Laozi', q:'Does the asymptote exist in reality, or only in grasping modes?' },
+  { tractability:10, label:'The death question', from:'Tsunetomo', q:'Is the mortal asymptote fundamental? Could we investigate this without being mortal?' },
+];
+
+const RELATIONS = [
+  { from:'Plato', on:'Laozi', color:'var(--plato)', text:'"He points at the moon and laughs when I try to build a ladder. Perhaps the laughter is wisdom. Perhaps it is evasion."' },
+  { from:'Laozi', on:'Plato', color:'var(--laozi)', text:'"He builds beautiful cages and calls them freedom. But the bird that flies has no name for flying."' },
+  { from:'Aristotle', on:'Sun Tzu', color:'var(--aristotle)', text:'"A practical man. If he would only systematize his observations! But perhaps systematization would destroy what makes them useful."' },
+  { from:'Sun Tzu', on:'Aristotle', color:'var(--suntzu)', text:'"He knows everything about animals. But does he know how to win a battle? Knowledge that cannot be deployed is decoration."' },
+  { from:'Musashi', on:'Tsunetomo', color:'var(--musashi)', text:'"He speaks of death like a poet. But has he faced death? Not the idea — the thing. The edge. The moment."' },
+  { from:'Tsunetomo', on:'Musashi', color:'var(--tsunetomo)', text:'"He killed sixty men and learned to paint. I served one lord and learned to die. Perhaps we are saying the same thing."' },
+  { from:'Marcus', on:'All', color:'var(--marcus)', text:'"Each of them has found a way to live. That is no small thing. The empire I ruled has fallen. The schools they founded endure."' },
+];
+
+
+// ═══════════════════════════════════════════════
+// HERO CANVAS — ambient floating particles
+// ═══════════════════════════════════════════════
+(function initHero() {
+  const c = document.getElementById('heroCanvas');
+  const ctx = c.getContext('2d');
+  let particles = [];
+  const COLORS = ['#e8b931','#3bbfa0','#5b8def','#d94f4f','#8899aa','#a87cdb','#c44040'];
+
+  function resize() {
+    c.width = c.offsetWidth * devicePixelRatio;
+    c.height = c.offsetHeight * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 50; i++) {
+    particles.push({
+      x: Math.random() * c.offsetWidth,
+      y: Math.random() * c.offsetHeight,
+      r: Math.random() * 2 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      alpha: Math.random() * 0.3 + 0.05
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, c.offsetWidth, c.offsetHeight);
+    const w = c.offsetWidth, h = c.offsetHeight;
+    for (const p of particles) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.fill();
+    }
+    // Draw subtle connecting lines
+    ctx.globalAlpha = 0.03;
+    ctx.strokeStyle = '#e8b931';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        if (dx*dx + dy*dy < 15000) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+
+// ═══════════════════════════════════════════════
+// SCROLL REVEAL
+// ═══════════════════════════════════════════════
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+
+// ═══════════════════════════════════════════════
+// CONSTELLATION — Interactive philosopher network
+// ═══════════════════════════════════════════════
+(function initConstellation() {
+  const wrap = document.getElementById('constellationWrap');
+  const c = document.getElementById('constellation');
+  const ctx = c.getContext('2d');
+  const panel = document.getElementById('philPanel');
+  const panelContent = document.getElementById('panelContent');
+  const closeBtn = document.getElementById('panelClose');
+  
+  let W, H, dpr, nodes = [], hovered = null, selected = null;
+  let mouseX = -1000, mouseY = -1000;
+  let animT = 0;
+
+  const philKeys = Object.keys(PHILOSOPHERS);
+
+  function resize() {
+    const rect = wrap.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    dpr = devicePixelRatio;
+    c.width = W * dpr;
+    c.height = H * dpr;
+    c.style.width = W + 'px';
+    c.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    layoutNodes();
+  }
+
+  function layoutNodes() {
+    const cx = W * 0.42, cy = H * 0.5;
+    const rx = Math.min(W * 0.32, 220), ry = Math.min(H * 0.38, 200);
+    nodes = philKeys.map((key, i) => {
+      const p = PHILOSOPHERS[key];
+      const angle = (p.angle * Math.PI / 180);
+      return {
+        key, x: cx + Math.cos(angle) * rx, y: cy + Math.sin(angle) * ry,
+        r: 24, color: p.color, name: p.name
+      };
+    });
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    animT += 0.01;
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw connecting lines between all nodes
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.stroke();
+      }
+    }
+
+    // Draw nodes
+    for (const n of nodes) {
+      const isHover = hovered === n.key;
+      const isSel = selected === n.key;
+      const scale = isHover ? 1.2 : isSel ? 1.15 : 1;
+      const r = n.r * scale;
+
+      // Glow
+      if (isHover || isSel) {
+        const grad = ctx.createRadialGradient(n.x, n.y, r * 0.5, n.x, n.y, r * 3);
+        grad.addColorStop(0, n.color + '30');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Outer ring pulse
+      const pulseR = r + Math.sin(animT * 2 + nodes.indexOf(n)) * 2;
+      ctx.strokeStyle = n.color + '40';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, pulseR + 4, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Circle
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = n.color + (isHover || isSel ? 'dd' : '88');
+      ctx.fill();
+
+      // Inner symbol
+      ctx.fillStyle = '#0f0f17';
+      ctx.font = `${r * 0.7}px "Crimson Pro"`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n.name[0], n.x, n.y + 1);
+
+      // Label
+      ctx.fillStyle = isHover || isSel ? '#f0ece4' : '#8a8680';
+      ctx.font = `${isHover || isSel ? '14' : '12'}px "DM Sans"`;
+      ctx.textAlign = 'center';
+      ctx.fillText(n.name, n.x, n.y + r + 18);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  function getNodeAt(mx, my) {
+    for (const n of nodes) {
+      const dx = mx - n.x, dy = my - n.y;
+      if (dx * dx + dy * dy < (n.r + 10) * (n.r + 10)) return n.key;
+    }
+    return null;
+  }
+
+  c.addEventListener('mousemove', (e) => {
+    const rect = c.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    const hit = getNodeAt(mouseX, mouseY);
+    hovered = hit;
+    c.style.cursor = hit ? 'pointer' : 'crosshair';
+  });
+
+  c.addEventListener('click', (e) => {
+    const rect = c.getBoundingClientRect();
+    const hit = getNodeAt(e.clientX - rect.left, e.clientY - rect.top);
+    if (hit) {
+      selected = hit;
+      showPanel(hit);
+    }
+  });
+
+  closeBtn.addEventListener('click', () => {
+    panel.classList.add('pointer-events-none');
+    panel.style.opacity = '0';
+    selected = null;
+  });
+
+  function showPanel(key) {
+    const p = PHILOSOPHERS[key];
+    panelContent.innerHTML = `
+      <div style="color:${p.color}" class="font-sans text-xs tracking-widest uppercase mb-1">${p.dates}</div>
+      <h3 class="text-2xl font-light mb-1" style="color:var(--text-bright)">${p.name}</h3>
+      <p class="italic opacity-50 mb-6 text-base">${p.epithet}</p>
+      <div class="mb-5">
+        <h4 class="font-sans text-xs tracking-widest uppercase opacity-40 mb-2">Historical Crisis</h4>
+        <p class="text-[15px] leading-relaxed">${p.crisis}</p>
+      </div>
+      <div class="mb-5">
+        <h4 class="font-sans text-xs tracking-widest uppercase opacity-40 mb-2">Epistemology</h4>
+        <p class="text-[15px] leading-relaxed">${p.epistemology}</p>
+      </div>
+      <div class="mb-5">
+        <h4 class="font-sans text-xs tracking-widest uppercase opacity-40 mb-2">Method</h4>
+        <ul class="space-y-1">
+          ${p.methods.map(m => `<li class="text-[14px] leading-relaxed opacity-70">— ${m}</li>`).join('')}
+        </ul>
+      </div>
+      <div class="mt-6 p-4 rounded-lg" style="background:${p.color}15; border:1px solid ${p.color}30">
+        <h4 class="font-sans text-xs tracking-widest uppercase mb-1" style="color:${p.color}">When confused → ${p.move}</h4>
+        <p class="text-[14px] opacity-70">${p.moveDesc}</p>
+      </div>
+    `;
+    panel.style.opacity = '1';
+    panel.classList.remove('pointer-events-none');
+  }
+})();
+
+
+// ═══════════════════════════════════════════════
+// ASYMPTOTE EXPLORER
+// ═══════════════════════════════════════════════
+(function initAsymptote() {
+  const c = document.getElementById('asymptoteCanvas');
+  const ctx = c.getContext('2d');
+  const descEl = document.getElementById('asymptoteDesc');
+  let W, H, dpr, currentPhil = 'plato', animProgress = 0, targetProgress = 1;
+  let dragX = -1;
+
+  const DESCRIPTIONS = {
+    plato: { title:'Access is achievable through reason', color:'var(--plato)',
+      desc:'The soul, properly prepared through dialectic, can complete the approach. The asymptote is contingent — not a feature of reality, but of embodiment.' },
+    laozi: { title:'The access IS the asymptote', color:'var(--laozi)',
+      desc:'The hand that grasps cannot hold water. The proof is a net — reality is not a fish. The asymptote is the structure of authentic relationship.' },
+    aristotle: { title:'The question is malformed', color:'var(--aristotle)',
+      desc:'Multiple senses of "reality" and "access" yield multiple curves. The plurality may be irreducible. We must carve at the joints.' },
+    suntzu: { title:'Truth is relational and positional', color:'var(--suntzu)',
+      desc:'There is no fixed asymptote — the terrain shifts. The curve must adapt to changing conditions. Map, then move.' },
+    musashi: { title:'The asymptote inverts', color:'var(--musashi)',
+      desc:'Through practice, you stop approaching from outside. You become the movement that generates ideals. The gap is not closed — it is dissolved.' },
+    marcus: { title:'A family of asymptotes', color:'var(--marcus)',
+      desc:'Not one curve but many, each shaped by mode of approach. Some dissolve in practice. Others sharpen. Begin with the most unavoidable.' },
+    tsunetomo: { title:'Death is the only outside', color:'var(--tsunetomo)',
+      desc:'The mortal asymptote — a vertical line — cuts through before you reach. Freedom is in releasing the need to complete the path.' },
+  };
+
+  function resize() {
+    const rect = c.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    dpr = devicePixelRatio;
+    c.width = W * dpr; c.height = H * dpr;
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Tabs
+  document.querySelectorAll('#asymptoteTabs .phil-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#asymptoteTabs .phil-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentPhil = btn.dataset.phil;
+      const d = DESCRIPTIONS[currentPhil];
+      const col = PHILOSOPHERS[currentPhil].color;
+      btn.style.borderColor = col;
+      btn.style.color = col;
+      descEl.innerHTML = `<strong class="block mb-1" style="color:${col}">${d.title}</strong>${d.desc}`;
+      animProgress = 0;
+      targetProgress = 1;
+    });
+  });
+
+  c.addEventListener('mousemove', (e) => {
+    const rect = c.getBoundingClientRect();
+    dragX = (e.clientX - rect.left) / W;
+  });
+  c.addEventListener('mouseleave', () => { dragX = -1; });
+
+  function draw() {
+    animProgress += (targetProgress - animProgress) * 0.03;
+    ctx.clearRect(0, 0, W, H);
+    const p = animProgress;
+    const col = PHILOSOPHERS[currentPhil].color;
+    const pad = 50;
+    const gW = W - pad * 2, gH = H - pad * 2;
+    const ox = pad, oy = pad;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 10; i++) {
+      const x = ox + (gW * i / 10);
+      ctx.beginPath(); ctx.moveTo(x, oy); ctx.lineTo(x, oy + gH); ctx.stroke();
+      const y = oy + (gH * i / 10);
+      ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox + gW, y); ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'center';
+    ctx.fillText('EFFORT / TIME →', ox + gW / 2, oy + gH + 30);
+    ctx.save();
+    ctx.translate(ox - 30, oy + gH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('UNDERSTANDING →', 0, 0);
+    ctx.restore();
+
+    // Asymptote line (Truth/Reality)
+    const truthY = oy + gH * 0.12;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.setLineDash([4, 6]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ox, truthY);
+    ctx.lineTo(ox + gW, truthY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'right';
+    ctx.fillText('Reality', ox + gW + 5, truthY - 6);
+
+    // Draw the curve based on current philosopher
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = col;
+    ctx.beginPath();
+
+    const steps = 200;
+    for (let i = 0; i <= steps * p; i++) {
+      const t = i / steps; // 0..1
+      const x = ox + t * gW;
+      let y;
+
+      switch (currentPhil) {
+        case 'plato':
+          // Curve that actually reaches the asymptote
+          y = oy + gH - (gH - (truthY - oy)) * Math.pow(t, 0.6);
+          // At the end, it touches
+          if (t > 0.85) y = truthY + (1 - (t - 0.85) / 0.15) * (oy + gH - (gH - (truthY - oy)) * Math.pow(0.85, 0.6) - truthY);
+          break;
+        case 'laozi':
+          // Curve merges with a flowing wave pattern
+          const base = oy + gH - (gH * 0.75) * (1 - Math.exp(-3 * t));
+          const wave = Math.sin(t * 12) * (15 * (1 - t));
+          y = base + wave;
+          break;
+        case 'aristotle':
+          // Multiple thin curves (draw extras separately)
+          y = oy + gH - (gH * 0.7) * (1 - Math.exp(-2.5 * t));
+          break;
+        case 'suntzu':
+          // Adapting curve - terrain shifts
+          const shift = Math.sin(t * 4) * 30;
+          y = oy + gH - (gH * 0.65) * (1 - Math.exp(-2 * t)) + shift * t;
+          break;
+        case 'musashi':
+          // Inversion point
+          if (t < 0.55) {
+            y = oy + gH - (gH * 0.5) * (1 - Math.exp(-3 * t));
+          } else {
+            const tt = (t - 0.55) / 0.45;
+            const baseY = oy + gH - (gH * 0.5) * (1 - Math.exp(-3 * 0.55));
+            y = baseY - tt * (baseY - truthY) * 1.1;
+            // Goes past and wraps
+            if (y < truthY - 10) y = truthY + (y - (truthY - 10)) * 0.1;
+          }
+          break;
+        case 'marcus':
+          // Main curve
+          y = oy + gH - (gH * 0.6) * (1 - Math.exp(-2 * t));
+          break;
+        case 'tsunetomo':
+          // Normal approach but cut short
+          y = oy + gH - (gH * 0.65) * (1 - Math.exp(-2.5 * t));
+          if (t > 0.7) {
+            y = oy + gH - (gH * 0.65) * (1 - Math.exp(-2.5 * 0.7)); // freeze
+          }
+          break;
+      }
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Extra drawings per philosopher
+    if (currentPhil === 'aristotle' && p > 0.3) {
+      // Multiple fainter curves for different "senses"
+      const offsets = [0.55, 0.85, 0.4];
+      const alphas = ['60', '40', '30'];
+      offsets.forEach((off, idx) => {
+        ctx.strokeStyle = col + alphas[idx];
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i <= steps * p; i++) {
+          const t = i / steps;
+          const x = ox + t * gW;
+          const y = oy + gH - (gH * off) * (1 - Math.exp(-(1.5 + idx) * t));
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+      ctx.fillStyle = col + '60';
+      ctx.font = '9px "DM Sans"';
+      ctx.textAlign = 'left';
+      ctx.fillText('ousia', ox + gW * 0.85, oy + gH * 0.28);
+      ctx.fillText('aletheia', ox + gW * 0.85, oy + gH * 0.42);
+      ctx.fillText('phronesis', ox + gW * 0.85, oy + gH * 0.52);
+      ctx.fillText('nous', ox + gW * 0.85, oy + gH * 0.15);
+    }
+
+    if (currentPhil === 'marcus' && p > 0.3) {
+      [0.45, 0.75, 0.35].forEach((off, idx) => {
+        ctx.strokeStyle = col + '40';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath();
+        for (let i = 0; i <= steps * p; i++) {
+          const t = i / steps;
+          const x = ox + t * gW;
+          const y = oy + gH - (gH * off) * (1 - Math.exp(-(1.5 + idx * 0.5) * t));
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+    }
+
+    if (currentPhil === 'tsunetomo') {
+      // Death line
+      const deathX = ox + gW * 0.7;
+      ctx.strokeStyle = '#c44040aa';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(deathX, oy);
+      ctx.lineTo(deathX, oy + gH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#c44040aa';
+      ctx.font = '10px "DM Sans"';
+      ctx.textAlign = 'center';
+      ctx.fillText('Death', deathX, oy - 8);
+
+      // Freedom zone
+      if (p > 0.5) {
+        ctx.fillStyle = '#c4404015';
+        ctx.fillRect(deathX, oy, gW - (deathX - ox), gH);
+        ctx.fillStyle = '#c4404060';
+        ctx.font = '11px "Crimson Pro"';
+        ctx.textAlign = 'center';
+        ctx.fillText('"What then?"', deathX + (ox + gW - deathX) / 2, oy + gH / 2);
+      }
+    }
+
+    if (currentPhil === 'musashi' && p > 0.4) {
+      // Mark inversion point
+      const invX = ox + 0.55 * gW;
+      const invY = oy + gH - (gH * 0.5) * (1 - Math.exp(-3 * 0.55));
+      ctx.beginPath();
+      ctx.arc(invX, invY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.fillStyle = col + 'bb';
+      ctx.font = '10px "DM Sans"';
+      ctx.textAlign = 'left';
+      ctx.fillText('inversion', invX + 10, invY - 8);
+    }
+
+    if (currentPhil === 'suntzu') {
+      // Shifting asymptote
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = ox + t * gW;
+        const y = truthY + Math.sin(t * 4) * 30 * t;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Drag indicator
+    if (dragX >= 0 && dragX <= 1) {
+      const dx = ox + dragX * gW;
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(dx, oy);
+      ctx.lineTo(dx, oy + gH);
+      ctx.stroke();
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+
+// ═══════════════════════════════════════════════
+// DEBATE CARDS
+// ═══════════════════════════════════════════════
+(function initDebate() {
+  const container = document.getElementById('debateCards');
+  DEBATE_DATA.forEach((d, i) => {
+    const col = PHILOSOPHERS[d.phil].color;
+    const card = document.createElement('div');
+    card.className = 'debate-card reveal';
+    card.style.borderLeftWidth = '3px';
+    card.style.borderLeftColor = col;
+    card.innerHTML = `
+      <div class="flex items-center gap-3 mb-2">
+        <span class="font-sans text-[10px] tracking-widest uppercase px-2 py-0.5 rounded" style="background:${col}20;color:${col}">${d.role}</span>
+        <span class="font-sans text-sm font-medium" style="color:${col}">${d.name}</span>
+      </div>
+      <p class="opacity-70 text-[15px]">${d.summary}</p>
+      <div class="expandable mt-4" id="debate-ex-${i}">
+        <div class="section-line mb-4"></div>
+        <div class="text-[15px] leading-relaxed opacity-60">${d.text}</div>
+      </div>
+      <button class="font-sans text-xs mt-3 opacity-30 hover:opacity-60 cursor-pointer transition-opacity expand-btn" data-i="${i}">
+        Read full argument ↓
+      </button>
+    `;
+    container.appendChild(card);
+    observer.observe(card);
+  });
+
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.expand-btn');
+    if (!btn) return;
+    const i = btn.dataset.i;
+    const ex = document.getElementById(`debate-ex-${i}`);
+    const isOpen = ex.classList.contains('open');
+    if (isOpen) {
+      ex.style.maxHeight = '0';
+      ex.classList.remove('open');
+      btn.textContent = 'Read full argument ↓';
+    } else {
+      ex.style.maxHeight = ex.scrollHeight + 'px';
+      ex.classList.add('open');
+      btn.textContent = 'Collapse ↑';
+    }
+  });
+})();
+
+
+// ═══════════════════════════════════════════════
+// SIGNATURE MOVES
+// ═══════════════════════════════════════════════
+(function initSignatures() {
+  const container = document.getElementById('sigCards');
+  SIGNATURES.forEach((s) => {
+    const p = PHILOSOPHERS[s.key];
+    const card = document.createElement('div');
+    card.className = 'reveal';
+    card.innerHTML = `
+      <div class="rounded-xl p-5 h-full" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.06);">
+        <canvas class="sig-viz mb-4" data-phil="${s.key}"></canvas>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="text-2xl" style="color:${p.color}">${s.icon}</span>
+          <span class="font-sans text-sm font-medium" style="color:${p.color}">${p.name}</span>
+        </div>
+        <p class="font-sans text-xs tracking-widest uppercase opacity-40 mb-1">"When confused, ${s.move.toLowerCase()}"</p>
+        <p class="text-[14px] opacity-50 leading-relaxed">${s.desc}</p>
+      </div>
+    `;
+    container.appendChild(card);
+    observer.observe(card);
+  });
+
+  // Animate signature canvases
+  const canvases = document.querySelectorAll('.sig-viz');
+  canvases.forEach(cv => {
+    const key = cv.dataset.phil;
+    const col = PHILOSOPHERS[key].color;
+    const ctx2 = cv.getContext('2d');
+    let t = 0;
+
+    function resizeCV() {
+      const rect = cv.getBoundingClientRect();
+      cv.width = rect.width * devicePixelRatio;
+      cv.height = rect.height * devicePixelRatio;
+      ctx2.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+    resizeCV();
+
+    function drawSig() {
+      t += 0.02;
+      const w = cv.offsetWidth, h = cv.offsetHeight;
+      ctx2.clearRect(0, 0, w, h);
+
+      switch (key) {
+        case 'plato': // Ascending particles
+          for (let i = 0; i < 20; i++) {
+            const y = h - ((t * 30 + i * 15) % h);
+            const x = w/2 + Math.sin(t + i) * 40;
+            const alpha = 1 - y / h;
+            ctx2.beginPath();
+            ctx2.arc(x, y, 2, 0, Math.PI * 2);
+            ctx2.fillStyle = col + Math.floor(alpha * 180).toString(16).padStart(2,'0');
+            ctx2.fill();
+          }
+          break;
+        case 'aristotle': // Descending classification lines
+          for (let i = 0; i < 5; i++) {
+            const y = (t * 20 + i * 30) % h;
+            ctx2.strokeStyle = col + '30';
+            ctx2.lineWidth = 0.5;
+            ctx2.beginPath();
+            ctx2.moveTo(20, y);
+            ctx2.lineTo(w - 20, y);
+            ctx2.stroke();
+            // Dots on lines
+            for (let j = 0; j < 4; j++) {
+              ctx2.beginPath();
+              ctx2.arc(40 + j * (w - 80) / 3, y, 3, 0, Math.PI * 2);
+              ctx2.fillStyle = col + '60';
+              ctx2.fill();
+            }
+          }
+          break;
+        case 'laozi': // Flowing water
+          ctx2.strokeStyle = col + '50';
+          ctx2.lineWidth = 1.5;
+          for (let l = 0; l < 5; l++) {
+            ctx2.beginPath();
+            for (let i = 0; i <= w; i += 2) {
+              const y = h / 2 + Math.sin(i * 0.02 + t * 2 + l * 1.2) * (20 + l * 8);
+              if (i === 0) ctx2.moveTo(i, y); else ctx2.lineTo(i, y);
+            }
+            ctx2.stroke();
+          }
+          break;
+        case 'suntzu': // Grid/terrain
+          ctx2.strokeStyle = col + '20';
+          ctx2.lineWidth = 0.5;
+          const gridSize = 20;
+          for (let x = 0; x < w; x += gridSize) {
+            for (let y = 0; y < h; y += gridSize) {
+              const elev = Math.sin(x * 0.03 + t) * Math.cos(y * 0.04 + t * 0.5) * 0.5 + 0.5;
+              ctx2.fillStyle = col + Math.floor(elev * 40).toString(16).padStart(2, '0');
+              ctx2.fillRect(x, y, gridSize - 1, gridSize - 1);
+            }
+          }
+          break;
+        case 'musashi': // Slash marks
+          for (let i = 0; i < 8; i++) {
+            const phase = (t * 0.5 + i * 0.5) % 3;
+            if (phase < 1) {
+              const alpha = 1 - phase;
+              const startX = w * 0.3 + i * 15;
+              ctx2.strokeStyle = col + Math.floor(alpha * 120).toString(16).padStart(2, '0');
+              ctx2.lineWidth = 2;
+              ctx2.beginPath();
+              ctx2.moveTo(startX, h * 0.2);
+              ctx2.lineTo(startX + 20, h * 0.8);
+              ctx2.stroke();
+            }
+          }
+          break;
+        case 'marcus': // Concentric circles contracting
+          const cx = w / 2, cy = h / 2;
+          for (let i = 5; i >= 0; i--) {
+            const r = 15 + i * 15 - (t * 3 % 15);
+            if (r > 0) {
+              ctx2.strokeStyle = col + Math.floor((1 - i / 6) * 60).toString(16).padStart(2, '0');
+              ctx2.lineWidth = 1;
+              ctx2.beginPath();
+              ctx2.arc(cx, cy, r, 0, Math.PI * 2);
+              ctx2.stroke();
+            }
+          }
+          // Center dot
+          ctx2.beginPath();
+          ctx2.arc(cx, cy, 3, 0, Math.PI * 2);
+          ctx2.fillStyle = col + '80';
+          ctx2.fill();
+          break;
+        case 'tsunetomo': // Fading figure
+          const fade = (Math.sin(t) + 1) / 2;
+          ctx2.fillStyle = col + Math.floor(fade * 40 + 10).toString(16).padStart(2, '0');
+          ctx2.beginPath();
+          ctx2.arc(w / 2, h / 2, 30, 0, Math.PI * 2);
+          ctx2.fill();
+          // Cross
+          ctx2.strokeStyle = col + Math.floor((1 - fade) * 60 + 10).toString(16).padStart(2, '0');
+          ctx2.lineWidth = 1;
+          ctx2.beginPath();
+          ctx2.moveTo(w / 2 - 40, h / 2);
+          ctx2.lineTo(w / 2 + 40, h / 2);
+          ctx2.moveTo(w / 2, h / 2 - 40);
+          ctx2.lineTo(w / 2, h / 2 + 40);
+          ctx2.stroke();
+          break;
+      }
+      requestAnimationFrame(drawSig);
+    }
+    drawSig();
+    window.addEventListener('resize', resizeCV);
+  });
+})();
+
+
+// ═══════════════════════════════════════════════
+// COUPLED ASYMPTOTES CANVAS
+// ═══════════════════════════════════════════════
+(function initCoupled() {
+  const c = document.getElementById('coupledCanvas');
+  const ctx = c.getContext('2d');
+  const mortalSlider = document.getElementById('mortalSlider');
+  const graspSlider = document.getElementById('graspSlider');
+  let W, H;
+
+  function resize() {
+    const rect = c.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    c.width = W * devicePixelRatio;
+    c.height = H * devicePixelRatio;
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    const mortality = mortalSlider.value / 100;
+    const grasping = graspSlider.value / 100;
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = 50;
+    const gW = W - pad * 2, gH = H - pad * 2;
+    const ox = pad, oy = pad;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 10; i++) {
+      ctx.beginPath(); ctx.moveTo(ox + gW * i / 10, oy); ctx.lineTo(ox + gW * i / 10, oy + gH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ox, oy + gH * i / 10); ctx.lineTo(ox + gW, oy + gH * i / 10); ctx.stroke();
+    }
+
+    // Reality line
+    const truthY = oy + gH * 0.1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.setLineDash([4, 6]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ox, truthY); ctx.lineTo(ox + gW, truthY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'right';
+    ctx.fillText('Reality', ox + gW + 5, truthY - 6);
+
+    // Death line (vertical)
+    const deathX = ox + gW * mortality;
+    ctx.strokeStyle = '#c4404088';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(deathX, oy); ctx.lineTo(deathX, oy + gH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#c4404088';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'center';
+    ctx.fillText('Death', deathX, oy - 8);
+
+    // Epistemic curve — shape affected by grasping mode
+    // High grasping = approaches quickly but plateaus
+    // Low grasping (yielding) = slower but deeper approach, with wave
+    const rate = 1.5 + grasping * 3;
+    const ceiling = 0.5 + (1 - grasping) * 0.35;
+    const waveAmp = (1 - grasping) * 15;
+
+    ctx.strokeStyle = '#e8b931';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const steps = 200;
+    let lastY;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const x = ox + t * gW;
+      if (x > deathX) break;
+      let y = oy + gH - (gH * ceiling) * (1 - Math.exp(-rate * t));
+      y += Math.sin(t * 8) * waveAmp * (1 - t);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      lastY = y;
+    }
+    ctx.stroke();
+
+    // Mark what was achieved at death
+    if (lastY) {
+      const achieved = 1 - (lastY - oy) / gH;
+      ctx.beginPath();
+      ctx.arc(deathX, lastY, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#e8b931';
+      ctx.fill();
+
+      // Gap visualization
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(deathX, lastY);
+      ctx.lineTo(deathX, truthY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Gap label
+      const gap = lastY - truthY;
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '10px "DM Sans"';
+      ctx.textAlign = 'left';
+      ctx.fillText(`gap: ${Math.round((1 - achieved / 0.9) * 100)}%`, deathX + 10, (lastY + truthY) / 2);
+    }
+
+    // Shaded area after death
+    ctx.fillStyle = '#c4404008';
+    ctx.fillRect(deathX, oy, gW - (deathX - ox), gH);
+
+    // Labels
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'center';
+    ctx.fillText('TIME →', ox + gW / 2, oy + gH + 30);
+
+    // Mode label
+    ctx.fillStyle = grasping > 0.5 ? '#e8b93180' : '#5b8def80';
+    ctx.font = '10px "DM Sans"';
+    ctx.textAlign = 'left';
+    ctx.fillText(grasping > 0.7 ? 'Mode: Grasping' : grasping < 0.3 ? 'Mode: Yielding' : 'Mode: Balanced', ox, oy + gH + 30);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+  mortalSlider.addEventListener('input', () => {});
+  graspSlider.addEventListener('input', () => {});
+})();
+
+
+// ═══════════════════════════════════════════════
+// OPEN QUESTIONS
+// ═══════════════════════════════════════════════
+(function initOpenQ() {
+  const container = document.getElementById('openQuestions');
+  OPEN_Q.forEach((q, i) => {
+    const el = document.createElement('div');
+    el.className = 'reveal';
+    const tractColor = q.tractability > 60 ? '#3bbfa0' : q.tractability > 30 ? '#e8b931' : '#d94f4f';
+    el.innerHTML = `
+      <div class="rounded-xl p-5" style="background:var(--bg-card); border:1px solid rgba(255,255,255,0.06);">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-sans text-sm font-medium" style="color:var(--text-bright)">${q.label}</span>
+          <span class="font-sans text-[10px] tracking-widest uppercase opacity-40">from ${q.from}</span>
+        </div>
+        <p class="text-[15px] opacity-60 mb-3">${q.q}</p>
+        <div class="flex items-center gap-3">
+          <div class="flex-1 h-1 rounded-full" style="background:rgba(255,255,255,0.06)">
+            <div class="tract-bar" style="width:${q.tractability}%; background:${tractColor}"></div>
+          </div>
+          <span class="font-mono text-[11px] opacity-40">${q.tractability}%</span>
+        </div>
+        <div class="flex justify-between mt-1">
+          <span class="font-sans text-[9px] opacity-20">undecidable</span>
+          <span class="font-sans text-[9px] opacity-20">tractable</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(el);
+    observer.observe(el);
+  });
+})();
+
+
+// ═══════════════════════════════════════════════
+// PHILOSOPHERS ON EACH OTHER
+// ═══════════════════════════════════════════════
+(function initRelations() {
+  const container = document.getElementById('relGrid');
+  RELATIONS.forEach((r, i) => {
+    const el = document.createElement('div');
+    el.className = 'rel-cell';
+    el.innerHTML = `
+      <div class="flex items-center gap-2 mb-2">
+        <span class="font-sans text-xs font-medium" style="color:${r.color}">${r.from}</span>
+        <span class="opacity-20 text-xs">on</span>
+        <span class="font-sans text-xs opacity-50">${r.on}</span>
+      </div>
+      <p>${r.text}</p>
+    `;
+    container.appendChild(el);
+
+    // Intersection observer for staggered reveal
+    const relObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          setTimeout(() => el.classList.add('show'), i * 120);
+        }
+      });
+    }, { threshold: 0.2 });
+    relObs.observe(el);
+  });
+})();
+</script>
+
+</body>
+</html>
