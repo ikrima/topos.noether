@@ -1,0 +1,1752 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Complex ↔ Split ↔ Dual — An Interactive Visual Essay</title>
+  <style>
+    :root{
+      --bg0:#07090f;
+      --bg1:#0b0f18;
+      --panel: rgba(255,255,255,0.075);
+      --panel2: rgba(255,255,255,0.10);
+      --stroke: rgba(255,255,255,0.14);
+      --stroke2: rgba(255,255,255,0.22);
+      --text: rgba(255,255,255,0.90);
+      --muted: rgba(255,255,255,0.62);
+      --muted2: rgba(255,255,255,0.46);
+      --hot: rgba(255,255,255,0.95);
+      --mint: rgba(140,255,220,0.88);
+      --amber: rgba(255,210,140,0.88);
+      --pink: rgba(255,140,190,0.86);
+      --blue: rgba(170,185,255,0.86);
+      --shadow: 0 20px 70px rgba(0,0,0,0.55);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    html, body{ height:100%; margin:0; overflow:hidden; }
+    body{
+      background:
+        radial-gradient(1200px 900px at 20% 15%, rgba(140,160,255,0.14), transparent 58%),
+        radial-gradient(900px 900px at 85% 25%, rgba(140,255,220,0.10), transparent 55%),
+        radial-gradient(900px 900px at 70% 90%, rgba(255,200,140,0.10), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    #app{
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+    }
+
+    #view2d, #view3d{ position: relative; overflow: hidden; }
+
+    canvas#c2d{
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      user-select: none;
+      touch-action: none;
+    }
+
+    /* Panels */
+    .panel{
+      position:absolute;
+      border-radius: var(--radius);
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+    .panelHeader{
+      padding: 14px 14px 12px 14px;
+      background: rgba(0,0,0,0.22);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .panelHeader .title{ font-size: 14px; font-weight: 900; color: var(--hot); letter-spacing: 0.2px; }
+    .panelHeader .tag{ font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .panelBody{ padding: 14px; overflow:auto; }
+
+    #story{ left:16px; top:16px; width:min(580px, calc(100% - 32px)); max-height: calc(100% - 32px); }
+    #story .panelBody{ max-height: calc(100vh - 32px - 52px); }
+
+    #paneWrap{ right:16px; top:16px; width: 380px; max-height: calc(100% - 32px); }
+    #paneWrap .panelBody{ padding: 10px 12px 14px 12px; }
+
+    #toast{
+      position:absolute;
+      left:50%;
+      bottom:16px;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events:none;
+      opacity:0;
+      transition: opacity 220ms ease;
+      max-width: min(980px, calc(100% - 32px));
+      text-align:center;
+    }
+
+    #story p{ margin:0 0 12px 0; color: var(--muted); line-height:1.55; font-size: 13px; }
+    #story p strong{ color: var(--hot); font-weight: 900; }
+    #story code{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,0.84);
+      background: rgba(255,255,255,0.06);
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      white-space: nowrap;
+    }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 10px;
+      align-items: baseline;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      margin: 12px 0;
+    }
+    .kv div{ font-size:12px; color: var(--muted); }
+    .kv b{ color: var(--hot); font-weight: 900; font-family: var(--mono); }
+
+    .tp-dfwv{ width: 100% !important; }
+
+    @media (max-width: 980px){
+      #app{ grid-template-columns: 1fr; grid-template-rows: 1fr 0.95fr; }
+      #paneWrap{ left:16px; right:16px; top:auto; bottom:16px; width:auto; max-height: 43vh; }
+      #story{ max-height: 45vh; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="view2d"><canvas id="c2d"></canvas></div>
+    <div id="view3d"></div>
+  </div>
+
+  <div id="story" class="panel">
+    <div class="panelHeader">
+      <div class="title" id="storyTitle">Complex ↔ Split ↔ Dual</div>
+      <div class="tag" id="storyTag">Δ-unification</div>
+    </div>
+    <div class="panelBody" id="storyBody"></div>
+  </div>
+
+  <div id="paneWrap" class="panel">
+    <div class="panelHeader">
+      <div class="title">Controls</div>
+      <div class="tag" id="paneTag">interactive</div>
+    </div>
+    <div class="panelBody" id="pane"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script type="module">
+    import * as THREE from 'https://esm.sh/three@0.160.1';
+    import { OrbitControls } from 'https://esm.sh/three@0.160.1/examples/jsm/controls/OrbitControls.js';
+    import { Pane } from 'https://esm.sh/tweakpane@4.0.5';
+
+    // ----------------------------
+    // Deterministic micro-test harness
+    // ----------------------------
+    function assert(cond, msg){ if (!cond) throw new Error('Test failed: ' + msg); }
+    function approx(a,b,eps=1e-9){ return Math.abs(a-b) <= eps; }
+    function prng(seed=1){
+      let s = seed>>>0;
+      return () => {
+        s ^= s << 13; s >>>= 0;
+        s ^= s >> 17; s >>>= 0;
+        s ^= s <<  5; s >>>= 0;
+        return (s>>>0) / 0xffffffff;
+      };
+    }
+
+    // ----------------------------
+    // Algebra A_Δ: z=a+bj, j^2=Δ
+    // ----------------------------
+    function add(z,w){ return { a:z.a+w.a, b:z.b+w.b }; }
+    function sub(z,w){ return { a:z.a-w.a, b:z.b-w.b }; }
+    function conj(z){ return { a:z.a, b:-z.b }; }
+    function mul(z,w,Δ){
+      // (a+bj)(c+dj) = (ac+Δbd) + (ad+bc)j
+      return { a: z.a*w.a + Δ*z.b*w.b, b: z.a*w.b + z.b*w.a };
+    }
+    function norm(z,Δ){ return z.a*z.a - Δ*z.b*z.b; }
+    function inv(z,Δ){
+      const N = norm(z,Δ);
+      if (Math.abs(N) < 1e-12) return null;
+      const c = conj(z);
+      return { a: c.a/N, b: c.b/N };
+    }
+
+    // Matrix avatar: v ↦ u*v in basis (1,j)
+    // [a'; b'] = [[ua, Δ ub],[ub, ua]] [a; b]
+    function matFrom(u,Δ){ return [[u.a, Δ*u.b],[u.b,u.a]]; }
+    function applyMat(M,v){ return { a: M[0][0]*v.a + M[0][1]*v.b, b: M[1][0]*v.a + M[1][1]*v.b }; }
+
+    // exp(jt)
+    function expJ(t,Δ){
+      const eps = 1e-8;
+      if (Math.abs(Δ) < eps) return { a: 1, b: t }; // ε^2=0
+      if (Δ < 0){
+        const κ = Math.sqrt(-Δ);
+        return { a: Math.cos(κ*t), b: Math.sin(κ*t)/κ };
+      } else {
+        const κ = Math.sqrt(Δ);
+        return { a: Math.cosh(κ*t), b: Math.sinh(κ*t)/κ };
+      }
+    }
+
+    function signDelta(Δ){
+      const eps = 1e-10;
+      if (Math.abs(Δ) < eps) return 0;
+      return Δ < 0 ? -1 : +1;
+    }
+
+    // Idempotent coordinates for split-type (Δ>0): x± = a ± b√Δ (in generator coords)
+    // In normalized coords (Δ=+1): x±=a±b
+    function idempotentCoords(z, Δ, deltaMode){
+      if (!(Δ > 0)) return null;
+      const κ = Math.sqrt(Δ);
+      const k = (deltaMode === 'family') ? κ : 1; // in iso-class mode, Δeff=+1
+      return { xp: z.a + z.b*k, xm: z.a - z.b*k, k };
+    }
+
+    // inverse: (xp,xm) -> (a,b)
+    function fromIdempotent(xp, xm, Δ, deltaMode){
+      const κ = Math.sqrt(Math.max(Δ, 0));
+      const k = (deltaMode === 'family') ? κ : 1;
+      return { a: 0.5*(xp + xm), b: 0.5*(xp - xm)/k };
+    }
+
+    // ----------------------------
+    // Tests: algebra + idempotent diagonalization + isomorphism gauge
+    // ----------------------------
+    (function runTests(){
+      const rnd = prng(42);
+      const deltas = [-1, 0, 1, -0.36, 0.36];
+      for (const Δ of deltas){
+        for (let i=0;i<150;i++){
+          const z = { a:(rnd()*2-1)*2, b:(rnd()*2-1)*2 };
+          const w = { a:(rnd()*2-1)*2, b:(rnd()*2-1)*2 };
+          const u = { a:(rnd()*2-1)*2, b:(rnd()*2-1)*2 };
+          const lhs = mul(mul(z,w,Δ),u,Δ);
+          const rhs = mul(z,mul(w,u,Δ),Δ);
+          assert(approx(lhs.a,rhs.a,1e-9) && approx(lhs.b,rhs.b,1e-9), `associativity Δ=${Δ}`);
+          const dist = sub(mul(z,add(w,u),Δ), add(mul(z,w,Δ), mul(z,u,Δ)));
+          assert(Math.abs(dist.a)<1e-9 && Math.abs(dist.b)<1e-9, `distributivity Δ=${Δ}`);
+        }
+      }
+
+      // expJ preserves norm=1 for Δ!=0
+      for (const Δ of [-1, 1, -0.36, 0.36]){
+        for (let i=0;i<60;i++){
+          const t = (rnd()*2-1)*2.2;
+          const e = expJ(t,Δ);
+          assert(approx(norm(e,Δ),1,1e-9), `norm(expJ)=1 Δ=${Δ}`);
+        }
+      }
+
+      // split diagonalization: for Δ>0, in idempotent coords multiplication is component-wise scaling
+      for (const Δ of [1, 0.36]){
+        const κ = Math.sqrt(Δ);
+        for (let i=0;i<120;i++){
+          const z = { a:(rnd()*2-1)*2, b:(rnd()*2-1)*2 };
+          const u = { a:(rnd()*2-1)*2, b:(rnd()*2-1)*2 };
+          const uz = mul(u,z,Δ);
+          const zpm = { xp: z.a + z.b*κ, xm: z.a - z.b*κ };
+          const upm = { sp: u.a + u.b*κ, sm: u.a - u.b*κ };
+          const uzpm = { xp: uz.a + uz.b*κ, xm: uz.a - uz.b*κ };
+          assert(approx(uzpm.xp, upm.sp*zpm.xp, 1e-8), `idempotent xp Δ=${Δ}`);
+          assert(approx(uzpm.xm, upm.sm*zpm.xm, 1e-8), `idempotent xm Δ=${Δ}`);
+        }
+      }
+
+      // isomorphism gauge: Δ=-κ^2. If we set b = bHat/κ, then N_Δ(a+bj) = a^2 + bHat^2 (independent of κ).
+      for (const κ of [0.4, 0.7, 1.3]){
+        const Δ = -κ*κ;
+        for (let i=0;i<120;i++){
+          const a = (rnd()*2-1)*2;
+          const bHat = (rnd()*2-1)*2;
+          const b = bHat/κ;
+          const z = { a, b };
+          const N = norm(z,Δ);
+          assert(approx(N, a*a + bHat*bHat, 1e-9), `gauge norm invariant κ=${κ}`);
+        }
+      }
+
+      console.log('[ok] internal tests passed');
+    })();
+
+    // ----------------------------
+    // Chapters / narrative
+    // ----------------------------
+    const Chapter = {
+      UNIFY:   'Unify: one algebra A_Δ',
+      MULT:    'Multiplication is geometry',
+      EXP:     'Exponentials: rotations / boosts / shears',
+      GAUGE:   'Isomorphism gauge: Δ vs sign(Δ)',
+      SPLITID: 'Split reveal: idempotents e±',
+      DUAL:    'Dual reveal: infinitesimals',
+      MAT:     'Matrix avatar',
+      EPILOG:  'Epilogue: ℍ vs M₂(ℝ)',
+    };
+
+    // ----------------------------
+    // State
+    // ----------------------------
+    const state = {
+      chapter: Chapter.UNIFY,
+
+      // Δ and interpretation
+      deltaMode: 'iso',      // 'iso' (snap to sign class; Δ is gauge) | 'family' (true 1-parameter family)
+      Δ: -1.0,
+      planeCoords: 'normalized', // 'normalized' | 'generator' (only meaningful when deltaMode='iso' and Δ!=0)
+
+      // primary draggable point z (stored in the coordinate system used by multiplication)
+      z: { a: 1.0, b: 0.7 },
+
+      // multiplier u
+      uMode: 'exp',
+      t: 0.65,
+      scale: 1.0,
+      u: { a: 1.0, b: 0.0 },
+
+      // split-idempotent overlay
+      showIdempotentOverlay: true,
+      showNullCone: true,
+
+      // visuals
+      showGrid: true,
+      showProductGrid: true,
+      showBasis: true,
+      showN1: true,
+      showN0: true,
+      animateT: false,
+      speed: 0.6,
+
+      // 2D view controls
+      zoom: 1.0,
+      panX: 0.0,
+      panY: 0.0,
+
+      // Epilogue: quaternion rotation
+      epi: {
+        axisX: 0.2,
+        axisY: 1.0,
+        axisZ: 0.1,
+        angle: 0.6,
+        spin: false,
+        spinSpeed: 0.7,
+
+        // Epilogue: matrix (split-quaternion proxy) in M2(R)
+        A00: 1.0,
+        A01: 0.6,
+        A10: -0.3,
+        A11: 1.0,
+        detNormalize: false, // if true, scale A so det=±1 when possible
+      }
+    };
+
+    function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+    function lerp(a,b,t){ return a + (b-a)*t; }
+
+    function toast(msg){
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.opacity = '1';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=>el.style.opacity='0', 1600);
+    }
+
+    function effectiveDelta(){
+      const Δ = state.Δ;
+      if (state.deltaMode === 'family') return Δ;
+      // iso-class mode: computations use sign(Δ)
+      return signDelta(Δ);
+    }
+
+    // In iso mode, Δ provides a gauge scale κ=√|Δ| that relates generator j to normalized ĵ:
+    // j = κ ĵ, so a + b_hat ĵ = a + (b_hat/κ) j.
+    function gaugeKappa(){
+      const Δ = state.Δ;
+      const s = signDelta(Δ);
+      if (s === 0) return 0;
+      return Math.sqrt(Math.abs(Δ));
+    }
+
+    // Convert a point in multiplication-coordinates (a,b) to what we render as "world" b-coordinate.
+    // - family: world = same
+    // - iso: if planeCoords='normalized' => world=b (b_hat)
+    //        if planeCoords='generator'  => world=b/κ
+    function coordToWorld(p){
+      if (state.deltaMode === 'family') return { a: p.a, b: p.b };
+      const κ = gaugeKappa();
+      const s = signDelta(state.Δ);
+      if (s === 0) return { a: p.a, b: p.b };
+      if (state.planeCoords === 'normalized') return { a: p.a, b: p.b };
+      return { a: p.a, b: p.b / κ };
+    }
+
+    // Inverse mapping for dragging.
+    function worldToCoord(pw){
+      if (state.deltaMode === 'family') return { a: pw.a, b: pw.b };
+      const κ = gaugeKappa();
+      const s = signDelta(state.Δ);
+      if (s === 0) return { a: pw.a, b: pw.b };
+      if (state.planeCoords === 'normalized') return { a: pw.a, b: pw.b };
+      return { a: pw.a, b: pw.b * κ };
+    }
+
+    // Compute u according to mode in multiplication-coordinates.
+    function currentU(Δeff){
+      let u;
+      if (state.uMode === 'exp'){
+        u = expJ(state.t, Δeff);
+        u = { a: u.a * state.scale, b: u.b * state.scale };
+      } else {
+        u = { a: state.u.a, b: state.u.b };
+      }
+      return u;
+    }
+
+    // ----------------------------
+    // Story text
+    // ----------------------------
+    const storyTitle = document.getElementById('storyTitle');
+    const storyTag = document.getElementById('storyTag');
+    const storyBody = document.getElementById('storyBody');
+
+    function kindFromDelta(Δeff){
+      const eps = 1e-9;
+      if (Math.abs(Δeff) < eps) return { name: 'parabolic (dual)', color: 'var(--mint)' };
+      if (Δeff < 0) return { name: 'elliptic (complex)', color: 'var(--blue)' };
+      return { name: 'hyperbolic (split)', color: 'var(--amber)' };
+    }
+
+    function fmt(x){
+      if (!Number.isFinite(x)) return 'NaN';
+      if (Math.abs(x) < 1e-7) return '0';
+      const ax = Math.abs(x);
+      if (ax >= 1000 || ax < 1e-4) return x.toExponential(3);
+      return x.toFixed(4);
+    }
+
+    function syncStory(){
+      const Δeff = effectiveDelta();
+      const k = kindFromDelta(Δeff);
+      const Δ = state.Δ;
+      const κ = gaugeKappa();
+      const s = signDelta(Δ);
+
+      storyTitle.textContent = state.chapter;
+      storyTag.textContent = (state.deltaMode === 'family')
+        ? `family: Δ=${Δ.toFixed(3)}`
+        : (s === 0 ? `iso-class: Δ≈0` : `iso-class: sign=${s}, κ=${κ.toFixed(3)}`);
+
+      const common = [
+        `We study one formula that contains three worlds: <code>A_Δ = ℝ[j]/(j²=Δ)</code>.`,
+        `Multiplication is the same algebraic law everywhere: <code>(a+bj)(c+dj)=(ac+Δbd)+(ad+bc)j</code>.`,
+        `The invariant quadratic form is <code>N(a+bj)=a²−Δb²</code>. Its unit set <code>N=1</code> is circle / hyperbola / pair of lines.`
+      ];
+
+      const blocks = {
+        [Chapter.UNIFY]: () => ([
+          ...common,
+          `<div class="kv">
+            <div>effective geometry</div><div><b>${k.name}</b></div>
+            <div>mode</div><div><b>${state.deltaMode}</b></div>
+            <div>observable plane</div><div><b>${state.deltaMode==='iso' ? state.planeCoords : 'generator'}</b></div>
+          </div>`,
+          `Left: a plane where points are numbers. Right: a 3D “norm surface” showing <code>a²−Δb²=1</code> across Δ.`,
+          `<p><strong>Drag</strong> the mint point z. The amber u either follows <code>exp(jt)</code> or is draggable. Watch the grid deform: rotate / boost / shear.</p>`
+        ]),
+
+        [Chapter.MULT]: () => ([
+          `Fix <code>u</code>. Multiplication <code>v ↦ u·v</code> is a linear map on the plane.`,
+          `In the basis (1,j), it has matrix <code>[[uₐ, Δu_b],[u_b,uₐ]]</code>.`,
+          `When <code>N(u)=1</code>, this map preserves the quadratic form <code>N</code> (a rotation/boost/shear with “budget” fixed).`
+        ]),
+
+        [Chapter.EXP]: () => ([
+          `One knob generates the canonical 1-parameter subgroup: <code>u(t)=exp(jt)</code>.`,
+          `• Δ<0: cos/sin (rotations).  • Δ>0: cosh/sinh (boosts).  • Δ=0: <code>1+jt</code> (shears).`,
+          `Turn on animation to feel the group law as motion.`
+        ]),
+
+        [Chapter.GAUGE]: () => ([
+          `For Δ≠0, the algebra depends only on <strong>sign(Δ)</strong>. The rest is coordinate scale.`,
+          `Write Δ = s·κ² with s∈{−1,+1}. Let <code>ĵ=j/κ</code>. Then <code>ĵ²=s</code>.`,
+          `So <code>a + b·ĵ</code> equals <code>a + (b/κ)·j</code>. Same element, two coordinate charts — a torsor-like choice.`,
+          `<div class="kv">
+            <div>Δ</div><div><b>${Δ.toFixed(3)}</b></div>
+            <div>sign s</div><div><b>${s}</b></div>
+            <div>κ=√|Δ|</div><div><b>${s===0 ? '0' : κ.toFixed(4)}</b></div>
+          </div>`,
+          `Toggle plane coordinates between <code>normalized</code> and <code>generator</code>. In iso-class mode, the normalized picture stays essentially fixed as Δ slides — that’s the “same algebra, different coordinates” reveal.`
+        ]),
+
+        [Chapter.SPLITID]: () => ([
+          `Split-complex (hyperbolic) numbers are the Δ>0 world. The light cone is <code>N=0</code>.`,
+          `Idempotents are the killer feature: for Δ>0, let <code>e±=(1±j/√Δ)/2</code>. Then <code>e±²=e±</code> and <code>e+e−=0</code>.`,
+          `In the coordinates <code>x± = a ± b√Δ</code>, multiplication becomes diagonal: <code>x± ↦ (uₐ ± u_b√Δ)·x±</code>.`,
+          `<p>Enable the idempotent overlay: you’ll see the plane as two null axes that scale independently. Zero divisors are exactly “one axis becomes 0.”</p>`
+        ]),
+
+        [Chapter.DUAL]: () => ([
+          `Dual numbers (Δ=0): <code>ε²=0</code>. Units are <code>a≠0</code>.`,
+          `Norm degenerates: <code>N(a+bε)=a²</code>. The b-direction is an infinitesimal “tangent probe.”`,
+          `The exponential <code>exp(εt)=1+εt</code> is a pure shear — the algebraic shadow of first-order motion.`
+        ]),
+
+        [Chapter.MAT]: () => ([
+          `The same object can be read as a number or as its matrix avatar. This is how “geometry becomes computation.”`,
+          `Complex: rotation-scaling matrices. Split: Lorentz-boost-like matrices. Dual: shear matrices.`,
+          `The determinant of this 2×2 avatar is exactly <code>N(u)</code>. So invertibility is “budget ≠ 0.”`
+        ]),
+
+        [Chapter.EPILOG]: () => ([
+          `We now echo the story in 4D. Two avatars of “hypercomplex”:`,
+          `• <strong>ℍ</strong> (quaternions): unit quaternions act as rotations in 3D, preserving Euclidean norm.`,
+          `• <strong>M₂(ℝ)</strong> (split-quaternion world): determinant plays the role of norm; det=0 gives zero divisors (rank drop).`,
+          `Left panel switches to a 2×2 matrix action. Right panel shows quaternion rotation of a 3D arrow.`
+        ])
+      };
+
+      const paras = (blocks[state.chapter] ? blocks[state.chapter]() : common)
+        .map(p => `<p>${p}</p>`)
+        .join('');
+      storyBody.innerHTML = paras;
+    }
+
+    // ----------------------------
+    // Tweakpane UI
+    // ----------------------------
+    const pane = new Pane({ container: document.getElementById('pane') });
+
+    const fChap = pane.addFolder({ title: 'Chapter' });
+    fChap.addBinding(state, 'chapter', {
+      options: Object.fromEntries(Object.values(Chapter).map(v=>[v,v]))
+    }).on('change', ()=>{
+      syncStory();
+      toast(state.chapter);
+      updateModeVisibility();
+    });
+
+    const fΔ = pane.addFolder({ title: 'Δ + interpretation' });
+    fΔ.addBinding(state, 'deltaMode', { options: { iso: 'iso', family: 'family' }, label: 'Δ mode' })
+      .on('change', ()=>{ syncStory(); updateModeVisibility(); });
+    fΔ.addBinding(state, 'Δ', { min: -1.6, max: 1.6, label: 'Δ' })
+      .on('change', ()=>{ syncStory(); });
+    fΔ.addBinding(state, 'planeCoords', { options: { normalized: 'normalized', generator: 'generator' }, label: 'plane coords' })
+      .on('change', ()=>{ syncStory(); });
+
+    const fU = pane.addFolder({ title: 'Multiplier u' });
+    fU.addBinding(state, 'uMode', { options: { exp: 'exp', drag: 'drag' }, label: 'mode' });
+    fU.addBinding(state, 't', { min: -2.2, max: 2.2, label: 't (exp)' });
+    fU.addBinding(state, 'scale', { min: 0.2, max: 2.4, label: 'scale' });
+    fU.addBinding(state, 'animateT', { label: 'animate t' });
+    fU.addBinding(state, 'speed', { min: 0.05, max: 2.0, label: 'speed' });
+
+    const fZ = pane.addFolder({ title: 'Point z' });
+    fZ.addBinding(state.z, 'a', { min: -2.6, max: 2.6, label: 'a' });
+    fZ.addBinding(state.z, 'b', { min: -2.6, max: 2.6, label: 'b' });
+
+    const fSplit = pane.addFolder({ title: 'Split overlay' });
+    fSplit.addBinding(state, 'showIdempotentOverlay', { label: 'idempotent axes' });
+    fSplit.addBinding(state, 'showNullCone', { label: 'N=0 cone' });
+
+    const fVis = pane.addFolder({ title: '2D visuals' });
+    fVis.addBinding(state, 'showGrid', { label: 'grid' });
+    fVis.addBinding(state, 'showProductGrid', { label: 'grid after u·' });
+    fVis.addBinding(state, 'showBasis', { label: 'basis arrows' });
+    fVis.addBinding(state, 'showN1', { label: 'N=1 curve' });
+    fVis.addBinding(state, 'showN0', { label: 'N=0 curve' });
+
+    const fView = pane.addFolder({ title: '2D view' });
+    fView.addBinding(state, 'zoom', { min: 0.55, max: 2.4, label: 'zoom' });
+    fView.addBinding(state, 'panX', { min: -1.6, max: 1.6, label: 'panX' });
+    fView.addBinding(state, 'panY', { min: -1.6, max: 1.6, label: 'panY' });
+
+    const fEpi = pane.addFolder({ title: 'Epilogue controls' });
+    const fQ = fEpi.addFolder({ title: 'Quaternion rotation (ℍ)' });
+    fQ.addBinding(state.epi, 'axisX', { min: -1, max: 1, label: 'axisX' });
+    fQ.addBinding(state.epi, 'axisY', { min: -1, max: 1, label: 'axisY' });
+    fQ.addBinding(state.epi, 'axisZ', { min: -1, max: 1, label: 'axisZ' });
+    fQ.addBinding(state.epi, 'angle', { min: -3.14, max: 3.14, label: 'angle' });
+    fQ.addBinding(state.epi, 'spin', { label: 'spin' });
+    fQ.addBinding(state.epi, 'spinSpeed', { min: 0.05, max: 2.5, label: 'spinSpeed' });
+
+    const fM = fEpi.addFolder({ title: 'Matrix action (M₂(ℝ))' });
+    fM.addBinding(state.epi, 'A00', { min: -2.2, max: 2.2, label: 'a' });
+    fM.addBinding(state.epi, 'A01', { min: -2.2, max: 2.2, label: 'b' });
+    fM.addBinding(state.epi, 'A10', { min: -2.2, max: 2.2, label: 'c' });
+    fM.addBinding(state.epi, 'A11', { min: -2.2, max: 2.2, label: 'd' });
+    fM.addBinding(state.epi, 'detNormalize', { label: 'normalize det≈±1' });
+
+    pane.addButton({ title: 'reset' }).on('click', ()=>{
+      state.chapter = Chapter.UNIFY;
+      state.deltaMode = 'iso';
+      state.Δ = -1.0;
+      state.planeCoords = 'normalized';
+      state.z.a = 1.0; state.z.b = 0.7;
+      state.uMode = 'exp';
+      state.t = 0.65;
+      state.scale = 1.0;
+      state.u.a = 1.0; state.u.b = 0.0;
+      state.zoom = 1.0; state.panX = 0.0; state.panY = 0.0;
+      state.animateT = false;
+      state.showIdempotentOverlay = true;
+      state.showNullCone = true;
+      state.epi.axisX = 0.2; state.epi.axisY = 1.0; state.epi.axisZ = 0.1;
+      state.epi.angle = 0.6; state.epi.spin = false; state.epi.spinSpeed = 0.7;
+      state.epi.A00 = 1.0; state.epi.A01 = 0.6; state.epi.A10 = -0.3; state.epi.A11 = 1.0;
+      state.epi.detNormalize = false;
+      syncStory();
+      updateModeVisibility();
+      toast('Reset');
+    });
+
+    function updateModeVisibility(){
+      // planeCoords only meaningful in iso mode
+      // Tweakpane doesn't support direct hide per binding elegantly across versions;
+      // we simply keep it visible, but story/behavior ignore it when family.
+      const paneTag = document.getElementById('paneTag');
+      paneTag.textContent = (state.chapter === Chapter.EPILOG) ? 'epilogue' : 'core';
+    }
+
+    syncStory();
+    updateModeVisibility();
+
+    // ----------------------------
+    // 2D Canvas
+    // ----------------------------
+    const c2d = document.getElementById('c2d');
+    const ctx = c2d.getContext('2d');
+
+    let view2d = { w: 0, h: 0, dpr: 1 };
+    function resize2D(){
+      const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+      const rect = c2d.getBoundingClientRect();
+      c2d.width = Math.floor(rect.width * dpr);
+      c2d.height = Math.floor(rect.height * dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      view2d = { w: rect.width, h: rect.height, dpr };
+    }
+
+    function worldToScreen(pw){
+      const { w,h } = view2d;
+      const s = 140 * state.zoom;
+      const cx = w*0.5 + state.panX*120;
+      const cy = h*0.55 - state.panY*120;
+      return { x: cx + pw.a*s, y: cy - pw.b*s };
+    }
+
+    function screenToWorld(x,y){
+      const { w,h } = view2d;
+      const s = 140 * state.zoom;
+      const cx = w*0.5 + state.panX*120;
+      const cy = h*0.55 - state.panY*120;
+      return { a: (x - cx)/s, b: -(y - cy)/s };
+    }
+
+    function strokeLine(A,B,col,width=1){
+      ctx.strokeStyle = col;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(A.x,A.y);
+      ctx.lineTo(B.x,B.y);
+      ctx.stroke();
+    }
+
+    function roundRect(x,y,w,h,r){
+      const rr = Math.min(r, w/2, h/2);
+      ctx.beginPath();
+      ctx.moveTo(x+rr, y);
+      ctx.arcTo(x+w, y, x+w, y+h, rr);
+      ctx.arcTo(x+w, y+h, x, y+h, rr);
+      ctx.arcTo(x, y+h, x, y, rr);
+      ctx.arcTo(x, y, x+w, y, rr);
+      ctx.closePath();
+    }
+
+    function drawAxes(){
+      const O = worldToScreen({a:0,b:0});
+      const X1 = worldToScreen({a:  5,b:0});
+      const X2 = worldToScreen({a: -5,b:0});
+      const Y1 = worldToScreen({a:0,b:  5});
+      const Y2 = worldToScreen({a:0,b: -5});
+      strokeLine(X2,X1,'rgba(255,255,255,0.18)',1.5);
+      strokeLine(Y2,Y1,'rgba(255,255,255,0.18)',1.5);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.font = '12px var(--mono)';
+      ctx.fillText('a', X1.x - 12, X1.y - 10);
+      ctx.fillText('b', Y1.x + 10, Y1.y + 4);
+      ctx.fillText('0', O.x + 6, O.y + 14);
+    }
+
+    function drawGrid(mapFn=null, alpha=0.10){
+      const span = 3.2;
+      const step = 0.5;
+      const f = mapFn || ((p)=>p);
+
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+      ctx.lineWidth = 1;
+
+      for (let x=-span; x<=span+1e-6; x+=step){
+        ctx.beginPath();
+        let first = true;
+        for (let y=-span; y<=span+1e-6; y+=0.08){
+          const q = f({a:x,b:y});
+          const sxy = worldToScreen(q);
+          if (first){ ctx.moveTo(sxy.x,sxy.y); first=false; } else ctx.lineTo(sxy.x,sxy.y);
+        }
+        ctx.stroke();
+      }
+      for (let y=-span; y<=span+1e-6; y+=step){
+        ctx.beginPath();
+        let first = true;
+        for (let x=-span; x<=span+1e-6; x+=0.08){
+          const q = f({a:x,b:y});
+          const sxy = worldToScreen(q);
+          if (first){ ctx.moveTo(sxy.x,sxy.y); first=false; } else ctx.lineTo(sxy.x,sxy.y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawArrow(to, col){
+      const O = worldToScreen({a:0,b:0});
+      ctx.save();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(O.x,O.y); ctx.lineTo(to.x,to.y); ctx.stroke();
+
+      const dx = to.x - O.x, dy = to.y - O.y;
+      const L = Math.hypot(dx,dy) + 1e-9;
+      const ux = dx/L, uy = dy/L;
+      const hx = to.x - ux*10, hy = to.y - uy*10;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(to.x,to.y);
+      ctx.lineTo(hx - uy*6, hy + ux*6);
+      ctx.lineTo(hx + uy*6, hy - ux*6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawHandle(pw, col, label){
+      const s = worldToScreen(pw);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 7.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 11, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.font = '800 12px var(--mono)';
+      ctx.fillStyle = 'rgba(255,255,255,0.80)';
+      ctx.fillText(label, s.x + 14, s.y + 4);
+      ctx.restore();
+    }
+
+    function drawBasis(Mu){
+      if (!state.showBasis) return;
+      const e1 = {a:1,b:0}, e2 = {a:0,b:1};
+      const f1 = applyMat(Mu, e1);
+      const f2 = applyMat(Mu, e2);
+      const pw1 = worldToScreen(f1);
+      const pw2 = worldToScreen(f2);
+
+      ctx.save();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(140,255,220,0.50)';
+      drawArrow(pw1, 'rgba(140,255,220,0.50)');
+      ctx.strokeStyle = 'rgba(255,210,140,0.50)';
+      drawArrow(pw2, 'rgba(255,210,140,0.50)');
+
+      ctx.fillStyle = 'rgba(255,255,255,0.60)';
+      ctx.font = '12px var(--mono)';
+      ctx.fillText('u·(1)', pw1.x + 8, pw1.y + 4);
+      ctx.fillText('u·(j)', pw2.x + 8, pw2.y + 4);
+      ctx.restore();
+    }
+
+    function drawConicN1(Δeff){
+      if (!state.showN1) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,210,140,0.55)';
+      ctx.lineWidth = 2;
+
+      const eps = 1e-8;
+      if (Math.abs(Δeff) < eps){
+        // N=a^2 => N=1 is a=±1
+        const p1a = worldToScreen({a:1,b:-3});
+        const p1b = worldToScreen({a:1,b: 3});
+        const p2a = worldToScreen({a:-1,b:-3});
+        const p2b = worldToScreen({a:-1,b: 3});
+        ctx.beginPath();
+        ctx.moveTo(p1a.x,p1a.y); ctx.lineTo(p1b.x,p1b.y);
+        ctx.moveTo(p2a.x,p2a.y); ctx.lineTo(p2b.x,p2b.y);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
+
+      if (Δeff < 0){
+        const κ = Math.sqrt(-Δeff);
+        const steps = 360;
+        ctx.beginPath();
+        for (let i=0;i<=steps;i++){
+          const t = (i/steps) * Math.PI*2;
+          const a = Math.cos(t);
+          const b = Math.sin(t)/κ;
+          const p = worldToScreen({a,b});
+          if (i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+        }
+        ctx.stroke();
+      } else {
+        const κ = Math.sqrt(Δeff);
+        const umax = 1.5;
+        // right
+        ctx.beginPath();
+        for (let i=0;i<=260;i++){
+          const u = lerp(-umax, umax, i/260);
+          const a = Math.cosh(u);
+          const b = Math.sinh(u)/κ;
+          const p = worldToScreen({a,b});
+          if (i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+        }
+        // left
+        for (let i=0;i<=260;i++){
+          const u = lerp(umax, -umax, i/260);
+          const a = -Math.cosh(u);
+          const b = Math.sinh(u)/κ;
+          const p = worldToScreen({a,b});
+          if (i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y);
+        }
+        ctx.stroke();
+      }
+
+      ctx.font = '800 12px var(--mono)';
+      ctx.fillStyle = 'rgba(255,210,140,0.70)';
+      const labelPos = worldToScreen({a: 1.05, b: 0.0});
+      ctx.fillText('N=1', labelPos.x + 8, labelPos.y - 10);
+      ctx.restore();
+    }
+
+    function drawConicN0(Δeff){
+      if (!state.showN0) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,140,190,0.35)';
+      ctx.lineWidth = 2;
+
+      const eps = 1e-8;
+      if (Math.abs(Δeff) < eps){
+        // N=a^2 => N=0 is a=0
+        const p1 = worldToScreen({a:0,b:-3});
+        const p2 = worldToScreen({a:0,b: 3});
+        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        ctx.restore();
+        return;
+      }
+      if (Δeff < 0){
+        const O = worldToScreen({a:0,b:0});
+        ctx.fillStyle = 'rgba(255,140,190,0.55)';
+        ctx.beginPath(); ctx.arc(O.x,O.y,4,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      // Δeff>0: a^2 - κ^2 b^2 = 0 => b = ± a/κ
+      const κ = Math.sqrt(Δeff);
+      const A1 = worldToScreen({a:-3,b: 3/κ});
+      const A2 = worldToScreen({a: 3,b:-3/κ});
+      const B1 = worldToScreen({a:-3,b:-3/κ});
+      const B2 = worldToScreen({a: 3,b: 3/κ});
+      ctx.beginPath();
+      ctx.moveTo(A1.x,A1.y); ctx.lineTo(A2.x,A2.y);
+      ctx.moveTo(B1.x,B1.y); ctx.lineTo(B2.x,B2.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,140,190,0.64)';
+      ctx.font = '800 12px var(--mono)';
+      const p = worldToScreen({a:1.1,b:1.1/κ});
+      ctx.fillText('N=0', p.x + 6, p.y - 6);
+      ctx.restore();
+    }
+
+    function drawIdempotentOverlay(Δeff, u, z, uz){
+      // Only meaningful in split world (effective Δeff>0)
+      if (!(Δeff > 0)) return;
+      if (!state.showIdempotentOverlay) return;
+
+      // In family mode with Δ>0, idempotent axes depend on κ=√Δeff (but Δeff can be +1 in iso mode)
+      // Here we are in the plane we are rendering; those coordinates already incorporate planeCoords.
+      // We'll overlay the null axes b=±a/√Δeff for the *effective* form.
+      const κeff = Math.sqrt(Δeff);
+
+      // Null cone
+      if (state.showNullCone){
+        const A1 = worldToScreen({a:-3,b: 3/κeff});
+        const A2 = worldToScreen({a: 3,b:-3/κeff});
+        const B1 = worldToScreen({a:-3,b:-3/κeff});
+        const B2 = worldToScreen({a: 3,b: 3/κeff});
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,140,190,0.20)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(A1.x,A1.y); ctx.lineTo(A2.x,A2.y);
+        ctx.moveTo(B1.x,B1.y); ctx.lineTo(B2.x,B2.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Idempotent coordinate grid: x+=const and x-=const in the normalized split basis.
+      // In (a,b) with Δeff=+1, lines x+=a+b=const and x-=a-b=const.
+      // In general Δeff=+1 always in our effective split; κeff=1. We'll implement with κeff anyway.
+      const span = 2.8;
+      const step = 0.6;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,210,140,0.14)';
+      ctx.lineWidth = 1;
+
+      // x+ = c : b = c - a
+      for (let c=-span; c<=span+1e-6; c+=step){
+        ctx.beginPath();
+        let first=true;
+        for (let a=-span; a<=span+1e-6; a+=0.08){
+          const b = (c - a); // for Δeff=+1
+          const p = worldToScreen({a,b});
+          if (first){ ctx.moveTo(p.x,p.y); first=false; } else ctx.lineTo(p.x,p.y);
+        }
+        ctx.stroke();
+      }
+      // x- = c : b = a - c
+      for (let c=-span; c<=span+1e-6; c+=step){
+        ctx.beginPath();
+        let first=true;
+        for (let a=-span; a<=span+1e-6; a+=0.08){
+          const b = (a - c);
+          const p = worldToScreen({a,b});
+          if (first){ ctx.moveTo(p.x,p.y); first=false; } else ctx.lineTo(p.x,p.y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Show x± scalings numerically for z and u
+      // We want x± in multiplication coordinates, not rendered coordinates, because scaling law depends on Δ family.
+      // Use idempotentCoords with actual Δ and deltaMode.
+      const Δactual = state.Δ;
+      const Δpm = (state.deltaMode === 'family') ? Δactual : (Δactual>0 ? 1 : Δactual);
+      const ΔforId = (state.deltaMode === 'family') ? Δactual : (state.Δ>0 ? 1 : 1);
+      const Δid = (state.deltaMode === 'family') ? Math.max(state.Δ, 0) : 1;
+
+      // Compute in coefficient space used for multiplication.
+      const Δmul = effectiveDelta();
+      // In split world, Δmul is +1; but in family mode it could be +Δ.
+      // We compute idempotents using actual Δ when family; using +1 when iso.
+      const Δidem = (state.deltaMode === 'family') ? state.Δ : 1;
+      const zI = idempotentCoords(z, Δidem, state.deltaMode);
+      const uI = idempotentCoords(u, Δidem, state.deltaMode);
+      const uzI= idempotentCoords(uz,Δidem, state.deltaMode);
+
+      if (zI && uI && uzI){
+        const sP = uI.xp;
+        const sM = uI.xm;
+        const xP = zI.xp;
+        const xM = zI.xm;
+
+        const boxX = 16;
+        const boxY = 16 + 44;
+        const boxW = 310;
+        const boxH = 96;
+
+        ctx.save();
+        roundRect(boxX, boxY, boxW, boxH, 16);
+        ctx.fillStyle = 'rgba(0,0,0,0.36)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.84)';
+        ctx.font = '900 12px var(--sans)';
+        ctx.fillText('Split (idempotent) coordinates', boxX+12, boxY+20);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.62)';
+        ctx.font = '12px var(--mono)';
+        ctx.fillText(`x+ = a + b·√Δ  ,  x- = a − b·√Δ`, boxX+12, boxY+40);
+
+        ctx.fillStyle = 'rgba(255,210,140,0.85)';
+        ctx.font = '900 12px var(--mono)';
+        ctx.fillText(`u scales:   s+ = ${fmt(sP)}   s- = ${fmt(sM)}`, boxX+12, boxY+62);
+
+        ctx.fillStyle = 'rgba(140,255,220,0.85)';
+        ctx.font = '900 12px var(--mono)';
+        ctx.fillText(`z comps:    x+ = ${fmt(xP)}   x- = ${fmt(xM)}`, boxX+12, boxY+82);
+
+        ctx.restore();
+      }
+    }
+
+    function infoPanel(Δeff, z, u, uz){
+      const x = 16;
+      const y = view2d.h - 176;
+      const w = Math.min(620, view2d.w - 32);
+      const h = 160;
+
+      ctx.save();
+      roundRect(x,y,w,h,16);
+      ctx.fillStyle = 'rgba(0,0,0,0.40)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.stroke();
+
+      const N = (zz)=>norm(zz, Δeff);
+      const Nu = N(u);
+      const Nz = N(z);
+      const Nuz = N(uz);
+
+      const invU = inv(u, Δeff);
+
+      const Δ = state.Δ;
+      const κ = gaugeKappa();
+      const s = signDelta(Δ);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.84)';
+      ctx.font = '900 12px var(--sans)';
+      ctx.fillText('Algebra snapshot', x+12, y+20);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.font = '12px var(--mono)';
+
+      if (state.deltaMode === 'family'){
+        ctx.fillText(`Δ=${Δ.toFixed(3)}  (family)   N=a²−Δb²`, x+12, y+40);
+      } else {
+        if (s===0) ctx.fillText(`iso-class: Δ≈0  (dual)   N=a²`, x+12, y+40);
+        else ctx.fillText(`iso-class: sign=${s}  κ=${κ.toFixed(3)}   N=a²−sign·b²`, x+12, y+40);
+      }
+
+      function fmtZ(name, col, zz, line){
+        ctx.fillStyle = col;
+        ctx.font = '900 12px var(--mono)';
+        ctx.fillText(name, x+12, y+line);
+        ctx.fillStyle = 'rgba(255,255,255,0.62)';
+        ctx.font = '12px var(--mono)';
+        ctx.fillText(`= ${fmt(zz.a)} + ${fmt(zz.b)}·j`, x+60, y+line);
+      }
+
+      fmtZ('z',  'rgba(140,255,220,0.86)', z, 62);
+      fmtZ('u',  'rgba(255,210,140,0.86)', u, 82);
+      fmtZ('u·z','rgba(255,140,190,0.82)', uz, 102);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.font = '12px var(--mono)';
+      ctx.fillText(`N(z)=${fmt(Nz)}   N(u)=${fmt(Nu)}   N(u·z)=${fmt(Nuz)}`, x+12, y+126);
+
+      if (invU){
+        ctx.fillStyle = 'rgba(255,255,255,0.52)';
+        ctx.font = '12px var(--mono)';
+        ctx.fillText(`u⁻¹ exists: ${fmt(invU.a)} + ${fmt(invU.b)}·j`, x+12, y+146);
+      } else {
+        ctx.fillStyle = 'rgba(255,140,190,0.65)';
+        ctx.font = '900 12px var(--mono)';
+        ctx.fillText(`u is non-invertible (N(u)=0)`, x+12, y+146);
+      }
+
+      ctx.restore();
+    }
+
+    // ----------------------------
+    // Dragging handles
+    // ----------------------------
+    let dragging = null; // 'z' | 'u'
+
+    function hitHandle(screenX,screenY,pw){
+      const s = worldToScreen(pw);
+      const dx = screenX - s.x, dy = screenY - s.y;
+      return (dx*dx + dy*dy) <= (12*12);
+    }
+
+    c2d.addEventListener('pointerdown', (ev)=>{
+      const rect = c2d.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+
+      // in epilogue, still allow dragging z/u? we keep it simple: yes.
+      const zW = coordToWorld(state.z);
+      const Δeff = effectiveDelta();
+      const u = currentU(Δeff);
+      const uW = coordToWorld(u);
+
+      if (hitHandle(x,y,zW)) dragging = 'z';
+      else if (state.uMode === 'drag' && hitHandle(x,y,uW)) dragging = 'u';
+
+      if (dragging) c2d.setPointerCapture(ev.pointerId);
+    });
+
+    c2d.addEventListener('pointerup', (ev)=>{
+      dragging = null;
+      try { c2d.releasePointerCapture(ev.pointerId); } catch {}
+    });
+
+    c2d.addEventListener('pointermove', (ev)=>{
+      const rect = c2d.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+
+      const zW = coordToWorld(state.z);
+      const Δeff = effectiveDelta();
+      const uCur = currentU(Δeff);
+      const uW = coordToWorld(uCur);
+
+      const overZ = hitHandle(x,y,zW);
+      const overU = (state.uMode==='drag') && hitHandle(x,y,uW);
+      c2d.style.cursor = (dragging || overZ || overU) ? 'grab' : 'default';
+
+      if (!dragging) return;
+
+      const w = screenToWorld(x,y);
+      const c = worldToCoord(w);
+      const lim = 2.8;
+
+      if (dragging === 'z'){
+        state.z.a = clamp(c.a, -lim, lim);
+        state.z.b = clamp(c.b, -lim, lim);
+      }
+      if (dragging === 'u' && state.uMode==='drag'){
+        state.u.a = clamp(c.a, -lim, lim);
+        state.u.b = clamp(c.b, -lim, lim);
+      }
+    });
+
+    // ----------------------------
+    // 3D (two modes): Norm surface vs Epilogue quaternion
+    // ----------------------------
+    const view3d = document.getElementById('view3d');
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.max(1, Math.min(2.5, window.devicePixelRatio || 1)));
+    renderer.setSize(view3d.clientWidth, view3d.clientHeight);
+    view3d.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, view3d.clientWidth/view3d.clientHeight, 0.01, 200);
+    camera.position.set(3.4, 2.2, 4.8);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 1.6;
+    controls.maxDistance = 14.0;
+
+    scene.add(new THREE.HemisphereLight(0xaab8ff, 0x0a0c12, 0.92));
+    const key = new THREE.DirectionalLight(0xffffff, 1.15);
+    key.position.set(3.2,4.4,2.2);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0x9ef6d4, 0.65);
+    rim.position.set(-3.4,1.8,-2.4);
+    scene.add(rim);
+
+    function makeAxes(){
+      const g = new THREE.BufferGeometry();
+      const pts = [];
+      pts.push(-3,0,0,  3,0,0); // x=a
+      pts.push(0,-3,0,  0,3,0); // y=b
+      pts.push(0,0,-2,  0,0,2); // z=Δ
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pts,3));
+      const m = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 });
+      return new THREE.LineSegments(g,m);
+    }
+    const axes3d = makeAxes();
+    scene.add(axes3d);
+
+    // Star dust
+    {
+      const N = 1200;
+      const g = new THREE.BufferGeometry();
+      const p = new Float32Array(N*3);
+      for (let i=0;i<N;i++){
+        const r = 14 * Math.pow(Math.random(), 0.55);
+        const th = Math.random()*Math.PI*2;
+        const ph = Math.acos(2*Math.random()-1);
+        p[3*i+0] = r*Math.sin(ph)*Math.cos(th);
+        p[3*i+1] = r*Math.cos(ph);
+        p[3*i+2] = r*Math.sin(ph)*Math.sin(th);
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(p,3));
+      const m = new THREE.PointsMaterial({ size: 0.010, color: 0xffffff, transparent: true, opacity: 0.22, depthWrite: false });
+      scene.add(new THREE.Points(g,m));
+    }
+
+    // Norm-surface meshes
+    function buildNegSurface(){
+      const Δmin = -1.6, Δmax = -0.08;
+      const nΔ = 34;
+      const nθ = 160;
+      const verts = [];
+      const idx = [];
+
+      for (let i=0;i<nΔ;i++){
+        const t = i/(nΔ-1);
+        const Δ = lerp(Δmin, Δmax, t);
+        const κ = Math.sqrt(-Δ);
+        for (let j=0;j<nθ;j++){
+          const th = (j/(nθ-1)) * Math.PI*2;
+          const a = Math.cos(th);
+          const b = Math.sin(th)/κ;
+          verts.push(a, b, Δ);
+        }
+      }
+      for (let i=0;i<nΔ-1;i++){
+        for (let j=0;j<nθ-1;j++){
+          const i0 = i*nθ + j;
+          const i1 = i0 + 1;
+          const i2 = (i+1)*nθ + j;
+          const i3 = i2 + 1;
+          idx.push(i0,i2,i1,  i1,i2,i3);
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(verts,3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      const m = new THREE.MeshStandardMaterial({
+        color: 0xaab8ff, roughness: 0.55, metalness: 0.0,
+        transparent: true, opacity: 0.16, side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      return new THREE.Mesh(g,m);
+    }
+
+    function buildPosSurface(sign=+1){
+      const Δmin = 0.08, Δmax = 1.6;
+      const nΔ = 34;
+      const nu = 120;
+      const umax = 1.35;
+
+      const verts = [];
+      const idx = [];
+
+      for (let i=0;i<nΔ;i++){
+        const t = i/(nΔ-1);
+        const Δ = lerp(Δmin, Δmax, t);
+        const κ = Math.sqrt(Δ);
+        for (let j=0;j<nu;j++){
+          const u = lerp(-umax, umax, j/(nu-1));
+          const a = sign * Math.cosh(u);
+          const b = Math.sinh(u)/κ;
+          verts.push(a, b, Δ);
+        }
+      }
+      for (let i=0;i<nΔ-1;i++){
+        for (let j=0;j<nu-1;j++){
+          const i0 = i*nu + j;
+          const i1 = i0 + 1;
+          const i2 = (i+1)*nu + j;
+          const i3 = i2 + 1;
+          idx.push(i0,i2,i1,  i1,i2,i3);
+        }
+      }
+
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(verts,3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      const m = new THREE.MeshStandardMaterial({
+        color: 0xffd28c, roughness: 0.55, metalness: 0.0,
+        transparent: true, opacity: 0.13, side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      return new THREE.Mesh(g,m);
+    }
+
+    const negSurf = buildNegSurface();
+    const posSurfR = buildPosSurface(+1);
+    const posSurfL = buildPosSurface(-1);
+    scene.add(negSurf, posSurfR, posSurfL);
+
+    const dualLines = (() => {
+      const g = new THREE.BufferGeometry();
+      const pts = [];
+      const bmin = -2.2, bmax = 2.2;
+      pts.push( 1, bmin, 0,  1, bmax, 0);
+      pts.push(-1, bmin, 0, -1, bmax, 0);
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pts,3));
+      const m = new THREE.LineBasicMaterial({ color: 0x9ef6d4, transparent: true, opacity: 0.35 });
+      return new THREE.LineSegments(g,m);
+    })();
+    scene.add(dualLines);
+
+    const slicePlane = (() => {
+      const g = new THREE.PlaneGeometry(6.0, 6.0, 1, 1);
+      const m = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite:false });
+      const mesh = new THREE.Mesh(g,m);
+      mesh.rotation.set(0,0,0); // x-y plane
+      return mesh;
+    })();
+    scene.add(slicePlane);
+
+    const sliceCurve = (() => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(3*500),3));
+      const m = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 });
+      return new THREE.Line(g,m);
+    })();
+    scene.add(sliceCurve);
+
+    function updateSliceCurve(Δ){
+      const eps = 1e-8;
+      const positions = sliceCurve.geometry.attributes.position.array;
+      let n = 0;
+      function push(a,b){
+        positions[3*n+0] = a;
+        positions[3*n+1] = b;
+        positions[3*n+2] = Δ;
+        n++;
+      }
+
+      if (Math.abs(Δ) < eps){
+        const bmin=-2.2,bmax=2.2;
+        push(1,bmin); push(1,bmax);
+        push(-1,bmin); push(-1,bmax);
+      } else if (Δ < 0){
+        const κ = Math.sqrt(-Δ);
+        const steps = 240;
+        for (let i=0;i<=steps;i++){
+          const t = (i/steps)*Math.PI*2;
+          const a = Math.cos(t);
+          const b = Math.sin(t)/κ;
+          push(a,b);
+        }
+      } else {
+        const κ = Math.sqrt(Δ);
+        const umax = 1.35;
+        const steps = 220;
+        for (let i=0;i<=steps;i++){
+          const u = lerp(-umax, umax, i/steps);
+          push(Math.cosh(u), Math.sinh(u)/κ);
+        }
+        for (let i=0;i<=steps;i++){
+          const u = lerp(umax, -umax, i/steps);
+          push(-Math.cosh(u), Math.sinh(u)/κ);
+        }
+      }
+
+      sliceCurve.geometry.setDrawRange(0, n);
+      sliceCurve.geometry.attributes.position.needsUpdate = true;
+    }
+
+    function makePoint(color){
+      const g = new THREE.SphereGeometry(0.045, 18, 12);
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false });
+      return new THREE.Mesh(g,m);
+    }
+    const pZ = makePoint(0x9ef6d4);
+    const pU = makePoint(0xffd28c);
+    const pUZ= makePoint(0xff8cbe);
+    scene.add(pZ,pU,pUZ);
+
+    // Epilogue objects (quaternion rotation)
+    const epiGroup = new THREE.Group();
+    scene.add(epiGroup);
+
+    const epiSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(1.25, 48, 32),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.10, roughness: 0.7, metalness: 0.0, depthWrite:false })
+    );
+    epiGroup.add(epiSphere);
+
+    const baseVec = new THREE.Vector3(1, 0.2, 0.3).normalize();
+    const arrow0 = new THREE.ArrowHelper(baseVec.clone(), new THREE.Vector3(0,0,0), 1.35, 0x9ef6d4, 0.18, 0.10);
+    const arrow1 = new THREE.ArrowHelper(baseVec.clone(), new THREE.Vector3(0,0,0), 1.35, 0xffd28c, 0.18, 0.10);
+    epiGroup.add(arrow0);
+    epiGroup.add(arrow1);
+
+    const axisLine = (()=>{
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array([0,0,0, 0,0,0]),3));
+      const m = new THREE.LineBasicMaterial({ color: 0xffffff, transparent:true, opacity: 0.25 });
+      return new THREE.Line(g,m);
+    })();
+    epiGroup.add(axisLine);
+
+    const epiLabel = (()=>{
+      // small ring to indicate rotation plane: just a circle in the plane orthogonal to axis (approx)
+      const g = new THREE.BufferGeometry();
+      const n = 160;
+      const pts = new Float32Array(n*3);
+      g.setAttribute('position', new THREE.BufferAttribute(pts,3));
+      const m = new THREE.LineBasicMaterial({ color: 0xffffff, transparent:true, opacity: 0.18 });
+      const line = new THREE.Line(g,m);
+      return line;
+    })();
+    epiGroup.add(epiLabel);
+
+    // ----------------------------
+    // Resize
+    // ----------------------------
+    function resize3D(){
+      const w = view3d.clientWidth, h = view3d.clientHeight;
+      renderer.setPixelRatio(Math.max(1, Math.min(2.5, window.devicePixelRatio || 1)));
+      renderer.setSize(w,h);
+      camera.aspect = w/h;
+      camera.updateProjectionMatrix();
+    }
+
+    window.addEventListener('resize', ()=>{ resize2D(); resize3D(); });
+    resize2D();
+    resize3D();
+
+    // ----------------------------
+    // Epilogue helpers
+    // ----------------------------
+    function det2(a,b,c,d){ return a*d - b*c; }
+
+    function normalizedMatrix(){
+      let a = state.epi.A00, b = state.epi.A01, c = state.epi.A10, d = state.epi.A11;
+      const det = det2(a,b,c,d);
+      if (state.epi.detNormalize && Math.abs(det) > 1e-10){
+        const s = det < 0 ? -1 : +1;
+        const scale = 1 / Math.sqrt(Math.abs(det));
+        a *= scale; b *= scale; c *= scale; d *= scale;
+        // keep sign: det becomes s
+        return { a,b,c,d, det: s };
+      }
+      return { a,b,c,d, det };
+    }
+
+    // ----------------------------
+    // Main draw routine (2D)
+    // ----------------------------
+    function draw2DCore(){
+      const { w,h } = view2d;
+      ctx.clearRect(0,0,w,h);
+
+      if (state.chapter === Chapter.EPILOG){
+        draw2DEpilogue();
+        return;
+      }
+
+      const Δeff = effectiveDelta();
+      const u = currentU(Δeff);
+      const z = { a: state.z.a, b: state.z.b };
+      const uz = mul(u, z, Δeff);
+
+      const zW  = coordToWorld(z);
+      const uW  = coordToWorld(u);
+      const uzW = coordToWorld(uz);
+
+      const Mu = matFrom(u, Δeff);
+
+      // base grid
+      if (state.showGrid) drawGrid(null, 0.10);
+
+      // product grid
+      if (state.showProductGrid){
+        const alpha = (state.chapter === Chapter.MULT) ? 0.18 : 0.12;
+        // map world points by Mu in *world coordinates*? We want the multiplication map in coefficient space,
+        // then render. So: take a world point (render basis), convert to coord space, multiply, then coordToWorld.
+        const f = (pw)=>{
+          const c = worldToCoord(pw);
+          const c2 = applyMat(Mu, c);
+          return coordToWorld(c2);
+        };
+        drawGrid(f, alpha);
+      }
+
+      drawAxes();
+      drawConicN1(Δeff);
+      drawConicN0(Δeff);
+
+      // arrows
+      drawArrow(worldToScreen(zW),  'rgba(140,255,220,0.62)');
+      drawArrow(worldToScreen(uW),  'rgba(255,210,140,0.62)');
+      drawArrow(worldToScreen(uzW), 'rgba(255,140,190,0.52)');
+
+      // split overlay
+      if (state.chapter === Chapter.SPLITID || state.showIdempotentOverlay){
+        drawIdempotentOverlay(Δeff, u, z, uz);
+      }
+
+      // basis
+      drawBasis(Mu);
+
+      // handles
+      drawHandle(zW,  'rgba(140,255,220,0.90)', 'z');
+      if (state.uMode === 'drag') drawHandle(uW, 'rgba(255,210,140,0.90)', 'u');
+      else drawHandle(uW, 'rgba(255,210,140,0.75)', 'u(exp)');
+      drawHandle(uzW, 'rgba(255,140,190,0.75)', 'u·z');
+
+      // info
+      infoPanel(Δeff, z, u, uz);
+
+      // ribbon
+      const k = kindFromDelta(Δeff);
+      ctx.save();
+      const bx = 16, by = 16;
+      const bw = 340, bh = 34;
+      roundRect(bx,by,bw,bh,14);
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.78)';
+      ctx.font = '900 12px var(--sans)';
+      ctx.fillText(`${k.name}`, bx+12, by+21);
+      ctx.fillStyle = 'rgba(255,255,255,0.50)';
+      ctx.font = '12px var(--mono)';
+      ctx.fillText(`N=a²−Δb²   (Δeff=${Δeff.toFixed(2)})`, bx+12, by+33);
+      ctx.restore();
+
+      // update 3D points (use coefficient space, but position at z=Δactual for surface)
+      const Δz = clamp(state.Δ, -1.6, 1.6);
+      // For display, we place points using rendered world coordinates, but on the Δ slice.
+      pZ.position.set(zW.a, zW.b, Δz);
+      pU.position.set(uW.a, uW.b, Δz);
+      pUZ.position.set(uzW.a, uzW.b, Δz);
+    }
+
+    function draw2DEpilogue(){
+      // 2D view becomes matrix action: v ↦ A v
+      const { w,h } = view2d;
+      const A = normalizedMatrix();
+      const det = A.det;
+
+      // background
+      ctx.clearRect(0,0,w,h);
+
+      // draw grid
+      const span = 3.2;
+      const step = 0.5;
+
+      function map(p){
+        return { a: A.a*p.a + A.b*p.b, b: A.c*p.a + A.d*p.b };
+      }
+
+      // Base grid
+      if (state.showGrid) drawGrid(null, 0.10);
+      // Transformed grid
+      if (state.showProductGrid) drawGrid(map, 0.16);
+
+      drawAxes();
+
+      // unit circle and its image
+      ctx.save();
+      ctx.strokeStyle = 'rgba(170,185,255,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const steps = 360;
+      for (let i=0;i<=steps;i++){
+        const t = (i/steps)*Math.PI*2;
+        const p = { a: Math.cos(t), b: Math.sin(t) };
+        const s = worldToScreen(p);
+        if (i===0) ctx.moveTo(s.x,s.y); else ctx.lineTo(s.x,s.y);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,210,140,0.55)';
+      ctx.beginPath();
+      for (let i=0;i<=steps;i++){
+        const t = (i/steps)*Math.PI*2;
+        const p = { a: Math.cos(t), b: Math.sin(t) };
+        const q = map(p);
+        const s = worldToScreen(q);
+        if (i===0) ctx.moveTo(s.x,s.y); else ctx.lineTo(s.x,s.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // Info box
+      const x = 16, y = 16;
+      const bw = Math.min(620, w-32);
+      const bh = 132;
+      ctx.save();
+      roundRect(x,y,bw,bh,16);
+      ctx.fillStyle = 'rgba(0,0,0,0.40)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.84)';
+      ctx.font = '900 12px var(--sans)';
+      ctx.fillText('Epilogue: ℍ vs M₂(ℝ) (split-quaternion avatar)', x+12, y+20);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.62)';
+      ctx.font = '12px var(--mono)';
+      ctx.fillText(`A = [[${fmt(A.a)}, ${fmt(A.b)}],[${fmt(A.c)}, ${fmt(A.d)}]]`, x+12, y+42);
+
+      const detStr = fmt(det);
+      const cls = (Math.abs(det) < 1e-9)
+        ? 'det=0 → zero divisor (rank drop)'
+        : (det > 0 ? 'det>0 → orientation-preserving' : 'det<0 → orientation-reversing');
+
+      ctx.fillStyle = (Math.abs(det) < 1e-9) ? 'rgba(255,140,190,0.75)' : 'rgba(255,255,255,0.62)';
+      ctx.font = '900 12px var(--mono)';
+      ctx.fillText(`det(A) = ${detStr}   (${cls})`, x+12, y+62);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.52)';
+      ctx.font = '12px var(--sans)';
+      ctx.fillText('Blue: unit circle. Amber: its image under A. Grid shows A acting on the plane.', x+12, y+86);
+      ctx.fillText('Right panel: unit quaternions act as 3D rotations (always invertible, norm-preserving).', x+12, y+106);
+
+      ctx.restore();
+
+      // hide z/u handles in epilogue? keep minimal: show nothing.
+    }
+
+    // ----------------------------
+    // 3D update
+    // ----------------------------
+    function setCore3DVisible(v){
+      axes3d.visible = v;
+      negSurf.visible = v;
+      posSurfR.visible = v;
+      posSurfL.visible = v;
+      dualLines.visible = v;
+      slicePlane.visible = v;
+      sliceCurve.visible = v;
+      pZ.visible = v;
+      pU.visible = v;
+      pUZ.visible = v;
+    }
+
+    function setEpi3DVisible(v){
+      epiGroup.visible = v;
+    }
+
+    function update3D(){
+      if (state.chapter === Chapter.EPILOG){
+        setCore3DVisible(false);
+        setEpi3DVisible(true);
+
+        // Quaternion rotation
+        const ax = new THREE.Vector3(state.epi.axisX, state.epi.axisY, state.epi.axisZ);
+        if (ax.lengthSq() < 1e-6) ax.set(0,1,0);
+        ax.normalize();
+
+        // axis line
+        const L = 1.6;
+        const pos = axisLine.geometry.attributes.position.array;
+        pos[0] = -ax.x*L; pos[1] = -ax.y*L; pos[2] = -ax.z*L;
+        pos[3] =  ax.x*L; pos[4] =  ax.y*L; pos[5] =  ax.z*L;
+        axisLine.geometry.attributes.position.needsUpdate = true;
+
+        // angle
+        const angle = state.epi.angle;
+        const q = new THREE.Quaternion().setFromAxisAngle(ax, angle);
+
+        arrow0.setDirection(baseVec);
+        const rotated = baseVec.clone().applyQuaternion(q).normalize();
+        arrow1.setDirection(rotated);
+
+        // draw ring orthogonal to axis for a visual cue
+        const ring = epiLabel.geometry.attributes.position.array;
+        const n = ring.length/3;
+        // pick an arbitrary vector not parallel to axis
+        const t = Math.abs(ax.y) < 0.9 ? new THREE.Vector3(0,1,0) : new THREE.Vector3(1,0,0);
+        const u = t.clone().cross(ax).normalize();
+        const v = ax.clone().cross(u).normalize();
+        const r = 1.15;
+        for (let i=0;i<n;i++){
+          const th = (i/(n-1))*Math.PI*2;
+          const p = u.clone().multiplyScalar(Math.cos(th)*r).add(v.clone().multiplyScalar(Math.sin(th)*r));
+          ring[3*i+0]=p.x; ring[3*i+1]=p.y; ring[3*i+2]=p.z;
+        }
+        epiLabel.geometry.attributes.position.needsUpdate = true;
+
+        // position group
+        epiGroup.position.set(0,0,0);
+        return;
+      }
+
+      setCore3DVisible(true);
+      setEpi3DVisible(false);
+
+      // Core: slice at actual Δ
+      const Δ = clamp(state.Δ, -1.6, 1.6);
+      slicePlane.position.set(0,0,Δ);
+      updateSliceCurve(Δ);
+
+      // Color of slice curve by effective geometry
+      const Δeff = effectiveDelta();
+      if (Math.abs(Δeff) < 1e-8) sliceCurve.material.color.set(0x9ef6d4);
+      else if (Δeff < 0) sliceCurve.material.color.set(0xaab8ff);
+      else sliceCurve.material.color.set(0xffd28c);
+    }
+
+    // ----------------------------
+    // Animation loop
+    // ----------------------------
+    const clock = new THREE.Clock();
+    let lastTime = performance.now()/1000;
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      const dt = t - lastTime;
+      lastTime = t;
+
+      if (state.animateT && state.chapter !== Chapter.EPILOG){
+        state.t += dt * state.speed;
+        const lim = 2.2;
+        if (state.t > lim) state.t = -lim;
+      }
+
+      if (state.epi.spin && state.chapter === Chapter.EPILOG){
+        state.epi.angle += dt * state.epi.spinSpeed;
+        if (state.epi.angle > Math.PI) state.epi.angle -= Math.PI*2;
+      }
+
+      draw2DCore();
+      update3D();
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+    toast('Drag z (mint). Use chapters to reveal: Δ gauge → idempotents → dual → epilogue.');
+
+  </script>
+</body>
+</html>

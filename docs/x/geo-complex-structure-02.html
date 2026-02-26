@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split-Complex Numbers: The Geometry of Spacetime</title>
+    <style>
+        /* Shared Design System */
+        :root {
+            --bg-color: #fdfbf7;
+            --text-color: #333;
+            --accent-color: #d9480f; 
+            --hyperbola-color: #1098ad; /* Cyan for Hyperbolic curves */
+            --null-color: #e03131; /* Red for Null/Light cones */
+            --grid-color: #e0e0e0;
+            --axis-color: #333;
+            --font-serif: "Merriweather", "Georgia", serif;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-serif);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-family: var(--font-sans);
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 550px;
+            margin: 2rem 0;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.05);
+            cursor: grab;
+            user-select: none;
+        }
+        .canvas-container:active { cursor: grabbing; }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            font-family: var(--font-sans);
+        }
+
+        button {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        button.active {
+            background: var(--text-color);
+            color: white;
+            border-color: var(--text-color);
+            transform: translateY(1px);
+        }
+
+        button:hover:not(.active) { background: #f0f0f0; }
+
+        /* Slider for Boost Mode */
+        .slider-container {
+            width: 100%;
+            max-width: 300px;
+            margin: 10px auto;
+            display: none;
+            text-align: center;
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+        }
+        .slider-container.visible { display: block; }
+        
+        input[type=range] {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .explanation {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255,255,255,0.5);
+            border-left: 4px solid var(--hyperbola-color);
+            transition: opacity 0.3s ease;
+        }
+
+        .math {
+            font-family: "Courier New", monospace;
+            background: #eee;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>The Split-Complex</h1>
+        <div class="subtitle">A visual companion: The Geometry of Spacetime</div>
+    </header>
+
+    <p>
+        Standard complex numbers ($i^2 = -1$) describe rotation and circles. 
+        But what if we define a new unit $j$ such that $j^2 = +1$ (but $j \neq 1$)?
+        We enter the <strong>Split-Complex</strong> numbers, the native algebra of Minkowski spacetime.
+    </p>
+
+    <div class="canvas-container" id="canvas-wrapper">
+        <canvas id="main-canvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="btn-minkowski" class="active">1. Minkowski Plane</button>
+        <button id="btn-null">2. The Null Cone</button>
+        <button id="btn-boost">3. Lorentz Boost</button>
+    </div>
+
+    <div id="slider-boost" class="slider-container">
+        <label>Rapidity (φ): <span id="val-rapidity">0.00</span></label>
+        <input type="range" id="input-rapidity" min="-2" max="2" step="0.01" value="0">
+        <div style="color:#666; font-size:0.8em">Drag to change velocity</div>
+    </div>
+
+    <!-- Explanations -->
+    <div id="text-minkowski" class="explanation">
+        <h3>1. The Indefinite Metric</h3>
+        <p>
+            In the complex plane, distance is $x^2 + y^2$ (circles). Here, the "distance" (interval) is $x^2 - y^2$.
+        </p>
+        <p>
+            <strong>Interact:</strong> Drag the blue point $z$. Notice the <strong>Hyperbola</strong> it travels on.
+            All points on that curve are the "same distance" from the center. 
+            This is why Special Relativity uses hyperbolas—to preserve the speed of light.
+        </p>
+        <p class="math">Interval = Re(z)² - Im(z)²</p>
+    </div>
+
+    <div id="text-null" class="explanation" style="display:none;">
+        <h3>2. The Null Directions (Light Cone)</h3>
+        <p>
+            Notice the red diagonal lines ($y=x$ and $y=-x$).
+        </p>
+        <p>
+            <strong>Interact:</strong> Drag $z$ onto a red line. The interval becomes <strong>Zero</strong>.
+            In physics, these are light rays. In algebra, these are <strong>Zero Divisors</strong>. 
+            Unlike standard complex numbers, you <em>cannot</em> divide by numbers on these lines. The algebra is "split."
+        </p>
+        <p class="math">(1+j)(1-j) = 1 - j² = 0</p>
+    </div>
+
+    <div id="text-boost" class="explanation" style="display:none;">
+        <h3>3. The Lorentz Boost</h3>
+        <p>
+            In standard complex numbers, multiplying by $e^{i\theta}$ rotates the world.
+            Here, multiplying by $e^{j\phi}$ (hyperbolic Euler) performs a <strong>Squeeze Mapping</strong>.
+        </p>
+        <p>
+            <strong>Interact:</strong> Drag the slider. Watch the grid. 
+            Space ($x$) expands while Time ($y$) contracts (or vice versa) to preserve the area.
+            Points slide along their hyperbolas. This is exactly how the universe looks to a moving observer.
+        </p>
+        <p class="math">z' = z · (cosh φ + j·sinh φ)</p>
+    </div>
+
+</div>
+
+<script>
+/**
+ * split-complex.js
+ * Visualization of the Hyperbolic Number Plane (Minkowski Spacetime)
+ */
+
+// --- Config ---
+const COLORS = {
+    grid: '#e0e0e0',
+    axis: '#333',
+    hyperbola: '#1098ad',
+    null: '#e03131',
+    point: '#1098ad',
+    text: '#444'
+};
+
+const STATE = {
+    mode: 'MINKOWSKI', // 'MINKOWSKI', 'NULL', 'BOOST'
+    width: 0,
+    height: 0,
+    scale: 60,
+    centerX: 0,
+    centerY: 0,
+    
+    // The main point
+    z: { x: 2, y: 1 },
+    
+    // Lorentz Boost Rapidity
+    rapidity: 0,
+
+    isDragging: false
+};
+
+// --- Setup ---
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+const wrapper = document.getElementById('canvas-wrapper');
+
+function resize() {
+    const rect = wrapper.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    STATE.width = rect.width;
+    STATE.height = rect.height;
+    STATE.centerX = STATE.width / 2;
+    STATE.centerY = STATE.height / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Math ---
+function toScreen(x, y) {
+    // Apply Boost if in Boost mode
+    let sx = x;
+    let sy = y;
+    
+    if (STATE.mode === 'BOOST') {
+        const phi = STATE.rapidity;
+        const c = Math.cosh(phi);
+        const s = Math.sinh(phi);
+        // Lorentz Transform (Hyperbolic Rotation)
+        sx = x * c + y * s;
+        sy = x * s + y * c;
+    }
+
+    return {
+        x: STATE.centerX + sx * STATE.scale,
+        y: STATE.centerY - sy * STATE.scale
+    };
+}
+
+// Inverse transform for mouse interaction
+function fromScreen(sx, sy) {
+    const rawX = (sx - STATE.centerX) / STATE.scale;
+    const rawY = -(sy - STATE.centerY) / STATE.scale;
+
+    if (STATE.mode === 'BOOST') {
+        // Inverse Boost
+        const phi = -STATE.rapidity;
+        const c = Math.cosh(phi);
+        const s = Math.sinh(phi);
+        return {
+            x: rawX * c + rawY * s,
+            y: rawX * s + rawY * c
+        };
+    }
+    return { x: rawX, y: rawY };
+}
+
+// --- Interaction ---
+function getMousePos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    return { x: (clientX - rect.left)*window.devicePixelRatio, y: (clientY - rect.top)*window.devicePixelRatio };
+}
+
+// We need raw screen coords for dragging logic to feel 1:1 with cursor
+canvas.addEventListener('mousedown', e => {
+    STATE.isDragging = true;
+    updateZ(e);
+});
+canvas.addEventListener('touchstart', e => {
+    STATE.isDragging = true;
+    updateZ(e);
+});
+window.addEventListener('mousemove', updateZ);
+window.addEventListener('touchmove', updateZ);
+window.addEventListener('mouseup', () => STATE.isDragging = false);
+window.addEventListener('touchend', () => STATE.isDragging = false);
+
+function updateZ(e) {
+    if (!STATE.isDragging) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    // Screen coords relative to canvas
+    const mx = cx - rect.left;
+    const my = cy - rect.top;
+
+    // Convert to Math coords
+    // Note: We do NOT apply inverse boost when dragging Z in boost mode
+    // because Z represents the object *before* the transform? 
+    // Actually, visually we want to drag the point under the cursor.
+    // If we are visualizing the grid distorting, Z usually stays fixed in the "frame" or moves with grid.
+    // Let's make Z fixed in the "Proper Frame" (before boost).
+    // So if grid distorts, Z moves visually.
+    
+    if (STATE.mode === 'BOOST') {
+        // If in boost mode, we usually just watch the grid.
+        // But if user drags, let's update Z in the proper frame.
+        // We need to map screen -> proper frame.
+        const mathPos = fromScreen(mx * window.devicePixelRatio, my * window.devicePixelRatio);
+        STATE.z.x = mathPos.x;
+        STATE.z.y = mathPos.y;
+    } else {
+        STATE.z.x = (mx - rect.width/2) / (STATE.scale / window.devicePixelRatio);
+        STATE.z.y = -(my - rect.height/2) / (STATE.scale / window.devicePixelRatio);
+    }
+}
+
+// --- Rendering ---
+
+function drawLine(p1, p2, color, width=1, dash=[]) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dash);
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+}
+
+function drawHyperbola(k, color) {
+    // x^2 - y^2 = k
+    // Parametric: x = sqrt(k)*cosh(t), y = sqrt(k)*sinh(t)
+    // If k > 0 (Right/Left)
+    // If k < 0 (Top/Bottom) -> y^2 - x^2 = -k
+    
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    
+    const steps = 50;
+    const maxT = 2.5;
+
+    // Draw both branches
+    [1, -1].forEach(sign => {
+        let first = true;
+        for(let t=-maxT; t<=maxT; t+=0.1) {
+            let px, py;
+            if (k > 0) {
+                px = sign * Math.sqrt(k) * Math.cosh(t);
+                py = Math.sqrt(k) * Math.sinh(t);
+            } else {
+                px = Math.sqrt(-k) * Math.sinh(t);
+                py = sign * Math.sqrt(-k) * Math.cosh(t);
+            }
+            const scr = toScreen(px, py);
+            if(first) ctx.moveTo(scr.x, scr.y);
+            else ctx.lineTo(scr.x, scr.y);
+            first = false;
+        }
+    });
+    ctx.stroke();
+}
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Draw The Null Cone (Diagonals)
+    // These are invariant under boost, so we can draw them fixed or transformed (same result)
+    const max = 20;
+    const null1a = toScreen(-max, -max);
+    const null1b = toScreen(max, max);
+    const null2a = toScreen(-max, max);
+    const null2b = toScreen(max, -max);
+
+    ctx.strokeStyle = COLORS.null;
+    ctx.lineWidth = 1; // Faint by default
+    ctx.globalAlpha = (STATE.mode === 'NULL') ? 1 : 0.2;
+    if (STATE.mode === 'NULL') ctx.lineWidth = 2;
+    
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(null1a.x, null1a.y); ctx.lineTo(null1b.x, null1b.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(null2a.x, null2a.y); ctx.lineTo(null2b.x, null2b.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // 2. Draw Grid
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
+    // We draw lines in proper frame -10 to 10, then transform them
+    for (let i = -10; i <= 10; i++) {
+        // Vertical lines in proper frame
+        drawLine(toScreen(i, -10), toScreen(i, 10), COLORS.grid);
+        // Horizontal lines in proper frame
+        drawLine(toScreen(-10, i), toScreen(10, i), COLORS.grid);
+    }
+
+    // 3. Axes
+    drawLine(toScreen(-10, 0), toScreen(10, 0), COLORS.axis, 2); // Re
+    drawLine(toScreen(0, -10), toScreen(0, 10), COLORS.axis, 2); // Im(j)
+
+    // 4. The Point Z and its Hyperbola
+    const Z = STATE.z;
+    const interval = Z.x*Z.x - Z.y*Z.y;
+    
+    // Draw Hyperbola passing through Z
+    // Only in Minkowski or Boost mode usually, but helpful in all
+    ctx.globalAlpha = 0.6;
+    if (Math.abs(interval) > 0.05) {
+        drawHyperbola(interval, COLORS.hyperbola);
+    }
+    ctx.globalAlpha = 1;
+
+    // Draw Z point
+    const screenZ = toScreen(Z.x, Z.y);
+    ctx.beginPath();
+    ctx.arc(screenZ.x, screenZ.y, 6, 0, Math.PI*2);
+    ctx.fillStyle = COLORS.point;
+    ctx.fill();
+
+    // Labels
+    ctx.font = "14px Merriweather";
+    ctx.fillStyle = COLORS.text;
+    ctx.fillText("z", screenZ.x + 10, screenZ.y - 10);
+
+    // Mode Specific Labels
+    if (STATE.mode === 'MINKOWSKI') {
+        const ax = toScreen(4.5, 0.2);
+        ctx.fillText("Re", ax.x, ax.y);
+        const ay = toScreen(0.2, 4.5);
+        ctx.fillText("j (Im)", ay.x, ay.y);
+    }
+
+    requestAnimationFrame(render);
+}
+
+// --- UI Binding ---
+const btns = {
+    minkowski: document.getElementById('btn-minkowski'),
+    null: document.getElementById('btn-null'),
+    boost: document.getElementById('btn-boost')
+};
+const panels = {
+    minkowski: document.getElementById('text-minkowski'),
+    null: document.getElementById('text-null'),
+    boost: document.getElementById('text-boost')
+};
+const sliderBoost = document.getElementById('slider-boost');
+const inputRapidity = document.getElementById('input-rapidity');
+const valRapidity = document.getElementById('val-rapidity');
+
+function setMode(m) {
+    STATE.mode = m;
+    
+    // Buttons
+    Object.values(btns).forEach(b => b.classList.remove('active'));
+    if (m === 'MINKOWSKI') btns.minkowski.classList.add('active');
+    if (m === 'NULL') btns.null.classList.add('active');
+    if (m === 'BOOST') btns.boost.classList.add('active');
+
+    // Panels
+    Object.values(panels).forEach(p => p.style.display = 'none');
+    if (m === 'MINKOWSKI') panels.minkowski.style.display = 'block';
+    if (m === 'NULL') panels.null.style.display = 'block';
+    if (m === 'BOOST') panels.boost.style.display = 'block';
+
+    // Slider
+    if (m === 'BOOST') sliderBoost.classList.add('visible');
+    else {
+        sliderBoost.classList.remove('visible');
+        STATE.rapidity = 0; // Reset
+        inputRapidity.value = 0;
+        valRapidity.textContent = "0.00";
+    }
+}
+
+btns.minkowski.addEventListener('click', () => setMode('MINKOWSKI'));
+btns.null.addEventListener('click', () => setMode('NULL'));
+btns.boost.addEventListener('click', () => setMode('BOOST'));
+
+inputRapidity.addEventListener('input', (e) => {
+    STATE.rapidity = parseFloat(e.target.value);
+    valRapidity.textContent = STATE.rapidity.toFixed(2);
+});
+
+// Init
+render();
+
+</script>
+</body>
+</html>
