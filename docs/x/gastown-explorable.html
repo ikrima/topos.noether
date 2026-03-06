@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Mathematics of Multi-Agent Orchestration</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #151820;
+  --border: #252a38;
+  --text: #d8dae2;
+  --text-dim: #7a7f92;
+  --text-bright: #f0f1f5;
+  --gold: #d4a853;
+  --blue: #5b8def;
+  --green: #5cc9a7;
+  --rose: #e07a8e;
+  --violet: #9b8ec4;
+  --gold-dim: rgba(212,168,83,0.15);
+  --blue-dim: rgba(91,141,239,0.15);
+  --green-dim: rgba(92,201,167,0.15);
+  --rose-dim: rgba(224,122,142,0.15);
+  --violet-dim: rgba(155,142,196,0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(91,141,239,0.3); }
+
+.essay {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+}
+
+h1 {
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-bright);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.byline {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 48px;
+}
+
+h2 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 72px;
+  margin-bottom: 20px;
+  letter-spacing: -0.3px;
+}
+
+h2.gold { color: var(--gold); }
+h2.blue { color: var(--blue); }
+h2.green { color: var(--green); }
+h2.rose { color: var(--rose); }
+h2.violet { color: var(--violet); }
+
+p { margin-bottom: 20px; }
+
+strong { color: var(--text-bright); font-weight: 600; }
+
+em { font-style: italic; }
+
+.math {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  color: var(--gold);
+  background: var(--gold-dim);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.insight {
+  border-left: 3px solid;
+  padding: 14px 20px;
+  margin: 28px 0;
+  background: var(--surface);
+  border-radius: 0 6px 6px 0;
+  font-size: 16px;
+}
+.insight.gold { border-color: var(--gold); }
+.insight.blue { border-color: var(--blue); }
+.insight.green { border-color: var(--green); }
+.insight.rose { border-color: var(--rose); }
+.insight.violet { border-color: var(--violet); }
+
+.insight .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  display: block;
+}
+.insight.gold .label { color: var(--gold); }
+.insight.blue .label { color: var(--blue); }
+.insight.green .label { color: var(--green); }
+.insight.rose .label { color: var(--rose); }
+.insight.violet .label { color: var(--violet); }
+
+/* ---- INTERACTIVE FIGURE ---- */
+.figure {
+  margin: 32px -40px;
+  position: relative;
+}
+
+@media (max-width: 780px) {
+  .figure { margin: 32px -12px; }
+}
+
+.figure canvas {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  cursor: default;
+  touch-action: none;
+}
+
+.figure .controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.figure .controls label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.figure .controls input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 140px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+.figure .controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--blue);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.figure .controls button {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.figure .controls button:hover {
+  border-color: var(--blue);
+  color: var(--text-bright);
+}
+.figure .controls button.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.figure .caption {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* ---- SEPARATOR ---- */
+.sep {
+  width: 40px;
+  height: 2px;
+  background: var(--border);
+  margin: 56px auto;
+}
+
+/* ---- FOOTER ---- */
+footer {
+  text-align: center;
+  padding: 40px 24px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+  max-width: 720px;
+  margin: 0 auto;
+}
+footer a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="essay">
+
+<h1>The Mathematics of Multi-Agent Orchestration</h1>
+<p class="byline">An explorable explanation of why Gas Town works — March 2026</p>
+
+<p>
+Gas Town is Steve Yegge's multi-agent orchestrator for Claude Code. It coordinates
+20–30 parallel AI coding agents through persistent work tracking backed by Git.
+It sounds like chaos. But it works — and the reason it works is mathematical.
+</p>
+<p>
+Underneath the Mad Max theming and the tmux panes, Gas Town encodes a small number of
+structural invariants — conservation laws, symmetry principles, and coherence conditions —
+that guarantee safe parallelism. If you understand these invariants, you can predict exactly
+when the system will succeed and when it will break.
+</p>
+<p>
+Let's explore each one, hands-on.
+</p>
+
+<div class="sep"></div>
+
+<!-- ================================================================ -->
+<!-- SECTION 1: CONSERVATION OF WORK                                  -->
+<!-- ================================================================ -->
+
+<h2 class="gold">I. Conservation of Work</h2>
+
+<p>
+The most fundamental property of Gas Town is that <strong>work cannot be silently lost</strong>.
+Every task is tracked as a "bead" — a structured issue stored as JSON in Git. A bead can
+change state — open, hooked, in-progress, done — but it can never quietly disappear.
+</p>
+<p>
+In physics, Emmy Noether proved that every continuous symmetry of a system produces a conserved
+quantity. When the laws of physics don't change over time, energy is conserved. In Gas Town,
+the rules for how beads evolve are <strong>time-invariant</strong> — they don't depend on when you look
+at them. The consequence: total work is always accounted for.
+</p>
+<p>
+In the simulation below, colored circles are <strong>beads</strong> (tasks) assigned to <strong>agents</strong>
+(the larger rings). Try clicking an agent to <strong>"crash"</strong> its session. Watch what happens to
+the beads — they scatter, but they never vanish. The counter at top never decreases.
+</p>
+
+<div class="figure" id="fig-conservation">
+  <canvas id="canvas-conservation" height="380"></canvas>
+  <div class="controls">
+    <button id="btn-crash">💥 Crash random agent</button>
+    <button id="btn-reset-1">Reset</button>
+  </div>
+  <div class="caption">Click an agent ring or use the button to crash a session. Beads persist — they float free until re-assigned.</div>
+</div>
+
+<div class="insight gold">
+  <span class="label">Practical takeaway</span>
+  File beads for everything. If it's not a bead, it <em>can</em> be forgotten when a session dies.
+  If it is a bead, it's conserved by construction — Git guarantees it.
+</div>
+
+<div class="sep"></div>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: IDENTITY ≠ SESSION                                     -->
+<!-- ================================================================ -->
+
+<h2 class="blue">II. Identity Survives Session Death</h2>
+
+<p>
+In physics, a <strong>gauge transformation</strong> changes your coordinate system without changing the
+underlying reality. The electric field you measure depends on your reference frame, but the
+charge of a particle does not. The charge is <em>gauge-invariant</em> — it's the real, physical
+thing.
+</p>
+<p>
+Gas Town makes the same distinction. Each agent has two layers: an <strong>ephemeral session</strong>
+(the Claude Code context window — expendable, routinely killed) and a <strong>persistent identity</strong>
+(role bead + agent bead + work history + inbox — stored in Git, survives indefinitely).
+</p>
+<p>
+The visualization below shows this layered structure. The outer ring represents the
+<strong>session</strong> — it pulses, decays, and can be destroyed. The inner core represents the
+<strong>identity</strong> — it remains stable through any number of session deaths. Use the slider to
+trigger <strong>handoff cycles</strong> and watch sessions dissolve and reform while identity persists.
+</p>
+
+<div class="figure" id="fig-identity">
+  <canvas id="canvas-identity" height="400"></canvas>
+  <div class="controls">
+    <label>Handoff cycle <input type="range" id="slider-handoff" min="0" max="100" value="0"></label>
+    <button id="btn-kill-session">Kill session</button>
+  </div>
+  <div class="caption">The outer session ring is ephemeral — the inner identity core is conserved. Drag the slider to cycle through handoffs.</div>
+</div>
+
+<p>
+The command <span class="math">gt handoff</span> enacts exactly this: it serializes the structural
+context from the dying session into the persistent identity layer, then starts a fresh session
+that reads it back. The session (gauge-dependent quantity) changes; the identity (gauge-invariant
+quantity) is preserved.
+</p>
+
+<div class="insight blue">
+  <span class="label">Practical takeaway</span>
+  Use <span class="math">gt handoff</span> liberally. Kill sessions without fear.
+  Your agent's identity, inbox, and work history survive because they live in Git, not in the
+  context window.
+</div>
+
+<div class="sep"></div>
+
+<!-- ================================================================ -->
+<!-- SECTION 3: PARALLEL COMPOSITION                                  -->
+<!-- ================================================================ -->
+
+<h2 class="green">III. Safe Parallelism Through Isolation</h2>
+
+<p>
+Gas Town achieves parallelism through <strong>git worktrees</strong>. Each Polecat (worker agent) gets
+its own isolated copy of the repository. They work simultaneously without interfering — like
+musicians in separate recording booths, each laying down their track independently.
+</p>
+<p>
+Mathematically, this is <strong>parallel composition</strong>: agents compose by working <em>side by side</em>
+(written ⊗ in category theory), not <em>in sequence</em> (written ∘). The critical property is
+that the order doesn't matter — whether Agent A finishes before Agent B or vice versa, the
+<strong>Refinery's merge</strong> produces the same result. This is the "braiding" symmetry of a
+monoidal category.
+</p>
+<p>
+In the simulation below, colored particles flow through <strong>parallel lanes</strong> (worktrees).
+Each lane processes its work independently. At the bottom, the <strong>merge point</strong> combines them.
+Use the slider to control the <strong>relative speed</strong> of Lane A vs Lane B — notice that the
+final merged output is always the same, regardless of which lane finishes first.
+</p>
+
+<div class="figure" id="fig-parallel">
+  <canvas id="canvas-parallel" height="420"></canvas>
+  <div class="controls">
+    <label>Lane A speed <input type="range" id="slider-speed-a" min="20" max="100" value="60"></label>
+    <label>Lane B speed <input type="range" id="slider-speed-b" min="20" max="100" value="60"></label>
+    <button id="btn-reset-3">Reset</button>
+  </div>
+  <div class="caption">Two worktrees process beads independently. Adjust lane speeds — the merged output is always the same.</div>
+</div>
+
+<p>
+When a merge <strong>conflicts</strong> — when two agents modify the same file in incompatible ways —
+you've discovered a failure of the isolation condition. The worktrees weren't truly
+independent; there was hidden coupling. The fix is architectural: decompose work so that
+parallel tasks touch different parts of the codebase.
+</p>
+
+<div class="insight green">
+  <span class="label">Practical takeaway</span>
+  More worktrees = more safe parallelism, <em>as long as tasks are independent</em>.
+  Merge conflicts aren't random chaos — they're a signal that your task decomposition has
+  hidden coupling.
+</div>
+
+<div class="sep"></div>
+
+<!-- ================================================================ -->
+<!-- SECTION 4: ∂²=0                                                  -->
+<!-- ================================================================ -->
+
+<h2 class="rose">IV. Don't Boundary the Boundary</h2>
+
+<p>
+In topology, the <strong>boundary operator</strong> <span class="math">∂</span> takes a region and
+returns its edge. A filled disk becomes a circle. A solid cube becomes its six faces. But
+here's the deep fact: <strong>the boundary of a boundary is always empty</strong>. The edge of an
+edge is nothing. Written: <span class="math">∂² = 0</span>.
+</p>
+<p>
+The visualization below lets you apply <span class="math">∂</span> step by step. Start with a
+<strong>filled region</strong>. Apply ∂ once to get the <strong>boundary</strong>. Apply it again — you
+get <strong>nothing</strong>. This isn't a special case. It's a universal law.
+</p>
+
+<div class="figure" id="fig-boundary">
+  <canvas id="canvas-boundary" height="360"></canvas>
+  <div class="controls">
+    <button id="btn-apply-d">Apply ∂</button>
+    <button id="btn-reset-4">Reset</button>
+  </div>
+  <div class="caption">Apply the boundary operator step by step. The boundary of a boundary is always empty: ∂² = 0.</div>
+</div>
+
+<p>
+In Gas Town, the <strong>Mayor</strong> sets the boundary: the project plan, the task decomposition,
+the architectural decisions. Workers operate <em>within</em> that boundary. If the Mayor —
+or the Deacon, or the Overseer — redundantly re-specifies context that's already been
+established, they're computing <span class="math">∂²</span>. The result is zero: no new
+information, just wasted tokens and contradictory signals.
+</p>
+<p>
+The infamous "murderous Deacon" bug from January 2026 was precisely this: the Deacon
+was re-establishing boundaries the Mayor had already set, producing a
+<span class="math">∂² ≠ 0</span> failure that destroyed other workers' coherent state.
+</p>
+
+<div class="insight rose">
+  <span class="label">Practical takeaway</span>
+  Set context once at the Mayor level. In workers, reference beads — don't re-explain the
+  whole project. Every redundant re-specification risks contradicting the established frame.
+</div>
+
+<div class="sep"></div>
+
+<!-- ================================================================ -->
+<!-- SECTION 5: COHERENCE THEOREM                                     -->
+<!-- ================================================================ -->
+
+<h2 class="violet">V. Coherence: Get the Generators Right</h2>
+
+<p>
+Mac Lane's <strong>coherence theorem</strong> says: in certain algebraic structures, if a small set
+of basic operations give the same result regardless of order, then <em>every possible
+combination</em> of those operations gives the same result. You don't have to check every
+case — just the generators.
+</p>
+<p>
+Gas Town has three fundamental protocols — its "generators":
+</p>
+<p>
+<strong>GUPP</strong> — if there's work on your hook, you must run it.<br>
+<strong>Handoff</strong> — serialize structural context when a session ends.<br>
+<strong>Merge</strong> — the Refinery lands clean code on main.
+</p>
+<p>
+If these three protocols are correct, Mac Lane's theorem tells us that <strong>all possible
+multi-agent workflows are coherent</strong> — regardless of timing, ordering, or the number of
+agents. You don't need to test every combination.
+</p>
+<p>
+The diagram below shows multiple <strong>paths</strong> through a network of operations. Each path
+represents a different ordering of agent actions. Toggle between paths — they all arrive
+at the <strong>same final state</strong>. That's coherence.
+</p>
+
+<div class="figure" id="fig-coherence">
+  <canvas id="canvas-coherence" height="400"></canvas>
+  <div class="controls">
+    <button class="path-btn active" data-path="0">Path α</button>
+    <button class="path-btn" data-path="1">Path β</button>
+    <button class="path-btn" data-path="2">Path γ</button>
+    <button id="btn-all-paths">Show all</button>
+  </div>
+  <div class="caption">Three different orderings of operations — all arrive at the same final state. That's coherence.</div>
+</div>
+
+<p>
+This is also why Gas Town <strong>degrades gracefully</strong>. Removing a role — disabling the Deacon,
+the Witness, or the Refinery — is like restricting to a smaller set of operations.
+The coherence conditions still hold within the subset. You lose functionality, not correctness.
+</p>
+
+<div class="insight violet">
+  <span class="label">Practical takeaway</span>
+  When things go wrong, check the three protocols — GUPP, handoff, merge — not
+  individual agent behavior. Fix the generator, not every diagram.
+</div>
+
+<div class="sep"></div>
+
+<p>
+These five principles — conservation of work, persistent identity, safe parallelism,
+<span class="math">∂²=0</span>, and coherence — aren't engineering heuristics. They're
+structural invariants. When they hold, Gas Town scales. When they break, the failures
+are <em>predictable</em>: you can always trace a bug back to a violated conservation law
+or a broken coherence condition.
+</p>
+<p>
+Understanding the mathematics doesn't just help you use Gas Town. It helps you
+understand <em>any</em> multi-agent system — and to predict which ones will work and which
+will descend into chaos.
+</p>
+
+</div>
+
+<footer>
+  Analysis synthesized from the work of Steve Yegge (Gas Town / Beads) ·
+  <a href="https://github.com/steveyegge/gastown">GitHub</a> ·
+  <a href="https://gastownhall.ai">gastownhall.ai</a>
+</footer>
+
+<script>
+// ============================================================
+//  UTILITIES
+// ============================================================
+const TAU = Math.PI * 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const easeInOut = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+
+function setupCanvas(id) {
+  const c = document.getElementById(id);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  c.width = rect.width * dpr;
+  c.height = (parseInt(c.getAttribute('height')) || 380) * dpr;
+  c.style.height = (parseInt(c.getAttribute('height')) || 380) + 'px';
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { c, ctx, w: rect.width, h: parseInt(c.getAttribute('height')) || 380, dpr };
+}
+
+const COLORS = {
+  gold: '#d4a853', blue: '#5b8def', green: '#5cc9a7',
+  rose: '#e07a8e', violet: '#9b8ec4',
+  bg: '#0d0f14', surface: '#151820', border: '#252a38',
+  text: '#d8dae2', dim: '#7a7f92', bright: '#f0f1f5'
+};
+
+const BEAD_COLORS = ['#e07a8e','#5cc9a7','#5b8def','#d4a853','#9b8ec4','#e8a86c','#6bc5d2','#c4e05c'];
+
+// ============================================================
+//  VIZ 1: CONSERVATION OF WORK
+// ============================================================
+(function() {
+  const { c, ctx, w, h } = setupCanvas('canvas-conservation');
+
+  class Bead {
+    constructor(x, y, color, agentIdx) {
+      this.x = x; this.y = y;
+      this.tx = x; this.ty = y;
+      this.vx = 0; this.vy = 0;
+      this.color = color;
+      this.r = 7;
+      this.agentIdx = agentIdx;
+      this.free = false;
+      this.phase = Math.random() * TAU;
+    }
+    update(dt) {
+      this.phase += dt * 1.5;
+      if (this.free) {
+        this.vy += 12 * dt;
+        this.vx *= 0.98; this.vy *= 0.98;
+        this.x += this.vx; this.y += this.vy;
+        if (this.y > h - 50) { this.y = h - 50; this.vy *= -0.4; }
+        if (this.x < 20) { this.x = 20; this.vx *= -0.6; }
+        if (this.x > w - 20) { this.x = w - 20; this.vx *= -0.6; }
+      } else {
+        this.x = lerp(this.x, this.tx, 0.08);
+        this.y = lerp(this.y, this.ty, 0.08);
+      }
+    }
+    draw(ctx) {
+      const glow = 0.3 + 0.15 * Math.sin(this.phase);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r + 4, 0, TAU);
+      ctx.fillStyle = this.color.replace(')', `,${glow})`).replace('rgb', 'rgba').replace('#', '');
+      // simple glow
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, TAU);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  class Agent {
+    constructor(x, y, label, color) {
+      this.x = x; this.y = y;
+      this.r = 50; this.label = label; this.color = color;
+      this.alive = true;
+      this.deathAnim = 0;
+      this.ring = 0;
+    }
+    draw(ctx) {
+      this.ring += 0.02;
+      const alpha = this.alive ? 1 : Math.max(0, 1 - this.deathAnim);
+      // outer ring
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r + 3 * Math.sin(this.ring * 2), 0, TAU);
+      ctx.strokeStyle = this.color.replace(')', `,${0.3 * alpha})`).replace('rgb', 'rgba');
+      if (this.color[0] === '#') {
+        const r = parseInt(this.color.slice(1,3),16), g = parseInt(this.color.slice(3,5),16), b = parseInt(this.color.slice(5,7),16);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.35 * alpha})`;
+      }
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // label
+      ctx.font = '600 13px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = `rgba(255,255,255,${0.7 * alpha})`;
+      ctx.fillText(this.label, this.x, this.y - this.r - 14);
+    }
+  }
+
+  const agents = [
+    new Agent(w * 0.2, h * 0.38, 'Polecat α', COLORS.green),
+    new Agent(w * 0.5, h * 0.38, 'Polecat β', COLORS.blue),
+    new Agent(w * 0.8, h * 0.38, 'Polecat γ', COLORS.violet),
+  ];
+
+  let beads = [];
+  function initBeads() {
+    beads = [];
+    agents.forEach((a, ai) => {
+      a.alive = true; a.deathAnim = 0;
+      const n = 5;
+      for (let i = 0; i < n; i++) {
+        const angle = (i / n) * TAU - Math.PI / 2;
+        const br = 28;
+        const bead = new Bead(
+          a.x + Math.cos(angle) * br,
+          a.y + Math.sin(angle) * br,
+          BEAD_COLORS[(ai * n + i) % BEAD_COLORS.length],
+          ai
+        );
+        bead.tx = bead.x; bead.ty = bead.y;
+        beads.push(bead);
+      }
+    });
+  }
+  initBeads();
+
+  function crashAgent(idx) {
+    const a = agents[idx];
+    if (!a.alive) return;
+    a.alive = false;
+    beads.forEach(b => {
+      if (b.agentIdx === idx && !b.free) {
+        b.free = true;
+        b.vx = (Math.random() - 0.5) * 120;
+        b.vy = -Math.random() * 80 - 30;
+      }
+    });
+  }
+
+  document.getElementById('btn-crash').onclick = () => {
+    const alive = agents.map((a,i) => a.alive ? i : -1).filter(i => i >= 0);
+    if (alive.length) crashAgent(alive[Math.floor(Math.random() * alive.length)]);
+  };
+  document.getElementById('btn-reset-1').onclick = initBeads;
+
+  // click on agent to crash
+  c.addEventListener('click', (e) => {
+    const rect = c.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    agents.forEach((a, i) => {
+      const dx = mx - a.x, dy = my - a.y;
+      if (dx*dx + dy*dy < (a.r+10)*(a.r+10) && a.alive) crashAgent(i);
+    });
+  });
+
+  let lastT = 0;
+  function draw(t) {
+    const dt = Math.min(0.05, (t - lastT) / 1000);
+    lastT = t;
+
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // update agents
+    agents.forEach(a => {
+      if (!a.alive) a.deathAnim = Math.min(1, a.deathAnim + dt * 1.5);
+    });
+
+    // draw agents
+    agents.forEach(a => a.draw(ctx));
+
+    // update and draw beads
+    beads.forEach(b => { b.update(dt); b.draw(ctx); });
+
+    // bead counter
+    ctx.font = '600 14px "DM Sans", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COLORS.gold;
+    ctx.fillText(`Total beads: ${beads.length}`, 16, 24);
+    ctx.fillStyle = COLORS.dim;
+    ctx.font = '400 12px "DM Sans", sans-serif';
+    const freeCount = beads.filter(b => b.free).length;
+    ctx.fillText(`(${beads.length - freeCount} assigned · ${freeCount} unassigned — none lost)`, 16, 42);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ============================================================
+//  VIZ 2: IDENTITY VS SESSION (GAUGE INVARIANCE)
+// ============================================================
+(function() {
+  const { c, ctx, w, h } = setupCanvas('canvas-identity');
+  const cx = w / 2, cy = h / 2;
+
+  let sessionPhase = 0;
+  let sessionHealth = 1;
+  let sessionColor = COLORS.blue;
+  let identityPulse = 0;
+  let handoffT = 0;
+  let sessionCycle = 0;
+  let killing = false;
+  let particles = [];
+
+  const slider = document.getElementById('slider-handoff');
+  const killBtn = document.getElementById('btn-kill-session');
+
+  // session death particles
+  class Spark {
+    constructor(x, y, color) {
+      this.x = x; this.y = y;
+      this.vx = (Math.random()-0.5)*180;
+      this.vy = (Math.random()-0.5)*180;
+      this.life = 1;
+      this.color = color;
+    }
+    update(dt) {
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.vx *= 0.96; this.vy *= 0.96;
+      this.life -= dt * 1.2;
+    }
+    draw(ctx) {
+      if (this.life <= 0) return;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 2, 0, TAU);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = this.life * 0.6;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  killBtn.onclick = () => {
+    if (killing) return;
+    killing = true;
+    // spawn sparks
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * TAU;
+      const r = 85 + Math.random() * 10;
+      particles.push(new Spark(cx + Math.cos(angle)*r, cy + Math.sin(angle)*r, sessionColor));
+    }
+  };
+
+  slider.oninput = () => {
+    handoffT = parseInt(slider.value) / 100;
+    sessionCycle = Math.floor(handoffT * 4);
+  };
+
+  const SESSION_COLORS = [COLORS.blue, COLORS.green, COLORS.rose, COLORS.violet, COLORS.gold];
+
+  let lastT = 0;
+  function draw(t) {
+    const dt = Math.min(0.05, (t - lastT) / 1000);
+    lastT = t;
+
+    sessionPhase += dt;
+    identityPulse += dt * 0.8;
+
+    // handle kill animation
+    if (killing) {
+      sessionHealth -= dt * 2.5;
+      if (sessionHealth <= 0) {
+        sessionHealth = 0;
+        // respawn after a beat
+        setTimeout(() => {
+          sessionHealth = 0.01;
+          sessionCycle = (sessionCycle + 1) % SESSION_COLORS.length;
+          sessionColor = SESSION_COLORS[sessionCycle];
+          killing = false;
+        }, 400);
+      }
+    } else if (sessionHealth < 1) {
+      sessionHealth = Math.min(1, sessionHealth + dt * 1.5);
+    }
+
+    // color from slider
+    if (!killing) {
+      sessionColor = SESSION_COLORS[sessionCycle % SESSION_COLORS.length];
+    }
+
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // labels
+    ctx.font = '400 12px "DM Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COLORS.dim;
+    ctx.fillText('SESSION (ephemeral)', cx, cy - 130);
+    ctx.fillText('IDENTITY (conserved)', cx, cy + 145);
+
+    // session ring — outer
+    const sessionAlpha = sessionHealth * (0.5 + 0.2 * Math.sin(sessionPhase * 3));
+    const ringR = 90;
+
+    // dashed rotating ring for session
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(sessionPhase * 0.3);
+    ctx.beginPath();
+    const segments = 24;
+    for (let i = 0; i < segments; i++) {
+      const a0 = (i / segments) * TAU;
+      const a1 = ((i + 0.6) / segments) * TAU;
+      ctx.moveTo(Math.cos(a0) * ringR, Math.sin(a0) * ringR);
+      ctx.arc(0, 0, ringR, a0, a1);
+    }
+    // parse session color for rgba
+    const sc = sessionColor;
+    const sr = parseInt(sc.slice(1,3),16), sg = parseInt(sc.slice(3,5),16), sb = parseInt(sc.slice(5,7),16);
+    ctx.strokeStyle = `rgba(${sr},${sg},${sb},${sessionAlpha})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // second ring
+    ctx.beginPath();
+    const ring2R = 105;
+    for (let i = 0; i < 16; i++) {
+      const a0 = (i / 16) * TAU + sessionPhase * 0.15;
+      const a1 = a0 + 0.12;
+      ctx.moveTo(Math.cos(a0)*ring2R, Math.sin(a0)*ring2R);
+      ctx.arc(0, 0, ring2R, a0, a1);
+    }
+    ctx.strokeStyle = `rgba(${sr},${sg},${sb},${sessionAlpha * 0.3})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // identity core — inner solid
+    const coreR = 40;
+    const coreGlow = 0.6 + 0.15 * Math.sin(identityPulse * 2);
+
+    // glow
+    const grad = ctx.createRadialGradient(cx, cy, coreR * 0.3, cx, cy, coreR * 1.8);
+    grad.addColorStop(0, `rgba(212,168,83,${coreGlow * 0.5})`);
+    grad.addColorStop(1, 'rgba(212,168,83,0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR * 1.8, 0, TAU);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // solid core
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR, 0, TAU);
+    ctx.fillStyle = COLORS.gold;
+    ctx.fill();
+
+    // identity label inside
+    ctx.font = '600 11px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillText('AGENT', cx, cy - 6);
+    ctx.fillText('ID', cx, cy + 8);
+
+    // session label
+    ctx.font = '500 12px "DM Sans", sans-serif';
+    ctx.fillStyle = `rgba(${sr},${sg},${sb},${sessionHealth})`;
+    ctx.fillText(`Session #${sessionCycle + 1}`, cx, cy - 65);
+
+    // particles
+    particles.forEach(p => { p.update(dt); p.draw(ctx); });
+    particles = particles.filter(p => p.life > 0);
+
+    // handoff counter
+    ctx.font = '400 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COLORS.dim;
+    ctx.fillText(`handoffs: ${sessionCycle}`, 16, 24);
+    ctx.fillStyle = COLORS.gold;
+    ctx.fillText(`identity: ■ intact`, 16, 42);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ============================================================
+//  VIZ 3: PARALLEL COMPOSITION
+// ============================================================
+(function() {
+  const { c, ctx, w, h } = setupCanvas('canvas-parallel');
+
+  const laneW = 100;
+  const laneGap = 60;
+  const lanesX = [w/2 - laneW - laneGap/2, w/2 + laneGap/2];
+  const laneTop = 50, laneBot = h - 90;
+  const mergeY = h - 55;
+
+  const sliderA = document.getElementById('slider-speed-a');
+  const sliderB = document.getElementById('slider-speed-b');
+
+  let beadsA = [], beadsB = [], merged = [];
+  let time = 0;
+
+  const LANE_COLORS = [COLORS.green, COLORS.blue];
+  const BEAD_SETS = [
+    ['#e07a8e','#d4a853','#5cc9a7'],
+    ['#5b8def','#9b8ec4','#6bc5d2']
+  ];
+
+  function initLanes() {
+    beadsA = BEAD_SETS[0].map((color, i) => ({
+      y: laneTop + 20 + i * 35, progress: 0, color, done: false, merging: false, mergeY: 0
+    }));
+    beadsB = BEAD_SETS[1].map((color, i) => ({
+      y: laneTop + 20 + i * 35, progress: 0, color, done: false, merging: false, mergeY: 0
+    }));
+    merged = [];
+    time = 0;
+  }
+  initLanes();
+  document.getElementById('btn-reset-3').onclick = initLanes;
+
+  let lastT = 0;
+  function draw(t) {
+    const dt = Math.min(0.04, (t - lastT) / 1000);
+    lastT = t;
+    time += dt;
+
+    const speedA = parseInt(sliderA.value) / 100;
+    const speedB = parseInt(sliderB.value) / 100;
+
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // draw lanes
+    for (let i = 0; i < 2; i++) {
+      const lx = lanesX[i];
+      ctx.fillStyle = COLORS.surface;
+      ctx.strokeStyle = COLORS.border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(lx, laneTop, laneW, laneBot - laneTop, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // lane label
+      ctx.font = '600 12px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = LANE_COLORS[i];
+      ctx.fillText(i === 0 ? 'Worktree A' : 'Worktree B', lx + laneW/2, laneTop - 10);
+    }
+
+    // merge zone
+    ctx.fillStyle = COLORS.surface;
+    ctx.strokeStyle = COLORS.border;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(w/2 - 100, mergeY - 12, 200, 30, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.font = '500 11px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COLORS.dim;
+    ctx.fillText('REFINERY · merge', w/2, mergeY + 6);
+
+    // merge arrows
+    for (let i = 0; i < 2; i++) {
+      const lx = lanesX[i] + laneW/2;
+      ctx.beginPath();
+      ctx.moveTo(lx, laneBot);
+      ctx.lineTo(w/2, mergeY - 12);
+      ctx.strokeStyle = `rgba(255,255,255,0.08)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // animate beads in lane A
+    beadsA.forEach((b, i) => {
+      if (!b.done) {
+        b.progress += dt * speedA * 0.6;
+        if (b.progress >= 1) {
+          b.done = true;
+          b.merging = true;
+          b.mergeY = laneBot;
+        }
+        const y = lerp(laneTop + 30 + i * 40, laneBot - 20, easeInOut(clamp(b.progress, 0, 1)));
+        const x = lanesX[0] + laneW / 2;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, TAU);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // progress bar
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(x - 20, y + 14, 40, 3);
+        ctx.fillStyle = b.color;
+        ctx.fillRect(x - 20, y + 14, 40 * clamp(b.progress, 0, 1), 3);
+      } else if (b.merging) {
+        b.mergeY = lerp(b.mergeY, mergeY, 0.06);
+        const frac = (b.mergeY - laneBot) / (mergeY - laneBot);
+        const x = lerp(lanesX[0] + laneW/2, w/2, easeOut(clamp(frac, 0, 1)));
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, b.mergeY, 8, 0, TAU);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        if (Math.abs(b.mergeY - mergeY) < 2) {
+          b.merging = false;
+          if (!merged.includes(b.color)) merged.push(b.color);
+        }
+      }
+    });
+
+    // animate beads in lane B
+    beadsB.forEach((b, i) => {
+      if (!b.done) {
+        b.progress += dt * speedB * 0.6;
+        if (b.progress >= 1) {
+          b.done = true;
+          b.merging = true;
+          b.mergeY = laneBot;
+        }
+        const y = lerp(laneTop + 30 + i * 40, laneBot - 20, easeInOut(clamp(b.progress, 0, 1)));
+        const x = lanesX[1] + laneW / 2;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, TAU);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(x - 20, y + 14, 40, 3);
+        ctx.fillStyle = b.color;
+        ctx.fillRect(x - 20, y + 14, 40 * clamp(b.progress, 0, 1), 3);
+      } else if (b.merging) {
+        b.mergeY = lerp(b.mergeY, mergeY, 0.06);
+        const frac = (b.mergeY - laneBot) / (mergeY - laneBot);
+        const x = lerp(lanesX[1] + laneW/2, w/2, easeOut(clamp(frac, 0, 1)));
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x, b.mergeY, 8, 0, TAU);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        if (Math.abs(b.mergeY - mergeY) < 2) {
+          b.merging = false;
+          if (!merged.includes(b.color)) merged.push(b.color);
+        }
+      }
+    });
+
+    // merged beads display
+    if (merged.length > 0) {
+      ctx.font = '500 11px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.bright;
+      ctx.fillText(`Merged: ${merged.length} / 6`, w/2, mergeY + 34);
+      merged.forEach((color, i) => {
+        ctx.beginPath();
+        ctx.arc(w/2 - (merged.length-1)*10 + i*20, mergeY + 52, 5, 0, TAU);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+    }
+
+    // order doesn't matter label
+    if (merged.length >= 6) {
+      ctx.font = '600 13px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.green;
+      ctx.fillText('✓ Same result regardless of lane speed', w/2, mergeY + 75);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ============================================================
+//  VIZ 4: ∂²=0 BOUNDARY OPERATOR
+// ============================================================
+(function() {
+  const { c, ctx, w, h } = setupCanvas('canvas-boundary');
+  const cx = w / 2, cy = h / 2;
+
+  let stage = 0; // 0=filled, 1=boundary, 2=empty
+  let animT = 1; // animation progress (1 = complete)
+  let targetStage = 0;
+  let time = 0;
+
+  document.getElementById('btn-apply-d').onclick = () => {
+    if (targetStage < 2 && animT >= 0.95) {
+      targetStage++;
+      animT = 0;
+    }
+  };
+  document.getElementById('btn-reset-4').onclick = () => {
+    targetStage = 0; stage = 0; animT = 1;
+  };
+
+  // shape: a rounded triangle-ish blob
+  function shapePath(ctx, r, phase) {
+    ctx.beginPath();
+    const pts = 80;
+    for (let i = 0; i <= pts; i++) {
+      const a = (i / pts) * TAU;
+      const wobble = r + 15 * Math.sin(a * 3 + phase) + 8 * Math.cos(a * 5 - phase * 0.7);
+      const x = cx + Math.cos(a) * wobble;
+      const y = cy + Math.sin(a) * wobble;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+
+  let lastT = 0;
+  function draw(t) {
+    const dt = Math.min(0.04, (t - lastT) / 1000);
+    lastT = t;
+    time += dt;
+
+    if (animT < 1) animT = Math.min(1, animT + dt * 1.8);
+    stage = targetStage;
+
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    const baseR = 90;
+    const anim = easeOut(animT);
+
+    if (stage === 0) {
+      // filled region
+      shapePath(ctx, baseR, time * 0.3);
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, baseR + 20);
+      grad.addColorStop(0, 'rgba(224,122,142,0.6)');
+      grad.addColorStop(1, 'rgba(224,122,142,0.15)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      shapePath(ctx, baseR, time * 0.3);
+      ctx.strokeStyle = COLORS.rose;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // label
+      ctx.font = '600 16px "Source Serif 4", serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.rose;
+      ctx.fillText('Filled Region', cx, cy - baseR - 30);
+      ctx.font = '400 13px "DM Sans", sans-serif';
+      ctx.fillStyle = COLORS.dim;
+      ctx.fillText('A 2D surface with interior', cx, cy + baseR + 40);
+
+    } else if (stage === 1) {
+      // boundary only — fill fades, stroke remains
+      const fillAlpha = Math.max(0, 1 - anim);
+      shapePath(ctx, baseR, time * 0.3);
+      ctx.fillStyle = `rgba(224,122,142,${0.3 * fillAlpha})`;
+      ctx.fill();
+
+      // animated boundary with dashes
+      shapePath(ctx, baseR, time * 0.3);
+      ctx.strokeStyle = COLORS.rose;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 4]);
+      ctx.lineDashOffset = -time * 30;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = '600 16px "Source Serif 4", serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.rose;
+      ctx.fillText('∂ → Boundary (1D curve)', cx, cy - baseR - 30);
+      ctx.font = '400 13px "DM Sans", sans-serif';
+      ctx.fillStyle = COLORS.dim;
+      ctx.fillText('The edge of the region — a closed curve', cx, cy + baseR + 40);
+
+    } else if (stage === 2) {
+      // ∂² = 0: boundary vanishes
+      const fadeAlpha = Math.max(0, 1 - anim);
+
+      if (fadeAlpha > 0) {
+        shapePath(ctx, baseR, time * 0.3);
+        ctx.strokeStyle = `rgba(224,122,142,${fadeAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.lineDashOffset = -time * 30;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // scattered particles fading away
+      if (anim < 1) {
+        const n = 60;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * TAU;
+          const wobble = baseR + 15 * Math.sin(a * 3 + time * 0.3);
+          const spread = anim * 60;
+          const px = cx + Math.cos(a) * (wobble + spread * (0.5 + 0.5 * Math.sin(i * 7)));
+          const py = cy + Math.sin(a) * (wobble + spread * (0.5 + 0.5 * Math.cos(i * 11)));
+          ctx.beginPath();
+          ctx.arc(px, py, 2 * (1 - anim), 0, TAU);
+          ctx.fillStyle = `rgba(224,122,142,${(1 - anim) * 0.5})`;
+          ctx.fill();
+        }
+      }
+
+      ctx.font = '600 20px "Source Serif 4", serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.rose;
+      ctx.globalAlpha = anim;
+      ctx.fillText('∂² = 0', cx, cy + 6);
+      ctx.globalAlpha = 1;
+      ctx.font = '600 16px "Source Serif 4", serif';
+      ctx.fillText('∂∂ → Empty', cx, cy - baseR - 30);
+      ctx.font = '400 13px "DM Sans", sans-serif';
+      ctx.fillStyle = COLORS.dim;
+      ctx.fillText('The boundary of the boundary is always nothing', cx, cy + baseR + 40);
+    }
+
+    // stage indicator
+    const stages = ['Region', '∂', '∂²=0'];
+    stages.forEach((s, i) => {
+      const sx = w/2 - 80 + i * 80;
+      const sy = h - 25;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 8, 0, TAU);
+      ctx.fillStyle = i <= stage ? COLORS.rose : COLORS.border;
+      ctx.fill();
+      ctx.font = '500 10px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = i <= stage ? COLORS.bright : COLORS.dim;
+      ctx.fillText(s, sx, sy + 22);
+    });
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ============================================================
+//  VIZ 5: COHERENCE THEOREM
+// ============================================================
+(function() {
+  const { c, ctx, w, h } = setupCanvas('canvas-coherence');
+
+  // Nodes in our operation graph
+  const nodes = [
+    { x: w/2, y: 45, label: 'Start', color: COLORS.dim },           // 0
+    { x: w/4, y: 130, label: 'GUPP', color: COLORS.violet },        // 1
+    { x: w*3/4, y: 130, label: 'Sling', color: COLORS.blue },       // 2
+    { x: w/6, y: 230, label: 'Polecat α', color: COLORS.green },    // 3
+    { x: w/2, y: 210, label: 'Polecat β', color: COLORS.rose },     // 4
+    { x: w*5/6, y: 230, label: 'Crew', color: COLORS.gold },        // 5
+    { x: w/3, y: 310, label: 'Merge A', color: COLORS.green },      // 6
+    { x: w*2/3, y: 310, label: 'Merge B', color: COLORS.rose },     // 7
+    { x: w/2, y: 380, label: '✓ Coherent main', color: COLORS.bright }, // 8
+  ];
+
+  // Three paths through the graph
+  const paths = [
+    { nodes: [0, 1, 3, 6, 8], color: COLORS.green, label: 'α: GUPP→Polecat α→Merge A' },
+    { nodes: [0, 2, 4, 7, 8], color: COLORS.rose, label: 'β: Sling→Polecat β→Merge B' },
+    { nodes: [0, 2, 5, 7, 8], color: COLORS.gold, label: 'γ: Sling→Crew→Merge B' },
+  ];
+
+  // Edges
+  const edges = [
+    [0,1],[0,2],
+    [1,3],[1,4],[2,4],[2,5],
+    [3,6],[4,6],[4,7],[5,7],
+    [6,8],[7,8]
+  ];
+
+  let activePath = 0;
+  let showAll = false;
+  let pathProgress = 0;
+  let time = 0;
+
+  const pathBtns = document.querySelectorAll('.path-btn');
+  pathBtns.forEach(btn => {
+    btn.onclick = () => {
+      showAll = false;
+      activePath = parseInt(btn.dataset.path);
+      pathProgress = 0;
+      pathBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('btn-all-paths').classList.remove('active');
+    };
+  });
+  document.getElementById('btn-all-paths').onclick = () => {
+    showAll = true;
+    pathProgress = 0;
+    pathBtns.forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-all-paths').classList.add('active');
+  };
+
+  function drawEdge(ctx, n1, n2, color, alpha, width) {
+    ctx.beginPath();
+    ctx.moveTo(n1.x, n1.y);
+    // bezier curve
+    const my = (n1.y + n2.y) / 2;
+    ctx.quadraticCurveTo((n1.x + n2.x)/2 + (n2.x - n1.x)*0.1, my, n2.x, n2.y);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPath(ctx, path, progress, thick) {
+    const pnodes = path.nodes;
+    for (let i = 0; i < pnodes.length - 1; i++) {
+      const segStart = i / (pnodes.length - 1);
+      const segEnd = (i + 1) / (pnodes.length - 1);
+      if (progress < segStart) break;
+      const segProgress = clamp((progress - segStart) / (segEnd - segStart), 0, 1);
+
+      const n1 = nodes[pnodes[i]];
+      const n2 = nodes[pnodes[i+1]];
+
+      // partial line
+      const ex = lerp(n1.x, n2.x, segProgress);
+      const ey = lerp(n1.y, n2.y, segProgress);
+
+      ctx.beginPath();
+      ctx.moveTo(n1.x, n1.y);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = path.color;
+      ctx.lineWidth = thick ? 3 : 2;
+      ctx.stroke();
+
+      // moving dot at frontier
+      if (segProgress < 1 && segProgress > 0) {
+        ctx.beginPath();
+        ctx.arc(ex, ey, 5, 0, TAU);
+        ctx.fillStyle = path.color;
+        ctx.shadowColor = path.color;
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+  }
+
+  let lastT = 0;
+  function draw(t) {
+    const dt = Math.min(0.04, (t - lastT) / 1000);
+    lastT = t;
+    time += dt;
+
+    pathProgress = Math.min(1, pathProgress + dt * 0.5);
+
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // draw all edges lightly
+    edges.forEach(([a,b]) => {
+      drawEdge(ctx, nodes[a], nodes[b], COLORS.border, 0.4, 1);
+    });
+
+    // draw active path(s)
+    if (showAll) {
+      paths.forEach(p => drawPath(ctx, p, pathProgress, false));
+    } else {
+      drawPath(ctx, paths[activePath], pathProgress, true);
+    }
+
+    // draw nodes
+    nodes.forEach((n, i) => {
+      const isTerminal = i === 8;
+      const r = isTerminal ? 18 : 14;
+
+      // check if on active path
+      let onPath = showAll;
+      if (!showAll) onPath = paths[activePath].nodes.includes(i);
+
+      // glow for terminal
+      if (isTerminal && pathProgress >= 0.99) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 8 + 3 * Math.sin(time * 3), 0, TAU);
+        const g = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 12);
+        g.addColorStop(0, 'rgba(92,201,167,0.3)');
+        g.addColorStop(1, 'rgba(92,201,167,0)');
+        ctx.fillStyle = g;
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, TAU);
+      ctx.fillStyle = onPath ? COLORS.surface : COLORS.bg;
+      ctx.strokeStyle = onPath ? n.color : COLORS.border;
+      ctx.lineWidth = onPath ? 2 : 1;
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = `${onPath ? 600 : 400} 10px "DM Sans", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = onPath ? n.color : COLORS.dim;
+      ctx.fillText(n.label, n.x, n.y + r + 14);
+    });
+
+    // path label
+    if (!showAll) {
+      ctx.font = '500 13px "DM Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = paths[activePath].color;
+      ctx.fillText(paths[activePath].label, 16, 24);
+    } else {
+      ctx.font = '500 13px "DM Sans", sans-serif';
+      ctx.textAlign = 'left';
+      paths.forEach((p, i) => {
+        ctx.fillStyle = p.color;
+        ctx.fillText(p.label, 16, 24 + i * 18);
+      });
+    }
+
+    // convergence message
+    if (pathProgress >= 0.99) {
+      ctx.font = '600 13px "DM Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.green;
+      const msg = showAll ? 'All paths converge → same coherent state' : 'This path reaches the same final state as any other';
+      ctx.fillText(msg, w/2, h - 10);
+    }
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ============================================================
+//  RESIZE HANDLER
+// ============================================================
+window.addEventListener('resize', () => {
+  // re-setup canvases on resize
+  ['canvas-conservation','canvas-identity','canvas-parallel','canvas-boundary','canvas-coherence'].forEach(id => {
+    const c = document.getElementById(id);
+    const dpr = window.devicePixelRatio || 1;
+    const rect = c.getBoundingClientRect();
+    c.width = rect.width * dpr;
+    // height stays the same
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+  });
+});
+</script>
+</body>
+</html>
