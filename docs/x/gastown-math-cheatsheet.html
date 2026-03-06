@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why Gas Town Works — A Mathematical Cheat Sheet for Multi-Agent Engineering</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0c0e13;
+    --surface: #14171f;
+    --surface-raised: #1a1e28;
+    --border: #2a2f3d;
+    --text: #e0e2e8;
+    --text-dim: #8b90a0;
+    --accent-gold: #d4a853;
+    --accent-blue: #5b8def;
+    --accent-green: #5cc9a7;
+    --accent-rose: #e07a8e;
+    --accent-violet: #9b8ec4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 32px;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+  header .title-block h1 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent-gold);
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+  header .title-block p.subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-style: italic;
+    font-family: 'Source Serif 4', serif;
+  }
+  header .meta {
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  header .meta strong { color: var(--accent-blue); font-weight: 600; }
+
+  /* ---- THESIS BAR ---- */
+  .thesis {
+    background: linear-gradient(135deg, #1a1e28 0%, #161a24 100%);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .thesis strong { color: var(--accent-gold); }
+
+  /* ---- GRID ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  /* ---- CARDS ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+  }
+  .card.gold::before { background: var(--accent-gold); }
+  .card.blue::before { background: var(--accent-blue); }
+  .card.green::before { background: var(--accent-green); }
+  .card.rose::before { background: var(--accent-rose); }
+  .card.violet::before { background: var(--accent-violet); }
+
+  .card .card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--bg);
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .card.gold .num { background: var(--accent-gold); }
+  .card.blue .num { background: var(--accent-blue); }
+  .card.green .num { background: var(--accent-green); }
+  .card.rose .num { background: var(--accent-rose); }
+  .card.violet .num { background: var(--accent-violet); }
+
+  .card h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .card.gold h3 { color: var(--accent-gold); }
+  .card.blue h3 { color: var(--accent-blue); }
+  .card.green h3 { color: var(--accent-green); }
+  .card.rose h3 { color: var(--accent-rose); }
+  .card.violet h3 { color: var(--accent-violet); }
+
+  .card .math-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 6px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .card p { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .card p.dim { color: var(--text-dim); font-size: 12px; }
+
+  .card .do-line {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    background: var(--surface-raised);
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-top: 8px;
+    border-left: 2px solid;
+  }
+  .card.gold .do-line { border-color: var(--accent-gold); color: var(--accent-gold); }
+  .card.blue .do-line { border-color: var(--accent-blue); color: var(--accent-blue); }
+  .card.green .do-line { border-color: var(--accent-green); color: var(--accent-green); }
+  .card.rose .do-line { border-color: var(--accent-rose); color: var(--accent-rose); }
+  .card.violet .do-line { border-color: var(--accent-violet); color: var(--accent-violet); }
+
+  /* ---- WIDE CARD ---- */
+  .wide { grid-column: 1 / -1; }
+
+  /* ---- BOTTOM STRIP ---- */
+  .bottom-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .strip-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .strip-card h4 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .strip-card.warn h4 { color: var(--accent-rose); }
+  .strip-card.scale h4 { color: var(--accent-green); }
+  .strip-card.meta h4 { color: var(--accent-violet); }
+  .strip-card p { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .strip-card code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--surface-raised);
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: var(--text);
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  footer a { color: var(--accent-blue); text-decoration: none; }
+
+  /* ---- PRINT ---- */
+  @media print {
+    body { background: #fff; color: #1a1a1a; padding: 16px; font-size: 12px; }
+    .card, .strip-card, .thesis { border-color: #ccc; background: #f9f9f9; }
+    .card::before { height: 2px; }
+    header .title-block h1 { color: #333; }
+    footer { color: #999; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<header>
+  <div class="title-block">
+    <h1>Why Gas Town Works</h1>
+    <p class="subtitle">The mathematics of multi-agent orchestration — a pragmatic cheat sheet</p>
+  </div>
+  <div class="meta">
+    <strong>Gas Town</strong> · Multi-agent orchestrator for Claude Code<br>
+    by Steve Yegge · github.com/steveyegge/gastown<br>
+    Mathematical analysis · March 2026
+  </div>
+</header>
+
+<!-- THESIS -->
+<div class="thesis">
+  <strong>Core claim:</strong> Gas Town's architecture works because it encodes three conservation laws — <strong>work is never silently lost</strong>, <strong>agent identity survives session death</strong>, and <strong>the main branch stays coherent</strong>. These aren't engineering heuristics. They're structural invariants. When they hold, you can safely parallelize. When they break, the system fails in predictable ways. Understanding <em>why</em> unlocks confident scaling.
+</div>
+
+<!-- MAIN GRID: 5 PRINCIPLES -->
+<div class="grid">
+
+  <!-- CARD 1 -->
+  <div class="card gold">
+    <div class="card-head">
+      <span class="num">1</span>
+      <h3>Conserve Work — Nothing Gets Lost</h3>
+    </div>
+    <span class="math-tag">Noether's theorem · time-translation symmetry</span>
+    <p>Every bead (task) lives in git. It can change state — open, hooked, in-progress, done — but it cannot silently vanish. Crashes, restarts, context window death: the work persists.</p>
+    <p class="dim"><b>Math intuition:</b> When a system's rules don't change over time, something is automatically conserved. Here, the rules for bead evolution are time-invariant → total work is always accounted for, like energy in physics.</p>
+    <div class="do-line">→ File beads for everything. If it's not a bead, it can be forgotten.</div>
+  </div>
+
+  <!-- CARD 2 -->
+  <div class="card blue">
+    <div class="card-head">
+      <span class="num">2</span>
+      <h3>Separate Identity from Session</h3>
+    </div>
+    <span class="math-tag">Gauge invariance · persistent vs. ephemeral state</span>
+    <p>Sessions are cattle — expendable, interchangeable. Agent <em>identity</em> (role, history, inbox) is the conserved quantity that survives across sessions. The context window is the gauge-dependent part; the Beads-backed identity is gauge-invariant.</p>
+    <p class="dim"><b>Math intuition:</b> In physics, measurable reality doesn't depend on your coordinate system. Similarly, meaningful work state shouldn't depend on which session you're in. <code>gt handoff</code> changes the session (coordinates); identity persists (physics).</p>
+    <div class="do-line">→ Use gt handoff liberally. Kill sessions without fear. Trust the identity layer.</div>
+  </div>
+
+  <!-- CARD 3 -->
+  <div class="card green">
+    <div class="card-head">
+      <span class="num">3</span>
+      <h3>Parallelize via Isolation, Serialize at Merge</h3>
+    </div>
+    <span class="math-tag">Symmetric monoidal category · parallel composition ⊗</span>
+    <p>Each Polecat works in its own git worktree: full isolation. This makes parallel work well-defined — agents compose by working <em>side by side</em> (⊗), not <em>in sequence</em> (∘). The Refinery serializes at merge time, which is the only point where ordering matters.</p>
+    <p class="dim"><b>Math intuition:</b> Two operations can run in any order if they don't interfere. Git worktrees guarantee non-interference. The merge queue is the "coherence constraint" that ensures the final result is the same regardless of which polecat finished first.</p>
+    <div class="do-line">→ More worktrees = more safe parallelism. Merge conflicts = interference you need to fix, not random chaos.</div>
+  </div>
+
+  <!-- CARD 4 -->
+  <div class="card rose">
+    <div class="card-head">
+      <span class="num">4</span>
+      <h3>Don't Re-Boundary the Boundary</h3>
+    </div>
+    <span class="math-tag">∂² = 0 · cohomological constraint</span>
+    <p>The Mayor sets the boundary: project plan, task decomposition, architectural decisions. Polecats and Crew work <em>within</em> that boundary. If the Mayor (or Overseer) redundantly re-specifies context already established, agents get contradictory signals and waste tokens rediscovering what was already settled.</p>
+    <p class="dim"><b>Math intuition:</b> In topology, taking the boundary of a boundary always gives you zero — there's nothing new there. Re-specifying established context is the informational equivalent: it adds noise, not signal. The "murderous Deacon" bug was exactly this — it re-bounded what the Mayor had already bounded.</p>
+    <div class="do-line">→ Set context once at the Mayor level. In workers, reference beads — don't re-explain the whole project.</div>
+  </div>
+
+  <!-- CARD 5 — WIDE -->
+  <div class="card violet wide">
+    <div class="card-head">
+      <span class="num">5</span>
+      <h3>Get Coherence Right and Everything Else Follows</h3>
+    </div>
+    <span class="math-tag">Mac Lane's coherence theorem · "if the basic diagrams commute, ALL diagrams commute"</span>
+    <p>You don't need to micromanage every agent interaction. You need to get the <em>fundamental protocols</em> right: GUPP (work on your hook = you must run it), handoff (serialize structural context, not just diffs), and merge (Refinery lands clean code on main). If these basic interactions are correct, the global system behavior is coherent <b>regardless of the specific order or timing of agent actions</b>. This is why Gas Town "degrades gracefully" — removing a role (Deacon, Witness) restricts the system to a smaller set of interactions where the coherence conditions still hold. You lose capability, not correctness.</p>
+    <p class="dim"><b>Math intuition:</b> Mac Lane proved that in certain algebraic structures, if a small set of canonical diagrams "commute" (give the same result regardless of path), then <em>every possible</em> diagram commutes. You don't have to check them all — just the generators. For Gas Town: nail GUPP + handoff + merge → all possible multi-agent workflows are coherent for free.</p>
+    <div class="do-line">→ When things go wrong, check the three protocols — not individual agent behavior. Fix the generator, not every diagram.</div>
+  </div>
+
+</div>
+
+<!-- BOTTOM STRIP -->
+<div class="bottom-strip">
+  <div class="strip-card warn">
+    <h4>⚠ When Symmetry Breaks</h4>
+    <p>Every Gas Town failure maps to a broken conservation law. Merge conflicts = repository integrity violated. Lost work = bead not persisted. Agents stepping on each other = identity confusion or worktree contamination. <b>Diagnosis:</b> ask "which conservation law broke?" not "which agent misbehaved?"</p>
+  </div>
+  <div class="strip-card scale">
+    <h4>↑ Scaling: Crew → Polecats → Convoys</h4>
+    <p>Use <b>Crew</b> for design-heavy, iterative work (low parallelism, high context). Graduate to <b>Polecats</b> for well-defined, parallelizable tasks (high parallelism, low context). <b>Convoys</b> batch polecats against bead lists. Match the decomposition to the work's inherent structure — don't force parallelism on serial dependencies.</p>
+  </div>
+  <div class="strip-card meta">
+    <h4>∞ The Wasteland Direction</h4>
+    <p>Federating <em>multiple Gas Towns</em> together (the Wasteland) is where higher category theory kicks in. Trust levels between towns are morphisms-between-morphisms (2-categorical). The Wanted Board is a colimit over participating towns. This is genuinely new mathematical territory for distributed agent systems.</p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>Synthesized from the work of Steve Yegge (Gas Town / Beads) · Mathematical analysis via McLarty, Tao, Noether framing</span>
+  <span><a href="https://github.com/steveyegge/gastown">github</a> · <a href="https://gastownhall.ai">gastownhall.ai</a> · <a href="https://discord.gg/gastown">discord</a></span>
+</footer>
+
+</div>
+</body>
+</html>
