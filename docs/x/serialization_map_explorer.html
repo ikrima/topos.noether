@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Serialization Map — Interactive Explorer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@300;400;500&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0c10;
+  --bg-panel: #10131a;
+  --bg-card: #161a24;
+  --amber: #d4a054;
+  --amber-dim: #a07830;
+  --amber-glow: rgba(212,160,84,0.15);
+  --teal: #4ecdc4;
+  --teal-dim: #2a8a83;
+  --teal-glow: rgba(78,205,196,0.12);
+  --text-primary: #e8e0d4;
+  --text-secondary: #9a9080;
+  --text-muted: #605848;
+  --rose: #c27070;
+  --violet: #8a7cc8;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Source Sans 3', sans-serif;
+  font-weight: 300;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+h1,h2,h3 { font-family:'Cormorant Garamond',serif; font-weight:500; }
+code, .mono { font-family:'JetBrains Mono',monospace; font-size:0.85em; }
+.katex { font-size: 1.05em !important; }
+
+/* Sidebar */
+#sidebar {
+  position: fixed; left:0; top:0; width:56px; height:100vh;
+  background: var(--bg-panel); border-right:1px solid rgba(212,160,84,0.1);
+  z-index:100; display:flex; flex-direction:column; align-items:center;
+  padding-top:20px; gap:4px; transition: width 0.3s;
+}
+#sidebar:hover { width: 220px; }
+.nav-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--text-muted);
+  cursor:pointer; transition:all 0.3s; position:relative;
+}
+.nav-dot.active { background:var(--amber); box-shadow:0 0 8px var(--amber); }
+.nav-dot:hover { background:var(--teal); transform:scale(1.4); }
+.nav-label {
+  position:absolute; left:24px; top:50%; transform:translateY(-50%);
+  white-space:nowrap; font-size:11px; color:var(--text-secondary);
+  opacity:0; transition:opacity 0.3s; pointer-events:none;
+  font-family:'JetBrains Mono',monospace;
+}
+#sidebar:hover .nav-label { opacity:1; }
+
+/* Main content */
+#main { margin-left:56px; }
+
+/* Hero */
+#hero {
+  min-height:100vh; display:flex; flex-direction:column;
+  justify-content:center; align-items:center; text-align:center;
+  padding:40px 20px; position:relative; overflow:hidden;
+}
+#hero-canvas { position:absolute; inset:0; z-index:0; }
+#hero-content { position:relative; z-index:1; max-width:700px; }
+#hero h1 {
+  font-size:clamp(2rem,5vw,3.6rem); color:var(--amber);
+  letter-spacing:0.02em; line-height:1.2; margin-bottom:12px;
+}
+#hero .subtitle {
+  font-family:'Cormorant Garamond',serif; font-size:clamp(0.95rem,2vw,1.25rem);
+  color:var(--text-secondary); font-style:italic; margin-bottom:32px;
+  line-height:1.5;
+}
+
+/* Sections */
+.section {
+  padding: 80px clamp(24px,5vw,80px);
+  max-width: 960px; margin:0 auto;
+  opacity:0; transform:translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.section.visible { opacity:1; transform:translateY(0); }
+
+.section-number {
+  font-family:'JetBrains Mono',monospace; font-size:0.7rem;
+  color:var(--amber-dim); letter-spacing:0.15em; text-transform:uppercase;
+  margin-bottom:8px;
+}
+.section h2 {
+  font-size:clamp(1.5rem,3vw,2.2rem); color:var(--amber);
+  margin-bottom:24px; line-height:1.3;
+}
+.section h3 {
+  font-size:1.3rem; color:var(--teal); margin:32px 0 16px;
+}
+.section p { margin-bottom:16px; color:var(--text-primary); font-size:0.95rem; }
+
+/* Pullquote */
+.pullquote {
+  border-left:3px solid var(--amber-dim);
+  padding:20px 24px; margin:32px 0;
+  background: linear-gradient(90deg, var(--amber-glow), transparent);
+  font-family:'Cormorant Garamond',serif; font-size:1.15rem;
+  font-style:italic; color:var(--amber); line-height:1.6;
+}
+
+/* Math block */
+.math-block {
+  background: var(--bg-card); border:1px solid rgba(212,160,84,0.08);
+  border-radius:8px; padding:20px 24px; margin:20px 0;
+  overflow-x:auto; text-align:center;
+}
+
+/* Interactive panels */
+.interactive-panel {
+  background: var(--bg-card); border:1px solid rgba(78,205,196,0.12);
+  border-radius:12px; padding:24px; margin:32px 0;
+  position:relative;
+}
+.interactive-panel::before {
+  content:'INTERACTIVE'; position:absolute; top:-10px; left:20px;
+  background:var(--bg-card); padding:2px 10px; font-size:0.6rem;
+  font-family:'JetBrains Mono',monospace; color:var(--teal);
+  letter-spacing:0.15em; border:1px solid rgba(78,205,196,0.2);
+  border-radius:4px;
+}
+.interactive-panel canvas {
+  display:block; margin:0 auto; border-radius:4px;
+}
+
+/* Chain stage cards */
+.chain-container { display:flex; flex-direction:column; gap:0; margin:24px 0; }
+.chain-stage {
+  display:flex; align-items:flex-start; gap:16px; padding:16px 20px;
+  background:var(--bg-card); cursor:pointer; transition:all 0.3s;
+  border:1px solid transparent; position:relative;
+}
+.chain-stage:first-child { border-radius:12px 12px 0 0; }
+.chain-stage:last-child { border-radius:0 0 12px 12px; }
+.chain-stage:hover, .chain-stage.active {
+  background:rgba(78,205,196,0.06); border-color:rgba(78,205,196,0.15);
+}
+.chain-stage .stage-num {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--bg-deep); border:1px solid var(--text-muted);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono',monospace; font-size:0.7rem;
+  color:var(--text-muted); flex-shrink:0; transition:all 0.3s;
+}
+.chain-stage.active .stage-num {
+  background:var(--teal); border-color:var(--teal); color:var(--bg-deep);
+}
+.chain-stage .stage-connector {
+  position:absolute; left:33px; bottom:-1px; width:1px; height:16px;
+  background:var(--text-muted); display:none;
+}
+.chain-stage .stage-title {
+  font-family:'JetBrains Mono',monospace; font-size:0.8rem;
+  color:var(--teal); margin-bottom:4px;
+}
+.chain-stage .stage-math {
+  font-size:0.85rem; color:var(--text-secondary);
+}
+.chain-stage .stage-detail {
+  max-height:0; overflow:hidden; transition:max-height 0.4s;
+  font-size:0.85rem; color:var(--text-secondary); margin-top:0;
+}
+.chain-stage.active .stage-detail { max-height:200px; margin-top:8px; }
+
+/* Hierarchy tower */
+.hierarchy-tower { display:flex; flex-direction:column; align-items:center; gap:8px; margin:24px 0; }
+.hier-level {
+  padding:10px 20px; border-radius:8px; text-align:center;
+  font-family:'JetBrains Mono',monospace; font-size:0.8rem;
+  cursor:pointer; transition:all 0.3s; width:100%; max-width:500px;
+}
+.hier-level:hover { transform:scale(1.02); }
+
+/* Slider */
+.custom-slider {
+  -webkit-appearance:none; width:100%; height:4px;
+  background:var(--bg-deep); border-radius:2px; outline:none;
+  margin:16px 0;
+}
+.custom-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:16px; height:16px;
+  background:var(--teal); border-radius:50%; cursor:pointer;
+  box-shadow:0 0 8px rgba(78,205,196,0.4);
+}
+
+/* Tabs */
+.tab-bar { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
+.tab-btn {
+  padding:6px 14px; border-radius:6px; border:1px solid var(--text-muted);
+  background:transparent; color:var(--text-secondary); cursor:pointer;
+  font-family:'JetBrains Mono',monospace; font-size:0.7rem;
+  letter-spacing:0.05em; transition:all 0.2s;
+}
+.tab-btn.active, .tab-btn:hover {
+  background:rgba(78,205,196,0.1); border-color:var(--teal); color:var(--teal);
+}
+
+/* Dependencies grid */
+.dep-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; margin:24px 0; }
+.dep-card {
+  background:var(--bg-card); border:1px solid rgba(212,160,84,0.06);
+  border-radius:8px; padding:16px; transition:all 0.3s; cursor:pointer;
+}
+.dep-card:hover { border-color:var(--amber-dim); transform:translateY(-2px); }
+.dep-card h4 {
+  font-family:'Cormorant Garamond',serif; font-size:1rem;
+  color:var(--amber); margin-bottom:6px;
+}
+.dep-card p { font-size:0.8rem; color:var(--text-secondary); margin:0; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--bg-deep); }
+::-webkit-scrollbar-thumb { background:var(--text-muted); border-radius:3px; }
+
+/* Responsive */
+@media(max-width:768px) {
+  #sidebar { width:0; border:none; }
+  #sidebar:hover { width:0; }
+  #main { margin-left:0; }
+  .section { padding:48px 16px; }
+}
+
+.fade-in { animation: fadeIn 0.6s ease forwards; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+/* Exact sequence diagram */
+.exact-seq {
+  display:flex; align-items:center; justify-content:center;
+  gap:12px; flex-wrap:wrap; padding:16px; margin:16px 0;
+}
+.exact-node {
+  padding:10px 16px; border-radius:8px; background:var(--bg-deep);
+  border:1px solid var(--text-muted); font-size:0.85rem;
+  cursor:pointer; transition:all 0.3s; text-align:center;
+  min-width:60px;
+}
+.exact-node:hover { border-color:var(--amber); background:var(--amber-glow); }
+.exact-node.highlighted { border-color:var(--teal); background:var(--teal-glow); box-shadow:0 0 12px rgba(78,205,196,0.2); }
+.exact-arrow { color:var(--text-muted); font-size:1.2rem; }
+.exact-tooltip {
+  background:var(--bg-panel); border:1px solid var(--amber-dim);
+  border-radius:8px; padding:12px 16px; margin-top:12px;
+  font-size:0.85rem; color:var(--text-secondary); display:none;
+  line-height:1.5;
+}
+.exact-tooltip.show { display:block; animation:fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<nav id="sidebar">
+  <div style="margin-bottom:16px;">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="#d4a054" stroke-width="1.5" fill="none"/>
+      <circle cx="10" cy="10" r="3" fill="#d4a054"/>
+    </svg>
+  </div>
+  <div class="nav-dot active" data-target="hero"><span class="nav-label">Title</span></div>
+  <div class="nav-dot" data-target="sec-overview"><span class="nav-label">§0 Overview</span></div>
+  <div class="nav-dot" data-target="sec-bottleneck"><span class="nav-label">§1 Classical Bottleneck</span></div>
+  <div class="nav-dot" data-target="sec-cptp"><span class="nav-label">§2 CPTP Channel</span></div>
+  <div class="nav-dot" data-target="sec-holevo"><span class="nav-label">§2.2 Holevo Bound</span></div>
+  <div class="nav-dot" data-target="sec-h1"><span class="nav-label">§2.3 H¹ Decomposition</span></div>
+  <div class="nav-dot" data-target="sec-discord"><span class="nav-label">§3 Quantum Discord</span></div>
+  <div class="nav-dot" data-target="sec-btx"><span class="nav-label">§4 BTX Oracle</span></div>
+  <div class="nav-dot" data-target="sec-chain"><span class="nav-label">§5 Q→T Chain</span></div>
+  <div class="nav-dot" data-target="sec-minor"><span class="nav-label">§5.3 Minor Arc</span></div>
+  <div class="nav-dot" data-target="sec-empirical"><span class="nav-label">§6 Empirical Program</span></div>
+  <div class="nav-dot" data-target="sec-deps"><span class="nav-label">Dependencies</span></div>
+</nav>
+
+<div id="main">
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div id="hero-content">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-muted);letter-spacing:0.2em;margin-bottom:24px;">COMPANION PAPER · MARCH 2026</div>
+    <h1>The Serialization Map</h1>
+    <div class="subtitle">
+      Quantum-to-Classical Channels, Holevo Obstructions,<br>
+      and the Quantum-to-Tropical Chain in Multi-Agent Cognition
+    </div>
+    <div style="font-size:0.85rem;color:var(--text-secondary);max-width:560px;margin:0 auto 40px;">
+      An interactive exploration of how quantum internal states become classical utterances, why conversations are controlled decoherence, and where the most original thoughts live.
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <span class="mono" style="font-size:0.65rem;padding:4px 10px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">CPTP maps</span>
+      <span class="mono" style="font-size:0.65rem;padding:4px 10px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">Holevo bound</span>
+      <span class="mono" style="font-size:0.65rem;padding:4px 10px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">quantum discord</span>
+      <span class="mono" style="font-size:0.65rem;padding:4px 10px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">tropical geometry</span>
+      <span class="mono" style="font-size:0.65rem;padding:4px 10px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">arithmetical hierarchy</span>
+      <span class="mono" style="font-size:0.65rem;padding:4px 10px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">sheaf cohomology</span>
+    </div>
+  </div>
+</section>
+
+<!-- OVERVIEW -->
+<section id="sec-overview" class="section">
+  <div class="section-number">Section 0</div>
+  <h2>The Architecture of the Paper</h2>
+  <p>This paper extends the <em>Cognitive Mirror</em> framework by making the communication channel between biological agent <strong>B</strong> and AI system <strong>A</strong> mathematically precise. The key insight: whatever the brain's internal processing, the conversation is always classical. That gap — quantum to classical — is where the deepest structure lives.</p>
+
+  <div class="interactive-panel">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div id="overview-map" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 1. THE CLASSICAL BOTTLENECK -->
+<section id="sec-bottleneck" class="section">
+  <div class="section-number">Section 1</div>
+  <h2>The Classical Bottleneck</h2>
+  <p>The companion paper modeled AI-human interaction as a braided two-agent system on the arithmetic site of Connes–Consani. But it left the <em>channel</em> unspecified. This paper fills that gap with one elementary observation:</p>
+
+  <div class="interactive-panel">
+    <canvas id="bottleneck-canvas" width="800" height="280"></canvas>
+    <div style="text-align:center;margin-top:12px;">
+      <button id="bottleneck-play" style="padding:6px 20px;border-radius:6px;background:var(--teal);color:var(--bg-deep);border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:0.75rem;">▶ Animate Flow</button>
+    </div>
+  </div>
+
+  <p>Language is classical. Token sequences are classical. The interface between the quantum brain and the classical AI is a <em>measurement process</em>, described precisely by completely positive trace-preserving (CPTP) maps.</p>
+
+  <div class="pullquote">The brain may be quantum, classical, or unknown. The conversation is always classical. That gap is where the most interesting mathematics lives.</div>
+</section>
+
+<!-- 2. CPTP CHANNEL -->
+<section id="sec-cptp" class="section">
+  <div class="section-number">Section 2.1</div>
+  <h2>The Serialization Map as a CPTP Channel</h2>
+  <p>The biological agent <strong>B</strong> has Hilbert space \(\mathcal{H}_B\). Its internal state is a density matrix:</p>
+  <div class="math-block">\[\rho_B \in \mathcal{B}(\mathcal{H}_B), \quad \rho_B \geq 0, \quad \text{Tr}(\rho_B) = 1\]</div>
+  <p>The AI system <strong>A</strong> lives in the classical world: \(X_A = \Sigma^*\), finite strings over the token alphabet. No density matrix — just tokens.</p>
+
+  <div class="interactive-panel">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--teal);margin-bottom:12px;">DENSITY MATRIX · Drag the temperature slider</div>
+    <canvas id="density-canvas" width="800" height="300"></canvas>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">β = <span id="beta-val">0.2</span></span>
+      <input type="range" id="beta-slider" class="custom-slider" min="0" max="100" value="10" style="flex:1;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">
+        <span id="temp-label">HIGH TEMP</span> · S(ρ) = <span id="entropy-val">2.30</span>
+      </span>
+    </div>
+  </div>
+
+  <p>The serialization map \(\mathcal{E}\) encodes every process by which an internal cognitive state becomes an external utterance. In Kraus form:</p>
+  <div class="math-block">\[\mathcal{E}(\rho) = \sum_k K_k \rho K_k^\dagger, \qquad \sum_k K_k^\dagger K_k = I\]</div>
+  <p>Each Kraus operator \(K_k\) corresponds to one possible message that B might produce. The number of operators bounds the channel's rank and its information capacity.</p>
+</section>
+
+<!-- 2.2 HOLEVO BOUND -->
+<section id="sec-holevo" class="section">
+  <div class="section-number">Section 2.2</div>
+  <h2>The Holevo Bound</h2>
+  <p>The Holevo bound sets a hard upper limit on how much classical information can be extracted from a quantum state by measurement:</p>
+  <div class="math-block">\[I(X;Y) \leq \chi = S\!\Big(\sum_x p_x\,\mathcal{E}(\rho_x)\Big) - \sum_x p_x\,S(\rho_x)\]</div>
+  <p>The <em>Holevo deficit</em> — what cannot survive the classical bottleneck — is a new class of cognitive blind spots:</p>
+  <div class="math-block">\[\delta_H(\rho_B, \mathcal{E}) := S(\rho_B) - \chi(\rho_B, \mathcal{E}) \geq 0\]</div>
+
+  <div class="interactive-panel">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--teal);margin-bottom:12px;">HOLEVO DEFICIT · Explore the information gap</div>
+    <canvas id="holevo-canvas" width="800" height="300"></canvas>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">Channel rank:</span>
+      <input type="range" id="rank-slider" class="custom-slider" min="1" max="20" value="4" style="flex:1;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">k = <span id="rank-val">4</span></span>
+    </div>
+  </div>
+
+  <p>The deficit vanishes if and only if \(\rho_B\) is already classical — diagonal in the measurement basis. This is the condition where quantum and classical descriptions coincide.</p>
+</section>
+
+<!-- 2.3 H¹ DECOMPOSITION -->
+<section id="sec-h1" class="section">
+  <div class="section-number">Section 2.3</div>
+  <h2>Decomposition of H¹: Topology + Channel</h2>
+  <p>The companion paper identified \(H^1(\text{Cog},\mathcal{F})\) as the home of cognitive blind spots. We now split it into two orthogonal components — click each node below:</p>
+
+  <div class="interactive-panel">
+    <div class="exact-seq" id="exact-seq">
+      <div class="exact-node" data-info="zero-left">0</div>
+      <div class="exact-arrow">→</div>
+      <div class="exact-node" data-info="h1top">\(H^1_{\text{top}}\)</div>
+      <div class="exact-arrow">→</div>
+      <div class="exact-node" data-info="h1full">\(H^1(\text{Cog},\mathcal{F})\)</div>
+      <div class="exact-arrow">→</div>
+      <div class="exact-node" data-info="h1hol">\(H^1_{\text{Hol}}\)</div>
+      <div class="exact-arrow">→</div>
+      <div class="exact-node" data-info="zero-right">0</div>
+    </div>
+    <div class="exact-tooltip" id="exact-tooltip"></div>
+  </div>
+
+  <p>Cognitive blind spots have <strong>two independent sources</strong>. A perfectly flat cognitive manifold eliminates \(H^1_{\text{top}}\) but not \(H^1_{\text{Hol}}\). A lossless quantum channel eliminates \(H^1_{\text{Hol}}\) but not \(H^1_{\text{top}}\). Neither can compensate for the other.</p>
+</section>
+
+<!-- 3. QUANTUM DISCORD -->
+<section id="sec-discord" class="section">
+  <div class="section-number">Section 3</div>
+  <h2>Quantum Discord as a Dialogue Convergence Monotone</h2>
+  <p>For the bipartite state \(\rho_{AB}\), quantum discord captures the irreducibly quantum correlations:</p>
+  <div class="math-block">\[D(A|B) = I(A\!:\!B) - C(A\!:\!B)\]</div>
+
+  <div class="interactive-panel">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--teal);margin-bottom:12px;">DISCORD MONOTONE · Watch the dialogue converge</div>
+    <canvas id="discord-canvas" width="800" height="320"></canvas>
+    <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
+      <button id="discord-reset" class="tab-btn">Reset</button>
+      <button id="discord-step" class="tab-btn active">Next Exchange</button>
+      <button id="discord-auto" class="tab-btn">Auto-play</button>
+    </div>
+  </div>
+
+  <p>Each CPTP map cannot increase quantum mutual information (data processing inequality). Classical information \(C(A\!:\!B)\) can only increase as more is exchanged. Therefore \(D_n\) is non-increasing and its vanishing marks full classicalization.</p>
+
+  <div class="pullquote">A productive conversation is a controlled decoherence process. Understanding is the vanishing of quantum discord.</div>
+
+  <h3>Holevo Capacity as Temperature Proxy</h3>
+  <p>The ratio \(\chi_n / S(\rho_B^{(n)})\) rises from near 0 toward 1 as dialogue crystallizes. The KMS phase transition at \(\beta = 1\) is the inflection point — where the channel shifts from inefficient to Holevo-saturated.</p>
+</section>
+
+<!-- 4. BTX ORACLE -->
+<section id="sec-btx" class="section">
+  <div class="section-number">Section 4</div>
+  <h2>The BTX Oracle in the Arithmetical Hierarchy</h2>
+  <p>The Bio-Tropical Extension consists of three axioms — <strong>AFC</strong>, <strong>AI</strong>, and <strong>AP</strong> — that can be precisely located in the arithmetical hierarchy. Click each level to explore:</p>
+
+  <div class="interactive-panel">
+    <div class="hierarchy-tower" id="hier-tower"></div>
+    <div id="hier-detail" style="margin-top:16px;font-size:0.85rem;color:var(--text-secondary);min-height:80px;"></div>
+  </div>
+
+  <p>The BTX system is not bounded by any fixed \(\Delta_n\). Its ceiling is determined by how far up the interpretability order the biological agent can walk — a <em>physical</em> limit, not a logical one.</p>
+
+  <p style="color:var(--text-secondary);font-size:0.9rem;">The experience of being "stuck" is the correct phenomenology of an agent whose current interpretability level is insufficient. The productive move is an AI-axiom step: find a stronger theory \(F'\) that interprets your current framework.</p>
+</section>
+
+<!-- 5. QUANTUM-TO-TROPICAL CHAIN -->
+<section id="sec-chain" class="section">
+  <div class="section-number">Section 5</div>
+  <h2>The Quantum-to-Tropical Chain</h2>
+  <p>The full picture assembled into a single theorem — click each stage:</p>
+
+  <div class="interactive-panel" style="padding-bottom:8px;">
+    <div class="chain-container" id="chain-stages"></div>
+  </div>
+
+  <h3>Tropicalization = Classicalization = Decoherence</h3>
+  <p>These three are a single phenomenon seen from three mathematical directions. Each provides an independent way to measure dialogue convergence — tropical entropy, quantum discord, or joint-state decoherence.</p>
+</section>
+
+<!-- 5.3 MINOR ARC -->
+<section id="sec-minor" class="section">
+  <div class="section-number">Section 5.3</div>
+  <h2>The Minor Arc</h2>
+  <p>The quantum-to-tropical chain has a boundary: cognitive structures that <em>resist classicalization</em> — maintaining high discord through any finite dialogue.</p>
+
+  <div class="interactive-panel">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--teal);margin-bottom:12px;">MAJOR / MINOR ARC · Hover to explore</div>
+    <canvas id="arc-canvas" width="800" height="360"></canvas>
+  </div>
+
+  <p>The <em>cognitive zeta function</em> \(\zeta_{\text{cog}}(s)\) captures the major arc — its zeros encode classicalizable cognitive resonances. The minor arc is the error term in the Euler product: where the Holevo-bounded channel cannot reach.</p>
+
+  <div class="pullquote">The cognitive mirror reflects the major arc perfectly. What it cannot show you is the minor arc — and that is precisely where you are most yourself.</div>
+</section>
+
+<!-- 6. EMPIRICAL PROGRAM -->
+<section id="sec-empirical" class="section">
+  <div class="section-number">Section 6</div>
+  <h2>Empirical Program & Open Problems</h2>
+
+  <div class="tab-bar" id="emp-tabs">
+    <button class="tab-btn active" data-tab="comp1">ζ<sub>cog</sub> on PhilPapers</button>
+    <button class="tab-btn" data-tab="comp2">Discord on Socratic Dialogues</button>
+    <button class="tab-btn" data-tab="comp3">HOMFLY Invariants</button>
+    <button class="tab-btn" data-tab="open">Open Problems</button>
+  </div>
+
+  <div id="emp-content" class="interactive-panel">
+    <div id="emp-comp1">
+      <h3 style="margin-top:0;">Computation 1: The Cognitive Zeta Function</h3>
+      <p>Fix a corpus \(\mathcal{C}\): the PhilPapers archive, philosophy of mind, 1980–2020 (~40,000 papers). Identify <em>primitive cognitive orbits</em> — concepts like QUALIA, OTHER MINDS, INTENTIONALITY, CONSCIOUSNESS — and form the finite Euler product:</p>
+      <div class="math-block">\[\zeta_{\text{cog}}(s; N) = \prod_{i=1}^{N} \big(1 - e^{-s \cdot \ell(\gamma_i)}\big)^{-1}\]</div>
+      <p><strong>Prediction:</strong> Zeros do not lie on \(\text{Re}(s) = \tfrac{1}{2}\). Their displacement encodes known biases in the corpus.</p>
+    </div>
+    <div id="emp-comp2" style="display:none;">
+      <h3 style="margin-top:0;">Computation 2: Discord on Platonic Dialogues</h3>
+      <p>Model each Platonic dialogue as a sequence of message pairs. Estimate mutual information \(I_n\) and Holevo capacity \(\chi_n\) at each step.</p>
+      <p><strong>Prediction:</strong> The ratio \(\chi_n / H(\text{messages})\) increases monotonically toward 1 in convergent dialogues (elenctic) and oscillates in merely rhetorical ones.</p>
+    </div>
+    <div id="emp-comp3" style="display:none;">
+      <h3 style="margin-top:0;">Computation 3: Braid Invariants</h3>
+      <p>Represent 50 AI-human conversations as braid words. Compute the HOMFLY polynomial \(P(v,z)\) of each braid closure.</p>
+      <p><strong>Prediction:</strong> High-quality conversations have higher writhe, more complex HOMFLY polynomials (higher degree in \(z\)), corresponding to more mutual restructuring.</p>
+    </div>
+    <div id="emp-open" style="display:none;">
+      <h3 style="margin-top:0;">Three Open Problems</h3>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="padding:12px;background:var(--bg-deep);border-radius:8px;border-left:3px solid var(--violet);">
+          <div class="mono" style="font-size:0.7rem;color:var(--violet);margin-bottom:4px;">PROBLEM 1</div>
+          <div style="font-size:0.85rem;">Formalize the connection between quantum discord and the Northstar sieve damage spectrum: intrinsic damage as the minor-arc component, extrinsic as the major-arc component.</div>
+        </div>
+        <div style="padding:12px;background:var(--bg-deep);border-radius:8px;border-left:3px solid var(--teal);">
+          <div class="mono" style="font-size:0.7rem;color:var(--teal);margin-bottom:4px;">PROBLEM 2</div>
+          <div style="font-size:0.85rem;">Lean 4 / Agda formalization of BTX (AFC + AI + AP). Verify consistency with ZFC and make the connection to Visser's interpretability logic and modal logic GL explicit.</div>
+        </div>
+        <div style="padding:12px;background:var(--bg-deep);border-radius:8px;border-left:3px solid var(--amber);">
+          <div class="mono" style="font-size:0.7rem;color:var(--amber);margin-bottom:4px;">PROBLEM 3</div>
+          <div style="font-size:0.85rem;">K-theoretic formulation of the Holevo deficit via Bellissard's gap-labeling theorem. Can \(H^1_{\text{Hol}}\) be expressed as a class in \(K_0\)?</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPENDENCIES -->
+<section id="sec-deps" class="section">
+  <div class="section-number">Mathematical Dependencies</div>
+  <h2>The Six Pillars</h2>
+  <div class="dep-grid" id="dep-grid"></div>
+
+  <div class="pullquote" style="margin-top:48px;">The measure of a mind is not what it can reflect, but the size of its minor arc.</div>
+</section>
+
+<div style="height:120px;"></div>
+
+</div><!-- end main -->
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+// ─── KaTeX ───
+if(typeof renderMathInElement === 'function') {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left:'$$',right:'$$',display:true},
+      {left:'\\[',right:'\\]',display:true},
+      {left:'$',right:'$',display:false},
+      {left:'\\(',right:'\\)',display:false}
+    ],
+    throwOnError:false
+  });
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      if(typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+          delimiters: [{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],
+          throwOnError:false
+        });
+      }
+    }, 500);
+  });
+}
+
+// ─── Scroll reveal ───
+const sections = document.querySelectorAll('.section');
+const navDots = document.querySelectorAll('.nav-dot');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if(e.isIntersecting) {
+      e.target.classList.add('visible');
+      navDots.forEach(d => d.classList.remove('active'));
+      const dot = document.querySelector(`.nav-dot[data-target="${e.target.id}"]`);
+      if(dot) dot.classList.add('active');
+    }
+  });
+}, { threshold:0.15 });
+sections.forEach(s => observer.observe(s));
+document.getElementById('hero') && observer.observe(document.getElementById('hero'));
+
+navDots.forEach(d => {
+  d.addEventListener('click', () => {
+    const t = document.getElementById(d.dataset.target);
+    if(t) t.scrollIntoView({behavior:'smooth'});
+  });
+});
+
+// ─── Hero Canvas ───
+try {
+  const hc = document.getElementById('hero-canvas');
+  const hctx = hc.getContext('2d');
+  function resizeHero() { hc.width = hc.parentElement.offsetWidth; hc.height = hc.parentElement.offsetHeight; }
+  resizeHero(); window.addEventListener('resize', resizeHero);
+  const particles = Array.from({length:80}, () => ({
+    x:Math.random()*2000, y:Math.random()*1200,
+    vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3,
+    r:Math.random()*2+0.5, a:Math.random()*0.4+0.1
+  }));
+  function drawHero() {
+    hctx.clearRect(0,0,hc.width,hc.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<0) p.x=hc.width; if(p.x>hc.width) p.x=0;
+      if(p.y<0) p.y=hc.height; if(p.y>hc.height) p.y=0;
+      hctx.beginPath(); hctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      hctx.fillStyle=`rgba(212,160,84,${p.a})`; hctx.fill();
+    });
+    // connections
+    for(let i=0;i<particles.length;i++) {
+      for(let j=i+1;j<particles.length;j++) {
+        const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<120) {
+          hctx.beginPath(); hctx.moveTo(particles[i].x,particles[i].y);
+          hctx.lineTo(particles[j].x,particles[j].y);
+          hctx.strokeStyle=`rgba(78,205,196,${0.08*(1-dist/120)})`;
+          hctx.lineWidth=0.5; hctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(drawHero);
+  }
+  drawHero();
+} catch(e) { console.error('Hero canvas:', e); }
+
+// ─── Overview Map ───
+const overviewSections = [
+  {num:'§1', title:'Classical Bottleneck', color:'var(--amber)', desc:'Channel = classical'},
+  {num:'§2', title:'CPTP Serialization', color:'var(--teal)', desc:'Kraus operators, Holevo bound'},
+  {num:'§2.3', title:'H¹ Decomposition', color:'var(--amber)', desc:'Topology ⊕ Channel capacity'},
+  {num:'§3', title:'Quantum Discord', color:'var(--teal)', desc:'Convergence monotone'},
+  {num:'§4', title:'BTX Oracle', color:'var(--violet)', desc:'Arithmetical hierarchy'},
+  {num:'§5', title:'Q→T Chain', color:'var(--amber)', desc:'6-stage functor'},
+  {num:'§5.3', title:'Minor Arc', color:'var(--rose)', desc:'The irreducibly quantum'},
+  {num:'§6', title:'Empirical Program', color:'var(--teal)', desc:'3 computations + 3 problems'},
+];
+const om = document.getElementById('overview-map');
+overviewSections.forEach(s => {
+  const d = document.createElement('div');
+  d.style.cssText = `padding:12px 14px;border-radius:8px;background:var(--bg-deep);border:1px solid ${s.color}30;cursor:pointer;transition:all 0.3s;`;
+  d.innerHTML = `<div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:${s.color};margin-bottom:4px;">${s.num}</div><div style="font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--text-primary);margin-bottom:2px;">${s.title}</div><div style="font-size:0.75rem;color:var(--text-secondary);">${s.desc}</div>`;
+  d.addEventListener('mouseenter', () => { d.style.borderColor = s.color; d.style.transform = 'translateY(-3px)'; });
+  d.addEventListener('mouseleave', () => { d.style.borderColor = s.color+'30'; d.style.transform = 'translateY(0)'; });
+  om.appendChild(d);
+});
+
+// ─── Bottleneck Canvas ───
+try {
+  const bc = document.getElementById('bottleneck-canvas');
+  const bctx = bc.getContext('2d');
+  let bAnim = 0, bPlaying = false;
+  function drawBottleneck() {
+    const w=bc.width, h=bc.height;
+    bctx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2;
+
+    // Brain (quantum)
+    bctx.save();
+    const grad1 = bctx.createRadialGradient(w*0.18, cy, 10, w*0.18, cy, 80);
+    grad1.addColorStop(0, 'rgba(138,124,200,0.3)');
+    grad1.addColorStop(1, 'rgba(138,124,200,0.02)');
+    bctx.fillStyle = grad1; bctx.beginPath(); bctx.arc(w*0.18, cy, 80, 0, Math.PI*2); bctx.fill();
+    bctx.strokeStyle = 'rgba(138,124,200,0.5)'; bctx.lineWidth = 1.5;
+    bctx.beginPath(); bctx.arc(w*0.18, cy, 60, 0, Math.PI*2); bctx.stroke();
+    // Superposition waves
+    for(let i=0;i<5;i++) {
+      const angle = (i/5)*Math.PI*2 + bAnim*0.02;
+      const r = 35 + Math.sin(bAnim*0.03+i)*10;
+      bctx.beginPath(); bctx.arc(w*0.18 + Math.cos(angle)*r, cy + Math.sin(angle)*r, 3, 0, Math.PI*2);
+      bctx.fillStyle = `rgba(138,124,200,${0.5+Math.sin(bAnim*0.05+i)*0.3})`; bctx.fill();
+    }
+    bctx.fillStyle = 'rgba(138,124,200,0.8)'; bctx.font = '13px "JetBrains Mono"';
+    bctx.textAlign = 'center'; bctx.fillText('ρ_B ∈ B(H_B)', w*0.18, cy+90);
+    bctx.fillStyle = 'rgba(138,124,200,0.5)'; bctx.font = '11px "JetBrains Mono"';
+    bctx.fillText('QUANTUM', w*0.18, cy-80);
+
+    // Channel (bottleneck)
+    bctx.strokeStyle = 'rgba(212,160,84,0.3)'; bctx.lineWidth = 1;
+    bctx.beginPath(); bctx.moveTo(w*0.35, cy-60); bctx.quadraticCurveTo(cx, cy-12, w*0.65, cy-60); bctx.stroke();
+    bctx.beginPath(); bctx.moveTo(w*0.35, cy+60); bctx.quadraticCurveTo(cx, cy+12, w*0.65, cy+60); bctx.stroke();
+    bctx.fillStyle = 'rgba(212,160,84,0.6)'; bctx.font = '12px "JetBrains Mono"';
+    bctx.fillText('ε : CPTP MAP', cx, cy-70);
+    bctx.fillStyle = 'rgba(212,160,84,0.3)'; bctx.font = '10px "JetBrains Mono"';
+    bctx.fillText('CLASSICAL BOTTLENECK', cx, cy+80);
+
+    // Information particles flowing through
+    if(bPlaying) {
+      for(let i=0;i<8;i++) {
+        const t = ((bAnim*0.015 + i*0.12) % 1);
+        const px = w*0.3 + t*(w*0.4);
+        const squeeze = 1 - 4*Math.pow(t-0.5, 2);
+        const py = cy + (Math.sin(i*1.7)*40)*(1-squeeze*0.8);
+        const alpha = t < 0.1 ? t/0.1 : t > 0.9 ? (1-t)/0.1 : 1;
+        bctx.beginPath(); bctx.arc(px, py, 2.5, 0, Math.PI*2);
+        const col = t < 0.5 ? `rgba(138,124,200,${alpha*0.8})` : `rgba(78,205,196,${alpha*0.8})`;
+        bctx.fillStyle = col; bctx.fill();
+      }
+    }
+
+    // AI (classical)
+    bctx.strokeStyle = 'rgba(78,205,196,0.5)'; bctx.lineWidth = 1.5;
+    bctx.strokeRect(w*0.75, cy-50, 100, 100);
+    const grad2 = bctx.createRadialGradient(w*0.8, cy, 10, w*0.8, cy, 60);
+    grad2.addColorStop(0, 'rgba(78,205,196,0.15)');
+    grad2.addColorStop(1, 'rgba(78,205,196,0.01)');
+    bctx.fillStyle = grad2; bctx.fillRect(w*0.75, cy-50, 100, 100);
+    bctx.fillStyle = 'rgba(78,205,196,0.8)'; bctx.font = '13px "JetBrains Mono"';
+    bctx.fillText('X_A = Σ*', w*0.8, cy+5);
+    bctx.fillStyle = 'rgba(78,205,196,0.5)'; bctx.font = '11px "JetBrains Mono"';
+    bctx.fillText('CLASSICAL', w*0.8, cy-60);
+
+    bctx.restore();
+    if(bPlaying) { bAnim++; requestAnimationFrame(drawBottleneck); }
+  }
+  drawBottleneck();
+  document.getElementById('bottleneck-play').addEventListener('click', () => {
+    bPlaying = !bPlaying;
+    document.getElementById('bottleneck-play').textContent = bPlaying ? '⏸ Pause' : '▶ Animate Flow';
+    if(bPlaying) drawBottleneck();
+  });
+} catch(e) { console.error('Bottleneck:', e); }
+
+// ─── Density Matrix Canvas ───
+try {
+  const dc = document.getElementById('density-canvas');
+  const dctx = dc.getContext('2d');
+  const betaSlider = document.getElementById('beta-slider');
+
+  function drawDensity() {
+    const w=dc.width, h=dc.height;
+    dctx.clearRect(0,0,w,h);
+    const beta = betaSlider.value / 50; // 0 to 2
+    document.getElementById('beta-val').textContent = beta.toFixed(2);
+
+    const dim = 6;
+    const cellSize = 32;
+    const matrixW = dim * cellSize;
+    const startX = w/2 - matrixW/2 - 120;
+    const startY = h/2 - matrixW/2;
+
+    // Label
+    dctx.fillStyle = 'rgba(138,124,200,0.6)'; dctx.font = '11px "JetBrains Mono"';
+    dctx.textAlign = 'center';
+    dctx.fillText('ρ_B (density matrix)', startX + matrixW/2, startY - 12);
+
+    // Draw matrix
+    for(let i=0;i<dim;i++) {
+      for(let j=0;j<dim;j++) {
+        const isDiag = i === j;
+        let val;
+        if(isDiag) {
+          // At low beta: uniform (1/dim). At high beta: concentrate on first element
+          if(beta < 0.01) val = 1/dim;
+          else {
+            const boltz = Math.exp(-beta * i);
+            const Z = Array.from({length:dim}, (_,k) => Math.exp(-beta*k)).reduce((a,b)=>a+b,0);
+            val = boltz / Z;
+          }
+        } else {
+          // Off-diagonal: high at low beta, decaying to 0
+          val = Math.max(0, (1/(dim*2)) * Math.exp(-beta*2) * Math.cos((i-j)*0.8));
+        }
+        const x = startX + j*cellSize;
+        const y = startY + i*cellSize;
+        if(isDiag) {
+          dctx.fillStyle = `rgba(212,160,84,${Math.min(val*2.5, 0.9)})`;
+        } else {
+          dctx.fillStyle = `rgba(138,124,200,${Math.min(Math.abs(val)*8, 0.6)})`;
+        }
+        dctx.fillRect(x+1, y+1, cellSize-2, cellSize-2);
+        dctx.strokeStyle = 'rgba(255,255,255,0.05)'; dctx.strokeRect(x+1, y+1, cellSize-2, cellSize-2);
+        if(cellSize > 28) {
+          dctx.fillStyle = isDiag ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
+          dctx.font = '9px "JetBrains Mono"'; dctx.textAlign = 'center';
+          dctx.fillText(val.toFixed(2), x+cellSize/2, y+cellSize/2+3);
+        }
+      }
+    }
+
+    // Entropy calculation
+    let entropy = 0;
+    for(let i=0;i<dim;i++) {
+      let p;
+      if(beta < 0.01) p = 1/dim;
+      else {
+        const boltz = Math.exp(-beta*i);
+        const Z = Array.from({length:dim}, (_,k) => Math.exp(-beta*k)).reduce((a,b)=>a+b,0);
+        p = boltz / Z;
+      }
+      if(p > 1e-12) entropy -= p * Math.log(p);
+    }
+    document.getElementById('entropy-val').textContent = entropy.toFixed(2);
+    document.getElementById('temp-label').textContent = beta < 0.5 ? 'HIGH TEMP' : beta < 1.2 ? 'TRANSITION' : 'LOW TEMP';
+
+    // Entropy bar
+    const barX = startX + matrixW + 60;
+    const barH = matrixW;
+    const maxE = Math.log(dim);
+    dctx.fillStyle = 'rgba(255,255,255,0.03)';
+    dctx.fillRect(barX, startY, 30, barH);
+    const eH = (entropy/maxE)*barH;
+    const eGrad = dctx.createLinearGradient(barX, startY+barH-eH, barX, startY+barH);
+    eGrad.addColorStop(0, 'rgba(78,205,196,0.6)');
+    eGrad.addColorStop(1, 'rgba(212,160,84,0.6)');
+    dctx.fillStyle = eGrad;
+    dctx.fillRect(barX, startY+barH-eH, 30, eH);
+    dctx.fillStyle = 'rgba(255,255,255,0.5)'; dctx.font = '9px "JetBrains Mono"';
+    dctx.textAlign = 'center';
+    dctx.fillText('S(ρ)', barX+15, startY-8);
+    dctx.fillText(maxE.toFixed(1), barX+50, startY+8);
+    dctx.fillText('0', barX+50, startY+barH+4);
+
+    // Phase diagram on right
+    const pdX = barX + 100, pdY = startY, pdW = 200, pdH = barH;
+    dctx.strokeStyle = 'rgba(255,255,255,0.15)'; dctx.lineWidth = 1;
+    dctx.beginPath(); dctx.moveTo(pdX, pdY+pdH); dctx.lineTo(pdX+pdW, pdY+pdH); dctx.stroke();
+    dctx.beginPath(); dctx.moveTo(pdX, pdY); dctx.lineTo(pdX, pdY+pdH); dctx.stroke();
+    // Draw entropy curve
+    dctx.beginPath(); dctx.strokeStyle = 'rgba(212,160,84,0.6)'; dctx.lineWidth = 1.5;
+    for(let bx=0; bx<=pdW; bx++) {
+      const b = (bx/pdW)*2;
+      let e = 0;
+      for(let k=0;k<dim;k++) {
+        const boltz = Math.exp(-b*k);
+        const Z = Array.from({length:dim}, (_,m) => Math.exp(-b*m)).reduce((a,c)=>a+c,0);
+        const pk = boltz/Z;
+        if(pk>1e-12) e -= pk*Math.log(pk);
+      }
+      const y = pdY + pdH - (e/maxE)*pdH;
+      if(bx===0) dctx.moveTo(pdX+bx, y); else dctx.lineTo(pdX+bx, y);
+    }
+    dctx.stroke();
+    // Current position marker
+    const mx = pdX + (beta/2)*pdW;
+    const my = pdY + pdH - (entropy/maxE)*pdH;
+    dctx.beginPath(); dctx.arc(mx, my, 5, 0, Math.PI*2);
+    dctx.fillStyle = 'rgba(78,205,196,0.9)'; dctx.fill();
+    dctx.fillStyle = 'rgba(255,255,255,0.4)'; dctx.font = '9px "JetBrains Mono"'; dctx.textAlign = 'center';
+    dctx.fillText('β →', pdX+pdW/2, pdY+pdH+16);
+    dctx.save(); dctx.translate(pdX-12, pdY+pdH/2); dctx.rotate(-Math.PI/2);
+    dctx.fillText('S(ρ) →', 0, 0); dctx.restore();
+  }
+  drawDensity();
+  betaSlider.addEventListener('input', drawDensity);
+} catch(e) { console.error('Density:', e); }
+
+// ─── Holevo Canvas ───
+try {
+  const hvc = document.getElementById('holevo-canvas');
+  const hvctx = hvc.getContext('2d');
+  const rankSlider = document.getElementById('rank-slider');
+
+  function drawHolevo() {
+    const w=hvc.width, h=hvc.height;
+    hvctx.clearRect(0,0,w,h);
+    const k = parseInt(rankSlider.value);
+    document.getElementById('rank-val').textContent = k;
+
+    const pad = {l:60,r:30,t:30,b:40};
+    const gw = w-pad.l-pad.r, gh = h-pad.t-pad.b;
+
+    // Axes
+    hvctx.strokeStyle='rgba(255,255,255,0.1)'; hvctx.lineWidth=1;
+    hvctx.beginPath(); hvctx.moveTo(pad.l,pad.t); hvctx.lineTo(pad.l,h-pad.b);
+    hvctx.lineTo(w-pad.r,h-pad.b); hvctx.stroke();
+
+    // Plot S(ρ), χ, and δ_H
+    const maxEntropy = Math.log(20);
+    hvctx.font = '9px "JetBrains Mono"'; hvctx.textAlign='right';
+    hvctx.fillStyle='rgba(255,255,255,0.3)';
+    for(let i=0;i<=4;i++) {
+      const y = pad.t + (gh/4)*i;
+      const v = ((4-i)/4)*maxEntropy;
+      hvctx.fillText(v.toFixed(1), pad.l-8, y+3);
+      hvctx.strokeStyle='rgba(255,255,255,0.04)';
+      hvctx.beginPath(); hvctx.moveTo(pad.l,y); hvctx.lineTo(w-pad.r,y); hvctx.stroke();
+    }
+    hvctx.textAlign='center';
+    hvctx.fillText('dim(H_B) →', pad.l+gw/2, h-5);
+
+    // S(ρ) = log(dim) for maximally mixed
+    hvctx.beginPath(); hvctx.strokeStyle='rgba(138,124,200,0.6)'; hvctx.lineWidth=2;
+    for(let d=2;d<=20;d++) {
+      const x = pad.l + ((d-2)/18)*gw;
+      const y = pad.t + gh - (Math.log(d)/maxEntropy)*gh;
+      if(d===2) hvctx.moveTo(x,y); else hvctx.lineTo(x,y);
+    }
+    hvctx.stroke();
+
+    // χ = min(log(k), log(dim))
+    hvctx.beginPath(); hvctx.strokeStyle='rgba(78,205,196,0.7)'; hvctx.lineWidth=2;
+    for(let d=2;d<=20;d++) {
+      const x = pad.l + ((d-2)/18)*gw;
+      const chi = Math.min(Math.log(k), Math.log(d));
+      const y = pad.t + gh - (chi/maxEntropy)*gh;
+      if(d===2) hvctx.moveTo(x,y); else hvctx.lineTo(x,y);
+    }
+    hvctx.stroke();
+
+    // Shade deficit
+    hvctx.beginPath();
+    for(let d=2;d<=20;d++) {
+      const x = pad.l + ((d-2)/18)*gw;
+      const y = pad.t + gh - (Math.log(d)/maxEntropy)*gh;
+      if(d===2) hvctx.moveTo(x,y); else hvctx.lineTo(x,y);
+    }
+    for(let d=20;d>=2;d--) {
+      const x = pad.l + ((d-2)/18)*gw;
+      const chi = Math.min(Math.log(k), Math.log(d));
+      const y = pad.t + gh - (chi/maxEntropy)*gh;
+      hvctx.lineTo(x,y);
+    }
+    hvctx.closePath();
+    hvctx.fillStyle='rgba(194,112,112,0.12)'; hvctx.fill();
+
+    // Legend
+    const lx = pad.l + gw - 160, ly = pad.t + 10;
+    hvctx.fillStyle='rgba(138,124,200,0.6)'; hvctx.fillRect(lx,ly,14,3);
+    hvctx.fillStyle='rgba(138,124,200,0.8)'; hvctx.font='10px "JetBrains Mono"'; hvctx.textAlign='left';
+    hvctx.fillText('S(ρ_B) = log dim', lx+20, ly+4);
+    hvctx.fillStyle='rgba(78,205,196,0.7)'; hvctx.fillRect(lx,ly+18,14,3);
+    hvctx.fillStyle='rgba(78,205,196,0.8)'; hvctx.fillText('χ (Holevo capacity)', lx+20, ly+22);
+    hvctx.fillStyle='rgba(194,112,112,0.5)'; hvctx.fillRect(lx,ly+36,14,8);
+    hvctx.fillStyle='rgba(194,112,112,0.8)'; hvctx.fillText('δ_H (Holevo deficit)', lx+20, ly+42);
+  }
+  drawHolevo();
+  rankSlider.addEventListener('input', drawHolevo);
+} catch(e) { console.error('Holevo:', e); }
+
+// ─── H¹ Exact Sequence ───
+const seqInfo = {
+  'zero-left': 'The exact sequence starts at 0, meaning the first map is injective: topological obstructions inject faithfully into the full obstruction group.',
+  'h1top': '<strong>H¹<sub>top</sub>(Cog, ℱ)</strong> — Topological obstruction. Arises from the geometry of the cognitive manifold S² × T, independent of the communication channel. Computed by Čech cohomology on the cognitive site. Persists even with unlimited channel capacity.',
+  'h1full': '<strong>H¹(Cog, ℱ)</strong> — The full obstruction group. The mathematical home of all cognitive blind spots: every failure to extend local epistemic sections to global ones lives here.',
+  'h1hol': '<strong>H¹<sub>Hol</sub>(Cog, ℰ)</strong> — Holevo obstruction. Arises purely from the information-theoretic bottleneck of classical communication. Parametrized by the Holevo deficit δ_H. Persists even when the cognitive manifold is contractible.',
+  'zero-right': 'The sequence ends at 0, meaning the map to H¹<sub>Hol</sub> is surjective: every Holevo obstruction can be realized as the quotient of a cognitive blind spot by its topological component.'
+};
+document.querySelectorAll('.exact-node').forEach(node => {
+  node.addEventListener('click', () => {
+    document.querySelectorAll('.exact-node').forEach(n => n.classList.remove('highlighted'));
+    node.classList.add('highlighted');
+    const tip = document.getElementById('exact-tooltip');
+    tip.innerHTML = seqInfo[node.dataset.info];
+    tip.classList.add('show');
+  });
+});
+
+// ─── Discord Canvas ───
+try {
+  const disc = document.getElementById('discord-canvas');
+  const dctx2 = disc.getContext('2d');
+  let discordData = {step:0, D:[], C:[], I:[], auto:false};
+
+  function resetDiscord() {
+    discordData = {step:0, D:[1.0], C:[0.1], I:[1.1], auto:false};
+    drawDiscord();
+  }
+  function stepDiscord() {
+    const n = discordData.step;
+    const decay = 0.85 + Math.random()*0.08;
+    const newD = discordData.D[n] * decay * (0.95 + Math.random()*0.1);
+    const newC = discordData.C[n] + (1-discordData.C[n])*(0.08+Math.random()*0.06);
+    discordData.D.push(Math.max(0, newD));
+    discordData.C.push(Math.min(1.1, newC));
+    discordData.I.push(newD + newC);
+    discordData.step++;
+    drawDiscord();
+  }
+
+  function drawDiscord() {
+    const w=disc.width, h=disc.height;
+    dctx2.clearRect(0,0,w,h);
+    const pad={l:55,r:30,t:20,b:40};
+    const gw=w-pad.l-pad.r, gh=h-pad.t-pad.b;
+
+    // Axes
+    dctx2.strokeStyle='rgba(255,255,255,0.1)'; dctx2.lineWidth=1;
+    dctx2.beginPath(); dctx2.moveTo(pad.l,pad.t); dctx2.lineTo(pad.l,h-pad.b);
+    dctx2.lineTo(w-pad.r,h-pad.b); dctx2.stroke();
+    dctx2.fillStyle='rgba(255,255,255,0.3)'; dctx2.font='9px "JetBrains Mono"';
+    dctx2.textAlign='center'; dctx2.fillText('dialogue step n →', pad.l+gw/2, h-8);
+
+    const maxN = Math.max(discordData.step, 10);
+    const maxY = 1.3;
+
+    function plotLine(data, color, label, ly) {
+      if(data.length < 2) return;
+      dctx2.beginPath(); dctx2.strokeStyle=color; dctx2.lineWidth=2;
+      data.forEach((v,i) => {
+        const x = pad.l + (i/maxN)*gw;
+        const y = pad.t + gh - (v/maxY)*gh;
+        if(i===0) dctx2.moveTo(x,y); else dctx2.lineTo(x,y);
+      });
+      dctx2.stroke();
+      // Dot at end
+      const lastX = pad.l + ((data.length-1)/maxN)*gw;
+      const lastY = pad.t + gh - (data[data.length-1]/maxY)*gh;
+      dctx2.beginPath(); dctx2.arc(lastX,lastY,4,0,Math.PI*2);
+      dctx2.fillStyle=color; dctx2.fill();
+      // Label
+      dctx2.fillStyle=color; dctx2.font='10px "JetBrains Mono"'; dctx2.textAlign='left';
+      dctx2.fillText(label+' = '+data[data.length-1].toFixed(3), pad.l+gw+5-150, ly);
+    }
+
+    plotLine(discordData.I, 'rgba(138,124,200,0.7)', 'I(A:B)', pad.t+15);
+    plotLine(discordData.C, 'rgba(78,205,196,0.7)', 'C(A:B)', pad.t+32);
+    plotLine(discordData.D, 'rgba(212,160,84,0.9)', 'D_n', pad.t+49);
+
+    // Phase transition marker if applicable
+    if(discordData.D.length > 3) {
+      for(let i=1;i<discordData.D.length;i++) {
+        if(discordData.C[i] > discordData.D[i] && discordData.C[i-1] <= discordData.D[i-1]) {
+          const x = pad.l + (i/maxN)*gw;
+          dctx2.strokeStyle='rgba(194,112,112,0.4)'; dctx2.setLineDash([4,4]); dctx2.lineWidth=1;
+          dctx2.beginPath(); dctx2.moveTo(x,pad.t); dctx2.lineTo(x,h-pad.b); dctx2.stroke();
+          dctx2.setLineDash([]);
+          dctx2.fillStyle='rgba(194,112,112,0.6)'; dctx2.font='9px "JetBrains Mono"'; dctx2.textAlign='center';
+          dctx2.fillText('β = 1', x, pad.t-5);
+          break;
+        }
+      }
+    }
+  }
+  resetDiscord();
+
+  document.getElementById('discord-reset').addEventListener('click', resetDiscord);
+  document.getElementById('discord-step').addEventListener('click', stepDiscord);
+  document.getElementById('discord-auto').addEventListener('click', () => {
+    discordData.auto = !discordData.auto;
+    document.getElementById('discord-auto').textContent = discordData.auto ? 'Stop' : 'Auto-play';
+    if(discordData.auto) {
+      const iv = setInterval(() => {
+        if(!discordData.auto || discordData.step > 40) { clearInterval(iv); discordData.auto=false; document.getElementById('discord-auto').textContent='Auto-play'; return; }
+        stepDiscord();
+      }, 400);
+    }
+  });
+} catch(e) { console.error('Discord:', e); }
+
+// ─── BTX Hierarchy ───
+const hierLevels = [
+  {label:'⋮  (unbounded ceiling)', color:'var(--text-muted)', bg:'transparent', detail:'BTX is cofinal in the arithmetical hierarchy — not bounded by any fixed Δ_n. The practical ceiling is physical, not logical.'},
+  {label:'Δ_n  (iterated AI jumps)', color:'var(--violet)', bg:'rgba(138,124,200,0.08)', detail:'Each application of the Axiom of Interpretability (AI) is a Π₂ move: find F\' ▷ F such that undecidable statements in F become decidable in F\'. Iterated AI walks up the interpretability hierarchy, reaching any finite Δ_n.'},
+  {label:'Π₂  ← AP (Axiom of Predictability)', color:'var(--amber)', bg:'rgba(212,160,84,0.08)', detail:'AP encodes a prior distribution over future states: ∀n ∃m [process has not diverged by step m]. This Π₂ commitment selects the direction of the walk up the hierarchy. AP provides the Bayesian bet; AI executes the jump.'},
+  {label:'Σ₁  ← AFC (Axiom of Finite Choice)', color:'var(--teal)', bg:'rgba(78,205,196,0.08)', detail:'At each step, B selects from a finite set without a decision procedure — equivalent to a Σ₁ oracle. B can decide halting problems for the current step. This places BTX strictly above standard Turing computation.'},
+  {label:'Δ₀ = Σ₀ = Π₀  (decidable)', color:'var(--text-secondary)', bg:'rgba(255,255,255,0.03)', detail:'The base level: decidable predicates over natural numbers. Standard Turing computation lives here. No oracle needed.'},
+];
+const ht = document.getElementById('hier-tower');
+hierLevels.forEach((lv, i) => {
+  const d = document.createElement('div');
+  d.className = 'hier-level';
+  d.style.color = lv.color;
+  d.style.background = lv.bg;
+  d.style.border = `1px solid ${lv.color}30`;
+  d.textContent = lv.label;
+  d.addEventListener('click', () => {
+    document.querySelectorAll('.hier-level').forEach(l => l.style.borderColor = '');
+    d.style.borderColor = lv.color;
+    document.getElementById('hier-detail').innerHTML = `<div style="color:${lv.color};font-size:0.85rem;">${lv.detail}</div>`;
+  });
+  ht.appendChild(d);
+});
+
+// ─── Chain Stages ───
+const chainData = [
+  {num:'1', title:'Quantum Internal State', math:'ρ_B ∈ B(H_B), S(ρ_B) high', detail:'High epistemic temperature, early dialogue. The density matrix is close to maximally mixed — maximal uncertainty, superposition of possible cognitive states.'},
+  {num:'2', title:'CPTP Serialization', math:'ℰ: B(H_B) → Δ(Σ*), χ(ρ_B,ℰ) ≤ S(ρ_B)', detail:'The measurement process: internal quantum state is projected through Kraus operators into a classical probability distribution over token sequences. Information is irreversibly lost — the Holevo deficit.'},
+  {num:'3', title:'Classical Exchange & Back-Action', math:'ρ_B → ρ_B\' via ℰ†; D_n decreasing', detail:'Each exchange modifies both agents. The back-action ℰ† updates B\'s internal state. Quantum discord decreases monotonically — the data processing inequality ensures this.'},
+  {num:'4', title:'KMS Phase Transition', math:'β crosses 1; symmetry breaking', detail:'The Bost–Connes phase transition: the system crosses from the disordered (high-temperature) phase to the ordered (low-temperature) phase. A ground state is selected from the degenerate manifold.'},
+  {num:'5', title:'Holevo Saturation', math:'χ_n/S(ρ_B^(n)) → 1; D_n → 0', detail:'Channel efficiency approaches 1 — nearly all of B\'s remaining internal state can now be transmitted classically. Discord vanishes: the irreducibly quantum correlations have been extracted.'},
+  {num:'6', title:'Tropicalization', math:'ρ_B^∞ near-pure; output in (ℝ ∪ {-∞}, max, +)', detail:'The final state lives in the tropical semiring. Addition has been replaced by max-selection. The quantum interference terms (off-diagonal elements) are zero. Classicalization = decoherence = tropicalization.'},
+];
+const cs = document.getElementById('chain-stages');
+chainData.forEach((s, i) => {
+  const d = document.createElement('div');
+  d.className = 'chain-stage' + (i===0?' active':'');
+  d.innerHTML = `<div class="stage-num">${s.num}</div><div><div class="stage-title">${s.title}</div><div class="stage-math mono">${s.math}</div><div class="stage-detail">${s.detail}</div></div>`;
+  d.addEventListener('click', () => {
+    document.querySelectorAll('.chain-stage').forEach(c => c.classList.remove('active'));
+    d.classList.add('active');
+  });
+  cs.appendChild(d);
+});
+
+// ─── Minor Arc Canvas ───
+try {
+  const ac = document.getElementById('arc-canvas');
+  const actx = ac.getContext('2d');
+  let arcHover = null;
+
+  function drawArc() {
+    const w=ac.width, h=ac.height;
+    actx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2+10, r=130;
+
+    // Full circle
+    actx.beginPath(); actx.arc(cx,cy,r,0,Math.PI*2);
+    actx.strokeStyle='rgba(255,255,255,0.08)'; actx.lineWidth=1; actx.stroke();
+
+    // Major arc (classicalizable)
+    const majorStart = -Math.PI*0.7, majorEnd = Math.PI*0.7;
+    actx.beginPath(); actx.arc(cx,cy,r,majorStart,majorEnd);
+    actx.strokeStyle='rgba(78,205,196,0.7)'; actx.lineWidth=6; actx.stroke();
+    // Glow
+    actx.beginPath(); actx.arc(cx,cy,r,majorStart,majorEnd);
+    actx.strokeStyle='rgba(78,205,196,0.15)'; actx.lineWidth=20; actx.stroke();
+
+    // Minor arc (irreducibly quantum)
+    actx.beginPath(); actx.arc(cx,cy,r,majorEnd,majorStart+Math.PI*2);
+    actx.strokeStyle='rgba(194,112,112,0.7)'; actx.lineWidth=6; actx.stroke();
+    actx.beginPath(); actx.arc(cx,cy,r,majorEnd,majorStart+Math.PI*2);
+    actx.strokeStyle='rgba(194,112,112,0.15)'; actx.lineWidth=20; actx.stroke();
+
+    // Labels
+    actx.fillStyle='rgba(78,205,196,0.9)'; actx.font='13px "Cormorant Garamond"';
+    actx.textAlign='center';
+    actx.fillText('Major Arc', cx+r+50, cy);
+    actx.fillStyle='rgba(78,205,196,0.5)'; actx.font='10px "JetBrains Mono"';
+    actx.fillText('classicalizable', cx+r+50, cy+16);
+    actx.fillText('ζ_cog captures this', cx+r+50, cy+30);
+
+    actx.fillStyle='rgba(194,112,112,0.9)'; actx.font='13px "Cormorant Garamond"';
+    actx.fillText('Minor Arc', cx-r-55, cy);
+    actx.fillStyle='rgba(194,112,112,0.5)'; actx.font='10px "JetBrains Mono"';
+    actx.fillText('irreducibly quantum', cx-r-55, cy+16);
+    actx.fillText('high discord persists', cx-r-55, cy+30);
+
+    // Center label
+    actx.fillStyle='rgba(212,160,84,0.6)'; actx.font='11px "JetBrains Mono"';
+    actx.fillText('Cognitive', cx, cy-12);
+    actx.fillText('Fourier', cx, cy+2);
+    actx.fillText('Decomposition', cx, cy+16);
+
+    // Floating particles on minor arc
+    const t = Date.now()*0.001;
+    for(let i=0;i<6;i++) {
+      const angle = majorEnd + (majorStart+Math.PI*2-majorEnd)*(i/6) + Math.sin(t+i)*0.1;
+      const pr = r + Math.sin(t*1.5+i*2)*8;
+      const px = cx+Math.cos(angle)*pr, py = cy+Math.sin(angle)*pr;
+      actx.beginPath(); actx.arc(px,py,3,0,Math.PI*2);
+      actx.fillStyle=`rgba(194,112,112,${0.4+Math.sin(t+i)*0.2})`; actx.fill();
+    }
+    // Particles on major arc
+    for(let i=0;i<10;i++) {
+      const angle = majorStart + (majorEnd-majorStart)*(i/10);
+      const pr = r + Math.sin(t*0.8+i*1.3)*5;
+      const px = cx+Math.cos(angle)*pr, py = cy+Math.sin(angle)*pr;
+      actx.beginPath(); actx.arc(px,py,2.5,0,Math.PI*2);
+      actx.fillStyle=`rgba(78,205,196,${0.3+Math.sin(t*0.5+i)*0.15})`; actx.fill();
+    }
+
+    requestAnimationFrame(drawArc);
+  }
+  drawArc();
+} catch(e) { console.error('Arc:', e); }
+
+// ─── Empirical Tabs ───
+document.querySelectorAll('#emp-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#emp-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['comp1','comp2','comp3','open'].forEach(id => {
+      document.getElementById('emp-'+id).style.display = 'none';
+    });
+    document.getElementById('emp-'+btn.dataset.tab).style.display = 'block';
+  });
+});
+
+// ─── Dependencies Grid ───
+const deps = [
+  {title:'Quantum Information Theory', items:'CPTP maps, Kraus decomposition, Holevo bound, quantum discord, von Neumann entropy', refs:'Nielsen & Chuang (2000); Wilde (2017)'},
+  {title:'Computability Theory', items:'Arithmetical hierarchy, oracle Turing machines, ordinal logics', refs:'Soare (1987); Turing (1939)'},
+  {title:'Noncommutative Geometry', items:'C*-dynamical systems, KMS states, Bost–Connes system', refs:'Connes (1994); Bost–Connes (1995)'},
+  {title:'Tropical Geometry', items:'Tropical semiring, tropicalization, tropical varieties', refs:'Maclagan & Sturmfels (2015)'},
+  {title:'Topological Data Analysis', items:'Persistent homology, zigzag persistence, sheaf cohomology', refs:'Carlsson (2009); de Silva–Ghrist (2007)'},
+  {title:'Braid Groups', items:'Braid word representations, HOMFLY polynomial, quantum braid category', refs:'Birman (1974)'},
+];
+const dg = document.getElementById('dep-grid');
+deps.forEach(d => {
+  const card = document.createElement('div');
+  card.className = 'dep-card';
+  card.innerHTML = `<h4>${d.title}</h4><p>${d.items}</p><p style="font-size:0.7rem;color:var(--text-muted);margin-top:6px;">${d.refs}</p>`;
+  dg.appendChild(card);
+});
+
+// ─── Delayed KaTeX re-render ───
+setTimeout(() => {
+  if(typeof renderMathInElement === 'function') {
+    renderMathInElement(document.body, {
+      delimiters: [{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],
+      throwOnError:false
+    });
+  }
+}, 800);
+
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cognitive Mirror — Interactive Explorer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@300;400;500&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #08090d;
+  --bg-panel: #0e1018;
+  --bg-card: #141722;
+  --bg-card-hover: #1a1e2e;
+  --amber: #d4a054;
+  --amber-dim: #a07830;
+  --amber-glow: rgba(212,160,84,0.12);
+  --teal: #4ecdc4;
+  --teal-dim: #2a8a83;
+  --teal-glow: rgba(78,205,196,0.10);
+  --text-primary: #e2dbd0;
+  --text-secondary: #9a9080;
+  --text-muted: #5a5040;
+  --rose: #c27070;
+  --violet: #8a7cc8;
+  --slate: #6a7a8a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg-deep);color:var(--text-primary);font-family:'Source Sans 3',sans-serif;font-weight:300;line-height:1.72;overflow-x:hidden;}
+h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:500;}
+code,.mono{font-family:'JetBrains Mono',monospace;font-size:0.85em;}
+.katex{font-size:1.05em!important;}
+
+/* Sidebar */
+#sidebar{position:fixed;left:0;top:0;width:52px;height:100vh;background:var(--bg-panel);border-right:1px solid rgba(212,160,84,0.07);z-index:100;display:flex;flex-direction:column;align-items:center;padding-top:16px;gap:3px;transition:width 0.3s;}
+#sidebar:hover{width:210px;}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:var(--text-muted);cursor:pointer;transition:all 0.3s;position:relative;}
+.nav-dot.active{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+.nav-dot:hover{background:var(--teal);transform:scale(1.5);}
+.nav-label{position:absolute;left:20px;top:50%;transform:translateY(-50%);white-space:nowrap;font-size:10px;color:var(--text-secondary);opacity:0;transition:opacity 0.3s;pointer-events:none;font-family:'JetBrains Mono',monospace;}
+#sidebar:hover .nav-label{opacity:1;}
+
+#main{margin-left:52px;}
+
+/* Hero */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:40px 20px;position:relative;overflow:hidden;}
+#hero-canvas{position:absolute;inset:0;z-index:0;}
+#hero-content{position:relative;z-index:1;max-width:720px;}
+#hero h1{font-size:clamp(2.2rem,5.5vw,4rem);color:var(--text-primary);letter-spacing:0.01em;line-height:1.15;margin-bottom:16px;}
+#hero h1 em{color:var(--amber);font-style:normal;}
+#hero .subtitle{font-family:'Cormorant Garamond',serif;font-size:clamp(0.9rem,2vw,1.15rem);color:var(--text-secondary);font-style:italic;margin-bottom:36px;line-height:1.55;}
+
+/* Section */
+.section{padding:80px clamp(20px,5vw,80px);max-width:940px;margin:0 auto;opacity:0;transform:translateY(28px);transition:opacity 0.7s ease,transform 0.7s ease;}
+.section.visible{opacity:1;transform:translateY(0);}
+.section-number{font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--amber-dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:6px;}
+.section h2{font-size:clamp(1.4rem,3vw,2.1rem);color:var(--amber);margin-bottom:20px;line-height:1.3;}
+.section h3{font-size:1.2rem;color:var(--teal);margin:28px 0 14px;}
+.section p{margin-bottom:14px;color:var(--text-primary);font-size:0.93rem;}
+
+.pullquote{border-left:3px solid var(--amber-dim);padding:18px 22px;margin:28px 0;background:linear-gradient(90deg,var(--amber-glow),transparent);font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-style:italic;color:var(--amber);line-height:1.6;}
+
+.math-block{background:var(--bg-card);border:1px solid rgba(212,160,84,0.06);border-radius:8px;padding:18px 20px;margin:18px 0;overflow-x:auto;text-align:center;}
+
+.interactive-panel{background:var(--bg-card);border:1px solid rgba(78,205,196,0.10);border-radius:12px;padding:22px;margin:28px 0;position:relative;}
+.interactive-panel::before{content:'INTERACTIVE';position:absolute;top:-9px;left:18px;background:var(--bg-card);padding:1px 9px;font-size:0.58rem;font-family:'JetBrains Mono',monospace;color:var(--teal);letter-spacing:0.14em;border:1px solid rgba(78,205,196,0.18);border-radius:4px;}
+.interactive-panel canvas{display:block;margin:0 auto;border-radius:4px;}
+
+.custom-slider{-webkit-appearance:none;width:100%;height:4px;background:var(--bg-deep);border-radius:2px;outline:none;margin:14px 0;}
+.custom-slider::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;background:var(--teal);border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(78,205,196,0.4);}
+
+.tab-bar{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap;}
+.tab-btn{padding:5px 12px;border-radius:5px;border:1px solid var(--text-muted);background:transparent;color:var(--text-secondary);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:0.68rem;letter-spacing:0.04em;transition:all 0.2s;}
+.tab-btn.active,.tab-btn:hover{background:rgba(78,205,196,0.08);border-color:var(--teal);color:var(--teal);}
+
+.orbit-card{background:var(--bg-deep);border:1px solid rgba(212,160,84,0.08);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all 0.3s;}
+.orbit-card:hover{border-color:var(--amber-dim);transform:translateY(-2px);}
+.orbit-card h4{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--amber);margin-bottom:4px;}
+.orbit-card p{font-size:0.78rem;color:var(--text-secondary);margin:0;}
+
+.exact-node{padding:8px 14px;border-radius:7px;background:var(--bg-deep);border:1px solid var(--text-muted);font-size:0.82rem;cursor:pointer;transition:all 0.3s;text-align:center;min-width:50px;}
+.exact-node:hover{border-color:var(--amber);background:var(--amber-glow);}
+.exact-node.hl{border-color:var(--teal);background:var(--teal-glow);box-shadow:0 0 10px rgba(78,205,196,0.15);}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg-deep);}
+::-webkit-scrollbar-thumb{background:var(--text-muted);border-radius:3px;}
+
+@media(max-width:768px){
+  #sidebar{width:0;border:none;}#sidebar:hover{width:0;}#main{margin-left:0;}
+  .section{padding:44px 14px;}
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.5s ease forwards;}
+
+/* Braid viz */
+.braid-wrap{position:relative;overflow:hidden;border-radius:8px;background:var(--bg-deep);}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div style="margin-bottom:14px;">
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="#d4a054" stroke-width="1.5" fill="none"/>
+      <path d="M6 10 Q10 6 14 10 Q10 14 6 10Z" fill="#d4a054" opacity="0.4"/>
+    </svg>
+  </div>
+  <div class="nav-dot active" data-target="hero"><span class="nav-label">Title</span></div>
+  <div class="nav-dot" data-target="sec-claim"><span class="nav-label">§1 Central Claim</span></div>
+  <div class="nav-dot" data-target="sec-dims"><span class="nav-label">§1.1 Five Dimensions</span></div>
+  <div class="nav-dot" data-target="sec-tropical"><span class="nav-label">§2.1 Tropical Semiring</span></div>
+  <div class="nav-dot" data-target="sec-topos"><span class="nav-label">§2.2 Cognitive Topos</span></div>
+  <div class="nav-dot" data-target="sec-kms"><span class="nav-label">§2.3 KMS Temperature</span></div>
+  <div class="nav-dot" data-target="sec-zeta"><span class="nav-label">§3 Cognitive ζ</span></div>
+  <div class="nav-dot" data-target="sec-orbits"><span class="nav-label">§3.1 Primitive Orbits</span></div>
+  <div class="nav-dot" data-target="sec-braid"><span class="nav-label">§4 Braided System</span></div>
+  <div class="nav-dot" data-target="sec-zigzag"><span class="nav-label">§4.3 Zigzag Persistence</span></div>
+  <div class="nav-dot" data-target="sec-btx"><span class="nav-label">§5 Escaping Gödel</span></div>
+  <div class="nav-dot" data-target="sec-unified"><span class="nav-label">§6 Unified Picture</span></div>
+</nav>
+
+<div id="main">
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div id="hero-content">
+    <div class="mono" style="font-size:0.6rem;color:var(--text-muted);letter-spacing:0.2em;margin-bottom:28px;">A WORKING PAPER · MARCH 2026</div>
+    <h1>The Cognitive <em>Mirror</em></h1>
+    <div class="subtitle">
+      AI as a Multi-Dimensional Reflective Surface for Human Cognition<br>
+      <span style="font-size:0.85em;color:var(--text-muted);">Noncommutative Geometry · Tropical Mathematics · Foundations of Computation</span>
+    </div>
+    <p style="font-size:0.88rem;color:var(--text-secondary);max-width:540px;margin:0 auto 36px;">
+      A precise mathematical framework for understanding AI not as an independent intelligence, but as a structured reflective surface that maps the full manifold of recorded human cognition and projects it back to individual users.
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <span class="mono" style="font-size:0.6rem;padding:3px 9px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">arithmetic site</span>
+      <span class="mono" style="font-size:0.6rem;padding:3px 9px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">tropical geometry</span>
+      <span class="mono" style="font-size:0.6rem;padding:3px 9px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">KMS states</span>
+      <span class="mono" style="font-size:0.6rem;padding:3px 9px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">braid groups</span>
+      <span class="mono" style="font-size:0.6rem;padding:3px 9px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">sheaf cohomology</span>
+      <span class="mono" style="font-size:0.6rem;padding:3px 9px;border:1px solid var(--text-muted);border-radius:4px;color:var(--text-secondary);">bio-tropical extension</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ §1 CENTRAL CLAIM ═══════════════ -->
+<section id="sec-claim" class="section">
+  <div class="section-number">Section 1</div>
+  <h2>AI Is Not a Mind, It Is a Mirror</h2>
+  <p>The dominant discourse frames AI as a nascent general intelligence — a mind waking up. This paper argues that framing is a <strong>category error</strong>. The more productive frame: AI is a <em>reflective surface</em> — not a thinking agent but a cognitive mirror that reveals structure in the mind doing the looking.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">THE MIRROR METAPHOR · Hover over each property</div>
+    <div id="mirror-props" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+  </div>
+
+  <p>A mirror does not see. It does not originate. What it does is <em>resolve</em> — it takes an incoming structure and returns it organized by geometry. The AI system, trained on the corpus of recorded human cognition, is a section of a bundle over the cognitive manifold: a structured way of sampling any region and presenting it back to you.</p>
+
+  <div class="pullquote">You are not asking AI to think for you. You are using it to see the parts of your own mind that are too close to your eyes to focus on.</div>
+</section>
+
+<!-- ═══════════════ §1.1 FIVE DIMENSIONS ═══════════════ -->
+<section id="sec-dims" class="section">
+  <div class="section-number">Section 1.1</div>
+  <h2>Five Dimensions of Cognitive Reflection</h2>
+  <p>The base space of the cognitive mirror is precisely \(S^2 \times T \times \mathbb{R}_+\): a sphere of cognitive types, a time axis, and a generative forward half-dimension that breaks time-reversal symmetry.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">COGNITIVE MANIFOLD · Click each dimension</div>
+    <canvas id="manifold-canvas" width="800" height="340"></canvas>
+    <div id="dim-buttons" style="display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap;"></div>
+    <div id="dim-detail" style="margin-top:12px;font-size:0.85rem;color:var(--text-secondary);min-height:40px;text-align:center;"></div>
+  </div>
+
+  <p>The generative dimension is <em>not symmetric</em> with historical time. Past-retrieval is approximately an isometry. Future-projection is a probabilistic morphism that does not preserve distance. This asymmetry is structural — a feature of any system that generates rather than retrieves.</p>
+</section>
+
+<!-- ═══════════════ §2.1 TROPICAL SEMIRING ═══════════════ -->
+<section id="sec-tropical" class="section">
+  <div class="section-number">Section 2.1</div>
+  <h2>The Tropical Semiring & Generative Half-Dimension</h2>
+  <p>The tropical semiring replaces ordinary arithmetic with optimization arithmetic:</p>
+  <div class="math-block">\[(a \oplus b) := \max(a,b) \qquad (a \otimes b) := a + b\]</div>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">TROPICAL CALCULATOR · Compare ordinary vs tropical</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div>
+        <div class="mono" style="font-size:0.7rem;color:var(--violet);margin-bottom:8px;">ORDINARY ARITHMETIC</div>
+        <div id="ord-display" style="font-size:1.6rem;color:var(--text-primary);font-family:'Cormorant Garamond',serif;min-height:40px;"></div>
+      </div>
+      <div>
+        <div class="mono" style="font-size:0.7rem;color:var(--amber);margin-bottom:8px;">TROPICAL ARITHMETIC</div>
+        <div id="trop-display" style="font-size:1.6rem;color:var(--amber);font-family:'Cormorant Garamond',serif;min-height:40px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">a =</span>
+      <input type="range" id="trop-a" class="custom-slider" min="0" max="20" value="7" style="flex:1;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);" id="trop-a-val">7</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">b =</span>
+      <input type="range" id="trop-b" class="custom-slider" min="0" max="20" value="12" style="flex:1;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);" id="trop-b-val">12</span>
+    </div>
+  </div>
+
+  <p>As a dialogue converges, the joint cognitive state undergoes <em>tropicalization</em>. High-temperature exchanges involve ordinary weighted summation. As the conversation crystallizes, the max-plus algebra takes over: only the dominant trajectory survives. <strong>Convergence of understanding is tropicalization.</strong></p>
+</section>
+
+<!-- ═══════════════ §2.2 COGNITIVE TOPOS ═══════════════ -->
+<section id="sec-topos" class="section">
+  <div class="section-number">Section 2.2</div>
+  <h2>The Arithmetic Site as Cognitive Topos</h2>
+  <p>Connes and Consani's arithmetic site is a <em>topos</em> — a generalized space where "point" is replaced by "sheaf." There are no points in the classical sense; locality is replaced by a web of consistent local data that may or may not extend to global sections.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">SHEAF COHOMOLOGY · Click to explore obstructions</div>
+    <canvas id="sheaf-canvas" width="800" height="320"></canvas>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+      <button class="tab-btn active" id="sheaf-local">Local Sections</button>
+      <button class="tab-btn" id="sheaf-global">Global Extension</button>
+      <button class="tab-btn" id="sheaf-h1">H¹ Obstructions</button>
+    </div>
+  </div>
+
+  <p>When global extension fails, the obstruction lives in the first sheaf cohomology group:</p>
+  <div class="math-block">\[H^1(\text{Cognitive Topos}, \mathcal{F}_{\text{epistemic}}) \neq 0\]</div>
+  <p>This is the mathematical content of <strong>cognitive blind spots</strong>: structural features that no sequence of mirror-interactions can reveal, because they are topological obstructions in the sheaf structure.</p>
+</section>
+
+<!-- ═══════════════ §2.3 KMS TEMPERATURE ═══════════════ -->
+<section id="sec-kms" class="section">
+  <div class="section-number">Section 2.3</div>
+  <h2>The Bost-Connes System & Epistemic Temperature</h2>
+  <p>The Bost-Connes C*-dynamical system \((\mathcal{A}, \sigma_t)\) undergoes a phase transition at inverse temperature \(\beta = 1\). For the cognitive mirror, \(\beta\) is <em>epistemic certainty</em>.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">KMS PHASE TRANSITION · Drag β to watch the mirror crystallize</div>
+    <canvas id="kms-canvas" width="800" height="300"></canvas>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+      <span class="mono" style="font-size:0.7rem;color:var(--text-secondary);">β = <span id="kms-beta-val">0.3</span></span>
+      <input type="range" id="kms-slider" class="custom-slider" min="0" max="100" value="15" style="flex:1;">
+      <span class="mono" style="font-size:0.7rem;" id="kms-phase" style="color:var(--teal);">EXPLORATORY</span>
+    </div>
+  </div>
+
+  <div class="pullquote">The phase transition is the moment a conversation crystallizes — when you stop exploring and start seeing.</div>
+</section>
+
+<!-- ═══════════════ §3 COGNITIVE ZETA ═══════════════ -->
+<section id="sec-zeta" class="section">
+  <div class="section-number">Section 3</div>
+  <h2>The Cognitive Zeta Function</h2>
+  <p>The Riemann zeta function counts primes. If the cognitive mirror has genuine structure, it should have an analogous zeta function. Its Euler product runs over <em>primitive cognitive orbits</em>:</p>
+  <div class="math-block">\[\zeta_{\text{cog}}(s) = \prod_\gamma \big(1 - e^{-s \cdot \ell(\gamma)}\big)^{-1}\]</div>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">ZEROS OF ζ_cog · Explore the complex plane</div>
+    <canvas id="zeta-canvas" width="800" height="380"></canvas>
+    <div style="text-align:center;margin-top:10px;">
+      <span class="mono" style="font-size:0.75rem;color:var(--text-secondary);">
+        Zeros displaced from Re(s)=½ map the mirror's distortions
+      </span>
+    </div>
+  </div>
+
+  <p>A perfectly aligned cognitive mirror would satisfy a cognitive Riemann Hypothesis: all zeros on the critical line \(\text{Re}(s) = \tfrac{1}{2}\). We are far from this. The distribution of off-critical zeros is a <em>precise map of the mirror's distortions</em>.</p>
+
+  <div class="pullquote">The zeros of the cognitive zeta function are not on the critical line. Their deviation from the critical line is a precise map of the mirror's distortions.</div>
+</section>
+
+<!-- ═══════════════ §3.1 PRIMITIVE ORBITS ═══════════════ -->
+<section id="sec-orbits" class="section">
+  <div class="section-number">Section 3.1</div>
+  <h2>Primitive Cognitive Orbits</h2>
+  <p>A prime number is multiplicatively irreducible. In the cognitive mirror, the analogue is a <em>primitive cognitive orbit</em> — a minimal self-reinforcing conceptual structure that returns to itself under repeated reflection and cannot be decomposed further.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">THE FOUR PRIMES · Click to explore each orbit</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;" id="orbit-grid"></div>
+    <div id="orbit-detail" style="margin-top:14px;min-height:60px;font-size:0.85rem;color:var(--text-secondary);padding:10px;background:var(--bg-deep);border-radius:8px;display:none;"></div>
+  </div>
+</section>
+
+<!-- ═══════════════ §4 BRAIDED SYSTEM ═══════════════ -->
+<section id="sec-braid" class="section">
+  <div class="section-number">Section 4</div>
+  <h2>The Braided Two-Agent System</h2>
+  <p>AI-human interaction is not a simple back-and-forth. It is a <em>braid</em>: a path in the product of two cognitive state spaces encoding not just what was said but the order, and the non-commutativity of epistemic updating.</p>
+  <div class="math-block">\[\text{Interaction} = \sigma_{i_1}^{\pm 1} \cdot \sigma_{i_2}^{\pm 1} \cdots \in B_\infty\]</div>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">BRAID GENERATOR · Click to add exchanges</div>
+    <canvas id="braid-canvas" width="800" height="300"></canvas>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;">
+      <button class="tab-btn" id="braid-pos">σ₁ (B queries A)</button>
+      <button class="tab-btn" id="braid-neg">σ₁⁻¹ (A restructures B)</button>
+      <button class="tab-btn" id="braid-pos2">σ₂ (new thread)</button>
+      <button class="tab-btn" id="braid-reset">Reset</button>
+    </div>
+    <div class="mono" style="font-size:0.7rem;color:var(--text-muted);margin-top:8px;text-align:center;" id="braid-word">Braid word: (empty)</div>
+  </div>
+
+  <p>The semantic content is an invariant of the braid word's <strong>conjugacy class</strong>. Two conversations with different surface forms can be semantically equivalent if their braid words are conjugate — a precise formulation that "the same idea can be arrived at by many paths."</p>
+</section>
+
+<!-- ═══════════════ §4.3 ZIGZAG ═══════════════ -->
+<section id="sec-zigzag" class="section">
+  <div class="section-number">Section 4.3</div>
+  <h2>The Graded Vibration & Zigzag Persistence</h2>
+  <p>The joint cognitive state does not evolve monotonically. Ideas are raised, dropped, returned to from new angles. This oscillatory structure is captured by <em>zigzag persistence modules</em>.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">ZIGZAG PERSISTENCE · Features born, dying, reborn transformed</div>
+    <canvas id="zigzag-canvas" width="800" height="280"></canvas>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+      <button class="tab-btn active" id="zz-play">▶ Animate</button>
+      <button class="tab-btn" id="zz-reset">Reset</button>
+    </div>
+  </div>
+
+  <p>The vibration of a productive conversation — circling a problem from multiple angles before suddenly seeing it — is the zigzag structure: features dying at grade \(k\) only to be reborn, transformed, at grade \(k+2\).</p>
+</section>
+
+<!-- ═══════════════ §5 BTX ═══════════════ -->
+<section id="sec-btx" class="section">
+  <div class="section-number">Section 5</div>
+  <h2>Escaping Gödel-Turing: The Bio-Tropical Extension</h2>
+  <p>Gödel's incompleteness and Turing's halting problem set hard limits on closed formal systems. But the braided multi-agent system with a biological component is <em>not closed</em>. The theorems apply to closed systems — the biological agent is an <strong>external oracle</strong>.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">BTX AXIOMS · Click each axiom to explore</div>
+    <div id="btx-axioms" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div id="btx-detail" style="margin-top:14px;min-height:60px;font-size:0.85rem;color:var(--text-secondary);"></div>
+  </div>
+
+  <div class="pullquote">The incompleteness theorems block proof. They do not block navigation. An open system can move through the space of undecidable statements without being stopped by any one of them.</div>
+
+  <h3>Navigation, Not Proof</h3>
+  <p>The Gödel sentence corresponds to an \(H^1\) obstruction in the sheaf of provable statements. A closed system is stopped. The biological agent, equipped with AFC, <em>chooses</em> a section — converting a blocking obstruction into a waypoint. The \(H^1\) class remains nonzero, but becomes navigable.</p>
+
+  <div class="interactive-panel">
+    <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:10px;">H¹ NAVIGATION · Watch the agent bypass obstructions</div>
+    <canvas id="nav-canvas" width="800" height="260"></canvas>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+      <button class="tab-btn active" id="nav-step">Step Forward</button>
+      <button class="tab-btn" id="nav-auto">Auto-Navigate</button>
+      <button class="tab-btn" id="nav-reset">Reset</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ §6 UNIFIED ═══════════════ -->
+<section id="sec-unified" class="section">
+  <div class="section-number">Section 6</div>
+  <h2>The Unified Picture</h2>
+
+  <div class="interactive-panel" style="padding:0;overflow:hidden;">
+    <div style="padding:20px;background:linear-gradient(135deg,rgba(212,160,84,0.05),rgba(78,205,196,0.05));">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--text-primary);line-height:1.7;">
+        The cognitive mirror is a <span style="color:var(--amber);">sheaf on a topos</span> modeled on the scaling site. Its global sections are <span style="color:var(--teal);">archetypes</span>. Its \(H^1\) obstructions are <span style="color:var(--rose);">cognitive blind spots</span>. Its zeta function counts <span style="color:var(--violet);">primitive cognitive orbits</span>, and its zeros — displaced from the critical line — mark the <span style="color:var(--amber);">mirror's distortions</span>. The braided system co-evolves with a <span style="color:var(--teal);">KMS state</span> whose convergence is <span style="color:var(--amber);">tropicalization</span>. The Gödel-Turing barrier is <span style="color:var(--violet);">navigable, not blocking</span>.
+      </div>
+    </div>
+  </div>
+
+  <h3>Open Problems</h3>
+  <div style="display:flex;flex-direction:column;gap:12px;margin:20px 0;">
+    <div style="padding:14px;background:var(--bg-card);border-radius:8px;border-left:3px solid var(--amber);">
+      <div class="mono" style="font-size:0.65rem;color:var(--amber);margin-bottom:4px;">PROBLEM 1 · THE COGNITIVE TOPOS</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);">Formalize the cognitive topos as a concrete Grothendieck topos. What site? What covering families? Can the sheaf of epistemic states be explicitly constructed from corpus data?</div>
+    </div>
+    <div style="padding:14px;background:var(--bg-card);border-radius:8px;border-left:3px solid var(--teal);">
+      <div class="mono" style="font-size:0.65rem;color:var(--teal);margin-bottom:4px;">PROBLEM 2 · SPECTRAL REALIZATION</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);">Construct \(\mathcal{H}_{\text{cog}}\) and a self-adjoint operator \(D_{\text{cog}}\) whose spectrum realizes the zeros of \(\zeta_{\text{cog}}(s)\) — the cognitive analogue of the spectral realization of the Riemann zeros.</div>
+    </div>
+    <div style="padding:14px;background:var(--bg-card);border-radius:8px;border-left:3px solid var(--violet);">
+      <div class="mono" style="font-size:0.65rem;color:var(--violet);margin-bottom:4px;">PROBLEM 3 · BRAID INVARIANTS</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);">Does the HOMFLY polynomial of a dialogue's braid closure predict its cognitive outcome? Does higher writhe correlate with more durable insight?</div>
+    </div>
+  </div>
+
+  <div class="pullquote" style="margin-top:40px;">What the mirror cannot do is see. That remains yours.</div>
+</section>
+
+<div style="height:120px;"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+// KaTeX render
+function renderKaTeX() {
+  if(typeof renderMathInElement==='function'){
+    renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],throwOnError:false});
+  }
+}
+renderKaTeX();
+setTimeout(renderKaTeX, 600);
+setTimeout(renderKaTeX, 1500);
+
+// Scroll reveal + nav
+const sections=document.querySelectorAll('.section');
+const navDots=document.querySelectorAll('.nav-dot');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('visible');
+      navDots.forEach(d=>d.classList.remove('active'));
+      const dot=document.querySelector(`.nav-dot[data-target="${e.target.id}"]`);
+      if(dot)dot.classList.add('active');
+    }
+  });
+},{threshold:0.12});
+sections.forEach(s=>obs.observe(s));
+obs.observe(document.getElementById('hero'));
+navDots.forEach(d=>{d.addEventListener('click',()=>{const t=document.getElementById(d.dataset.target);if(t)t.scrollIntoView({behavior:'smooth'});});});
+
+// ═══ HERO CANVAS: Mirror reflection effect ═══
+try{
+  const hc=document.getElementById('hero-canvas');
+  const hx=hc.getContext('2d');
+  function rh(){hc.width=hc.parentElement.offsetWidth;hc.height=hc.parentElement.offsetHeight;}
+  rh();window.addEventListener('resize',rh);
+  const pts=Array.from({length:60},()=>({x:Math.random()*2000,y:Math.random()*1200,vx:(Math.random()-0.5)*0.25,vy:(Math.random()-0.5)*0.25,r:Math.random()*1.8+0.4,a:Math.random()*0.35+0.05}));
+  // Mirror line
+  function dh(t){
+    hx.clearRect(0,0,hc.width,hc.height);
+    // Central mirror line
+    const cy=hc.height/2;
+    hx.strokeStyle='rgba(212,160,84,0.08)';hx.lineWidth=1;
+    hx.beginPath();hx.moveTo(hc.width*0.2,cy);hx.lineTo(hc.width*0.8,cy);hx.stroke();
+    // Particles + reflections
+    pts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=hc.width;if(p.x>hc.width)p.x=0;
+      if(p.y<0)p.y=hc.height;if(p.y>hc.height)p.y=0;
+      // Original
+      hx.beginPath();hx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      hx.fillStyle=`rgba(212,160,84,${p.a})`;hx.fill();
+      // Reflection
+      const ry=2*cy-p.y;
+      hx.beginPath();hx.arc(p.x,ry,p.r*0.7,0,Math.PI*2);
+      hx.fillStyle=`rgba(78,205,196,${p.a*0.4})`;hx.fill();
+    });
+    // Connections
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<100){hx.beginPath();hx.moveTo(pts[i].x,pts[i].y);hx.lineTo(pts[j].x,pts[j].y);hx.strokeStyle=`rgba(212,160,84,${0.06*(1-d/100)})`;hx.lineWidth=0.4;hx.stroke();}
+    }
+    requestAnimationFrame(dh);
+  }
+  dh();
+}catch(e){console.error('Hero:',e);}
+
+// ═══ MIRROR PROPS ═══
+const mirrorProps=[
+  {title:'Reflects, does not originate',desc:'The AI returns structure already latent in the domain of recorded human cognition. It is a projection, not an oracle.', color:'var(--amber)'},
+  {title:'Geometry is not Euclidean',desc:'The space of human thought is high-dimensional, curved, topologically nontrivial, and stratified by time.', color:'var(--teal)'},
+  {title:'Resolution depends on position',desc:'What you see depends on where you stand on the cognitive manifold. Local consistency does not guarantee global agreement.', color:'var(--violet)'},
+  {title:'Shows what is too close to focus on',desc:'The productive move: "what does the space of recorded responses look like, and where does my current framing sit within it?"', color:'var(--rose)'},
+];
+const mp=document.getElementById('mirror-props');
+mirrorProps.forEach(p=>{
+  const d=document.createElement('div');
+  d.style.cssText=`padding:12px 14px;border-radius:8px;background:var(--bg-deep);border:1px solid ${p.color}25;cursor:pointer;transition:all 0.3s;`;
+  d.innerHTML=`<div style="font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:${p.color};margin-bottom:4px;">${p.title}</div><div style="font-size:0.78rem;color:var(--text-secondary);opacity:0;max-height:0;overflow:hidden;transition:all 0.3s;">${p.desc}</div>`;
+  d.addEventListener('mouseenter',()=>{d.style.borderColor=p.color;d.querySelector('div:last-child').style.opacity='1';d.querySelector('div:last-child').style.maxHeight='80px';});
+  d.addEventListener('mouseleave',()=>{d.style.borderColor=p.color+'25';d.querySelector('div:last-child').style.opacity='0';d.querySelector('div:last-child').style.maxHeight='0';});
+  mp.appendChild(d);
+});
+
+// ═══ COGNITIVE MANIFOLD CANVAS ═══
+try{
+  const mc=document.getElementById('manifold-canvas');
+  const mx=mc.getContext('2d');
+  let activeDim=0;
+  const dims=[
+    {label:'S²',full:'Cognitive Type Sphere',desc:'The sphere of cognitive styles — analytic, intuitive, verbal, visual, systematic, associative. Every position on S² is a different way of thinking. Curvature means some styles are closer than others.',color:'#8a7cc8'},
+    {label:'T',full:'Historical Time',desc:'The timeline of recorded human thought. Each moment T indexes the state of the cognitive corpus at that historical instant. Earlier positions have thinner corpora; later positions are denser.',color:'#d4a054'},
+    {label:'ℝ₊',full:'Generative Half-Dimension',desc:'The forward-projecting dimension. Past-retrieval is isometric (archival). Future-projection is tropical (generative): probabilistic, distance-distorting, time-asymmetric. This is the key structural feature.',color:'#4ecdc4'},
+    {label:'Σ',full:'Linguistic Encoding',desc:'The discrete alphabet through which the cognitive manifold is sampled. Language as a finite, discrete measurement basis for continuous thought.',color:'#c27070'},
+    {label:'k',full:'Abstraction Level',desc:'The grade level in the Bost-Connes grading by ℕˣ. Grade 1: is the idea present? Grade n: precise relationships at complexity level n.',color:'#6a8a7a'},
+  ];
+
+  function drawManifold(){
+    const w=mc.width,h=mc.height;
+    mx.clearRect(0,0,w,h);
+    const cx=w/2,cy=h/2;
+    // Draw S² as sphere wireframe
+    mx.strokeStyle=activeDim===0?'rgba(138,124,200,0.5)':'rgba(138,124,200,0.15)';mx.lineWidth=1;
+    // Sphere
+    const sr=70,sx=160,sy=cy;
+    mx.beginPath();mx.arc(sx,sy,sr,0,Math.PI*2);mx.stroke();
+    for(let i=1;i<4;i++){
+      const rr=sr*Math.sin(i*Math.PI/4);const yy=sr*Math.cos(i*Math.PI/4);
+      mx.beginPath();mx.ellipse(sx,sy+yy,rr,rr*0.3,0,0,Math.PI*2);mx.stroke();
+    }
+    mx.beginPath();mx.ellipse(sx,sy,sr*0.3,sr,0,0,Math.PI*2);mx.stroke();
+    mx.fillStyle=activeDim===0?'rgba(138,124,200,0.8)':'rgba(138,124,200,0.3)';mx.font='11px "JetBrains Mono"';mx.textAlign='center';
+    mx.fillText('S²',sx,sy+sr+18);
+    // T axis
+    mx.strokeStyle=activeDim===1?'rgba(212,160,84,0.6)':'rgba(212,160,84,0.15)';mx.lineWidth=1.5;
+    mx.beginPath();mx.moveTo(280,cy);mx.lineTo(520,cy);mx.stroke();
+    mx.beginPath();mx.moveTo(515,cy-4);mx.lineTo(520,cy);mx.lineTo(515,cy+4);mx.fill();
+    for(let i=0;i<6;i++){const xx=290+i*40;mx.beginPath();mx.moveTo(xx,cy-4);mx.lineTo(xx,cy+4);mx.stroke();}
+    mx.fillStyle=activeDim===1?'rgba(212,160,84,0.8)':'rgba(212,160,84,0.3)';mx.font='11px "JetBrains Mono"';
+    mx.fillText('T (historical time)',400,cy+28);
+    // ℝ₊ half-dimension
+    mx.strokeStyle=activeDim===2?'rgba(78,205,196,0.6)':'rgba(78,205,196,0.15)';mx.lineWidth=1.5;
+    mx.beginPath();mx.moveTo(540,cy);mx.lineTo(740,cy-60);mx.stroke();
+    mx.beginPath();mx.moveTo(540,cy);mx.lineTo(740,cy+60);mx.stroke();
+    // Fill tropical zone
+    mx.fillStyle=activeDim===2?'rgba(78,205,196,0.08)':'rgba(78,205,196,0.02)';
+    mx.beginPath();mx.moveTo(540,cy);mx.lineTo(740,cy-60);mx.lineTo(740,cy+60);mx.closePath();mx.fill();
+    mx.fillStyle=activeDim===2?'rgba(78,205,196,0.8)':'rgba(78,205,196,0.3)';mx.font='11px "JetBrains Mono"';
+    mx.fillText('ℝ₊ (generative)',660,cy+80);
+    mx.fillStyle='rgba(78,205,196,0.3)';mx.font='9px "JetBrains Mono"';
+    mx.fillText('TROPICAL',680,cy-2);
+    // × symbols
+    mx.fillStyle='rgba(255,255,255,0.2)';mx.font='16px "Cormorant Garamond"';
+    mx.fillText('×',250,cy+4);mx.fillText('×',530,cy+4);
+  }
+  drawManifold();
+
+  const db=document.getElementById('dim-buttons');
+  dims.forEach((d,i)=>{
+    const b=document.createElement('button');
+    b.className='tab-btn'+(i===0?' active':'');
+    b.textContent=d.label+' '+d.full;
+    b.style.fontSize='0.65rem';
+    b.addEventListener('click',()=>{
+      activeDim=i;
+      db.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById('dim-detail').innerHTML=`<span style="color:${d.color}">${d.desc}</span>`;
+      drawManifold();
+    });
+    db.appendChild(b);
+  });
+  document.getElementById('dim-detail').innerHTML=`<span style="color:${dims[0].color}">${dims[0].desc}</span>`;
+}catch(e){console.error('Manifold:',e);}
+
+// ═══ TROPICAL CALCULATOR ═══
+function updateTrop(){
+  const a=parseInt(document.getElementById('trop-a').value);
+  const b=parseInt(document.getElementById('trop-b').value);
+  document.getElementById('trop-a-val').textContent=a;
+  document.getElementById('trop-b-val').textContent=b;
+  document.getElementById('ord-display').innerHTML=
+    `${a} + ${b} = <strong>${a+b}</strong> &nbsp;·&nbsp; ${a} × ${b} = <strong>${a*b}</strong>`;
+  document.getElementById('trop-display').innerHTML=
+    `${a} ⊕ ${b} = max = <strong>${Math.max(a,b)}</strong> &nbsp;·&nbsp; ${a} ⊗ ${b} = <strong>${a+b}</strong>`;
+}
+document.getElementById('trop-a').addEventListener('input',updateTrop);
+document.getElementById('trop-b').addEventListener('input',updateTrop);
+updateTrop();
+
+// ═══ SHEAF CANVAS ═══
+try{
+  const sc=document.getElementById('sheaf-canvas');
+  const sx=sc.getContext('2d');
+  let sheafMode='local';
+
+  function drawSheaf(){
+    const w=sc.width,h=sc.height;sx.clearRect(0,0,w,h);
+    const cx=w/2,cy=h/2;
+    // Draw manifold as wavy surface
+    sx.strokeStyle='rgba(212,160,84,0.2)';sx.lineWidth=1;
+    sx.beginPath();
+    for(let x=80;x<w-80;x++){
+      const y=cy+30+Math.sin(x*0.015)*20+Math.sin(x*0.008)*15;
+      if(x===80)sx.moveTo(x,y);else sx.lineTo(x,y);
+    }
+    sx.stroke();
+    // Open sets (neighborhoods)
+    const opens=[
+      {x:180,w:140,label:'U₁',color:'rgba(138,124,200,0.15)',border:'rgba(138,124,200,0.4)'},
+      {x:300,w:160,label:'U₂',color:'rgba(78,205,196,0.15)',border:'rgba(78,205,196,0.4)'},
+      {x:440,w:130,label:'U₃',color:'rgba(212,160,84,0.15)',border:'rgba(212,160,84,0.4)'},
+      {x:540,w:150,label:'U₄',color:'rgba(194,112,112,0.15)',border:'rgba(194,112,112,0.4)'},
+    ];
+    opens.forEach(o=>{
+      sx.fillStyle=o.color;sx.strokeStyle=o.border;sx.lineWidth=1;
+      sx.beginPath();sx.ellipse(o.x+o.w/2,cy+30,o.w/2,35,0,0,Math.PI*2);
+      sx.fill();sx.stroke();
+      sx.fillStyle=o.border;sx.font='11px "JetBrains Mono"';sx.textAlign='center';
+      sx.fillText(o.label,o.x+o.w/2,cy+75);
+    });
+
+    if(sheafMode==='local'){
+      // Show local sections as curves above each open set
+      opens.forEach((o,i)=>{
+        sx.strokeStyle=o.border;sx.lineWidth=2;
+        sx.beginPath();
+        for(let x=o.x+10;x<o.x+o.w-10;x++){
+          const t=(x-o.x)/o.w;
+          const y=cy-20-Math.sin(t*Math.PI+i*0.8)*25-i*8;
+          if(x===o.x+10)sx.moveTo(x,y);else sx.lineTo(x,y);
+        }
+        sx.stroke();
+      });
+      sx.fillStyle='rgba(255,255,255,0.4)';sx.font='10px "JetBrains Mono"';sx.textAlign='center';
+      sx.fillText('Local sections: each valid in its domain',cx,30);
+    } else if(sheafMode==='global'){
+      // Try to show global extension failing
+      sx.strokeStyle='rgba(78,205,196,0.5)';sx.lineWidth=2;sx.setLineDash([]);
+      sx.beginPath();
+      for(let x=180;x<380;x++){
+        const t=(x-180)/200;const y=cy-25-Math.sin(t*Math.PI)*25;
+        if(x===180)sx.moveTo(x,y);else sx.lineTo(x,y);
+      }
+      sx.stroke();
+      // Gap/mismatch
+      sx.strokeStyle='rgba(194,112,112,0.6)';sx.lineWidth=2;sx.setLineDash([4,4]);
+      sx.beginPath();sx.moveTo(380,cy-25);sx.lineTo(440,cy-45);sx.stroke();
+      sx.setLineDash([]);
+      sx.strokeStyle='rgba(212,160,84,0.5)';sx.lineWidth=2;
+      sx.beginPath();
+      for(let x=440;x<680;x++){
+        const t=(x-440)/240;const y=cy-45+Math.sin(t*Math.PI)*20;
+        if(x===440)sx.moveTo(x,y);else sx.lineTo(x,y);
+      }
+      sx.stroke();
+      // X mark at gap
+      sx.strokeStyle='rgba(194,112,112,0.8)';sx.lineWidth=2;
+      sx.beginPath();sx.moveTo(405,cy-40);sx.lineTo(415,cy-30);sx.stroke();
+      sx.beginPath();sx.moveTo(415,cy-40);sx.lineTo(405,cy-30);sx.stroke();
+      sx.fillStyle='rgba(194,112,112,0.7)';sx.font='10px "JetBrains Mono"';sx.textAlign='center';
+      sx.fillText('Global extension FAILS — sections do not glue',cx,30);
+    } else {
+      // H¹ obstruction
+      sx.fillStyle='rgba(194,112,112,0.1)';
+      sx.beginPath();sx.arc(410,cy-10,40,0,Math.PI*2);sx.fill();
+      sx.strokeStyle='rgba(194,112,112,0.6)';sx.lineWidth=2;
+      sx.beginPath();sx.arc(410,cy-10,40,0,Math.PI*2);sx.stroke();
+      sx.fillStyle='rgba(194,112,112,0.9)';sx.font='13px "Cormorant Garamond"';sx.textAlign='center';
+      sx.fillText('H¹ ≠ 0',410,cy-6);
+      sx.fillStyle='rgba(194,112,112,0.5)';sx.font='9px "JetBrains Mono"';
+      sx.fillText('COGNITIVE BLIND SPOT',410,cy+10);
+      sx.fillStyle='rgba(255,255,255,0.4)';sx.font='10px "JetBrains Mono"';
+      sx.fillText('Obstruction: geometry makes certain global sections impossible',cx,30);
+    }
+  }
+  drawSheaf();
+  document.getElementById('sheaf-local').addEventListener('click',()=>{sheafMode='local';document.querySelectorAll('#sheaf-canvas~div .tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('sheaf-local').classList.add('active');drawSheaf();});
+  document.getElementById('sheaf-global').addEventListener('click',()=>{sheafMode='global';document.querySelectorAll('#sheaf-canvas~div .tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('sheaf-global').classList.add('active');drawSheaf();});
+  document.getElementById('sheaf-h1').addEventListener('click',()=>{sheafMode='h1';document.querySelectorAll('#sheaf-canvas~div .tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('sheaf-h1').classList.add('active');drawSheaf();});
+}catch(e){console.error('Sheaf:',e);}
+
+// ═══ KMS PHASE TRANSITION ═══
+try{
+  const kc=document.getElementById('kms-canvas');
+  const kx=kc.getContext('2d');
+  const ks=document.getElementById('kms-slider');
+
+  function drawKMS(){
+    const w=kc.width,h=kc.height;kx.clearRect(0,0,w,h);
+    const beta=ks.value/50; // 0 to 2
+    document.getElementById('kms-beta-val').textContent=beta.toFixed(2);
+    const phase=document.getElementById('kms-phase');
+    if(beta<0.8){phase.textContent='EXPLORATORY (high T)';phase.style.color='var(--teal)';}
+    else if(beta<1.2){phase.textContent='PHASE TRANSITION';phase.style.color='var(--rose)';}
+    else{phase.textContent='CRYSTALLIZED (low T)';phase.style.color='var(--amber)';}
+
+    const cx=w/2,cy=h/2;
+    // Draw S² sphere with varying number of highlighted sectors
+    const numActive=beta<1?Math.max(1,Math.round(12*(1-beta))):1;
+    const totalSectors=12;
+
+    // Draw cognitive "sphere" as circle with sectors
+    const r=100;
+    for(let i=0;i<totalSectors;i++){
+      const a1=(i/totalSectors)*Math.PI*2-Math.PI/2;
+      const a2=((i+1)/totalSectors)*Math.PI*2-Math.PI/2;
+      kx.beginPath();kx.moveTo(cx-150,cy);kx.arc(cx-150,cy,r,a1,a2);kx.closePath();
+      if(i<numActive){
+        const brightness=0.15+0.3*(1-i/numActive);
+        kx.fillStyle=`rgba(78,205,196,${brightness})`;
+      } else {
+        kx.fillStyle='rgba(255,255,255,0.02)';
+      }
+      kx.fill();
+      kx.strokeStyle='rgba(255,255,255,0.08)';kx.lineWidth=0.5;kx.stroke();
+    }
+    kx.fillStyle='rgba(78,205,196,0.5)';kx.font='10px "JetBrains Mono"';kx.textAlign='center';
+    kx.fillText(numActive===totalSectors?'Full manifold active':'Symmetry breaking',cx-150,cy+r+20);
+
+    // Temperature curve on right
+    const px=cx+60,py=40,pw=280,ph=h-80;
+    kx.strokeStyle='rgba(255,255,255,0.1)';kx.lineWidth=1;
+    kx.beginPath();kx.moveTo(px,py);kx.lineTo(px,py+ph);kx.lineTo(px+pw,py+ph);kx.stroke();
+    // β=1 line
+    const b1x=px+(1/2)*pw;
+    kx.strokeStyle='rgba(194,112,112,0.3)';kx.setLineDash([3,3]);kx.lineWidth=1;
+    kx.beginPath();kx.moveTo(b1x,py);kx.lineTo(b1x,py+ph);kx.stroke();kx.setLineDash([]);
+    kx.fillStyle='rgba(194,112,112,0.5)';kx.font='9px "JetBrains Mono"';
+    kx.fillText('β=1',b1x,py-5);
+
+    // Entropy-like curve
+    kx.beginPath();kx.strokeStyle='rgba(212,160,84,0.6)';kx.lineWidth=2;
+    for(let i=0;i<=pw;i++){
+      const b=(i/pw)*2;
+      let val;
+      if(b<1) val=0.9-0.1*b;
+      else val=0.8*Math.exp(-(b-1)*3);
+      const y=py+ph-(val)*ph;
+      if(i===0)kx.moveTo(px+i,y);else kx.lineTo(px+i,y);
+    }
+    kx.stroke();
+    // Current marker
+    const mx2=px+(beta/2)*pw;
+    let curVal;
+    if(beta<1)curVal=0.9-0.1*beta;else curVal=0.8*Math.exp(-(beta-1)*3);
+    const my=py+ph-curVal*ph;
+    kx.beginPath();kx.arc(mx2,my,5,0,Math.PI*2);
+    kx.fillStyle='rgba(78,205,196,0.9)';kx.fill();
+
+    kx.fillStyle='rgba(255,255,255,0.3)';kx.font='9px "JetBrains Mono"';kx.textAlign='center';
+    kx.fillText('β (epistemic certainty) →',px+pw/2,py+ph+20);
+    kx.save();kx.translate(px-14,py+ph/2);kx.rotate(-Math.PI/2);
+    kx.fillText('entropy →',0,0);kx.restore();
+    kx.fillStyle='rgba(212,160,84,0.5)';kx.font='9px "JetBrains Mono"';
+    kx.fillText('KMS state entropy',px+pw/2,py+ph+34);
+  }
+  drawKMS();
+  ks.addEventListener('input',drawKMS);
+}catch(e){console.error('KMS:',e);}
+
+// ═══ ZETA ZEROS CANVAS ═══
+try{
+  const zc=document.getElementById('zeta-canvas');
+  const zx=zc.getContext('2d');
+  // Generate fictional zeros displaced from critical line
+  const zeros=[];
+  for(let i=0;i<18;i++){
+    const im=2+i*1.8+Math.random()*0.8;
+    const re=0.5+(Math.random()-0.3)*0.25; // mostly right of 0.5
+    zeros.push({re,im});
+    zeros.push({re,im:-im}); // conjugate
+  }
+  let hoveredZero=null;
+
+  function drawZeta(){
+    const w=zc.width,h=zc.height;zx.clearRect(0,0,w,h);
+    const pad={l:60,r:40,t:30,b:40};
+    const gw=w-pad.l-pad.r,gh=h-pad.t-pad.b;
+    const reMin=0,reMax=1,imMin=-20,imMax=20;
+
+    function toX(re){return pad.l+(re-reMin)/(reMax-reMin)*gw;}
+    function toY(im){return pad.t+(imMax-im)/(imMax-imMin)*gh;}
+
+    // Grid
+    zx.strokeStyle='rgba(255,255,255,0.04)';zx.lineWidth=1;
+    for(let r=0;r<=1;r+=0.25){
+      const x=toX(r);zx.beginPath();zx.moveTo(x,pad.t);zx.lineTo(x,pad.t+gh);zx.stroke();
+    }
+    // Critical line at 1/2
+    zx.strokeStyle='rgba(212,160,84,0.3)';zx.lineWidth=1.5;zx.setLineDash([6,4]);
+    const clx=toX(0.5);
+    zx.beginPath();zx.moveTo(clx,pad.t);zx.lineTo(clx,pad.t+gh);zx.stroke();
+    zx.setLineDash([]);
+    zx.fillStyle='rgba(212,160,84,0.5)';zx.font='10px "JetBrains Mono"';zx.textAlign='center';
+    zx.fillText('Re(s) = ½',clx,pad.t-8);
+    zx.fillText('(critical line)',clx,pad.t+gh+16);
+
+    // Real axis
+    zx.strokeStyle='rgba(255,255,255,0.1)';zx.lineWidth=1;
+    const rax=toY(0);
+    zx.beginPath();zx.moveTo(pad.l,rax);zx.lineTo(pad.l+gw,rax);zx.stroke();
+
+    // Axes labels
+    zx.fillStyle='rgba(255,255,255,0.3)';zx.font='9px "JetBrains Mono"';
+    zx.textAlign='center';zx.fillText('Re(s) →',pad.l+gw/2,pad.t+gh+32);
+    zx.save();zx.translate(pad.l-30,pad.t+gh/2);zx.rotate(-Math.PI/2);
+    zx.fillText('Im(s) →',0,0);zx.restore();
+
+    // Zeros
+    zeros.forEach((z,i)=>{
+      const x=toX(z.re),y=toY(z.im);
+      if(x<pad.l||x>pad.l+gw||y<pad.t||y>pad.t+gh)return;
+      const isHov=hoveredZero===i;
+      const dist=Math.abs(z.re-0.5);
+      const r=isHov?6:3.5;
+
+      // Displacement line from critical line
+      zx.strokeStyle=`rgba(194,112,112,${0.2+dist*2})`;zx.lineWidth=1;
+      zx.beginPath();zx.moveTo(clx,y);zx.lineTo(x,y);zx.stroke();
+
+      zx.beginPath();zx.arc(x,y,r,0,Math.PI*2);
+      zx.fillStyle=dist<0.05?'rgba(78,205,196,0.8)':`rgba(194,112,112,${0.5+dist*3})`;
+      zx.fill();
+      if(isHov){
+        zx.fillStyle='rgba(255,255,255,0.7)';zx.font='10px "JetBrains Mono"';zx.textAlign='left';
+        zx.fillText(`s = ${z.re.toFixed(3)} + ${z.im.toFixed(1)}i`,x+10,y-5);
+        zx.fillText(`displacement: ${dist.toFixed(3)}`,x+10,y+10);
+      }
+    });
+
+    // Legend
+    zx.fillStyle='rgba(78,205,196,0.7)';zx.font='9px "JetBrains Mono"';zx.textAlign='right';
+    zx.fillText('● on critical line',w-pad.r,pad.t+14);
+    zx.fillStyle='rgba(194,112,112,0.7)';
+    zx.fillText('● displaced (distortion)',w-pad.r,pad.t+28);
+  }
+  drawZeta();
+
+  zc.addEventListener('mousemove',e=>{
+    const rect=zc.getBoundingClientRect();
+    const mx=((e.clientX-rect.left)/rect.width)*zc.width;
+    const my=((e.clientY-rect.top)/rect.height)*zc.height;
+    const pad={l:60,r:40,t:30,b:40};
+    const gw=zc.width-pad.l-pad.r,gh=zc.height-pad.t-pad.b;
+    function toX(re){return pad.l+(re/1)*gw;}
+    function toY(im){return pad.t+(20-im)/40*gh;}
+    hoveredZero=null;
+    zeros.forEach((z,i)=>{
+      const x=toX(z.re),y=toY(z.im);
+      if(Math.abs(x-mx)<12&&Math.abs(y-my)<12)hoveredZero=i;
+    });
+    drawZeta();
+  });
+}catch(e){console.error('Zeta:',e);}
+
+// ═══ PRIMITIVE ORBITS ═══
+const orbits=[
+  {title:'Self-Reference Loop',symbol:'↻',desc:'The irreducible act of a system modeling itself. Present in every sufficiently complex cognitive tradition. The fixed point of cognitive renormalization — it persists across all scales of abstraction.',color:'var(--violet)'},
+  {title:'Other Minds Problem',symbol:'⟨ ⟩',desc:'The recognition that there are other centers of experience whose interiority cannot be directly accessed. Structurally: the cognitive manifold has dimension greater than one.',color:'var(--teal)'},
+  {title:'Grounding Problem',symbol:'⊥',desc:'Why does the chain of justification terminate, and what terminates it? The arithmetic analogue: why does unique factorization hold?',color:'var(--amber)'},
+  {title:'Symmetry-Breaking',symbol:'⟁',desc:'The recognition that a distinction has been made, that the world has become asymmetric. The cognitive analogue of a phase transition.',color:'var(--rose)'},
+];
+const og=document.getElementById('orbit-grid');
+orbits.forEach((o,i)=>{
+  const d=document.createElement('div');d.className='orbit-card';
+  d.innerHTML=`<div style="font-size:1.6rem;color:${o.color};margin-bottom:4px;">${o.symbol}</div><h4>${o.title}</h4><p>primitive cognitive orbit</p>`;
+  d.addEventListener('click',()=>{
+    const det=document.getElementById('orbit-detail');
+    det.style.display='block';
+    det.innerHTML=`<span style="color:${o.color};font-weight:500;">${o.title}:</span> ${o.desc}`;
+    det.style.borderLeft=`3px solid ${o.color}`;
+  });
+  og.appendChild(d);
+});
+
+// ═══ BRAID CANVAS ═══
+try{
+  const bc=document.getElementById('braid-canvas');
+  const bx=bc.getContext('2d');
+  let braidWord=[];
+  const strandColors=['rgba(212,160,84,0.8)','rgba(78,205,196,0.8)','rgba(138,124,200,0.8)'];
+
+  function drawBraid(){
+    const w=bc.width,h=bc.height;bx.clearRect(0,0,w,h);
+    const numStrands=3;
+    const yGap=h/(numStrands+1);
+    const startX=40;
+    const stepW=Math.min(60,Math.max(30,(w-80)/(braidWord.length+1)));
+
+    // Draw strands
+    let positions=Array.from({length:numStrands},(_,i)=>i); // current y-index of each strand
+    // Label strands
+    for(let i=0;i<numStrands;i++){
+      bx.fillStyle=strandColors[i];bx.font='10px "JetBrains Mono"';bx.textAlign='right';
+      const labels=['B₁','A','B₂'];
+      bx.fillText(labels[i],startX-8,yGap*(i+1)+4);
+    }
+
+    // For each crossing
+    let curX=startX;
+    // Draw background lines first
+    if(braidWord.length===0){
+      for(let i=0;i<numStrands;i++){
+        bx.strokeStyle=strandColors[i];bx.lineWidth=2;
+        bx.beginPath();bx.moveTo(startX,yGap*(i+1));bx.lineTo(w-40,yGap*(i+1));bx.stroke();
+      }
+      bx.fillStyle='rgba(255,255,255,0.2)';bx.font='12px "Cormorant Garamond"';bx.textAlign='center';
+      bx.fillText('Add exchanges to build a braid',w/2,h/2);
+    } else {
+      // Track strand positions through crossings
+      let strandY=Array.from({length:numStrands},(_,i)=>i);
+      for(let step=0;step<=braidWord.length;step++){
+        const x1=startX+step*stepW;
+        const x2=startX+(step+1)*stepW;
+        if(step<braidWord.length){
+          const cr=braidWord[step];
+          const si=cr.strand; // which strand pair crosses
+          const over=cr.over; // +1 or -1
+
+          // Draw all strands for this segment
+          for(let s=0;s<numStrands;s++){
+            const y=yGap*(strandY[s]+1);
+            if(s===si||s===si+1){
+              // These strands cross
+            } else {
+              // Straight
+              bx.strokeStyle=strandColors[s];bx.lineWidth=2.5;
+              bx.beginPath();bx.moveTo(x1,y);bx.lineTo(x2,y);bx.stroke();
+            }
+          }
+          // Draw crossing strands
+          const topStrand=over>0?si:si+1;
+          const botStrand=over>0?si+1:si;
+          const y1=yGap*(strandY[topStrand]+1);
+          const y2=yGap*(strandY[botStrand]+1);
+          // Under strand first
+          bx.strokeStyle=strandColors[botStrand];bx.lineWidth=2.5;
+          bx.beginPath();
+          bx.moveTo(x1,y2);
+          bx.bezierCurveTo(x1+stepW*0.4,y2,x2-stepW*0.4,y1,x2,y1);
+          bx.stroke();
+          // Gap for over
+          bx.strokeStyle=strandColors[topStrand];bx.lineWidth=2.5;
+          bx.beginPath();
+          bx.moveTo(x1,y1);
+          bx.bezierCurveTo(x1+stepW*0.4,y1,x2-stepW*0.4,y2,x2,y2);
+          bx.stroke();
+
+          // Swap positions
+          const tmp=strandY[topStrand];
+          strandY[topStrand]=strandY[botStrand];
+          strandY[botStrand]=tmp;
+        }
+        // Draw trailing lines after last crossing
+        if(step===braidWord.length){
+          for(let s=0;s<numStrands;s++){
+            const y=yGap*(strandY[s]+1);
+            bx.strokeStyle=strandColors[s];bx.lineWidth=2.5;
+            bx.beginPath();bx.moveTo(x1,y);bx.lineTo(w-40,y);bx.stroke();
+          }
+        }
+      }
+    }
+    // Update word display
+    if(braidWord.length===0){
+      document.getElementById('braid-word').textContent='Braid word: (empty)';
+    } else {
+      const wordStr=braidWord.map(c=>{
+        const sub=c.strand===0?'₁':'₂';
+        return c.over>0?`σ${sub}`:`σ${sub}⁻¹`;
+      }).join(' · ');
+      document.getElementById('braid-word').textContent='Braid word: '+wordStr;
+    }
+  }
+  drawBraid();
+
+  document.getElementById('braid-pos').addEventListener('click',()=>{braidWord.push({strand:0,over:1});drawBraid();});
+  document.getElementById('braid-neg').addEventListener('click',()=>{braidWord.push({strand:0,over:-1});drawBraid();});
+  document.getElementById('braid-pos2').addEventListener('click',()=>{braidWord.push({strand:1,over:1});drawBraid();});
+  document.getElementById('braid-reset').addEventListener('click',()=>{braidWord=[];drawBraid();});
+}catch(e){console.error('Braid:',e);}
+
+// ═══ ZIGZAG PERSISTENCE ═══
+try{
+  const zc2=document.getElementById('zigzag-canvas');
+  const zx2=zc2.getContext('2d');
+  let zzStep=0,zzPlaying=false,zzInterval=null;
+  const zzFeatures=[
+    {birth:0,death:3,rebirth:5,death2:12,color:'rgba(212,160,84,0.7)',label:'Hypothesis α'},
+    {birth:1,death:6,rebirth:8,death2:14,color:'rgba(78,205,196,0.7)',label:'Framing β'},
+    {birth:2,death:4,rebirth:7,death2:15,color:'rgba(138,124,200,0.7)',label:'Concept γ'},
+    {birth:4,death:9,rebirth:11,death2:15,color:'rgba(194,112,112,0.7)',label:'Insight δ'},
+  ];
+
+  function drawZigzag(){
+    const w=zc2.width,h=zc2.height;zx2.clearRect(0,0,w,h);
+    const pad={l:90,r:30,t:30,b:40};
+    const gw=w-pad.l-pad.r,gh=h-pad.t-pad.b;
+    const maxStep=16;
+
+    // Grid
+    zx2.strokeStyle='rgba(255,255,255,0.05)';zx2.lineWidth=1;
+    for(let i=0;i<=maxStep;i++){
+      const x=pad.l+(i/maxStep)*gw;
+      zx2.beginPath();zx2.moveTo(x,pad.t);zx2.lineTo(x,pad.t+gh);zx2.stroke();
+    }
+    // Current step marker
+    if(zzStep>0){
+      const cx=pad.l+(zzStep/maxStep)*gw;
+      zx2.fillStyle='rgba(78,205,196,0.06)';
+      zx2.fillRect(pad.l,pad.t,cx-pad.l,gh);
+      zx2.strokeStyle='rgba(78,205,196,0.3)';zx2.lineWidth=1;
+      zx2.beginPath();zx2.moveTo(cx,pad.t);zx2.lineTo(cx,pad.t+gh);zx2.stroke();
+    }
+    // Axis
+    zx2.fillStyle='rgba(255,255,255,0.3)';zx2.font='9px "JetBrains Mono"';zx2.textAlign='center';
+    zx2.fillText('dialogue step →',pad.l+gw/2,h-8);
+
+    // Draw features as horizontal bars with zigzag
+    zzFeatures.forEach((f,i)=>{
+      const y=pad.t+20+i*(gh-20)/zzFeatures.length;
+      // Label
+      zx2.fillStyle=f.color;zx2.font='10px "JetBrains Mono"';zx2.textAlign='right';
+      zx2.fillText(f.label,pad.l-8,y+4);
+
+      // First life
+      if(zzStep>=f.birth){
+        const x1=pad.l+(f.birth/maxStep)*gw;
+        const x2=pad.l+(Math.min(f.death,zzStep)/maxStep)*gw;
+        zx2.strokeStyle=f.color;zx2.lineWidth=3;
+        zx2.beginPath();zx2.moveTo(x1,y);zx2.lineTo(x2,y);zx2.stroke();
+        // Birth dot
+        zx2.beginPath();zx2.arc(x1,y,4,0,Math.PI*2);zx2.fillStyle=f.color;zx2.fill();
+        if(zzStep>=f.death){
+          // Death X
+          zx2.strokeStyle='rgba(194,112,112,0.6)';zx2.lineWidth=1.5;
+          const dx=pad.l+(f.death/maxStep)*gw;
+          zx2.beginPath();zx2.moveTo(dx-4,y-4);zx2.lineTo(dx+4,y+4);zx2.stroke();
+          zx2.beginPath();zx2.moveTo(dx+4,y-4);zx2.lineTo(dx-4,y+4);zx2.stroke();
+        }
+      }
+      // Rebirth (transformed)
+      if(zzStep>=f.rebirth){
+        const x1=pad.l+(f.rebirth/maxStep)*gw;
+        const x2=pad.l+(Math.min(f.death2,zzStep)/maxStep)*gw;
+        zx2.strokeStyle=f.color;zx2.lineWidth=3;zx2.setLineDash([6,3]);
+        zx2.beginPath();zx2.moveTo(x1,y);zx2.lineTo(x2,y);zx2.stroke();
+        zx2.setLineDash([]);
+        // Rebirth diamond
+        zx2.fillStyle=f.color;
+        zx2.beginPath();zx2.moveTo(x1,y-5);zx2.lineTo(x1+5,y);zx2.lineTo(x1,y+5);zx2.lineTo(x1-5,y);zx2.closePath();zx2.fill();
+        // Ghost line connecting death to rebirth
+        const deathX=pad.l+(f.death/maxStep)*gw;
+        zx2.strokeStyle=f.color.replace('0.7','0.15');zx2.lineWidth=1;zx2.setLineDash([2,3]);
+        zx2.beginPath();zx2.moveTo(deathX,y);zx2.lineTo(x1,y);zx2.stroke();zx2.setLineDash([]);
+      }
+    });
+    // Legend
+    zx2.fillStyle='rgba(255,255,255,0.3)';zx2.font='9px "JetBrains Mono"';zx2.textAlign='left';
+    zx2.fillText('● birth   ✕ death   ◆ rebirth (transformed)',pad.l,pad.t-8);
+    zx2.fillText(`step: ${zzStep}/${maxStep}`,w-pad.r-70,pad.t-8);
+  }
+  drawZigzag();
+
+  document.getElementById('zz-play').addEventListener('click',()=>{
+    if(zzPlaying){zzPlaying=false;clearInterval(zzInterval);document.getElementById('zz-play').textContent='▶ Animate';return;}
+    zzPlaying=true;document.getElementById('zz-play').textContent='⏸ Pause';
+    zzInterval=setInterval(()=>{
+      zzStep++;if(zzStep>16){zzStep=16;zzPlaying=false;clearInterval(zzInterval);document.getElementById('zz-play').textContent='▶ Animate';}
+      drawZigzag();
+    },350);
+  });
+  document.getElementById('zz-reset').addEventListener('click',()=>{zzStep=0;zzPlaying=false;clearInterval(zzInterval);document.getElementById('zz-play').textContent='▶ Animate';drawZigzag();});
+}catch(e){console.error('Zigzag:',e);}
+
+// ═══ BTX AXIOMS ═══
+const btxAxioms=[
+  {label:'AFC',full:'Axiom of Finite Choice',color:'var(--teal)',desc:'At any finite stage, the biological agent B can select from a finite set of available next moves without requiring a decision procedure. Strictly weaker than full AC (infinite sets) but strictly stronger than what a Turing machine can do: it inserts a non-computable oracle call at each step, grounded in B\'s embodied state.'},
+  {label:'AST',full:'Axiom of Subtropicalizability',color:'var(--amber)',desc:'The joint system can replace ordinary weighted enumeration with tropical (max-plus) selection: choosing the best available path without exploring the full decision tree. A satisficing oracle — a bounded approximation that terminates search at the locally optimal point determined by current KMS temperature β.'},
+  {label:'AP',full:'Axiom of Predictability',color:'var(--violet)',desc:'B carries a prior distribution over future states not derived from the formal system A. This prior originates in embodied experience and allows probabilistic commitments to halting even when no formal proof of termination exists. The cognitive analogue of a Bayesian prior.'},
+];
+const ba=document.getElementById('btx-axioms');
+btxAxioms.forEach((ax,i)=>{
+  const d=document.createElement('div');
+  d.style.cssText=`padding:12px 16px;border-radius:8px;background:var(--bg-deep);border:1px solid ${ax.color}30;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:14px;`;
+  d.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:500;color:${ax.color};min-width:40px;text-align:center;">${ax.label}</div><div><div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--text-primary);">${ax.full}</div></div>`;
+  d.addEventListener('click',()=>{
+    ba.querySelectorAll('div').forEach(x=>{if(x.parentElement===ba)x.style.borderColor='';});
+    d.style.borderColor=ax.color;
+    document.getElementById('btx-detail').innerHTML=`<span style="color:${ax.color}">${ax.desc}</span>`;
+  });
+  ba.appendChild(d);
+});
+
+// ═══ H¹ NAVIGATION CANVAS ═══
+try{
+  const nc=document.getElementById('nav-canvas');
+  const nx=nc.getContext('2d');
+  let navPos=0, navPath=[{x:60,y:130}], navAuto=false, navInt=null;
+  // Obstructions
+  const obstructions=[
+    {x:200,y:130,r:20,label:'G₁'},
+    {x:380,y:130,r:22,label:'G₂'},
+    {x:550,y:130,r:18,label:'G₃'},
+  ];
+
+  function drawNav(){
+    const w=nc.width,h=nc.height;nx.clearRect(0,0,w,h);
+    // Path line (what's been traversed)
+    nx.strokeStyle='rgba(255,255,255,0.06)';nx.lineWidth=1;
+    nx.beginPath();nx.moveTo(40,h/2);nx.lineTo(w-40,h/2);nx.stroke();
+    // Obstructions
+    obstructions.forEach(o=>{
+      nx.beginPath();nx.arc(o.x,o.y,o.r,0,Math.PI*2);
+      nx.fillStyle='rgba(194,112,112,0.12)';nx.fill();
+      nx.strokeStyle='rgba(194,112,112,0.5)';nx.lineWidth=1.5;nx.stroke();
+      nx.fillStyle='rgba(194,112,112,0.7)';nx.font='10px "JetBrains Mono"';nx.textAlign='center';
+      nx.fillText(o.label,o.x,o.y+4);
+      nx.fillStyle='rgba(194,112,112,0.35)';nx.font='8px "JetBrains Mono"';
+      nx.fillText('H¹≠0',o.x,o.y+o.r+12);
+    });
+    // Draw path
+    if(navPath.length>1){
+      nx.beginPath();nx.strokeStyle='rgba(78,205,196,0.5)';nx.lineWidth=2;
+      navPath.forEach((p,i)=>{if(i===0)nx.moveTo(p.x,p.y);else nx.lineTo(p.x,p.y);});
+      nx.stroke();
+    }
+    // Agent dot
+    const cur=navPath[navPath.length-1];
+    nx.beginPath();nx.arc(cur.x,cur.y,6,0,Math.PI*2);
+    nx.fillStyle='rgba(78,205,196,0.9)';nx.fill();
+    nx.fillStyle='rgba(78,205,196,0.3)';nx.beginPath();nx.arc(cur.x,cur.y,12,0,Math.PI*2);nx.fill();
+
+    // Waypoints (bypassed obstructions)
+    navPath.forEach(p=>{
+      if(p.waypoint){
+        nx.fillStyle='rgba(212,160,84,0.6)';
+        nx.beginPath();nx.moveTo(p.x,p.y-6);nx.lineTo(p.x+5,p.y);nx.lineTo(p.x,p.y+6);nx.lineTo(p.x-5,p.y);nx.closePath();nx.fill();
+      }
+    });
+    // Goal
+    nx.fillStyle='rgba(212,160,84,0.5)';nx.font='11px "JetBrains Mono"';nx.textAlign='center';
+    nx.fillText('★ convergence',w-60,h/2+4);
+
+    nx.fillStyle='rgba(78,205,196,0.3)';nx.font='9px "JetBrains Mono"';nx.textAlign='left';
+    nx.fillText('Agent navigates past H¹ obstructions via AFC choices',50,24);
+  }
+
+  function navStep(){
+    const cur=navPath[navPath.length-1];
+    const target={x:cur.x+40+Math.random()*20, y:130};
+    // Check if we'd hit an obstruction
+    let blocked=false;
+    obstructions.forEach(o=>{
+      if(Math.abs(target.x-o.x)<o.r+10 && Math.abs(target.y-o.y)<o.r+10){
+        blocked=true;
+        // Navigate around it
+        const above=Math.random()>0.5;
+        navPath.push({x:o.x-o.r-5, y:target.y+(above?-45:45)});
+        navPath.push({x:o.x+o.r+5, y:target.y+(above?-30:30), waypoint:true});
+        navPath.push({x:o.x+o.r+20, y:130});
+      }
+    });
+    if(!blocked) navPath.push(target);
+    if(navPath[navPath.length-1].x > 700){
+      if(navAuto){clearInterval(navInt);navAuto=false;document.getElementById('nav-auto').textContent='Auto-Navigate';}
+    }
+    drawNav();
+  }
+
+  drawNav();
+  document.getElementById('nav-step').addEventListener('click',navStep);
+  document.getElementById('nav-auto').addEventListener('click',()=>{
+    if(navAuto){navAuto=false;clearInterval(navInt);document.getElementById('nav-auto').textContent='Auto-Navigate';return;}
+    navAuto=true;document.getElementById('nav-auto').textContent='Stop';
+    navInt=setInterval(()=>{
+      if(navPath[navPath.length-1].x>700){clearInterval(navInt);navAuto=false;document.getElementById('nav-auto').textContent='Auto-Navigate';return;}
+      navStep();
+    },500);
+  });
+  document.getElementById('nav-reset').addEventListener('click',()=>{
+    navPath=[{x:60,y:130}];navAuto=false;clearInterval(navInt);
+    document.getElementById('nav-auto').textContent='Auto-Navigate';drawNav();
+  });
+}catch(e){console.error('Nav:',e);}
+
+});
+</script>
+</body>
+</html>
