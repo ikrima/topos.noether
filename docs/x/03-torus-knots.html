@@ -1,0 +1,2199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torus Knots — An Interactive Exploration</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #08080c;
+    --bg-surface: #0e0e14;
+    --bg-elevated: #15151e;
+    --text: #c8c8d4;
+    --text-dim: #6a6a80;
+    --text-bright: #eeeef4;
+    --accent: #e8943a;
+    --accent-glow: #e8943a44;
+    --torus-blue: #4a7aaf;
+    --torus-blue-dim: #4a7aaf33;
+    --green: #5acea0;
+    --red: #e06060;
+    --border: #1e1e2e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--bg);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 17px;
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .article {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 600;
+    color: var(--text-bright);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-top: 4rem;
+    margin-bottom: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  p { margin-bottom: 1.2em; }
+
+  .dim { color: var(--text-dim); }
+  .accent { color: var(--accent); }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+  }
+
+  /* 3D Viewer */
+  .viewer-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    max-height: 70vh;
+    border-radius: 12px;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #12121a 0%, #08080c 100%);
+    border: 1px solid var(--border);
+    cursor: grab;
+    touch-action: none;
+  }
+  .viewer-wrap:active { cursor: grabbing; }
+  .viewer-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+
+  .viewer-label {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .viewer-knot-name {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Controls */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  @media (max-width: 560px) {
+    .controls-grid { grid-template-columns: 1fr; }
+  }
+
+  .control-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+
+  .control-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .control-value {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-elevated);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--bg-elevated);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+
+  .toggle.active { background: var(--accent); border-color: var(--accent); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-bright);
+    transition: transform 0.2s;
+  }
+
+  .toggle.active::after { transform: translateX(18px); }
+
+  .toggle-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* 2D Canvas */
+  .canvas-2d-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/1;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+  }
+
+  .canvas-2d-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Properties table */
+  .props-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .prop-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    text-align: center;
+  }
+
+  .prop-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .prop-val {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--text-bright);
+  }
+
+  /* Gallery */
+  .gallery-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+  }
+
+  .gallery-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .gallery-btn:hover { border-color: var(--accent); color: var(--text); }
+  .gallery-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+  /* Math */
+  .math-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+
+  .katex { font-size: 1.1em; }
+
+  /* Warning badge */
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin-left: 8px;
+  }
+
+  .badge-warn { background: #e0606020; color: var(--red); border: 1px solid #e0606040; }
+  .badge-ok { background: #5acea020; color: var(--green); border: 1px solid #5acea040; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+
+  /* Trace progress bar */
+  .trace-bar {
+    width: 100%;
+    height: 4px;
+    background: var(--bg-elevated);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .trace-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.05s linear;
+  }
+
+  .separator {
+    width: 60px;
+    height: 2px;
+    background: var(--border);
+    margin: 3rem auto;
+    border-radius: 1px;
+  }
+
+  /* Inline math color */
+  .katex .mord.text { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="article" style="padding-top: clamp(3rem,8vh,6rem); padding-bottom: 2rem;">
+  <p class="mono dim" style="font-size:12px; margin-bottom:12px; letter-spacing:0.1em; text-transform:uppercase;">An Interactive Exploration</p>
+  <h1>Torus Knots</h1>
+  <p style="margin-top:16px; font-size:1.1rem; color:var(--text-dim); max-width:560px;">
+    A curve that winds around a donut-shaped surface, weaving through its hole and around its body, then closes back on itself in a perfect loop.
+  </p>
+</header>
+
+<!-- Main 3D Viewer -->
+<div class="article">
+  <div class="viewer-wrap" id="viewer">
+    <div class="viewer-label">drag to rotate · scroll to zoom</div>
+    <div class="viewer-knot-name" id="knotNameLabel">T(2,3) — Trefoil</div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="article">
+  <div class="controls-grid">
+    <div class="control-card">
+      <div class="control-label">
+        <span>Parameter p <span style="color:var(--text-dim);font-size:10px;">(longitudinal winds)</span></span>
+        <span class="control-value" id="pVal">2</span>
+      </div>
+      <input type="range" id="pSlider" min="1" max="12" value="2" step="1">
+    </div>
+    <div class="control-card">
+      <div class="control-label">
+        <span>Parameter q <span style="color:var(--text-dim);font-size:10px;">(meridional winds)</span></span>
+        <span class="control-value" id="qVal">3</span>
+      </div>
+      <input type="range" id="qSlider" min="1" max="12" value="3" step="1">
+    </div>
+  </div>
+
+  <div class="control-card" style="margin-bottom:24px;">
+    <div style="display:flex; flex-wrap:wrap; gap:16px 32px;">
+      <div class="toggle-row">
+        <div class="toggle active" id="toggleTorus"></div>
+        <span class="toggle-text">Show torus surface</span>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle" id="toggleTrace"></div>
+        <span class="toggle-text">Trace animation</span>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle active" id="toggleAutoRotate"></div>
+        <span class="toggle-text">Auto-rotate</span>
+      </div>
+    </div>
+    <div class="trace-bar" id="traceBarWrap" style="display:none;">
+      <div class="trace-fill" id="traceFill"></div>
+    </div>
+  </div>
+
+  <div id="knotStatus" style="text-align:center; margin-bottom:24px;">
+    <span class="mono" style="font-size:13px;"></span>
+  </div>
+</div>
+
+<!-- Section: What is a Torus Knot? -->
+<div class="article">
+  <h2>A Knot on a Donut</h2>
+  <p>
+    Take a torus — the mathematical name for a donut shape. Now imagine drawing a closed curve on its surface, one that winds around the hole of the torus some number of times while simultaneously looping around the tube itself. If the curve closes up perfectly to form a single loop, you have a <em>torus knot</em>.
+  </p>
+  <p>
+    Every torus knot is described by two integers, <strong class="accent">p</strong> and <strong class="accent">q</strong>. The parameter p counts how many times the curve wraps around the axis of symmetry (the long way around the donut), while q counts how many times it passes through the hole (the short way around the tube). For the curve to form a true knot — a single connected loop — these two numbers must be <em>coprime</em>, meaning they share no common factor other than 1.
+  </p>
+  <p>
+    If p and q do share a common factor d, the result isn't a single knotted loop but rather d separate interlinked loops — a <em>torus link</em> with d components.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: The Fundamental Domain -->
+<div class="article">
+  <h2>The Fundamental Domain</h2>
+  <p>
+    There is a beautiful way to see the structure of a torus knot. A torus can be "unrolled" into a flat rectangle by cutting along two circles. On this rectangle, the knot becomes a collection of straight, parallel line segments. Glueing the edges back together — top to bottom, left to right — recovers the torus and the line segments reconnect into the knot.
+  </p>
+  <p>
+    Below, the horizontal axis represents the longitudinal angle (around the hole) and the vertical axis represents the meridional angle (around the tube). A <strong class="mono accent">T(p,q)</strong> torus knot appears as lines with slope q/p. Adjust the sliders above and watch the lines change.
+  </p>
+
+  <div class="canvas-2d-wrap" id="domainWrap">
+    <canvas id="domainCanvas"></canvas>
+  </div>
+
+  <p style="margin-top:16px; font-size:0.92rem; color:var(--text-dim);">
+    The orange lines trace the path of the knot on the unrolled torus. Opposite edges of the rectangle are identified — left with right, and top with bottom — to reconstruct the full torus surface.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Properties -->
+<div class="article">
+  <h2>Knot Invariants</h2>
+  <p>
+    Torus knots are among the best-understood families in knot theory. Their topological invariants have clean, closed-form expressions in terms of p and q.
+  </p>
+
+  <div class="props-grid" id="propsGrid">
+    <div class="prop-card">
+      <div class="prop-name">Crossing No.</div>
+      <div class="prop-val" id="propCrossing">3</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-name">Genus</div>
+      <div class="prop-val" id="propGenus">1</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-name">Bridge No.</div>
+      <div class="prop-val" id="propBridge">2</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-name">Braid Index</div>
+      <div class="prop-val" id="propBraid">2</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-name">Unknotting No.</div>
+      <div class="prop-val" id="propUnknotting">1</div>
+    </div>
+    <div class="prop-card">
+      <div class="prop-name">Components</div>
+      <div class="prop-val" id="propComponents">1</div>
+    </div>
+  </div>
+
+  <div class="math-block" id="mathFormulas">
+    <div id="mathCrossing" style="margin-bottom:12px;"></div>
+    <div id="mathGenus" style="margin-bottom:12px;"></div>
+    <div id="mathAlexander"></div>
+  </div>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Parametric Equations -->
+<div class="article">
+  <h2>Parametric Equations</h2>
+  <p>
+    A <strong class="mono accent">T(p,q)</strong> torus knot that lies on a torus with major radius R and minor radius r is traced by the following parametric curve as t sweeps from 0 to 2π:
+  </p>
+
+  <div class="math-block" id="mathParam"></div>
+
+  <p>
+    The key insight is that p and q control how fast the curve winds in each of the torus's two angular directions. The parameter p governs the rotation around the central axis, while q governs the rotation around the tube cross-section. Their ratio determines the geometry; because they are coprime, the curve visits every part of the torus surface before closing.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Gallery -->
+<div class="article">
+  <h2>Gallery of Torus Knots</h2>
+  <p>
+    Below are several famous torus knots, each with its own character. Click to explore them. Every torus knot is <em>prime</em> — it cannot be decomposed into simpler knots — and <em>chiral</em>, meaning it is not equivalent to its mirror image.
+  </p>
+
+  <div class="gallery-grid" id="gallery"></div>
+
+  <div style="margin-top:16px;">
+    <p style="font-size:0.92rem; color:var(--text-dim);">
+      The trefoil <span class="mono">T(2,3)</span> is the simplest nontrivial torus knot, with just 3 crossings. As p and q grow, the knot becomes increasingly complex and tightly wound around the torus.
+    </p>
+  </div>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Torus Links -->
+<div class="article">
+  <h2>When p and q Share a Factor</h2>
+  <p>
+    If gcd(p,q) = d > 1, the parametric curve doesn't form a single loop. Instead, it produces d separate, interlinked curves — a <em>torus link</em>. Each component is itself a <strong class="mono">T(p/d, q/d)</strong> torus knot (or unknot), and the d components are braided together symmetrically around the torus.
+  </p>
+  <p>
+    Try setting both sliders to even numbers — say <strong class="mono accent">p = 4</strong>, <strong class="mono accent">q = 6</strong> — and watch the 3D view. You'll see two separate loops intertwined, because gcd(4,6) = 2. The visualization renders each component in a different color.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Why Torus Knots Matter -->
+<div class="article">
+  <h2>Why Torus Knots Matter</h2>
+  <p>
+    Torus knots appear throughout mathematics, physics, and biology. They arise naturally as the links of isolated singularities of complex curves, connecting knot theory to algebraic geometry. In physics, knotted field configurations — including knotted light beams and knotted vortices in fluids — often take the form of torus knots.
+  </p>
+  <p>
+    In molecular biology, DNA can form knotted configurations inside viral capsids, and torus knots are among the most commonly observed DNA knot types. Understanding their geometry helps researchers analyze the three-dimensional structure of genetic material.
+  </p>
+  <p>
+    Torus knots also played a central role in one of knot theory's landmark results: the proof of the Milnor conjecture by Kronheimer and Mrowka, which established that the unknotting number of a T(p,q) torus knot equals (p−1)(q−1)/2 — exactly the genus of the knot's minimal Seifert surface.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PART II: DEEP DIVE — THE DOUBLE HELIX AND TORSION             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<div class="article">
+  <p class="mono dim" style="text-align:center; letter-spacing:0.2em; font-size:11px; margin-top:2rem;">PART II</p>
+  <h2 style="text-align:center; margin-top:0.5rem; font-size:clamp(1.6rem,3.5vw,2.2rem);">The Double Helix Connection</h2>
+  <p style="text-align:center; color:var(--text-dim); margin-bottom:3rem;">
+    From torus knots to DNA — torsion, supercoiling, and filling space with helices
+  </p>
+</div>
+
+<!-- Section: Helix as Torus Knot -->
+<div class="article">
+  <h2>The Helix: A Torus Knot Unrolled</h2>
+  <p>
+    A circular helix — the simplest space curve with constant curvature <em>and</em> constant torsion — is intimately related to torus knots. Consider a torus knot T(1,q): it wraps once around the hole and q times around the tube. If we imagine stretching the torus into a long, thin cylinder by increasing the major radius R toward infinity, this (1,q) curve becomes a helix with q turns.
+  </p>
+  <p>
+    Conversely, every helix can be thought of as the "unrolled" limit of a torus knot. The parametric equations converge: as R → ∞ while r stays fixed, the torus knot curve approaches a helix with radius r and pitch determined by q.
+  </p>
+  <p>
+    What makes the helix special among all space curves is Lancret's theorem: <em>a curve in 3-space is a general helix if and only if the ratio of its torsion to its curvature is constant.</em> For a circular helix with radius a and pitch 2πb, the curvature and torsion are:
+  </p>
+  <div id="mathHelixKT" style="text-align:center; margin: 1.5rem 0;"></div>
+  <p>
+    This constant ratio τ/κ = b/a is the tangent of the helix angle. A torus knot, by contrast, has curvature and torsion that <em>oscillate</em> — a fact we can visualize directly.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: DNA Double Helix as Torus Link -->
+<div class="article">
+  <h2>DNA: A Torus Link in Nature</h2>
+  <p>
+    Watson and Crick's double helix is, topologically, a <strong>T(2, n) torus link</strong> — two helical strands winding around a common axis, interlinked n times where n depends on the length of the molecule. In B-form DNA, the helix makes one full turn every 10.5 base pairs, so a circular DNA molecule of N base pairs has a linking number Lk ≈ N/10.5.
+  </p>
+  <p>
+    Each strand traces a helix on the surface of an imaginary torus whose axis follows the DNA centerline. The two strands are the two components of the link, just as our T(2,q) visualization shows two intertwined curves when gcd = 2.
+  </p>
+</div>
+
+<!-- DNA 3D Viewer -->
+<div class="article" style="max-width:820px;">
+  <div class="viewer-wrap" id="dnaViewerWrap" style="aspect-ratio:16/9; max-height:55vh;">
+    <canvas id="dnaCanvas"></canvas>
+    <div class="viewer-label" style="left:12px; top:12px;">
+      <span class="mono" style="font-size:11px; color:var(--accent);">DNA Double Helix</span>
+      <span class="mono dim" style="font-size:10px; margin-left:8px;">Drag to rotate · Scroll to zoom</span>
+    </div>
+  </div>
+  <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px;">
+    <button class="toggle-btn active" id="toggleDnaTorus">Show envelope</button>
+    <button class="toggle-btn" id="toggleDnaBasePairs">Show base pairs</button>
+  </div>
+  <div style="margin-top:16px;">
+    <label class="mono dim" style="font-size:11px;">Turns of helix: <span id="dnaHelixTurns" class="accent">3</span></label>
+    <input type="range" min="1" max="8" value="3" step="1" id="dnaTurnsSlider" class="slider" style="width:100%; margin-top:4px;">
+  </div>
+</div>
+
+<div class="article">
+  <p>
+    The visualization above renders a B-DNA double helix — two phosphate-sugar backbones spiraling in right-handed helical paths, joined by horizontal rungs representing base pairs. Toggle the torus surface to see the invisible torus on which both strands live.
+  </p>
+  <p>
+    This torus-link structure has a profound consequence: the two strands of circular DNA (like a bacterial plasmid) are topologically <em>linked</em>. You cannot separate them without cutting at least one strand — exactly the job of <strong>topoisomerase</strong> enzymes.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Curvature & Torsion -->
+<div class="article">
+  <h2>Curvature & Torsion Along the Curve</h2>
+  <p>
+    The Frenet–Serret frame assigns three orthonormal vectors to each point of a space curve: the tangent <strong style="color:#e8943a;">T</strong>, the normal <strong style="color:#5acea0;">N</strong>, and the binormal <strong style="color:#7a8af7;">B</strong>. As the frame travels along the curve, its rotation is governed by two scalar functions: the curvature κ (how sharply the curve bends) and the torsion τ (how much it twists out of its osculating plane).
+  </p>
+  <div id="mathFrenet" style="text-align:center; margin:1.5rem 0;"></div>
+  <p>
+    For a helix, both κ and τ are constant — the frame rotates uniformly. For a torus knot, they oscillate periodically. The pattern of these oscillations encodes the curve's topology.
+  </p>
+</div>
+
+<!-- Frenet-Serret Canvas -->
+<div class="article" style="max-width:820px;">
+  <div style="position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--bg-surface);">
+    <canvas id="frenetCanvas" style="width:100%; display:block;"></canvas>
+    <div style="position:absolute; left:12px; top:12px;">
+      <span class="mono" style="font-size:11px; color:var(--accent);">Frenet–Serret Frame</span>
+    </div>
+  </div>
+  <div style="display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap; margin-top:12px;">
+    <label class="mono dim" style="font-size:11px;">Curve:</label>
+    <button class="gallery-btn active" data-frenet="helix" style="font-size:12px;">Helix</button>
+    <button class="gallery-btn" data-frenet="trefoil" style="font-size:12px;">Trefoil T(2,3)</button>
+    <button class="gallery-btn" data-frenet="t34" style="font-size:12px;">T(3,4)</button>
+    <button class="gallery-btn" data-frenet="t57" style="font-size:12px;">T(5,7)</button>
+    <label class="mono dim" style="font-size:11px; margin-left:8px;">Speed:</label>
+    <input type="range" min="1" max="10" value="4" id="frenetSpeed" class="slider" style="width:80px;">
+  </div>
+  <!-- Torsion/curvature plot -->
+  <div style="position:relative; margin-top:16px; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--bg-surface);">
+    <canvas id="torsionPlot" style="width:100%; display:block;"></canvas>
+    <div style="position:absolute; left:12px; top:8px;">
+      <span class="mono" style="font-size:10px; color:var(--text-dim);">
+        <span style="color:#e8943a;">━━</span> κ(t) curvature &nbsp;&nbsp; <span style="color:#7a8af7;">━━</span> τ(t) torsion
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="article">
+  <p>
+    Compare the plots: for a helix, both curves are perfectly flat — constant curvature and torsion. For the trefoil T(2,3), they oscillate with period 2π/3 (three cycles per revolution). For T(3,4), twelve peaks appear. In general, a T(p,q) torus knot has p·q oscillation periods per full traversal. The peaks in torsion correspond to moments where the curve twists most sharply out of its local plane — precisely where it passes over a meridional circle of the torus.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Cable Knots -->
+<div class="article">
+  <h2>Cable Knots: Helices of Helices</h2>
+  <p>
+    A <strong>cable knot</strong> C(K; p,q) is constructed by taking a knot K and replacing it with a T(p,q) torus knot drawn in a thin tubular neighborhood of K. If K is itself a torus knot, the result is an <strong>iterated torus knot</strong> — a helix wound around a helix.
+  </p>
+  <p>
+    This is exactly what nature does with DNA. The double helix (level 0) wraps around histone proteins to form nucleosomes (level 1). The nucleosome chain coils into a 30nm solenoid (level 2). Each successive level of coiling is a cable construction — a helix whose axis is itself a helix.
+  </p>
+</div>
+
+<!-- Cable Knot 3D Viewer -->
+<div class="article" style="max-width:820px;">
+  <div class="viewer-wrap" id="cableViewerWrap" style="aspect-ratio:4/3; max-height:55vh;">
+    <canvas id="cableCanvas"></canvas>
+    <div class="viewer-label" style="left:12px; top:12px;">
+      <span class="mono" style="font-size:11px; color:var(--accent);">Cable Knot Construction</span>
+    </div>
+  </div>
+  <div style="margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+    <div>
+      <label class="mono dim" style="font-size:11px;">Depth: <span id="cableDepthVal" class="accent">1</span></label>
+      <input type="range" min="0" max="3" value="1" step="1" id="cableDepthSlider" class="slider" style="width:100%; margin-top:4px;">
+    </div>
+    <div>
+      <label class="mono dim" style="font-size:11px;">Winds per level: <span id="cableWindVal" class="accent">6</span></label>
+      <input type="range" min="3" max="20" value="6" step="1" id="cableWindSlider" class="slider" style="width:100%; margin-top:4px;">
+    </div>
+  </div>
+  <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
+    <button class="toggle-btn active" id="toggleCableAxes">Show axis curves</button>
+    <button class="toggle-btn" id="toggleCableAutoRotate">Auto-rotate</button>
+  </div>
+  <div id="cableLevelLabels" class="mono" style="margin-top:12px; font-size:12px; color:var(--text-dim); text-align:center;"></div>
+</div>
+
+<div class="article">
+  <p>
+    At depth 0, you see a simple circle — the unknot. At depth 1, the circle becomes a helix: a torus knot wound around the original path. At depth 2, <em>that</em> helix becomes the axis for a finer helix wound around it. At depth 3, we get a helix-of-a-helix-of-a-helix — and the curve begins to fill an ever-larger volume of the space around the original circle.
+  </p>
+  <p>
+    Each level of cabling multiplies the total length of curve contained within a bounded region, and the ratio of curve length to enclosing volume grows at each iteration. In the limit, the iterated construction approaches a <strong>space-filling curve</strong> — a 1-dimensional object whose image has Hausdorff dimension 3.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Twist-Writhe-Linking -->
+<div class="article">
+  <h2>Twist, Writhe, and Linking Number</h2>
+  <p>
+    For a closed ribbon — like the two strands of circular DNA — the <strong>linking number</strong> Lk counts how many times one strand winds around the other. White's theorem (Călugăreanu–White–Fuller) decomposes this topological invariant into two geometric quantities:
+  </p>
+  <div id="mathWhite" style="text-align:center; margin:1.5rem 0;"></div>
+  <p>
+    The <strong>twist</strong> Tw measures the helical winding of the ribbon about its own centerline. The <strong>writhe</strong> Wr measures the coiling or crossing of the centerline itself. The key insight: Lk is fixed (a topological invariant that cannot change without cutting), but twist and writhe can freely interconvert.
+  </p>
+</div>
+
+<!-- Twist-Writhe Interactive Canvas -->
+<div class="article" style="max-width:820px;">
+  <div style="position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--bg-surface);">
+    <canvas id="twistWritheCanvas" style="width:100%; display:block;"></canvas>
+    <div style="position:absolute; left:12px; top:10px;">
+      <span class="mono" style="font-size:11px; color:var(--accent);">Twist–Writhe Conservation</span>
+    </div>
+    <div id="twLabels" style="position:absolute; right:12px; top:10px; text-align:right;" class="mono" >
+      <div style="font-size:13px; color:var(--text-bright);">Lk = <span id="twLk">10</span></div>
+      <div style="font-size:12px; color:#e8943a;">Tw = <span id="twTw">10.0</span></div>
+      <div style="font-size:12px; color:#5acea0;">Wr = <span id="twWr">0.0</span></div>
+    </div>
+  </div>
+  <div style="margin-top:14px;">
+    <label class="mono dim" style="font-size:11px;">Supercoiling (Writhe): <span id="twSupercoilVal" class="accent" style="min-width:40px; display:inline-block;">0</span></label>
+    <input type="range" min="-8" max="8" value="0" step="0.1" id="twSupercoilSlider" class="slider" style="width:100%; margin-top:4px;">
+  </div>
+  <p class="mono dim" style="font-size:11px; text-align:center; margin-top:6px;">Drag the slider to add supercoiling → Writhe changes, Twist compensates, Linking number is conserved.</p>
+</div>
+
+<div class="article">
+  <p>
+    This is the fundamental constraint governing DNA topology. A circular DNA molecule has a fixed linking number set at the time the circle is closed. When the molecule is relaxed, nearly all the linking appears as twist (the normal helical winding). When the molecule is <strong>supercoiled</strong> — wound tighter or looser than its relaxed state — some twist converts to writhe. Negative supercoiling (underwinding) produces the compact, right-handed interwound structures seen in bacterial plasmids.
+  </p>
+  <p>
+    Topoisomerases control this balance. Type I topoisomerases change Lk by ±1 (cutting one strand). Type II topoisomerases change Lk by ±2 (passing one double helix through another). Both enable the cell to regulate twist and writhe independently — essential for replication, transcription, and compaction.
+  </p>
+</div>
+
+<div class="separator"></div>
+
+<!-- Section: Space-Filling Hierarchy -->
+<div class="article">
+  <h2>Filling Space with Torsion</h2>
+  <p>
+    The human genome contains approximately 6 billion base pairs — about 2 meters of DNA — packed into a nucleus roughly 6 μm across. This 300,000-fold compaction is achieved through <em>iterated helical winding</em>: each level of organization is a helix whose axis follows the helix of the previous level, exactly like the cable knot construction above.
+  </p>
+</div>
+
+<!-- Packing Levels Visualization -->
+<div class="article" style="max-width:820px;">
+  <div style="position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:var(--bg-surface);">
+    <canvas id="packingCanvas" style="width:100%; display:block;"></canvas>
+    <div style="position:absolute; left:12px; top:10px;">
+      <span class="mono" style="font-size:11px; color:var(--accent);">Chromatin Packing Hierarchy</span>
+    </div>
+  </div>
+  <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:12px;">
+    <button class="gallery-btn active" data-pack="0" style="font-size:11px;">Double Helix<br><span class="dim" style="font-size:10px;">2 nm</span></button>
+    <button class="gallery-btn" data-pack="1" style="font-size:11px;">Nucleosome<br><span class="dim" style="font-size:10px;">11 nm</span></button>
+    <button class="gallery-btn" data-pack="2" style="font-size:11px;">Solenoid<br><span class="dim" style="font-size:10px;">30 nm</span></button>
+    <button class="gallery-btn" data-pack="3" style="font-size:11px;">Loop<br><span class="dim" style="font-size:10px;">300 nm</span></button>
+    <button class="gallery-btn" data-pack="4" style="font-size:11px;">Chromosome<br><span class="dim" style="font-size:10px;">1400 nm</span></button>
+  </div>
+  <div id="packDesc" class="mono dim" style="text-align:center; font-size:12px; margin-top:10px; min-height:2em;">
+    The B-form double helix: two right-handed helical strands with 3.4 nm pitch, 2 nm diameter.
+  </div>
+</div>
+
+<div class="article">
+  <p>
+    At each level, the same geometric principle operates: a 1-dimensional curve (the previous-level fiber) is wound around a new axis, sweeping out a toroidal neighborhood. The double helix wraps around histone octamers 1.65 times — a left-handed T(1,−2) cable. The nucleosome chain coils into a solenoid — roughly 6 nucleosomes per helical turn. These solenoid fibers form loops anchored to a protein scaffold, and the loops themselves coil and fold further.
+  </p>
+  <p>
+    The result is a structure whose topology is an iterated torus knot — a cable of a cable of a cable — where each level of cabling contributes additional torsion and compaction. At each stage, the effective dimension of the curve increases. A single helix, while still 1-dimensional, sweeps out an area proportional to its length. The helix-of-helix sweeps out a volume. The iterated construction produces a dense, space-filling arrangement — a 1-dimensional curve that effectively fills three-dimensional space.
+  </p>
+  <p>
+    Recent Hi-C chromosome conformation data suggests that chromatin at the megabase scale organizes as a <strong>fractal globule</strong> — a knot-free, maximally dense packing that preserves the ability to unfold any local region. This is precisely the topology one obtains from iterated torus-knot cabling: dense, self-similar, and unknotted at every scale.
+  </p>
+  <p>
+    And so the torus knot — a simple curve on the surface of a donut — turns out to be the fundamental motif of life's most essential molecule. From the helical winding of Watson and Crick's double helix, through the supercoiled topology managed by topoisomerases, to the hierarchical cable-knot architecture of the chromosome, torsion is the recurring theme: a one-dimensional thread twisted, wound, and wound again, until it fills the three-dimensional world.
+  </p>
+</div>
+
+<!-- Footer -->
+<footer class="article" style="padding:4rem 24px 3rem; text-align:center;">
+  <p class="mono dim" style="font-size:11px;">
+    An interactive exploration of torus knots · Built with Three.js and KaTeX
+  </p>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+// ─── State ───────────────────────────────────────────────────
+const state = {
+  p: 2, q: 3,
+  showTorus: true,
+  showTrace: false,
+  autoRotate: true,
+  traceT: 0,
+  traceSpeed: 0.003,
+  R: 2.2,
+  r: 0.85,
+};
+
+// ─── Utility ─────────────────────────────────────────────────
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a; }
+
+// ─── Three.js Setup ──────────────────────────────────────────
+const container = document.getElementById('viewer');
+const rect = container.getBoundingClientRect();
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, rect.width / rect.height, 0.1, 100);
+camera.position.set(0, 2.5, 7);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(rect.width, rect.height);
+renderer.setClearColor(0x000000, 0);
+container.appendChild(renderer.domElement);
+
+// Lights
+const ambient = new THREE.AmbientLight(0x404060, 0.6);
+scene.add(ambient);
+
+const light1 = new THREE.PointLight(0xffeedd, 1.0, 20);
+light1.position.set(4, 5, 3);
+scene.add(light1);
+
+const light2 = new THREE.PointLight(0x6688cc, 0.5, 20);
+light2.position.set(-4, -3, 2);
+scene.add(light2);
+
+// Scene group for rotation
+const sceneGroup = new THREE.Group();
+scene.add(sceneGroup);
+
+// ─── Torus Knot Curve ────────────────────────────────────────
+class TorusKnotCurve extends THREE.Curve {
+  constructor(p, q, R, r) {
+    super();
+    this.p = p; this.q = q; this.R = R; this.r = r;
+  }
+  getPoint(t, optionalTarget = new THREE.Vector3()) {
+    const angle = t * Math.PI * 2;
+    const x = (this.R + this.r * Math.cos(this.q * angle)) * Math.cos(this.p * angle);
+    const y = (this.R + this.r * Math.cos(this.q * angle)) * Math.sin(this.p * angle);
+    const z = -this.r * Math.sin(this.q * angle);
+    return optionalTarget.set(x, y, z);
+  }
+}
+
+// ─── Scene Objects ───────────────────────────────────────────
+let knotMeshes = [];
+let torusMesh = null;
+let torusWire = null;
+let tracerMeshes = [];
+
+const knotColors = [0xe8943a, 0x5acea0, 0x7a8aef, 0xe06080, 0xc0c040, 0x50c0e0];
+
+function createScene() {
+  // Remove old objects
+  knotMeshes.forEach(m => sceneGroup.remove(m));
+  tracerMeshes.forEach(m => sceneGroup.remove(m));
+  if (torusMesh) sceneGroup.remove(torusMesh);
+  if (torusWire) sceneGroup.remove(torusWire);
+  knotMeshes = [];
+  tracerMeshes = [];
+
+  const { p, q, R, r } = state;
+  const d = gcd(p, q);
+  const numComponents = d;
+
+  // Create knot tube(s)
+  if (numComponents === 1) {
+    const curve = new TorusKnotCurve(p, q, R, r);
+    const segments = Math.max(256, (p + q) * 40);
+    const tubeGeo = new THREE.TubeGeometry(curve, segments, 0.055, 12, true);
+    const tubeMat = new THREE.MeshStandardMaterial({
+      color: knotColors[0],
+      metalness: 0.35,
+      roughness: 0.35,
+      emissive: knotColors[0],
+      emissiveIntensity: 0.12,
+    });
+    const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+    sceneGroup.add(mesh);
+    knotMeshes.push(mesh);
+
+    // Tracer
+    const tracerGeo = new THREE.SphereGeometry(0.09, 12, 12);
+    const tracerMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const tracer = new THREE.Mesh(tracerGeo, tracerMat);
+    tracer.visible = state.showTrace;
+    sceneGroup.add(tracer);
+    tracerMeshes.push(tracer);
+  } else {
+    // Multi-component link
+    const pp = p / d;
+    const qq = q / d;
+    for (let i = 0; i < d; i++) {
+      const offset = (2 * Math.PI * i) / d;
+      const curve = new (class extends THREE.Curve {
+        getPoint(t, target = new THREE.Vector3()) {
+          const angle = t * Math.PI * 2;
+          const phi = pp * angle + offset * pp;
+          const theta = qq * angle + offset * qq;
+          const x = (R + r * Math.cos(theta)) * Math.cos(phi);
+          const y = (R + r * Math.cos(theta)) * Math.sin(phi);
+          const z = -r * Math.sin(theta);
+          return target.set(x, y, z);
+        }
+      })();
+      const segments = Math.max(128, (pp + qq) * 40);
+      const tubeGeo = new THREE.TubeGeometry(curve, segments, 0.05, 10, true);
+      const color = knotColors[i % knotColors.length];
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: color,
+        metalness: 0.35,
+        roughness: 0.35,
+        emissive: color,
+        emissiveIntensity: 0.12,
+      });
+      const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+      sceneGroup.add(mesh);
+      knotMeshes.push(mesh);
+    }
+  }
+
+  // Torus surface
+  const torusGeo = new THREE.TorusGeometry(R, r, 48, 96);
+  const torusMat = new THREE.MeshStandardMaterial({
+    color: 0x4a7aaf,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  torusMesh = new THREE.Mesh(torusGeo, torusMat);
+  torusMesh.visible = state.showTorus;
+  sceneGroup.add(torusMesh);
+
+  const wireGeo = new THREE.TorusGeometry(R, r, 24, 48);
+  const wireMat = new THREE.MeshBasicMaterial({
+    color: 0x4a7aaf,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.06,
+  });
+  torusWire = new THREE.Mesh(wireGeo, wireMat);
+  torusWire.visible = state.showTorus;
+  sceneGroup.add(torusWire);
+}
+
+createScene();
+
+// ─── Mouse / Touch Controls ─────────────────────────────────
+let isDragging = false;
+let prevPointer = { x: 0, y: 0 };
+let rotX = 0.4, rotY = 0;
+let cameraDistance = 7;
+
+sceneGroup.rotation.x = rotX;
+
+container.addEventListener('pointerdown', (e) => {
+  isDragging = true;
+  prevPointer = { x: e.clientX, y: e.clientY };
+  container.setPointerCapture(e.pointerId);
+});
+
+container.addEventListener('pointermove', (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevPointer.x;
+  const dy = e.clientY - prevPointer.y;
+  rotY += dx * 0.006;
+  rotX += dy * 0.006;
+  rotX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotX));
+  prevPointer = { x: e.clientX, y: e.clientY };
+});
+
+container.addEventListener('pointerup', (e) => {
+  isDragging = false;
+  container.releasePointerCapture(e.pointerId);
+});
+
+container.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  cameraDistance += e.deltaY * 0.005;
+  cameraDistance = Math.max(3, Math.min(15, cameraDistance));
+}, { passive: false });
+
+// ─── Animation Loop ──────────────────────────────────────────
+let autoRotateAngle = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (state.autoRotate && !isDragging) {
+    autoRotateAngle += 0.004;
+  }
+
+  sceneGroup.rotation.x = rotX;
+  sceneGroup.rotation.y = rotY + autoRotateAngle;
+
+  camera.position.set(0, 0, cameraDistance);
+  camera.lookAt(0, 0, 0);
+
+  // Tracer animation
+  if (state.showTrace && tracerMeshes.length > 0) {
+    state.traceT = (state.traceT + state.traceSpeed) % 1;
+    const { p, q, R, r } = state;
+    const angle = state.traceT * Math.PI * 2;
+    const x = (R + r * Math.cos(q * angle)) * Math.cos(p * angle);
+    const y = (R + r * Math.cos(q * angle)) * Math.sin(p * angle);
+    const z = -r * Math.sin(q * angle);
+    tracerMeshes[0].position.set(x, y, z);
+
+    document.getElementById('traceFill').style.width = (state.traceT * 100) + '%';
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+
+// ─── Resize ──────────────────────────────────────────────────
+const ro = new ResizeObserver(() => {
+  const r = container.getBoundingClientRect();
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(r.width, r.height);
+});
+ro.observe(container);
+
+// ─── 2D Fundamental Domain ───────────────────────────────────
+const domainCanvas = document.getElementById('domainCanvas');
+const dCtx = domainCanvas.getContext('2d');
+
+function drawDomain() {
+  const wrap = document.getElementById('domainWrap');
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  domainCanvas.width = w * dpr;
+  domainCanvas.height = h * dpr;
+  dCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const pad = 32;
+  const dw = w - pad * 2;
+  const dh = h - pad * 2;
+
+  // Background
+  dCtx.fillStyle = '#0e0e14';
+  dCtx.fillRect(0, 0, w, h);
+
+  // Grid
+  dCtx.strokeStyle = '#1a1a28';
+  dCtx.lineWidth = 1;
+  for (let i = 0; i <= 8; i++) {
+    const x = pad + (dw * i / 8);
+    dCtx.beginPath(); dCtx.moveTo(x, pad); dCtx.lineTo(x, pad + dh); dCtx.stroke();
+  }
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + (dh * i / 4);
+    dCtx.beginPath(); dCtx.moveTo(pad, y); dCtx.lineTo(pad + dw, y); dCtx.stroke();
+  }
+
+  // Border
+  dCtx.strokeStyle = '#2a2a40';
+  dCtx.lineWidth = 1.5;
+  dCtx.strokeRect(pad, pad, dw, dh);
+
+  // Edge labels
+  dCtx.font = '11px "JetBrains Mono", monospace';
+  dCtx.fillStyle = '#6a6a80';
+  dCtx.textAlign = 'center';
+  dCtx.fillText('0', pad, pad + dh + 18);
+  dCtx.fillText('2π', pad + dw, pad + dh + 18);
+  dCtx.fillText('longitudinal (p winds)', pad + dw / 2, pad + dh + 18);
+  dCtx.save();
+  dCtx.translate(14, pad + dh / 2);
+  dCtx.rotate(-Math.PI / 2);
+  dCtx.fillText('meridional (q winds)', 0, 0);
+  dCtx.restore();
+
+  // Identification arrows
+  dCtx.fillStyle = '#4a7aaf';
+  dCtx.font = '14px sans-serif';
+  // Left/right arrows
+  const my = pad + dh / 2;
+  dCtx.fillText('▶', pad - 12, my + 5);
+  dCtx.fillText('▶', pad + dw + 4, my + 5);
+  // Top/bottom arrows
+  const mx = pad + dw / 2;
+  dCtx.fillText('▼', mx - 4, pad - 4);
+  dCtx.fillText('▼', mx - 4, pad + dh + 30);
+
+  // Draw knot lines
+  const { p, q } = state;
+  const d = gcd(p, q);
+  const N = 4000;
+
+  for (let comp = 0; comp < d; comp++) {
+    const color = d === 1 ? '#e8943a' : ['#e8943a', '#5acea0', '#7a8aef', '#e06080', '#c0c040', '#50c0e0'][comp % 6];
+    dCtx.strokeStyle = color;
+    dCtx.lineWidth = 2;
+    dCtx.lineCap = 'round';
+    dCtx.beginPath();
+    let started = false;
+    let prevX = 0, prevY = 0;
+
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const offset = comp / d;
+      const rawX = ((p * (t + offset)) % 1 + 1) % 1;
+      const rawY = ((q * (t + offset)) % 1 + 1) % 1;
+      const sx = pad + rawX * dw;
+      const sy = pad + rawY * dh;
+
+      if (!started) {
+        dCtx.moveTo(sx, sy);
+        started = true;
+      } else {
+        const jumpX = Math.abs(sx - prevX) > dw * 0.4;
+        const jumpY = Math.abs(sy - prevY) > dh * 0.4;
+        if (jumpX || jumpY) {
+          dCtx.moveTo(sx, sy);
+        } else {
+          dCtx.lineTo(sx, sy);
+        }
+      }
+      prevX = sx;
+      prevY = sy;
+    }
+    dCtx.stroke();
+  }
+
+  // Tracer on 2D
+  if (state.showTrace) {
+    const rawX = ((p * state.traceT) % 1 + 1) % 1;
+    const rawY = ((q * state.traceT) % 1 + 1) % 1;
+    const sx = pad + rawX * dw;
+    const sy = pad + rawY * dh;
+    dCtx.fillStyle = '#ffffff';
+    dCtx.beginPath();
+    dCtx.arc(sx, sy, 5, 0, Math.PI * 2);
+    dCtx.fill();
+  }
+}
+
+drawDomain();
+// Redraw 2D when tracing
+function animateDomain() {
+  if (state.showTrace) drawDomain();
+  requestAnimationFrame(animateDomain);
+}
+animateDomain();
+
+// ─── Properties ──────────────────────────────────────────────
+function updateProperties() {
+  const { p, q } = state;
+  const d = gcd(p, q);
+  const isKnot = d === 1;
+  const isTrivial = p === 1 || q === 1;
+
+  // Properties
+  let crossing, genus, bridge, braidIdx, unknotting;
+  if (isTrivial) {
+    crossing = 0; genus = 0; bridge = 1; braidIdx = 1; unknotting = 0;
+  } else if (isKnot) {
+    crossing = Math.min(p * (q - 1), q * (p - 1));
+    genus = (p - 1) * (q - 1) / 2;
+    bridge = Math.min(p, q);
+    braidIdx = Math.min(p, q);
+    unknotting = (p - 1) * (q - 1) / 2;
+  } else {
+    const pp = p / d, qq = q / d;
+    if (pp === 1 || qq === 1) {
+      crossing = 0; genus = 0; bridge = 1; braidIdx = 1; unknotting = 0;
+    } else {
+      crossing = Math.min(p * (q - 1), q * (p - 1));
+      genus = '—';
+      bridge = Math.min(p, q);
+      braidIdx = Math.min(p, q);
+      unknotting = '—';
+    }
+  }
+
+  document.getElementById('propCrossing').textContent = crossing;
+  document.getElementById('propGenus').textContent = genus;
+  document.getElementById('propBridge').textContent = bridge;
+  document.getElementById('propBraid').textContent = braidIdx;
+  document.getElementById('propUnknotting').textContent = unknotting;
+  document.getElementById('propComponents').textContent = d;
+  document.getElementById('propComponents').style.color = d > 1 ? '#e06060' : '';
+
+  // Knot name
+  let name = `T(${p},${q})`;
+  const names = {
+    '2,3': 'Trefoil (3₁)', '3,2': 'Trefoil (3₁)',
+    '2,5': 'Cinquefoil (5₁)', '5,2': 'Cinquefoil (5₁)',
+    '2,7': 'Septafoil (7₁)', '7,2': 'Septafoil (7₁)',
+    '3,4': '8₁₉ knot', '4,3': '8₁₉ knot',
+    '2,9': '9₁ knot', '9,2': '9₁ knot',
+    '3,5': '10₁₂₄ knot', '5,3': '10₁₂₄ knot',
+    '2,11': '11a367', '11,2': '11a367',
+  };
+  const key = `${Math.min(p,q)},${Math.max(p,q)}`;
+  const key2 = `${p},${q}`;
+  if (names[key2]) name += ' — ' + names[key2];
+  else if (names[key]) name += ' — ' + names[key];
+  else if (isTrivial) name += ' — Unknot';
+  else if (!isKnot) name += ` — ${d}-component link`;
+
+  document.getElementById('knotNameLabel').textContent = name;
+
+  // Status
+  let statusHTML = '';
+  if (isTrivial) {
+    statusHTML = '<span class="badge badge-warn">Trivial (unknot)</span>';
+  } else if (!isKnot) {
+    statusHTML = `<span class="badge badge-warn">Torus link · gcd(${p},${q}) = ${d} · ${d} components</span>`;
+  } else {
+    statusHTML = `<span class="badge badge-ok">Torus knot · gcd(${p},${q}) = 1</span>`;
+  }
+  document.getElementById('knotStatus').innerHTML = statusHTML;
+
+  // Math formulas
+  try {
+    if (typeof katex !== 'undefined') {
+      katex.render(`\\text{Crossing number} = \\min\\!\\big(p(q{-}1),\\, q(p{-}1)\\big) = \\min(${p}\\cdot${q-1},\\,${q}\\cdot${p-1}) = ${isTrivial ? 0 : Math.min(p*(q-1), q*(p-1))}`, document.getElementById('mathCrossing'), { displayMode: true });
+      katex.render(`\\text{Genus} = \\frac{(p-1)(q-1)}{2} = \\frac{${p-1}\\cdot${q-1}}{2} = ${isTrivial ? 0 : (p-1)*(q-1)/2}`, document.getElementById('mathGenus'), { displayMode: true });
+      katex.render(`\\Delta(t) = \\frac{(t^{pq}-1)(t-1)}{(t^p-1)(t^q-1)}`, document.getElementById('mathAlexander'), { displayMode: true });
+    }
+  } catch(e) {}
+
+  // Gallery active state
+  document.querySelectorAll('.gallery-btn').forEach(btn => {
+    const bp = parseInt(btn.dataset.p);
+    const bq = parseInt(btn.dataset.q);
+    btn.classList.toggle('active', bp === p && bq === q);
+  });
+}
+
+// ─── Parametric equations display ────────────────────────────
+function renderParamMath() {
+  try {
+    if (typeof katex !== 'undefined') {
+      katex.render(`\\begin{aligned} x(t) &= \\big(R + r\\cos(qt)\\big)\\cos(pt) \\\\ y(t) &= \\big(R + r\\cos(qt)\\big)\\sin(pt) \\\\ z(t) &= -r\\sin(qt) \\end{aligned} \\qquad t \\in [0, 2\\pi]`, document.getElementById('mathParam'), { displayMode: true });
+    }
+  } catch(e) {}
+}
+
+// ─── Gallery Setup ───────────────────────────────────────────
+const galleryKnots = [
+  { p: 2, q: 3, label: 'T(2,3)', sub: 'Trefoil' },
+  { p: 2, q: 5, label: 'T(2,5)', sub: 'Cinquefoil' },
+  { p: 3, q: 4, label: 'T(3,4)', sub: '8₁₉' },
+  { p: 2, q: 7, label: 'T(2,7)', sub: 'Septafoil' },
+  { p: 3, q: 5, label: 'T(3,5)', sub: '10₁₂₄' },
+  { p: 2, q: 9, label: 'T(2,9)', sub: '9₁' },
+  { p: 4, q: 5, label: 'T(4,5)', sub: '' },
+  { p: 3, q: 7, label: 'T(3,7)', sub: '' },
+  { p: 5, q: 7, label: 'T(5,7)', sub: '' },
+  { p: 4, q: 6, label: 'T(4,6)', sub: '2-link' },
+  { p: 3, q: 9, label: 'T(3,9)', sub: '3-link' },
+];
+
+const galleryEl = document.getElementById('gallery');
+galleryKnots.forEach(k => {
+  const btn = document.createElement('button');
+  btn.className = 'gallery-btn';
+  btn.dataset.p = k.p;
+  btn.dataset.q = k.q;
+  btn.innerHTML = k.label + (k.sub ? `<span style="font-size:10px;opacity:0.5;margin-left:4px;">${k.sub}</span>` : '');
+  btn.addEventListener('click', () => {
+    state.p = k.p;
+    state.q = k.q;
+    document.getElementById('pSlider').value = k.p;
+    document.getElementById('qSlider').value = k.q;
+    document.getElementById('pVal').textContent = k.p;
+    document.getElementById('qVal').textContent = k.q;
+    rebuild();
+  });
+  galleryEl.appendChild(btn);
+});
+
+// ─── Rebuild ─────────────────────────────────────────────────
+function rebuild() {
+  state.traceT = 0;
+  createScene();
+  torusMesh.visible = state.showTorus;
+  torusWire.visible = state.showTorus;
+  tracerMeshes.forEach(m => m.visible = state.showTrace);
+  updateProperties();
+  drawDomain();
+}
+
+// ─── Event Listeners ─────────────────────────────────────────
+document.getElementById('pSlider').addEventListener('input', (e) => {
+  state.p = parseInt(e.target.value);
+  document.getElementById('pVal').textContent = state.p;
+  rebuild();
+});
+
+document.getElementById('qSlider').addEventListener('input', (e) => {
+  state.q = parseInt(e.target.value);
+  document.getElementById('qVal').textContent = state.q;
+  rebuild();
+});
+
+// Toggles
+function setupToggle(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', () => {
+    state[key] = !state[key];
+    el.classList.toggle('active', state[key]);
+
+    if (key === 'showTorus') {
+      torusMesh.visible = state.showTorus;
+      torusWire.visible = state.showTorus;
+    }
+    if (key === 'showTrace') {
+      tracerMeshes.forEach(m => m.visible = state.showTrace);
+      document.getElementById('traceBarWrap').style.display = state.showTrace ? 'block' : 'none';
+      if (!state.showTrace) drawDomain();
+    }
+  });
+}
+
+setupToggle('toggleTorus', 'showTorus');
+setupToggle('toggleTrace', 'showTrace');
+setupToggle('toggleAutoRotate', 'autoRotate');
+
+// ─── Window Resize for 2D canvas ─────────────────────────────
+window.addEventListener('resize', () => drawDomain());
+
+// ─── Init ────────────────────────────────────────────────────
+updateProperties();
+
+// Defer KaTeX rendering
+function tryRenderMath() {
+  if (typeof katex !== 'undefined') {
+    renderParamMath();
+    updateProperties();
+    renderPartIIMath();
+  } else {
+    setTimeout(tryRenderMath, 200);
+  }
+}
+tryRenderMath();
+
+// ═══════════════════════════════════════════════════════════
+// PART II JAVASCRIPT
+// ═══════════════════════════════════════════════════════════
+
+function renderPartIIMath() {
+  try {
+    katex.render(String.raw`\kappa = \frac{a}{a^2 + b^2}, \qquad \tau = \frac{b}{a^2 + b^2}`, document.getElementById('mathHelixKT'), { displayMode: true });
+    katex.render(String.raw`\frac{d}{ds}\begin{pmatrix}\mathbf{T}\\\mathbf{N}\\\mathbf{B}\end{pmatrix} = \begin{pmatrix}0 & \kappa & 0\\-\kappa & 0 & \tau\\0 & -\tau & 0\end{pmatrix}\begin{pmatrix}\mathbf{T}\\\mathbf{N}\\\mathbf{B}\end{pmatrix}`, document.getElementById('mathFrenet'), { displayMode: true });
+    katex.render(String.raw`\mathrm{Lk} = \mathrm{Tw} + \mathrm{Wr}`, document.getElementById('mathWhite'), { displayMode: true });
+  } catch(e) { console.error('KaTeX part II:', e); }
+}
+
+// ─── DNA Double Helix 3D ──────────────────────────────────
+(function() {
+  const wrap = document.getElementById('dnaViewerWrap');
+  const canvas = document.getElementById('dnaCanvas');
+  if (!wrap || !canvas) return;
+
+  const dnaScene = new THREE.Scene();
+  const dnaCamera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 200);
+  dnaCamera.position.set(0, 8, 18);
+  dnaCamera.lookAt(0, 0, 0);
+
+  const dnaRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  dnaRenderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  dnaRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  dnaRenderer.setClearColor(0x0a0a12);
+
+  // Lighting
+  dnaScene.add(new THREE.AmbientLight(0x404060, 0.6));
+  const dL1 = new THREE.DirectionalLight(0xffeedd, 0.8);
+  dL1.position.set(5, 10, 7);
+  dnaScene.add(dL1);
+  const dL2 = new THREE.DirectionalLight(0x6688cc, 0.4);
+  dL2.position.set(-5, -3, -5);
+  dnaScene.add(dL2);
+
+  let dnaTurns = 3;
+  let showDnaTorus = true;
+  let showBasePairs = false;
+  let showDnaLabels = true;
+  let dnaGroup = new THREE.Group();
+  dnaScene.add(dnaGroup);
+
+  const strandMat1 = new THREE.MeshStandardMaterial({ color: 0xe8943a, roughness: 0.4, metalness: 0.2 });
+  const strandMat2 = new THREE.MeshStandardMaterial({ color: 0x5acea0, roughness: 0.4, metalness: 0.2 });
+  const bpMat1 = new THREE.MeshStandardMaterial({ color: 0x4466aa, roughness: 0.5 });
+  const bpMat2 = new THREE.MeshStandardMaterial({ color: 0xaa4466, roughness: 0.5 });
+  const torusMat = new THREE.MeshStandardMaterial({ color: 0x4a7aaf, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
+  const torusWireMat = new THREE.LineBasicMaterial({ color: 0x4a7aaf, transparent: true, opacity: 0.15 });
+
+  function buildDNA() {
+    while (dnaGroup.children.length) {
+      const c = dnaGroup.children[0];
+      dnaGroup.remove(c);
+      if (c.geometry) c.geometry.dispose();
+    }
+
+    const R = 1.0; // helix radius
+    const pitch = 3.4; // nm per turn (scaled)
+    const totalH = dnaTurns * pitch;
+    const segs = dnaTurns * 80;
+
+    // Build strand curves
+    function helixPoints(offset) {
+      const pts = [];
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs;
+        const angle = t * dnaTurns * Math.PI * 2 + offset;
+        const y = t * totalH - totalH / 2;
+        pts.push(new THREE.Vector3(R * Math.cos(angle), y, R * Math.sin(angle)));
+      }
+      return pts;
+    }
+
+    const pts1 = helixPoints(0);
+    const pts2 = helixPoints(Math.PI);
+
+    const curve1 = new THREE.CatmullRomCurve3(pts1);
+    const curve2 = new THREE.CatmullRomCurve3(pts2);
+
+    const tubeGeo1 = new THREE.TubeGeometry(curve1, segs, 0.15, 8, false);
+    const tubeGeo2 = new THREE.TubeGeometry(curve2, segs, 0.15, 8, false);
+    dnaGroup.add(new THREE.Mesh(tubeGeo1, strandMat1));
+    dnaGroup.add(new THREE.Mesh(tubeGeo2, strandMat2));
+
+    // Base pairs
+    const bpGroup = new THREE.Group();
+    bpGroup.visible = showBasePairs;
+    bpGroup.userData.isBP = true;
+    const bpCount = Math.round(dnaTurns * 10);
+    for (let i = 0; i < bpCount; i++) {
+      const t = (i + 0.5) / bpCount;
+      const p1 = curve1.getPointAt(t);
+      const p2 = curve2.getPointAt(t);
+      const mid = p1.clone().add(p2).multiplyScalar(0.5);
+      const dir = p2.clone().sub(p1);
+      const len = dir.length();
+      const geo = new THREE.CylinderGeometry(0.06, 0.06, len * 0.45, 6);
+      const m1 = new THREE.Mesh(geo, i % 2 === 0 ? bpMat1 : bpMat2);
+      const m2 = new THREE.Mesh(geo, i % 2 === 0 ? bpMat2 : bpMat1);
+      m1.position.copy(p1.clone().lerp(mid, 0.5));
+      m2.position.copy(mid.clone().lerp(p2, 0.5));
+      [m1, m2].forEach(m => {
+        m.lookAt(m.position.clone().add(dir));
+        m.rotateX(Math.PI / 2);
+      });
+      bpGroup.add(m1, m2);
+    }
+    dnaGroup.add(bpGroup);
+
+    // Cylinder surface (the "torus" for a linear segment is a cylinder)
+    const cylGeo = new THREE.CylinderGeometry(R * 1.15, R * 1.15, totalH * 1.02, 32, 1, true);
+    const cylMeshDNA = new THREE.Mesh(cylGeo, torusMat);
+    cylMeshDNA.userData.isTorus = true;
+    cylMeshDNA.visible = showDnaTorus;
+    dnaGroup.add(cylMeshDNA);
+
+    const wireGeo = new THREE.EdgesGeometry(new THREE.CylinderGeometry(R * 1.15, R * 1.15, totalH * 1.02, 16, 4, true));
+    const wireLine = new THREE.LineSegments(wireGeo, torusWireMat);
+    wireLine.userData.isTorus = true;
+    wireLine.visible = showDnaTorus;
+    dnaGroup.add(wireLine);
+
+    dnaCamera.position.set(0, totalH * 0.3, totalH * 1.1);
+    dnaCamera.lookAt(0, 0, 0);
+  }
+
+  buildDNA();
+
+  // Controls
+  let dnaIsDragging = false, dnaPrevX = 0, dnaPrevY = 0;
+  let dnaRotY = 0, dnaRotX = 0.3;
+
+  wrap.addEventListener('pointerdown', e => { dnaIsDragging = true; dnaPrevX = e.clientX; dnaPrevY = e.clientY; wrap.setPointerCapture(e.pointerId); });
+  wrap.addEventListener('pointermove', e => { if (!dnaIsDragging) return; dnaRotY += (e.clientX - dnaPrevX) * 0.008; dnaRotX += (e.clientY - dnaPrevY) * 0.008; dnaRotX = Math.max(-1.5, Math.min(1.5, dnaRotX)); dnaPrevX = e.clientX; dnaPrevY = e.clientY; });
+  wrap.addEventListener('pointerup', () => dnaIsDragging = false);
+  wrap.addEventListener('wheel', e => { e.preventDefault(); dnaCamera.position.z *= (1 + e.deltaY * 0.001); dnaCamera.position.z = Math.max(5, Math.min(50, dnaCamera.position.z)); }, { passive: false });
+
+  document.getElementById('dnaTurnsSlider').addEventListener('input', e => {
+    dnaTurns = parseInt(e.target.value);
+    document.getElementById('dnaHelixTurns').textContent = dnaTurns;
+    buildDNA();
+  });
+
+  document.getElementById('toggleDnaTorus').addEventListener('click', function() {
+    showDnaTorus = !showDnaTorus;
+    this.classList.toggle('active', showDnaTorus);
+    dnaGroup.children.forEach(c => { if (c.userData.isTorus) c.visible = showDnaTorus; });
+  });
+  document.getElementById('toggleDnaBasePairs').addEventListener('click', function() {
+    showBasePairs = !showBasePairs;
+    this.classList.toggle('active', showBasePairs);
+    dnaGroup.children.forEach(c => { if (c.userData.isBP) c.visible = showBasePairs; });
+  });
+
+  function animateDNA() {
+    requestAnimationFrame(animateDNA);
+    if (!dnaIsDragging) dnaRotY += 0.003;
+    dnaGroup.rotation.y = dnaRotY;
+    dnaGroup.rotation.x = dnaRotX;
+    dnaRenderer.render(dnaScene, dnaCamera);
+  }
+  animateDNA();
+
+  const dnaRO = new ResizeObserver(() => {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    dnaRenderer.setSize(w, h);
+    dnaCamera.aspect = w / h;
+    dnaCamera.updateProjectionMatrix();
+  });
+  dnaRO.observe(wrap);
+})();
+
+// ─── Frenet-Serret Frame Canvas ───────────────────────────
+(function() {
+  const c1 = document.getElementById('frenetCanvas');
+  const c2 = document.getElementById('torsionPlot');
+  if (!c1 || !c2) return;
+  const ctx1 = c1.getContext('2d');
+  const ctx2 = c2.getContext('2d');
+
+  let frenetCurve = 'helix';
+  let frenetT = 0;
+  let frenetSpeedMul = 4;
+
+  function resizeCanvas(canvas, aspect) {
+    const w = canvas.parentElement.clientWidth;
+    const h = w / aspect;
+    canvas.width = w * 2; canvas.height = h * 2;
+    canvas.style.height = h + 'px';
+  }
+
+  function curvePoint(type, t) {
+    const R = 2.0, r = 0.7;
+    let p, q;
+    if (type === 'helix') {
+      const a = 1.0, b = 0.5;
+      return { x: a * Math.cos(t), y: b * t, z: a * Math.sin(t) };
+    } else if (type === 'trefoil') { p = 2; q = 3; }
+    else if (type === 't34') { p = 3; q = 4; }
+    else { p = 5; q = 7; }
+    return {
+      x: (R + r * Math.cos(q * t)) * Math.cos(p * t),
+      y: (R + r * Math.cos(q * t)) * Math.sin(p * t),
+      z: -r * Math.sin(q * t)
+    };
+  }
+
+  function curveDerivatives(type, t) {
+    const dt = 0.0001;
+    const p0 = curvePoint(type, t - dt);
+    const p1 = curvePoint(type, t);
+    const p2 = curvePoint(type, t + dt);
+    const p3 = curvePoint(type, t + 2 * dt);
+
+    const v = { x: (p2.x - p0.x) / (2*dt), y: (p2.y - p0.y) / (2*dt), z: (p2.z - p0.z) / (2*dt) };
+    const a = { x: (p2.x - 2*p1.x + p0.x) / (dt*dt), y: (p2.y - 2*p1.y + p0.y) / (dt*dt), z: (p2.z - 2*p1.z + p0.z) / (dt*dt) };
+    const j = { x: (p3.x - 3*p2.x + 3*p1.x - p0.x) / (dt*dt*dt), y: (p3.y - 3*p2.y + 3*p1.y - p0.y) / (dt*dt*dt), z: (p3.z - 3*p2.z + 3*p1.z - p0.z) / (dt*dt*dt) };
+
+    const cross = {
+      x: v.y * a.z - v.z * a.y,
+      y: v.z * a.x - v.x * a.z,
+      z: v.x * a.y - v.y * a.x
+    };
+    const crossMag = Math.sqrt(cross.x*cross.x + cross.y*cross.y + cross.z*cross.z);
+    const vMag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+
+    const kappa = crossMag / (vMag * vMag * vMag);
+    const tau = crossMag > 1e-10 ? (cross.x * j.x + cross.y * j.y + cross.z * j.z) / (crossMag * crossMag) : 0;
+
+    // TNB frame
+    const T = { x: v.x / vMag, y: v.y / vMag, z: v.z / vMag };
+    const B = crossMag > 1e-10 ? { x: cross.x / crossMag, y: cross.y / crossMag, z: cross.z / crossMag } : { x: 0, y: 1, z: 0 };
+    const N = { x: B.y * T.z - B.z * T.y, y: B.z * T.x - B.x * T.z, z: B.x * T.y - B.y * T.x };
+
+    return { kappa, tau, T, N, B, pos: p1 };
+  }
+
+  function project(p, cx, cy, scale, rotY) {
+    const cosR = Math.cos(rotY), sinR = Math.sin(rotY);
+    const x2 = p.x * cosR - p.z * sinR;
+    const z2 = p.x * sinR + p.z * cosR;
+    const cosP = Math.cos(0.35), sinP = Math.sin(0.35);
+    const y2 = p.y * cosP - z2 * sinP;
+    return { x: cx + x2 * scale, y: cy - y2 * scale };
+  }
+
+  const kappaHistory = [];
+  const tauHistory = [];
+  const histLen = 300;
+
+  function drawFrenet() {
+    resizeCanvas(c1, 16/9);
+    resizeCanvas(c2, 4);
+    const W1 = c1.width, H1 = c1.height;
+    const W2 = c2.width, H2 = c2.height;
+
+    // Clear
+    ctx1.fillStyle = '#0e0e14';
+    ctx1.fillRect(0, 0, W1, H1);
+    ctx2.fillStyle = '#0e0e14';
+    ctx2.fillRect(0, 0, W2, H2);
+
+    const cx = W1 / 2, cy = H1 / 2;
+    const scale = Math.min(W1, H1) * 0.17;
+    const tMax = frenetCurve === 'helix' ? Math.PI * 6 : Math.PI * 2;
+    const rotY = frenetT * 0.1;
+
+    // Draw curve
+    ctx1.beginPath();
+    ctx1.strokeStyle = '#3a3a52';
+    ctx1.lineWidth = 2;
+    const steps = 500;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * tMax;
+      const p = curvePoint(frenetCurve, t);
+      const s = project(p, cx, cy, scale, rotY);
+      i === 0 ? ctx1.moveTo(s.x, s.y) : ctx1.lineTo(s.x, s.y);
+    }
+    ctx1.stroke();
+
+    // Current param
+    const tCur = (frenetT * frenetSpeedMul * 0.003) % 1 * tMax;
+    const d = curveDerivatives(frenetCurve, tCur);
+    const pos = project(d.pos, cx, cy, scale, rotY);
+
+    // Draw TNB vectors
+    const arrowLen = scale * 0.4;
+    function drawArrow(vec, color) {
+      const tip = project({
+        x: d.pos.x + vec.x * 1.5,
+        y: d.pos.y + vec.y * 1.5,
+        z: d.pos.z + vec.z * 1.5
+      }, cx, cy, scale, rotY);
+      ctx1.beginPath();
+      ctx1.moveTo(pos.x, pos.y);
+      ctx1.lineTo(tip.x, tip.y);
+      ctx1.strokeStyle = color;
+      ctx1.lineWidth = 3;
+      ctx1.stroke();
+      // Arrowhead
+      ctx1.beginPath();
+      ctx1.arc(tip.x, tip.y, 5, 0, Math.PI * 2);
+      ctx1.fillStyle = color;
+      ctx1.fill();
+    }
+
+    drawArrow(d.T, '#e8943a');
+    drawArrow(d.N, '#5acea0');
+    drawArrow(d.B, '#7a8af7');
+
+    // Point on curve
+    ctx1.beginPath();
+    ctx1.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+    ctx1.fillStyle = '#eeeef4';
+    ctx1.fill();
+
+    // Legend
+    ctx1.font = `${Math.round(W1 * 0.018)}px 'JetBrains Mono', monospace`;
+    const lx = W1 - W1 * 0.15, ly = H1 - H1 * 0.15;
+    ctx1.fillStyle = '#e8943a'; ctx1.fillText('T tangent', lx, ly);
+    ctx1.fillStyle = '#5acea0'; ctx1.fillText('N normal', lx, ly + W1*0.025);
+    ctx1.fillStyle = '#7a8af7'; ctx1.fillText('B binormal', lx, ly + W1*0.05);
+
+    // Update history
+    kappaHistory.push(d.kappa);
+    tauHistory.push(d.tau);
+    if (kappaHistory.length > histLen) kappaHistory.shift();
+    if (tauHistory.length > histLen) tauHistory.shift();
+
+    // Draw torsion/curvature plot
+    let maxVal = 0.1;
+    for (let i = 0; i < kappaHistory.length; i++) {
+      maxVal = Math.max(maxVal, Math.abs(kappaHistory[i]), Math.abs(tauHistory[i]));
+    }
+    maxVal *= 1.2;
+
+    const plotY = H2 / 2;
+    const plotScale = (H2 * 0.4) / maxVal;
+
+    // Zero line
+    ctx2.beginPath();
+    ctx2.moveTo(0, plotY);
+    ctx2.lineTo(W2, plotY);
+    ctx2.strokeStyle = '#1e1e2e';
+    ctx2.lineWidth = 1;
+    ctx2.stroke();
+
+    // Kappa
+    ctx2.beginPath();
+    ctx2.strokeStyle = '#e8943a';
+    ctx2.lineWidth = 2;
+    for (let i = 0; i < kappaHistory.length; i++) {
+      const x = (i / histLen) * W2;
+      const y = plotY - kappaHistory[i] * plotScale;
+      i === 0 ? ctx2.moveTo(x, y) : ctx2.lineTo(x, y);
+    }
+    ctx2.stroke();
+
+    // Tau
+    ctx2.beginPath();
+    ctx2.strokeStyle = '#7a8af7';
+    ctx2.lineWidth = 2;
+    for (let i = 0; i < tauHistory.length; i++) {
+      const x = (i / histLen) * W2;
+      const y = plotY - tauHistory[i] * plotScale;
+      i === 0 ? ctx2.moveTo(x, y) : ctx2.lineTo(x, y);
+    }
+    ctx2.stroke();
+
+    frenetT++;
+    requestAnimationFrame(drawFrenet);
+  }
+
+  drawFrenet();
+
+  // Frenet curve selector
+  document.querySelectorAll('[data-frenet]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-frenet]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      frenetCurve = btn.dataset.frenet;
+      kappaHistory.length = 0;
+      tauHistory.length = 0;
+    });
+  });
+
+  document.getElementById('frenetSpeed').addEventListener('input', e => {
+    frenetSpeedMul = parseInt(e.target.value);
+  });
+})();
+
+// ─── Cable Knot 3D ────────────────────────────────────────
+(function() {
+  const wrap = document.getElementById('cableViewerWrap');
+  const canvas = document.getElementById('cableCanvas');
+  if (!wrap || !canvas) return;
+
+  const cScene = new THREE.Scene();
+  const cCamera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 200);
+  cCamera.position.set(0, 4, 10);
+  cCamera.lookAt(0, 0, 0);
+
+  const cRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  cRenderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  cRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  cRenderer.setClearColor(0x0a0a12);
+
+  cScene.add(new THREE.AmbientLight(0x404060, 0.6));
+  const cL1 = new THREE.DirectionalLight(0xffeedd, 0.9);
+  cL1.position.set(5, 10, 7);
+  cScene.add(cL1);
+
+  let cableDepth = 1, cableWinds = 6;
+  let showCableAxes = true, cableAutoRot = false;
+  let cGroup = new THREE.Group();
+  cScene.add(cGroup);
+
+  const cableColors = [0x555570, 0xe8943a, 0x5acea0, 0x7a8af7];
+
+  function buildCable() {
+    while (cGroup.children.length) {
+      const c = cGroup.children[0]; cGroup.remove(c);
+      if (c.geometry) c.geometry.dispose();
+    }
+
+    // Build iteratively: start with circle, then cable at each level
+    // Level 0: circle of radius R0
+    // Level i: wind around level i-1 curve, with tube radius r_i, winding number w
+
+    const totalSegs = 3000;
+
+    function getPoint(depth, t) {
+      if (depth === 0) {
+        const R = 3;
+        return new THREE.Vector3(R * Math.cos(t), 0, R * Math.sin(t));
+      }
+
+      const parentT = t;
+      const parentPt = getPoint(depth - 1, parentT);
+
+      // Get parent tangent for frame
+      const dt = 0.0001;
+      const pPrev = getPoint(depth - 1, parentT - dt);
+      const pNext = getPoint(depth - 1, parentT + dt);
+
+      const tangent = new THREE.Vector3().subVectors(pNext, pPrev).normalize();
+
+      // Build frame using Frenet-like approach
+      const up = new THREE.Vector3(0, 1, 0);
+      if (Math.abs(tangent.dot(up)) > 0.99) up.set(1, 0, 0);
+      const normal = new THREE.Vector3().crossVectors(tangent, up).normalize();
+      const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+
+      // Cable parameters: wind around parent curve
+      const r = 1.2 / Math.pow(2.2, depth); // decreasing radius
+      const w = cableWinds;
+      const angle = t * w;
+
+      const offset = new THREE.Vector3()
+        .addScaledVector(normal, r * Math.cos(angle))
+        .addScaledVector(binormal, r * Math.sin(angle));
+
+      return parentPt.clone().add(offset);
+    }
+
+    // Generate curve points for the final depth
+    const pts = [];
+    for (let i = 0; i <= totalSegs; i++) {
+      const t = (i / totalSegs) * Math.PI * 2;
+      pts.push(getPoint(cableDepth, t));
+    }
+
+    const curve = new THREE.CatmullRomCurve3(pts, true);
+    const tubeRadius = 0.08 / Math.max(1, cableDepth * 0.7);
+    const geo = new THREE.TubeGeometry(curve, totalSegs, tubeRadius, 8, true);
+    const mat = new THREE.MeshStandardMaterial({
+      color: cableColors[Math.min(cableDepth, 3)],
+      roughness: 0.35, metalness: 0.3
+    });
+    cGroup.add(new THREE.Mesh(geo, mat));
+
+    // Axis curves for lower levels
+    if (showCableAxes && cableDepth > 0) {
+      for (let d = 0; d < cableDepth; d++) {
+        const axisPts = [];
+        const axisSeg = 500;
+        for (let i = 0; i <= axisSeg; i++) {
+          axisPts.push(getPoint(d, (i / axisSeg) * Math.PI * 2));
+        }
+        const axisGeo = new THREE.BufferGeometry().setFromPoints(axisPts);
+        const axisMat = new THREE.LineBasicMaterial({
+          color: cableColors[d],
+          transparent: true,
+          opacity: 0.3 + d * 0.15
+        });
+        cGroup.add(new THREE.Line(axisGeo, axisMat));
+      }
+    }
+
+    // Update label
+    const labels = [
+      'Level 0: Circle (unknot)',
+      'Level 1: Helix wound around circle',
+      'Level 2: Helix wound around helix wound around circle',
+      'Level 3: Helix³ — approaching space-filling'
+    ];
+    document.getElementById('cableLevelLabels').textContent = labels[cableDepth] || '';
+  }
+
+  buildCable();
+
+  // Controls
+  let cIsDrag = false, cPrevX = 0, cPrevY = 0, cRotY = 0, cRotX = 0.3;
+  wrap.addEventListener('pointerdown', e => { cIsDrag = true; cPrevX = e.clientX; cPrevY = e.clientY; wrap.setPointerCapture(e.pointerId); });
+  wrap.addEventListener('pointermove', e => { if (!cIsDrag) return; cRotY += (e.clientX - cPrevX) * 0.008; cRotX += (e.clientY - cPrevY) * 0.008; cRotX = Math.max(-1.5, Math.min(1.5, cRotX)); cPrevX = e.clientX; cPrevY = e.clientY; });
+  wrap.addEventListener('pointerup', () => cIsDrag = false);
+  wrap.addEventListener('wheel', e => { e.preventDefault(); cCamera.position.z *= (1 + e.deltaY * 0.001); cCamera.position.z = Math.max(3, Math.min(40, cCamera.position.z)); }, { passive: false });
+
+  document.getElementById('cableDepthSlider').addEventListener('input', e => {
+    cableDepth = parseInt(e.target.value);
+    document.getElementById('cableDepthVal').textContent = cableDepth;
+    buildCable();
+  });
+  document.getElementById('cableWindSlider').addEventListener('input', e => {
+    cableWinds = parseInt(e.target.value);
+    document.getElementById('cableWindVal').textContent = cableWinds;
+    buildCable();
+  });
+  document.getElementById('toggleCableAxes').addEventListener('click', function() {
+    showCableAxes = !showCableAxes; this.classList.toggle('active', showCableAxes); buildCable();
+  });
+  document.getElementById('toggleCableAutoRotate').addEventListener('click', function() {
+    cableAutoRot = !cableAutoRot; this.classList.toggle('active', cableAutoRot);
+  });
+
+  function animateCable() {
+    requestAnimationFrame(animateCable);
+    if (cableAutoRot && !cIsDrag) cRotY += 0.005;
+    cGroup.rotation.y = cRotY;
+    cGroup.rotation.x = cRotX;
+    cRenderer.render(cScene, cCamera);
+  }
+  animateCable();
+
+  const cRO = new ResizeObserver(() => {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    cRenderer.setSize(w, h);
+    cCamera.aspect = w / h;
+    cCamera.updateProjectionMatrix();
+  });
+  cRO.observe(wrap);
+})();
+
+// ─── Twist-Writhe Canvas ──────────────────────────────────
+(function() {
+  const canvas = document.getElementById('twistWritheCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const Lk = 10;
+  let writhe = 0;
+
+  function resize() {
+    const w = canvas.parentElement.clientWidth;
+    const h = w / 2.5;
+    canvas.width = w * 2; canvas.height = h * 2;
+    canvas.style.height = h + 'px';
+  }
+
+  function drawTwistWrithe() {
+    resize();
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#0e0e14';
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2, cy = H / 2;
+    const twist = Lk - writhe;
+
+    // Draw a circular ribbon with supercoiling
+    // Supercoiling makes the ribbon form a figure-8 / plectonemic shape
+    const absWr = Math.abs(writhe);
+    const wrSign = writhe >= 0 ? 1 : -1;
+
+    const baseR = Math.min(W, H) * 0.3;
+    const segs = 600;
+
+    // Generate ribbon centerline: from circle to figure-8 as writhe increases
+    function centerPoint(t) {
+      const blend = Math.min(absWr / 5, 1);
+      // Circle
+      const circX = baseR * Math.cos(t);
+      const circY = baseR * Math.sin(t) * 0.3;
+      // Figure-8 (lemniscate)
+      const denom = 1 + Math.sin(t) * Math.sin(t);
+      const lemX = baseR * Math.cos(t) / denom;
+      const lemY = baseR * Math.sin(t) * Math.cos(t) / denom * wrSign;
+
+      // Progressive plectonemic: multiple crossings
+      const loops = Math.max(1, Math.floor(absWr / 2));
+      const plecX = baseR * 0.85 * Math.cos(t);
+      const plecY = baseR * 0.25 * Math.sin(t * loops) * (absWr / 5);
+
+      if (blend < 0.5) {
+        const b2 = blend * 2;
+        return {
+          x: cx + circX * (1 - b2) + lemX * b2,
+          y: cy + circY * (1 - b2) + lemY * b2
+        };
+      } else {
+        const b2 = (blend - 0.5) * 2;
+        return {
+          x: cx + lemX * (1 - b2) + (cx + plecX) * b2 - cx * b2,
+          y: cy + lemY * (1 - b2) + plecY * b2
+        };
+      }
+    }
+
+    // Draw two strands offset from centerline (twist visualization)
+    const ribbonW = baseR * 0.06;
+    const twistRate = twist * 0.5;
+
+    for (let strand = 0; strand < 2; strand++) {
+      ctx.beginPath();
+      ctx.strokeStyle = strand === 0 ? '#e8943a' : '#5acea0';
+      ctx.lineWidth = 3;
+
+      for (let i = 0; i <= segs; i++) {
+        const t = (i / segs) * Math.PI * 2;
+        const c = centerPoint(t);
+
+        // Get tangent
+        const dt = 0.01;
+        const cNext = centerPoint(t + dt);
+        const dx = cNext.x - c.x, dy = cNext.y - c.y;
+        const len = Math.sqrt(dx*dx + dy*dy) || 1;
+        const nx = -dy / len, ny = dx / len;
+
+        const phase = strand === 0 ? 0 : Math.PI;
+        const offset = ribbonW * Math.cos(twistRate * t + phase);
+
+        const px = c.x + nx * offset;
+        const py = c.y + ny * offset;
+
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    // Draw center line (dashed)
+    ctx.beginPath();
+    ctx.setLineDash([8, 8]);
+    ctx.strokeStyle = '#2a2a3a';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= segs; i++) {
+      const t = (i / segs) * Math.PI * 2;
+      const c = centerPoint(t);
+      i === 0 ? ctx.moveTo(c.x, c.y) : ctx.lineTo(c.x, c.y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Update labels
+    document.getElementById('twLk').textContent = Lk;
+    document.getElementById('twTw').textContent = twist.toFixed(1);
+    document.getElementById('twWr').textContent = (writhe >= 0 ? '+' : '') + writhe.toFixed(1);
+  }
+
+  drawTwistWrithe();
+
+  document.getElementById('twSupercoilSlider').addEventListener('input', e => {
+    writhe = parseFloat(e.target.value);
+    document.getElementById('twSupercoilVal').textContent = (writhe >= 0 ? '+' : '') + writhe.toFixed(1);
+    drawTwistWrithe();
+  });
+
+  window.addEventListener('resize', drawTwistWrithe);
+})();
+
+// ─── Packing Hierarchy Canvas ─────────────────────────────
+(function() {
+  const canvas = document.getElementById('packingCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let packLevel = 0;
+  let animT = 0;
+
+  const descriptions = [
+    'The B-form double helix: two right-handed helical strands with 3.4 nm pitch, 2 nm diameter.',
+    'DNA wraps 1.65 turns around histone octamers → 11 nm nucleosome "beads on a string."',
+    'Nucleosome chain coils into 30 nm solenoid — ~6 nucleosomes per helical turn.',
+    'Solenoid fibers form 300 nm loops anchored to a protein scaffold.',
+    'Loops coil and condense into a 1400 nm metaphase chromatid — 10,000× compaction.'
+  ];
+  const levelColors = ['#e8943a', '#5acea0', '#7a8af7', '#cc6688', '#aabb44'];
+  const levelNames = ['2 nm', '11 nm', '30 nm', '300 nm', '1400 nm'];
+
+  function resize() {
+    const w = canvas.parentElement.clientWidth;
+    const h = w / 2;
+    canvas.width = w * 2; canvas.height = h * 2;
+    canvas.style.height = h + 'px';
+  }
+
+  function drawPacking() {
+    resize();
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#0e0e14';
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2, cy = H / 2;
+    animT += 0.015;
+
+    // Draw the current packing level as iterative helices
+    // Level 0: simple double helix
+    // Level 1: helix wound into beads
+    // Level 2: beads wound into solenoid
+    // Level 3: solenoid into loops
+    // Level 4: loops into chromosome
+
+    const baseR = Math.min(W, H) * 0.35;
+    const segs = 800;
+
+    // For each level, we draw a helical structure
+    // Level n uses a helix with increasing nesting
+    function getNestedPoint(level, t, R, amplitude) {
+      if (level === 0) {
+        // Simple helix extending horizontally
+        const x = t * R;
+        const y = amplitude * Math.sin(t * 8 + animT);
+        const z = amplitude * Math.cos(t * 8 + animT);
+        return { x, y, z };
+      }
+      // Nested: wind around previous level
+      const parentPt = getNestedPoint(level - 1, t, R * 0.8, amplitude * 0.7);
+      const winding = [0, 12, 6, 4, 3][level] || 6;
+      const r = amplitude * 0.4 / level;
+      const angle = t * winding * 2 + animT * (level % 2 === 0 ? 1 : -1);
+      return {
+        x: parentPt.x + r * Math.cos(angle) * 0.3,
+        y: parentPt.y + r * Math.sin(angle),
+        z: parentPt.z + r * Math.cos(angle + 1.5)
+      };
+    }
+
+    // Draw all levels up to current
+    for (let lv = 0; lv <= packLevel; lv++) {
+      ctx.beginPath();
+      ctx.strokeStyle = levelColors[lv];
+      ctx.lineWidth = lv === packLevel ? 3 : 1.5;
+      ctx.globalAlpha = lv === packLevel ? 1 : 0.25;
+
+      for (let i = 0; i <= segs; i++) {
+        const t = (i / segs) * Math.PI * 2 - Math.PI;
+        const amp = baseR * 0.3;
+        const pt = getNestedPoint(lv, t, baseR * 0.8, amp);
+
+        // Simple 2D projection
+        const px = cx + pt.x;
+        const py = cy + pt.y * 0.8 + pt.z * 0.2;
+
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Scale bar
+    ctx.fillStyle = levelColors[packLevel];
+    ctx.font = `bold ${Math.round(W * 0.025)}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(levelNames[packLevel], cx, H - H * 0.06);
+
+    // Scale bar line
+    const barW = W * 0.1;
+    ctx.beginPath();
+    ctx.moveTo(cx - barW/2, H - H * 0.1);
+    ctx.lineTo(cx + barW/2, H - H * 0.1);
+    ctx.strokeStyle = levelColors[packLevel];
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    requestAnimationFrame(drawPacking);
+  }
+
+  drawPacking();
+
+  document.querySelectorAll('[data-pack]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-pack]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      packLevel = parseInt(btn.dataset.pack);
+      document.getElementById('packDesc').textContent = descriptions[packLevel];
+    });
+  });
+})();
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
