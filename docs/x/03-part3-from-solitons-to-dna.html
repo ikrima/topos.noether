@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Solitons to DNA — Part 3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400&display=swap');
+
+  :root {
+    --bg: #FAF8F4; --text: #2A2520; --text-secondary: #6B6560;
+    --accent: #C4601D; --accent-light: #E8A56E; --accent-bg: #FDF5EE;
+    --border: #E0DBD4; --canvas-bg: #F2F0EB;
+    --blue: #2D6A9F; --green: #3A7D44; --red: #C4401D; --purple: #7B4DAA;
+    --max-width: 720px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { font-size:18px; scroll-behavior:smooth; background:var(--bg); }
+  body { font-family:'Source Serif 4',Georgia,serif; color:var(--text); line-height:1.72; -webkit-font-smoothing:antialiased; }
+  .essay { max-width:var(--max-width); margin:0 auto; padding:0 24px 120px; }
+
+  .hero { text-align:center; padding:80px 0 48px; }
+  .hero .part-label { font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:12px; }
+  .hero h1 { font-size:2.6rem; font-weight:300; line-height:1.15; letter-spacing:-0.02em; margin-bottom:16px; }
+  .hero .subtitle { font-size:1.05rem; color:var(--text-secondary); font-style:italic; font-weight:300; }
+  .hero-divider { width:48px; height:2px; background:var(--accent); margin:40px auto 0; }
+
+  section { margin-top:56px; }
+  section h2 { font-size:1.5rem; font-weight:600; margin-bottom:20px; line-height:1.3; }
+  p { margin-bottom:18px; } p:last-child { margin-bottom:0; }
+  em.def { font-style:italic; color:var(--accent); }
+  .math { font-family:'JetBrains Mono',monospace; font-size:0.82em; background:var(--accent-bg); padding:2px 6px; border-radius:3px; white-space:nowrap; }
+  .equation { display:block; text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.88em; padding:18px 0; color:var(--text); }
+  .note { border-left:3px solid var(--accent); padding:14px 20px; margin:24px 0; background:var(--accent-bg); font-size:0.92rem; border-radius:0 4px 4px 0; }
+
+  .figure { margin:36px -24px; background:var(--canvas-bg); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:20px 24px; position:relative; }
+  @media(min-width:820px){ .figure { margin-left:-60px; margin-right:-60px; padding:24px 36px; border-radius:6px; border:1px solid var(--border); } }
+  .figure-label { font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:12px; font-family:'JetBrains Mono',monospace; }
+
+  .controls { display:flex; flex-wrap:wrap; gap:16px; margin-top:14px; align-items:center; }
+  .control-group { display:flex; align-items:center; gap:8px; }
+  .control-group label { font-size:0.75rem; font-family:'JetBrains Mono',monospace; color:var(--text-secondary); white-space:nowrap; }
+  .control-group input[type="range"] { width:120px; accent-color:var(--accent); }
+  .control-group .value { font-size:0.72rem; font-family:'JetBrains Mono',monospace; color:var(--accent); min-width:36px; }
+  .btn-group { display:flex; gap:4px; }
+  .btn { font-size:0.72rem; font-family:'JetBrains Mono',monospace; padding:4px 12px; border:1px solid var(--border); background:var(--bg); color:var(--text-secondary); cursor:pointer; border-radius:3px; transition:all 0.15s; }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+  .btn.active { background:var(--accent); color:white; border-color:var(--accent); }
+
+  .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; }
+  .legend-item { display:flex; align-items:center; gap:5px; font-size:0.7rem; font-family:'JetBrains Mono',monospace; color:var(--text-secondary); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  .readout { display:flex; gap:20px; margin-top:10px; flex-wrap:wrap; }
+  .readout-item { font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--text-secondary); }
+  .readout-item span { color:var(--accent); font-weight:600; }
+
+  .unified-grid { display:grid; grid-template-columns:2fr 1fr; grid-template-rows:auto auto; gap:2px; }
+  .unified-grid .three-container { grid-row:1/3; }
+  .unified-grid canvas { border-radius:4px; }
+  @media(max-width:600px){ .unified-grid { grid-template-columns:1fr; } }
+
+  .coda { margin-top:64px; padding:36px; border:1px solid var(--border); border-radius:6px; background:var(--accent-bg); }
+  .coda h3 { font-size:1.2rem; font-weight:600; margin-bottom:12px; }
+  .coda p { font-size:0.95rem; }
+
+  .arch-table { width:100%; border-collapse:collapse; margin:20px 0; font-size:0.82rem; font-family:'JetBrains Mono',monospace; }
+  .arch-table th, .arch-table td { padding:8px 12px; border:1px solid var(--border); text-align:left; }
+  .arch-table th { background:var(--accent-bg); color:var(--accent); font-weight:600; }
+  .arch-table td { background:var(--bg); }
+</style>
+</head>
+<body>
+<article class="essay">
+
+  <header class="hero">
+    <div class="part-label">Part 3 of 3</div>
+    <h1>From Solitons to DNA</h1>
+    <p class="subtitle">Discrete elastic rods, supercoiling,<br>and the unified architecture of curve dynamics</p>
+    <div class="hero-divider"></div>
+  </header>
+
+  <!-- ==================== INTRO ==================== -->
+  <section>
+    <p>Parts 1 and 2 built the continuous theory: curvature and frames, then the Hasimoto transform revealing NLS solitons inside moving filaments. That mathematics is beautiful but infinite-dimensional — it lives on smooth curves parameterized by a continuous arc length.</p>
+    <p>To simulate a curve on a computer, we need to <em>discretize</em>. But naively replacing derivatives with finite differences destroys the geometric structure that makes everything work. The breakthrough of Bergou, Wardetzky, Robinson, Audoly, and Grinspun (SIGGRAPH 2008) was to realize: <em class="def">don't discretize the equations — discretize the geometry, then derive the equations</em>.</p>
+    <p>The result is a discrete elastic rod that preserves the exact relationship between Bishop frames, twist, writhe, and elastic energy — and runs at 60 frames per second.</p>
+  </section>
+
+  <!-- ==================== DISCRETE GEOMETRY ==================== -->
+  <section>
+    <h2>Discretizing the Geometry</h2>
+    <p>A smooth curve γ(s) becomes a polygonal chain: vertices <span class="math">x₀, x₁, ..., xₙ</span> connected by edges <span class="math">eⁱ = xᵢ₊₁ − xᵢ</span>. Tangent vectors <span class="math">tⁱ = eⁱ/|eⁱ|</span> live on edges, while curvature lives on vertices — at each vertex, we measure the turning angle between consecutive edges.</p>
+    <p>The discrete curvature binormal at vertex i is:</p>
+    <div class="equation">(κb)ᵢ = 2(eⁱ⁻¹ × eⁱ) / (|eⁱ⁻¹||eⁱ| + eⁱ⁻¹ · eⁱ)</div>
+    <p>This specific formula — with the <span class="math">2 tan(φ/2)</span> normalization rather than <span class="math">sin φ</span> or <span class="math">φ</span> itself — isn't arbitrary. It emerges from the holonomy analysis and has the right divergence behavior: as consecutive edges fold onto each other, the curvature goes to infinity, penalizing kinks.</p>
+    <p>The discrete Bishop frame propagates by rotating each <span class="math">uⁱ</span> from one edge to the next about the curvature binormal — exactly the minimal rotation that maps one tangent to the next. And the material frame angle <span class="math">θⁱ</span> is still a single scalar per edge, with twist given by the simple difference <span class="math">mᵢ = θⁱ − θⁱ⁻¹</span>.</p>
+
+    <div class="note">
+      <strong>The quasistatic trick.</strong> Twist waves in thin rods travel much faster than bending waves — effectively infinitely fast in the thin-rod limit. This means that at each timestep, the twist distribution equilibrates instantly. Mathematically, the material frame angles θⁱ minimize the energy for the current centerline. For isotropic rods, this gives uniform twist. For the general case, it requires solving a tridiagonal linear system — O(n) per timestep.
+    </div>
+  </section>
+
+  <!-- ==================== FIGURE 1: DISCRETE ROD SIMULATOR ==================== -->
+  <div class="figure" id="fig-rod-sim">
+    <div class="figure-label">Interactive · Discrete elastic rod simulator (Bergou et al.)</div>
+    <div style="display:flex;gap:2px;flex-wrap:wrap;">
+      <div class="three-container" id="container-rod" style="height:400px;flex:2;min-width:300px;border-radius:4px;"></div>
+      <canvas id="canvas-rod-plots" width="700" height="800" style="flex:1;min-width:180px;border-radius:4px;"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>play</label>
+        <div class="btn-group">
+          <button class="btn active" id="rod-play">▶</button>
+          <button class="btn" id="rod-pause">⏸</button>
+          <button class="btn" id="rod-reset">↺</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>gravity</label>
+        <input type="range" id="rod-gravity" min="0" max="500" value="200">
+        <div class="value" id="rod-g-val">0.40</div>
+      </div>
+      <div class="control-group">
+        <label>stiffness α</label>
+        <input type="range" id="rod-alpha" min="10" max="500" value="200">
+        <div class="value" id="rod-a-val">0.40</div>
+      </div>
+      <div class="control-group">
+        <label>twist β</label>
+        <input type="range" id="rod-beta" min="10" max="500" value="150">
+        <div class="value" id="rod-b-val">0.30</div>
+      </div>
+      <div class="control-group">
+        <label>end twist</label>
+        <input type="range" id="rod-twist" min="-6283" max="6283" value="0">
+        <div class="value" id="rod-tw-val">0.00</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#2A2520"></div>centerline</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>κ(s) curvature</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7B4DAA"></div>m(s) twist</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>|ψ| Hasimoto</div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">E_bend = <span id="rod-ebend">0.00</span></div>
+      <div class="readout-item">E_twist = <span id="rod-etwist">0.00</span></div>
+      <div class="readout-item">Tw = <span id="rod-tw-read">0.00</span></div>
+      <div class="readout-item">Wr ≈ <span id="rod-wr-read">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>Crank up the end twist and watch what happens. At low twist, the rod just rotates smoothly about its axis. But past a critical threshold — the <em class="def">buckling instability</em> — the rod suddenly coils on itself, converting twist into writhe. This is Călugăreanu's theorem in action: the linking number is conserved, so twist lost at the ends reappears as spatial coiling.</p>
+    <p>This is exactly what DNA does.</p>
+  </section>
+
+  <!-- ==================== DNA ==================== -->
+  <section>
+    <h2>DNA Supercoiling</h2>
+    <p>A DNA molecule is a thin elastic rod. The double helix has a natural twist of about 10.5 base pairs per turn. Enzymes called <em class="def">topoisomerases</em> can change the linking number by cutting one strand, passing the other through, and resealing — effectively adding or removing whole turns of twist.</p>
+    <p>When the linking number differs from the relaxed value, the DNA is said to be <em class="def">supercoiled</em>. Most bacterial DNA is negatively supercoiled (underwound), which helps with strand separation during replication. The excess linking deficit distributes between twist and writhe according to the elastic properties of the double helix.</p>
+    <p>The ratio of twist to writhe at equilibrium depends on the relative bending and torsional stiffness. For DNA, the persistence length (bending) is about 50 nm and the torsional stiffness gives a characteristic ratio. At moderate supercoiling, most of the excess goes into writhe — forming the <em class="def">plectonemic</em> (interwound) structures visible under electron microscopy.</p>
+  </section>
+
+  <!-- ==================== FIGURE 2: SUPERCOILING ==================== -->
+  <div class="figure" id="fig-supercoil">
+    <div class="figure-label">Interactive · DNA supercoiling: twist → writhe conversion</div>
+    <div class="three-container" id="container-supercoil" style="height:420px;border-radius:4px;"></div>
+    <div class="controls">
+      <div class="control-group">
+        <label>ΔLk (excess linking)</label>
+        <input type="range" id="sc-lk" min="-4000" max="4000" value="0">
+        <div class="value" id="sc-lk-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>β/α (twist/bend ratio)</label>
+        <input type="range" id="sc-ratio" min="100" max="1000" value="500">
+        <div class="value" id="sc-ratio-val">1.00</div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">ΔLk = <span id="sc-dlk">0.00</span></div>
+      <div class="readout-item">ΔTw = <span id="sc-dtw">0.00</span></div>
+      <div class="readout-item">Wr = <span id="sc-wr">0.00</span></div>
+      <div class="readout-item">ΔTw + Wr = <span id="sc-sum">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>Drag the linking number away from zero and watch the closed loop buckle into a supercoiled configuration. The readouts confirm Călugăreanu: <span class="math">ΔLk = ΔTw + Wr</span> always holds. At the <span class="math">β/α</span> ratio characteristic of DNA (~0.7), most of the excess linking goes into writhe, producing the tight interwound plectonemes familiar from electron micrographs.</p>
+  </section>
+
+  <!-- ==================== THE ARCHITECTURE ==================== -->
+  <section>
+    <h2>The Grand Architecture</h2>
+    <p>Here is the deepest insight of this entire series: the <em>same discrete Bishop frame</em> that Bergou uses for physical simulation is <em>exactly</em> the spatial part of the AKNS Lax pair at spectral parameter λ = 0. The discrete parallel transport chain that propagates the Bishop frame from edge to edge <em>is</em> the scattering problem of integrable systems theory.</p>
+    <p>This means the data structure that gives us efficient O(n) simulation also gives us access to the full integrable hierarchy — solitons, spectral curves, conserved quantities, and all. The unified architecture looks like this:</p>
+
+    <table class="arch-table">
+      <tr><th>Layer</th><th>Data</th><th>Equation</th></tr>
+      <tr><td>Physical (Bergou)</td><td>xᵢ, eⁱ, θⁱ</td><td>F = −∇E, symplectic Euler</td></tr>
+      <tr><td>Geometric (Bishop)</td><td>uⁱ, vⁱ, (κb)ᵢ</td><td>parallel transport Pᵢ</td></tr>
+      <tr><td>Hasimoto</td><td>ψⁱ = k₁ⁱ + ik₂ⁱ</td><td>discrete NLS (Ablowitz–Ladik)</td></tr>
+      <tr><td>Spectral</td><td>ζₙ, ρ(ζ)</td><td>discrete AKNS scattering</td></tr>
+      <tr><td>Topological</td><td>Lk, Tw, Wr</td><td>Călugăreanu: Lk = Tw + Wr</td></tr>
+    </table>
+
+    <p>Every layer reads from and writes to the same underlying discrete rod. Drag a vertex in the 3D view and all five layers update. Drag an eigenvalue in the spectral plane and the curve reshapes to match. The architecture is bidirectional — geometry flows both ways.</p>
+  </section>
+
+  <!-- ==================== FIGURE 3: UNIFIED DISPLAY ==================== -->
+  <div class="figure" id="fig-unified">
+    <div class="figure-label">Interactive · The unified five-level display</div>
+    <div class="unified-grid">
+      <div class="three-container" id="container-unified" style="height:440px;border-radius:4px;"></div>
+      <canvas id="canvas-unified-kappa" width="500" height="440" style="border-radius:4px;"></canvas>
+      <canvas id="canvas-unified-psi" width="500" height="440" style="border-radius:4px;"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>time</label>
+        <input type="range" id="uni-time" min="0" max="2000" value="0">
+        <div class="value" id="uni-t-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>mode</label>
+        <div class="btn-group">
+          <button class="btn active" data-mode="soliton">NLS soliton</button>
+          <button class="btn" data-mode="breather">breather</button>
+          <button class="btn" data-mode="helix">helix</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>η</label>
+        <input type="range" id="uni-eta" min="100" max="600" value="350">
+        <div class="value" id="uni-eta-val">0.35</div>
+      </div>
+      <div class="control-group">
+        <label>ξ</label>
+        <input type="range" id="uni-xi" min="0" max="500" value="200">
+        <div class="value" id="uni-xi-val">0.20</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>|ψ| = κ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>Re(ψ)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7B4DAA"></div>Im(ψ)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3A7D44"></div>tantrix</div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">∫κ² ds = <span id="uni-H0">0.00</span></div>
+      <div class="readout-item">max κ = <span id="uni-maxk">0.00</span></div>
+      <div class="readout-item">Wr ≈ <span id="uni-wr">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>This is the full picture. The 3D filament, the curvature and twist plots, and the Hasimoto wavefunction all move in lockstep. The NLS soliton is a localized helical kink traveling without distortion. The breather is a bound state — two solitons orbiting each other, creating a pulsating curvature bump. The helix is the simplest stationary solution — constant curvature and torsion, no dynamics at all.</p>
+    <p>Each of these solutions corresponds to specific spectral data: eigenvalues in the upper half of the complex ζ-plane. Solitons are isolated eigenvalues. Finite-gap solutions are spectral curves. The geometry of the curve is completely encoded in the scattering data, and vice versa.</p>
+  </section>
+
+  <!-- ==================== CODA ==================== -->
+  <section>
+    <h2>What We've Built</h2>
+    <p>Across these three parts, we've followed a single thread from the simplest possible question — "how much does a curve bend?" — through a web of increasingly profound mathematical connections. Curvature led to frames. Frames led to twist and writhe. The topology of ribbons gave us Călugăreanu's theorem. Letting curves move revealed the vortex filament equation. The Hasimoto transform showed that this equation <em>is</em> the nonlinear Schrödinger equation in disguise. And the discrete theory unified simulation with integrable systems through a single shared structure: the Bishop frame.</p>
+
+    <div class="note">
+      <strong>The central miracle.</strong> The discrete parallel transport that makes rod simulation efficient at O(n) per frame is the same mathematical object as the Lax pair of integrable systems theory. This isn't a coincidence — it's the geometric content of integrability. The Bishop frame <em>is</em> the scattering problem. The curvature and torsion <em>are</em> the potential. The spectral parameter deforms geometry into spectroscopy.
+    </div>
+
+    <p>From phone cords to vortex rings, from DNA supercoiling to rogue ocean waves, the geometry of elastic curves connects some of the most beautiful mathematics of the past three centuries. What Euler began with the elastica, what Da Rios discovered for vortex filaments, what Hasimoto unified through his transform, and what Bergou made computable — it's all one story, told in the language of moving frames on curves.</p>
+  </section>
+
+  <div class="coda">
+    <h3>Further Reading</h3>
+    <p>Bergou, M. et al. "Discrete Elastic Rods" (SIGGRAPH 2008). The computational framework behind everything in Part 3.</p>
+    <p style="margin-top:8px;">Hasimoto, H. "A soliton on a vortex filament" (J. Fluid Mech, 1972). The paper that started it all.</p>
+    <p style="margin-top:8px;">Langer, J. & Perline, R. "The planar filament equation" (1994). The mKdV connection.</p>
+    <p style="margin-top:8px;">Calini, A. & Ivey, T. "Knot types, Floquet spectra, and finite-gap solutions" (2005). Spectral data ↔ knot types.</p>
+  </div>
+
+</article>
+
+<script>
+// ========================================================================
+//  UTILITY
+// ========================================================================
+const V = {
+  add(a,b){ return [a[0]+b[0],a[1]+b[1],a[2]+b[2]]; },
+  sub(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; },
+  scale(a,s){ return [a[0]*s,a[1]*s,a[2]*s]; },
+  dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; },
+  cross(a,b){ return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]; },
+  len(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); },
+  norm(a){ const l=V.len(a); return l>1e-12?[a[0]/l,a[1]/l,a[2]/l]:[0,0,1]; },
+};
+
+function nlsSoliton(s, t, eta, xi) {
+  const arg = 2*eta*(s - 4*xi*t);
+  const amp = 2*eta / Math.cosh(Math.max(-40, Math.min(40, arg)));
+  const phase = 2*xi*s - 4*(xi*xi - eta*eta)*t;
+  return [amp * Math.cos(phase), amp * Math.sin(phase)];
+}
+
+function nlsBreather(s, t, eta, xi) {
+  // Akhmediev-like breather: modulated envelope
+  const env = 2*eta / Math.cosh(Math.max(-40, Math.min(40, 2*eta*(s - 4*xi*t))));
+  const carrier = Math.cos(1.5*s - 2*t);
+  const mod = 1 + 0.4*Math.cos(0.8*s + 3*t);
+  const amp = env * mod;
+  const phase = 2*xi*s - 4*(xi*xi - eta*eta)*t + 0.3*Math.sin(2*s - t);
+  return [amp * Math.cos(phase), amp * Math.sin(phase)];
+}
+
+function curveFromPsi(psiRe, psiIm, ds, N) {
+  let T=[1,0,0], U=[0,1,0], Vb=[0,0,1];
+  const pts = [[0,0,0]];
+  for (let i = 0; i < N; i++) {
+    const k1 = psiRe[i], k2 = psiIm[i];
+    const dT = V.add(V.scale(U, k1*ds), V.scale(Vb, k2*ds));
+    const dU = V.scale(T, -k1*ds);
+    const dV = V.scale(T, -k2*ds);
+    T = V.norm(V.add(T, dT));
+    U = V.add(U, dU);
+    U = V.sub(U, V.scale(T, V.dot(U, T)));
+    U = V.norm(U);
+    Vb = V.cross(T, U);
+    pts.push(V.add(pts[pts.length-1], V.scale(T, ds)));
+  }
+  return pts;
+}
+
+function centerCurve(pts) {
+  let cx=0,cy=0,cz=0;
+  for (const p of pts) { cx+=p[0]; cy+=p[1]; cz+=p[2]; }
+  cx/=pts.length; cy/=pts.length; cz/=pts.length;
+  return pts.map(p=>[p[0]-cx, p[1]-cy, p[2]-cz]);
+}
+
+function makeTube(scene, pts, name, N, radius, colorFn) {
+  const old = scene.getObjectByName(name);
+  if (old) scene.remove(old);
+  const threePoints = pts.map(p=>new THREE.Vector3(p[0],p[1],p[2]));
+  const path = new THREE.CatmullRomCurve3(threePoints);
+  const geo = new THREE.TubeGeometry(path, Math.min(N,500), radius||0.03, 8, false);
+  if (colorFn) {
+    const colors = new Float32Array(geo.attributes.position.count*3);
+    for (let i=0; i<geo.attributes.position.count; i++) {
+      const t = (i / geo.attributes.position.count);
+      const c = colorFn(t);
+      colors[i*3]=c[0]; colors[i*3+1]=c[1]; colors[i*3+2]=c[2];
+    }
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  }
+  const mat = colorFn
+    ? new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.7})
+    : new THREE.MeshStandardMaterial({color:0x2A2520, roughness:0.7});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.name = name;
+  scene.add(mesh);
+  return mesh;
+}
+
+function setupScene(container) {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xF2F0EB);
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+  dl.position.set(3,5,4); scene.add(dl);
+  return {scene, camera, renderer};
+}
+
+function orbitControls(container, state, updateCam) {
+  container.addEventListener('pointerdown', e=>{
+    state.dragging=true; state.prev={x:e.clientX,y:e.clientY};
+    container.setPointerCapture(e.pointerId);
+  });
+  container.addEventListener('pointermove', e=>{
+    if(!state.dragging) return;
+    state.theta+=(e.clientX-state.prev.x)*0.008;
+    state.phi=Math.max(0.2,Math.min(2.9,state.phi-(e.clientY-state.prev.y)*0.008));
+    state.prev={x:e.clientX,y:e.clientY}; updateCam();
+  });
+  container.addEventListener('pointerup', ()=>{state.dragging=false;});
+  container.addEventListener('wheel', e=>{
+    e.preventDefault();
+    state.dist=Math.max(2,Math.min(15,state.dist+e.deltaY*0.005)); updateCam();
+  }, {passive:false});
+}
+
+function updateCameraFromState(camera, state) {
+  camera.position.set(
+    state.dist*Math.sin(state.phi)*Math.cos(state.theta),
+    state.dist*Math.cos(state.phi),
+    state.dist*Math.sin(state.phi)*Math.sin(state.theta)
+  );
+  camera.lookAt(0,0,0);
+}
+
+// ========================================================================
+//  FIGURE 1: DISCRETE ROD SIMULATOR
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-rod');
+  const plotCanvas = document.getElementById('canvas-rod-plots');
+  const plotCtx = plotCanvas.getContext('2d');
+
+  const NR = 40; // number of vertices
+  const restLen = 0.25;
+  let vertices = [];
+  let velocities = [];
+  let playing = true;
+  const dt = 0.008;
+
+  // Initialize as a straight rod along X
+  function initRod() {
+    vertices = []; velocities = [];
+    for (let i = 0; i <= NR; i++) {
+      vertices.push([i*restLen - NR*restLen/2, 0, 0]);
+      velocities.push([0, 0, 0]);
+    }
+  }
+
+  function computeBishopAndCurvature() {
+    const edges = [];
+    const tangents = [];
+    for (let i = 0; i < NR; i++) {
+      const e = V.sub(vertices[i+1], vertices[i]);
+      edges.push(e);
+      tangents.push(V.norm(e));
+    }
+
+    const kappaBinormals = [[0,0,0]]; // dummy at i=0
+    const curvatures = [0];
+    for (let i = 1; i < NR; i++) {
+      const e0 = edges[i-1], e1 = edges[i];
+      const l0 = V.len(e0), l1 = V.len(e1);
+      const cross = V.cross(e0, e1);
+      const denom = l0*l1 + V.dot(e0, e1);
+      if (Math.abs(denom) < 1e-10) {
+        kappaBinormals.push([0,0,0]);
+        curvatures.push(0);
+      } else {
+        const kb = V.scale(cross, 2/denom);
+        kappaBinormals.push(kb);
+        curvatures.push(V.len(kb));
+      }
+    }
+
+    // Bishop frame
+    let u0;
+    if (Math.abs(tangents[0][1]) < 0.9) u0 = V.norm(V.cross(tangents[0], [0,1,0]));
+    else u0 = V.norm(V.cross(tangents[0], [1,0,0]));
+    const bishopU = [u0], bishopV = [V.cross(tangents[0], u0)];
+
+    for (let i = 1; i < NR; i++) {
+      const t1 = tangents[i-1], t2 = tangents[i];
+      const axis = V.cross(t1, t2);
+      const axisLen = V.len(axis);
+      let u = bishopU[i-1];
+      if (axisLen > 1e-10) {
+        const cosA = Math.max(-1, Math.min(1, V.dot(t1, t2)));
+        const angle = Math.acos(cosA);
+        const a = V.norm(axis);
+        u = V.add(V.add(V.scale(u, cosA), V.scale(V.cross(a,u), Math.sin(angle))),
+                    V.scale(a, V.dot(a,u)*(1-cosA)));
+      }
+      u = V.norm(V.sub(u, V.scale(t2, V.dot(u, t2))));
+      bishopU.push(u);
+      bishopV.push(V.cross(t2, u));
+    }
+
+    // Twist from end twist slider
+    const endTwist = parseFloat(document.getElementById('rod-twist').value) / 1000;
+    const twistPerEdge = endTwist / NR;
+    const twists = [];
+    for (let i = 0; i < NR; i++) twists.push(twistPerEdge);
+
+    // Hasimoto ψ
+    const psiRe = [], psiIm = [];
+    for (let i = 1; i < NR; i++) {
+      const thetaI = twistPerEdge * i;
+      const k1 = V.dot(kappaBinormals[i], bishopU[Math.min(i, NR-1)]);
+      const k2 = V.dot(kappaBinormals[i], bishopV[Math.min(i, NR-1)]);
+      psiRe.push(k1*Math.cos(thetaI) + k2*Math.sin(thetaI));
+      psiIm.push(-k1*Math.sin(thetaI) + k2*Math.cos(thetaI));
+    }
+
+    return {edges, tangents, kappaBinormals, curvatures, bishopU, bishopV, twists, psiRe, psiIm};
+  }
+
+  function computeForces() {
+    const alpha = parseFloat(document.getElementById('rod-alpha').value) / 500;
+    const gravity = parseFloat(document.getElementById('rod-gravity').value) / 500;
+    const forces = vertices.map(()=>[0, -gravity*0.1, 0]);
+
+    // Bending forces (simplified: spring toward straight)
+    for (let i = 1; i < NR; i++) {
+      const e0 = V.sub(vertices[i], vertices[i-1]);
+      const e1 = V.sub(vertices[i+1], vertices[i]);
+      const l0 = V.len(e0), l1 = V.len(e1);
+      if (l0 < 1e-10 || l1 < 1e-10) continue;
+      const t0 = V.scale(e0, 1/l0), t1 = V.scale(e1, 1/l1);
+      // Force proportional to curvature binormal
+      const kb = V.cross(t0, t1);
+      const denom = 1 + V.dot(t0, t1);
+      if (Math.abs(denom) < 1e-10) continue;
+      const kbScaled = V.scale(kb, 2/denom);
+      const voronoiLen = (l0 + l1) / 2;
+      const fMag = alpha / (voronoiLen * voronoiLen);
+      // Distribute forces to three vertices
+      const f = V.scale(kbScaled, -fMag);
+      forces[i-1] = V.add(forces[i-1], V.scale(f, -0.5));
+      forces[i] = V.add(forces[i], f);
+      forces[i+1] = V.add(forces[i+1], V.scale(f, -0.5));
+    }
+
+    // Damping
+    for (let i = 0; i <= NR; i++) {
+      forces[i] = V.add(forces[i], V.scale(velocities[i], -0.3));
+    }
+
+    return forces;
+  }
+
+  function enforceInextensibility() {
+    // Fast projection: constrain edge lengths to restLen
+    for (let iter = 0; iter < 5; iter++) {
+      for (let i = 0; i < NR; i++) {
+        const e = V.sub(vertices[i+1], vertices[i]);
+        const l = V.len(e);
+        if (l < 1e-10) continue;
+        const correction = V.scale(e, (l - restLen) / (2*l));
+        if (i > 0) vertices[i] = V.add(vertices[i], correction);
+        if (i < NR-1) vertices[i+1] = V.sub(vertices[i+1], correction);
+      }
+    }
+  }
+
+  function stepSimulation() {
+    const forces = computeForces();
+    // Pin first vertex
+    for (let i = 1; i <= NR; i++) {
+      velocities[i] = V.add(velocities[i], V.scale(forces[i], dt));
+      vertices[i] = V.add(vertices[i], V.scale(velocities[i], dt));
+    }
+    enforceInextensibility();
+    // Fix first vertex
+    vertices[0] = [-NR*restLen/2, 0, 0];
+  }
+
+  // Three.js setup
+  const {scene, camera, renderer} = setupScene(container);
+  const camState = {theta:0.4, phi:1.0, dist:6, dragging:false, prev:{x:0,y:0}};
+  const updateCam = ()=>updateCameraFromState(camera, camState);
+  updateCam();
+  orbitControls(container, camState, updateCam);
+
+  function updateVisuals() {
+    const data = computeBishopAndCurvature();
+    const pts = vertices.map(v=>[v[0], v[1], v[2]]);
+    makeTube(scene, pts, 'rodCurve', NR, 0.04);
+
+    // Ribbon
+    const old = scene.getObjectByName('rodRibbon');
+    if (old) scene.remove(old);
+    const endTwist = parseFloat(document.getElementById('rod-twist').value) / 1000;
+    const ribbonW = 0.06;
+    const verts = [], indices = [], colors = [];
+    for (let i = 0; i < Math.min(data.bishopU.length, NR); i++) {
+      const p = vertices[i];
+      const thetaI = endTwist * (i/NR);
+      const u = data.bishopU[i], v = data.bishopV[i];
+      const m1 = V.add(V.scale(u, Math.cos(thetaI)), V.scale(v, Math.sin(thetaI)));
+      const side = V.scale(m1, ribbonW);
+      verts.push(p[0]-side[0],p[1]-side[1],p[2]-side[2]);
+      verts.push(p[0]+side[0],p[1]+side[1],p[2]+side[2]);
+      const hue = i/NR;
+      const c = new THREE.Color().setHSL(hue*0.8+0.05, 0.45, 0.55);
+      colors.push(c.r,c.g,c.b, c.r,c.g,c.b);
+    }
+    for (let i = 0; i < Math.min(data.bishopU.length, NR)-1; i++) {
+      indices.push(i*2,i*2+1,i*2+2, i*2+1,i*2+3,i*2+2);
+    }
+    if (verts.length > 6) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({vertexColors:true, side:THREE.DoubleSide, transparent:true, opacity:0.5, roughness:0.8});
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = 'rodRibbon';
+      scene.add(mesh);
+    }
+
+    // Update plots
+    drawRodPlots(data);
+
+    // Readouts
+    let eBend = 0, eTwist = 0, totalTwist = 0;
+    const alpha = parseFloat(document.getElementById('rod-alpha').value) / 500;
+    const beta = parseFloat(document.getElementById('rod-beta').value) / 500;
+    for (let i = 1; i < NR; i++) {
+      const kb2 = V.dot(data.kappaBinormals[i], data.kappaBinormals[i]);
+      const voronoiLen = (V.len(data.edges[i-1]) + V.len(data.edges[Math.min(i,NR-1)])) / 2;
+      eBend += alpha * kb2 / voronoiLen;
+    }
+    const twistPerEdge = endTwist / NR;
+    for (let i = 0; i < NR; i++) {
+      eTwist += beta * twistPerEdge * twistPerEdge / restLen;
+      totalTwist += twistPerEdge;
+    }
+    document.getElementById('rod-ebend').textContent = eBend.toFixed(3);
+    document.getElementById('rod-etwist').textContent = eTwist.toFixed(3);
+    document.getElementById('rod-tw-read').textContent = (totalTwist/(2*Math.PI)).toFixed(2);
+    document.getElementById('rod-wr-read').textContent = '0.00'; // simplified
+    document.getElementById('rod-g-val').textContent = (parseFloat(document.getElementById('rod-gravity').value)/500).toFixed(2);
+    document.getElementById('rod-a-val').textContent = (parseFloat(document.getElementById('rod-alpha').value)/500).toFixed(2);
+    document.getElementById('rod-b-val').textContent = (parseFloat(document.getElementById('rod-beta').value)/500).toFixed(2);
+    document.getElementById('rod-tw-val').textContent = (endTwist/(2*Math.PI)).toFixed(2) + 'π';
+  }
+
+  function drawRodPlots(data) {
+    const dpr = window.devicePixelRatio || 1;
+    const W = Math.max(120, plotCanvas.parentElement.getBoundingClientRect().width * 0.28);
+    const H = 400;
+    plotCanvas.style.width = W+'px'; plotCanvas.style.height = H+'px';
+    plotCanvas.width = W*dpr; plotCanvas.height = H*dpr;
+    plotCtx.setTransform(dpr,0,0,dpr,0,0);
+    plotCtx.clearRect(0,0,W,H);
+    plotCtx.fillStyle = '#F2F0EB';
+    plotCtx.fillRect(0,0,W,H);
+
+    const pad=10, plotH=H/3, maxK=4;
+    // κ(s)
+    plotCtx.fillStyle='#aaa'; plotCtx.font='10px JetBrains Mono';
+    plotCtx.fillText('κ(s)', pad, pad+8);
+    const z1 = pad + plotH*0.8;
+    plotCtx.beginPath(); plotCtx.moveTo(pad,z1); plotCtx.lineTo(W-pad,z1);
+    plotCtx.strokeStyle='#ddd'; plotCtx.lineWidth=1; plotCtx.stroke();
+    plotCtx.beginPath();
+    for (let i=0; i<data.curvatures.length; i++) {
+      const x = pad + (i/data.curvatures.length)*(W-2*pad);
+      const y = z1 - (data.curvatures[i]/maxK)*plotH*0.7;
+      i===0?plotCtx.moveTo(x,y):plotCtx.lineTo(x,y);
+    }
+    plotCtx.strokeStyle='#C4601D'; plotCtx.lineWidth=2; plotCtx.stroke();
+
+    // |ψ|
+    plotCtx.fillText('|ψ|', pad, plotH+pad+8);
+    const z2 = plotH + pad + plotH*0.8;
+    plotCtx.beginPath(); plotCtx.moveTo(pad,z2); plotCtx.lineTo(W-pad,z2);
+    plotCtx.strokeStyle='#ddd'; plotCtx.lineWidth=1; plotCtx.stroke();
+    plotCtx.beginPath();
+    for (let i=0; i<data.psiRe.length; i++) {
+      const x = pad + (i/data.psiRe.length)*(W-2*pad);
+      const amp = Math.sqrt(data.psiRe[i]**2 + data.psiIm[i]**2);
+      const y = z2 - (amp/maxK)*plotH*0.7;
+      i===0?plotCtx.moveTo(x,y):plotCtx.lineTo(x,y);
+    }
+    plotCtx.strokeStyle='#2D6A9F'; plotCtx.lineWidth=2; plotCtx.stroke();
+
+    // Re/Im ψ
+    plotCtx.fillText('Re,Im(ψ)', pad, 2*plotH+pad+8);
+    const z3 = 2*plotH + pad + plotH*0.5;
+    plotCtx.beginPath(); plotCtx.moveTo(pad,z3); plotCtx.lineTo(W-pad,z3);
+    plotCtx.strokeStyle='#ddd'; plotCtx.lineWidth=1; plotCtx.stroke();
+    for (const [arr,col] of [[data.psiRe,'#2D6A9F'],[data.psiIm,'#7B4DAA']]) {
+      plotCtx.beginPath();
+      for (let i=0; i<arr.length; i++) {
+        const x = pad + (i/arr.length)*(W-2*pad);
+        const y = z3 - (arr[i]/maxK)*plotH*0.4;
+        i===0?plotCtx.moveTo(x,y):plotCtx.lineTo(x,y);
+      }
+      plotCtx.strokeStyle=col; plotCtx.lineWidth=1.5; plotCtx.stroke();
+    }
+  }
+
+  function animate() {
+    if (playing) { for(let i=0;i<3;i++) stepSimulation(); }
+    updateVisuals();
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+
+  document.getElementById('rod-play').addEventListener('click', function(){ playing=true; document.querySelectorAll('#fig-rod-sim .btn-group')[0].querySelectorAll('.btn').forEach(b=>b.classList.remove('active')); this.classList.add('active'); });
+  document.getElementById('rod-pause').addEventListener('click', function(){ playing=false; document.querySelectorAll('#fig-rod-sim .btn-group')[0].querySelectorAll('.btn').forEach(b=>b.classList.remove('active')); this.classList.add('active'); });
+  document.getElementById('rod-reset').addEventListener('click', function(){ initRod(); });
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect=container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  initRod();
+  animate();
+})();
+
+// ========================================================================
+//  FIGURE 2: DNA SUPERCOILING
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-supercoil');
+  const {scene, camera, renderer} = setupScene(container);
+  const camState = {theta:0.3, phi:1.1, dist:5.5, dragging:false, prev:{x:0,y:0}};
+  const updateCam = ()=>updateCameraFromState(camera, camState);
+  updateCam();
+  orbitControls(container, camState, updateCam);
+
+  const NC = 300;
+
+  function supercoiledCurve(deltaLk, ratio) {
+    // Model: closed curve that buckles with excess linking
+    // At deltaLk=0: circle. As |deltaLk| increases: figure-8, plectoneme
+    const absDLk = Math.abs(deltaLk);
+    const sign = deltaLk >= 0 ? 1 : -1;
+
+    // Partition into twist and writhe based on ratio
+    // At equilibrium: minimize E = α∫κ²ds + β∫m²ds subject to ΔLk = ΔTw + Wr
+    // Solution: ΔTw/Wr = β/(α·something), simplified here:
+    const wrFrac = ratio / (1 + ratio); // fraction going to writhe
+    const wr = absDLk * wrFrac * sign;
+    const tw = (deltaLk - wr);
+
+    // Curve: circle with supercoiling
+    const pts = [];
+    const R = 1.5;
+    const writheAmp = Math.min(1.2, Math.abs(wr) * 0.4);
+    const lobes = Math.max(2, Math.round(Math.abs(wr) + 1));
+
+    for (let i = 0; i <= NC; i++) {
+      const t = (i/NC) * Math.PI * 2;
+      // Base circle
+      let x = R * Math.cos(t);
+      let y = R * Math.sin(t);
+      // Out-of-plane writhe: figure-8 then plectoneme
+      let z = writheAmp * Math.sin(lobes * t);
+
+      // For higher writhe, add interwound (plectonemic) structure
+      if (Math.abs(wr) > 1.0) {
+        const plecAmp = Math.min(0.5, (Math.abs(wr) - 1.0) * 0.25);
+        const squish = 1 - plecAmp * 0.5;
+        x *= squish;
+        x += plecAmp * Math.cos(3*t) * Math.sin(t);
+        y += plecAmp * Math.sin(3*t) * Math.cos(t);
+        z += plecAmp * 0.5 * Math.sin(5*t);
+      }
+
+      pts.push([x, y, z]);
+    }
+
+    return { pts, tw, wr, dlk: deltaLk };
+  }
+
+  function update() {
+    const deltaLk = parseFloat(document.getElementById('sc-lk').value) / 1000;
+    const ratio = parseFloat(document.getElementById('sc-ratio').value) / 500;
+
+    document.getElementById('sc-lk-val').textContent = deltaLk.toFixed(2);
+    document.getElementById('sc-ratio-val').textContent = ratio.toFixed(2);
+
+    const data = supercoiledCurve(deltaLk, ratio);
+
+    // Color by curvature estimate
+    makeTube(scene, data.pts, 'scCurve', NC, 0.04, (t)=>{
+      const i = Math.floor(t*NC);
+      const ip = Math.min(i+1, NC), im = Math.max(i-1, 0);
+      const e0 = V.sub(data.pts[i], data.pts[im]);
+      const e1 = V.sub(data.pts[ip], data.pts[i]);
+      const cross = V.len(V.cross(e0, e1));
+      const dot = V.dot(V.norm(e0), V.norm(e1));
+      const kEst = Math.min(1, cross / (V.len(e0)*V.len(e1)+0.01) * 4);
+      return [0.17+0.6*kEst, 0.42-0.15*kEst, 0.62-0.45*kEst];
+    });
+
+    document.getElementById('sc-dlk').textContent = deltaLk.toFixed(2);
+    document.getElementById('sc-dtw').textContent = data.tw.toFixed(2);
+    document.getElementById('sc-wr').textContent = data.wr.toFixed(2);
+    document.getElementById('sc-sum').textContent = (data.tw + data.wr).toFixed(2);
+  }
+
+  document.getElementById('sc-lk').addEventListener('input', update);
+  document.getElementById('sc-ratio').addEventListener('input', update);
+
+  function render() { renderer.render(scene, camera); requestAnimationFrame(render); }
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect=container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  update();
+  render();
+})();
+
+// ========================================================================
+//  FIGURE 3: UNIFIED FIVE-LEVEL DISPLAY
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-unified');
+  const kappaCanvas = document.getElementById('canvas-unified-kappa');
+  const psiCanvas = document.getElementById('canvas-unified-psi');
+  const kappaCtx = kappaCanvas.getContext('2d');
+  const psiCtx = psiCanvas.getContext('2d');
+
+  const {scene, camera, renderer} = setupScene(container);
+  const camState = {theta:0.3, phi:1.0, dist:8, dragging:false, prev:{x:0,y:0}};
+  const updateCam = ()=>updateCameraFromState(camera, camState);
+  updateCam();
+  orbitControls(container, camState, updateCam);
+
+  // Tantrix sphere
+  const sphereGeo = new THREE.SphereGeometry(0.95, 32, 24);
+  const sphereMat = new THREE.MeshBasicMaterial({color:0xDDD8D0, wireframe:true, transparent:true, opacity:0.08});
+  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+  sphere.position.set(3.5, 0, 0);
+  scene.add(sphere);
+
+  const NU = 400;
+  const dsU = 0.06;
+  let currentMode = 'soliton';
+
+  function getPsi(mode, t, eta, xi) {
+    const psiRe = new Float64Array(NU), psiIm = new Float64Array(NU);
+    for (let i=0; i<NU; i++) {
+      const s = (i - NU/2)*dsU;
+      if (mode === 'soliton') {
+        const [re,im] = nlsSoliton(s, t, eta, xi);
+        psiRe[i]=re; psiIm[i]=im;
+      } else if (mode === 'breather') {
+        const [re,im] = nlsBreather(s, t, eta, xi);
+        psiRe[i]=re; psiIm[i]=im;
+      } else { // helix
+        const k = 2*eta;
+        const phase = xi*4*s + t;
+        psiRe[i] = k*Math.cos(phase);
+        psiIm[i] = k*Math.sin(phase);
+      }
+    }
+    return {psiRe, psiIm};
+  }
+
+  function update() {
+    const t = parseFloat(document.getElementById('uni-time').value)/1000*3;
+    const eta = parseFloat(document.getElementById('uni-eta').value)/1000;
+    const xi = parseFloat(document.getElementById('uni-xi').value)/1000;
+    document.getElementById('uni-t-val').textContent = t.toFixed(2);
+    document.getElementById('uni-eta-val').textContent = eta.toFixed(2);
+    document.getElementById('uni-xi-val').textContent = xi.toFixed(2);
+
+    const {psiRe, psiIm} = getPsi(currentMode, t, eta, xi);
+
+    // Curve
+    const rawPts = curveFromPsi(psiRe, psiIm, dsU, NU);
+    const pts = centerCurve(rawPts);
+    makeTube(scene, pts, 'uniCurve', NU, 0.03, (tParam)=>{
+      const i = Math.min(Math.floor(tParam*NU), NU-1);
+      const k2 = psiRe[i]**2 + psiIm[i]**2;
+      const intensity = Math.min(1, Math.sqrt(k2)/(2*eta+0.01));
+      return [0.16+0.6*intensity, 0.14, 0.12];
+    });
+
+    // Tantrix on unit sphere (offset to right)
+    const oldT = scene.getObjectByName('uniTantrix');
+    if (oldT) scene.remove(oldT);
+    // Compute tangents
+    const tangents = [];
+    for (let i=0; i<pts.length-1; i++) {
+      tangents.push(V.norm(V.sub(pts[i+1], pts[i])));
+    }
+    const step = Math.max(1, Math.floor(tangents.length/200));
+    const tPts = [];
+    for (let i=0; i<tangents.length; i+=step) {
+      tPts.push(new THREE.Vector3(
+        tangents[i][0]+3.5,
+        tangents[i][1],
+        tangents[i][2]
+      ));
+    }
+    if (tPts.length > 2) {
+      const tGeo = new THREE.BufferGeometry().setFromPoints(tPts);
+      const tMat = new THREE.LineBasicMaterial({color:0x3A7D44});
+      const tLine = new THREE.Line(tGeo, tMat);
+      tLine.name = 'uniTantrix';
+      scene.add(tLine);
+    }
+
+    // Plots
+    let energy = 0, maxK = 0;
+    for (let i=0; i<NU; i++) {
+      const k2 = psiRe[i]**2 + psiIm[i]**2;
+      energy += k2*dsU;
+      maxK = Math.max(maxK, Math.sqrt(k2));
+    }
+    document.getElementById('uni-H0').textContent = energy.toFixed(3);
+    document.getElementById('uni-maxk').textContent = maxK.toFixed(3);
+    document.getElementById('uni-wr').textContent = '~0';
+
+    drawUnifiedPlots(psiRe, psiIm, eta);
+  }
+
+  function drawUnifiedPlots(psiRe, psiIm, eta) {
+    const dpr = window.devicePixelRatio || 1;
+    const maxAmp = 2*eta + 0.2;
+
+    // Kappa canvas
+    const rect1 = kappaCanvas.parentElement.getBoundingClientRect();
+    const W1 = Math.max(100, Math.floor(rect1.width*0.32));
+    const H1 = 220;
+    kappaCanvas.style.width=W1+'px'; kappaCanvas.style.height=H1+'px';
+    kappaCanvas.width=W1*dpr; kappaCanvas.height=H1*dpr;
+    kappaCtx.setTransform(dpr,0,0,dpr,0,0);
+    kappaCtx.clearRect(0,0,W1,H1);
+    kappaCtx.fillStyle='#F2F0EB'; kappaCtx.fillRect(0,0,W1,H1);
+
+    const pad=10;
+    kappaCtx.fillStyle='#aaa'; kappaCtx.font='10px JetBrains Mono';
+    kappaCtx.fillText('|ψ| = κ(s)', pad, pad+8);
+    const z1 = pad + H1*0.75;
+    kappaCtx.beginPath(); kappaCtx.moveTo(pad,z1); kappaCtx.lineTo(W1-pad,z1);
+    kappaCtx.strokeStyle='#ddd'; kappaCtx.lineWidth=1; kappaCtx.stroke();
+
+    // Filled envelope
+    kappaCtx.beginPath();
+    kappaCtx.moveTo(pad, z1);
+    for (let i=0;i<NU;i++) {
+      const x = pad+(i/NU)*(W1-2*pad);
+      const amp = Math.sqrt(psiRe[i]**2+psiIm[i]**2);
+      kappaCtx.lineTo(x, z1-(amp/maxAmp)*H1*0.6);
+    }
+    kappaCtx.lineTo(W1-pad, z1);
+    kappaCtx.closePath();
+    kappaCtx.fillStyle='rgba(196,96,29,0.15)'; kappaCtx.fill();
+
+    kappaCtx.beginPath();
+    for (let i=0;i<NU;i++) {
+      const x = pad+(i/NU)*(W1-2*pad);
+      const amp = Math.sqrt(psiRe[i]**2+psiIm[i]**2);
+      const y = z1-(amp/maxAmp)*H1*0.6;
+      i===0?kappaCtx.moveTo(x,y):kappaCtx.lineTo(x,y);
+    }
+    kappaCtx.strokeStyle='#C4601D'; kappaCtx.lineWidth=2; kappaCtx.stroke();
+
+    // Psi canvas
+    const W2=W1, H2=220;
+    psiCanvas.style.width=W2+'px'; psiCanvas.style.height=H2+'px';
+    psiCanvas.width=W2*dpr; psiCanvas.height=H2*dpr;
+    psiCtx.setTransform(dpr,0,0,dpr,0,0);
+    psiCtx.clearRect(0,0,W2,H2);
+    psiCtx.fillStyle='#F2F0EB'; psiCtx.fillRect(0,0,W2,H2);
+
+    psiCtx.fillStyle='#aaa'; psiCtx.font='10px JetBrains Mono';
+    psiCtx.fillText('Re(ψ), Im(ψ)', pad, pad+8);
+    const z2 = pad + H2*0.5;
+    psiCtx.beginPath(); psiCtx.moveTo(pad,z2); psiCtx.lineTo(W2-pad,z2);
+    psiCtx.strokeStyle='#ddd'; psiCtx.lineWidth=1; psiCtx.stroke();
+
+    for (const [arr,col] of [[psiRe,'#2D6A9F'],[psiIm,'#7B4DAA']]) {
+      psiCtx.beginPath();
+      for (let i=0;i<NU;i++) {
+        const x = pad+(i/NU)*(W2-2*pad);
+        const y = z2-(arr[i]/maxAmp)*H2*0.38;
+        i===0?psiCtx.moveTo(x,y):psiCtx.lineTo(x,y);
+      }
+      psiCtx.strokeStyle=col; psiCtx.lineWidth=1.5; psiCtx.stroke();
+    }
+  }
+
+  function render() { renderer.render(scene, camera); requestAnimationFrame(render); }
+
+  document.getElementById('uni-time').addEventListener('input', update);
+  document.getElementById('uni-eta').addEventListener('input', update);
+  document.getElementById('uni-xi').addEventListener('input', update);
+
+  document.querySelectorAll('[data-mode]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('[data-mode]').forEach(b=>b.classList.remove('active'));
+      this.classList.add('active');
+      currentMode = this.dataset.mode;
+      update();
+    });
+  });
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect=container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  update();
+  render();
+})();
+</script>
+</body>
+</html>

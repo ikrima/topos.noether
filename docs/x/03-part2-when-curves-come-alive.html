@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When Curves Come Alive — Part 2</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400&display=swap');
+
+  :root {
+    --bg: #FAF8F4;
+    --text: #2A2520;
+    --text-secondary: #6B6560;
+    --accent: #C4601D;
+    --accent-light: #E8A56E;
+    --accent-bg: #FDF5EE;
+    --border: #E0DBD4;
+    --canvas-bg: #F2F0EB;
+    --blue: #2D6A9F;
+    --green: #3A7D44;
+    --red: #C4401D;
+    --purple: #7B4DAA;
+    --max-width: 720px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 18px; scroll-behavior: smooth; background: var(--bg); }
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    color: var(--text); line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+  }
+  .essay { max-width: var(--max-width); margin: 0 auto; padding: 0 24px 120px; }
+
+  .hero { text-align: center; padding: 80px 0 48px; }
+  .hero .part-label {
+    font-size: 0.72rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 12px;
+  }
+  .hero h1 { font-size: 2.6rem; font-weight: 300; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 16px; }
+  .hero .subtitle { font-size: 1.05rem; color: var(--text-secondary); font-style: italic; font-weight: 300; }
+  .hero-divider { width: 48px; height: 2px; background: var(--accent); margin: 40px auto 0; }
+
+  section { margin-top: 56px; }
+  section h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 20px; line-height: 1.3; }
+  p { margin-bottom: 18px; }
+  p:last-child { margin-bottom: 0; }
+
+  em.def { font-style: italic; color: var(--accent); }
+  .math {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+    background: var(--accent-bg); padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+  }
+  .equation {
+    display: block; text-align: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.88em;
+    padding: 18px 0; color: var(--text);
+  }
+  .note {
+    border-left: 3px solid var(--accent); padding: 14px 20px; margin: 24px 0;
+    background: var(--accent-bg); font-size: 0.92rem; border-radius: 0 4px 4px 0;
+  }
+
+  .figure {
+    margin: 36px -24px; background: var(--canvas-bg);
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 20px 24px; position: relative;
+  }
+  @media (min-width: 820px) {
+    .figure {
+      margin-left: -60px; margin-right: -60px; padding: 24px 36px;
+      border-radius: 6px; border: 1px solid var(--border);
+    }
+  }
+  .figure-label {
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-secondary); margin-bottom: 12px; font-family: 'JetBrains Mono', monospace;
+  }
+  .figure canvas, .figure .three-container { display: block; width: 100%; border-radius: 4px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; align-items: center; }
+  .control-group { display: flex; align-items: center; gap: 8px; }
+  .control-group label {
+    font-size: 0.75rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary); white-space: nowrap;
+  }
+  .control-group input[type="range"] { width: 120px; accent-color: var(--accent); }
+  .control-group .value {
+    font-size: 0.72rem; font-family: 'JetBrains Mono', monospace;
+    color: var(--accent); min-width: 36px;
+  }
+  .btn-group { display: flex; gap: 4px; }
+  .btn {
+    font-size: 0.72rem; font-family: 'JetBrains Mono', monospace;
+    padding: 4px 12px; border: 1px solid var(--border); background: var(--bg);
+    color: var(--text-secondary); cursor: pointer; border-radius: 3px; transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .readout { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
+  .readout-item { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--text-secondary); }
+  .readout-item span { color: var(--accent); font-weight: 600; }
+
+  .split-canvas { display: flex; gap: 2px; }
+  .split-canvas canvas { border-radius: 4px; }
+
+  .next-part {
+    margin-top: 64px; text-align: center; padding: 36px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--accent-bg);
+  }
+  .next-part .label {
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace;
+  }
+  .next-part h3 { font-size: 1.2rem; font-weight: 400; }
+</style>
+</head>
+<body>
+<article class="essay">
+
+  <header class="hero">
+    <div class="part-label">Part 2 of 3</div>
+    <h1>When Curves Come Alive</h1>
+    <p class="subtitle">Elastic energy, solitons, and the astonishing equation<br>hiding inside every moving filament</p>
+    <div class="hero-divider"></div>
+  </header>
+
+  <!-- ==================== INTRO ==================== -->
+  <section>
+    <p>In Part 1, we built the geometric vocabulary of curves — curvature, torsion, the Bishop frame, and the topological constraint of Călugăreanu's theorem. Those were static snapshots. Now the curves start to move.</p>
+    <p>What happens when you let a bent curve relax under its own elastic energy? What happens when a vortex filament in a fluid evolves according to its own curvature? The answers lead to some of the most celebrated equations in mathematical physics — and to solitons, those mysterious waves that pass through each other without breaking.</p>
+  </section>
+
+  <!-- ==================== ELASTIC ENERGY ==================== -->
+  <section>
+    <h2>The Elastic Curve</h2>
+    <p>Euler posed the question in 1744: among all plane curves of fixed length connecting two points with given tangent directions, which one minimizes the total bending energy <span class="math">∫κ² ds</span>? The answer — the <em class="def">elastica</em> — is the shape a thin elastic rod naturally assumes.</p>
+    <p>The Euler–Lagrange equation for this variational problem is:</p>
+    <div class="equation">κ'' + ½κ³ = λκ</div>
+    <p>where λ is a Lagrange multiplier enforcing the length constraint. This is a nonlinear oscillator for the curvature κ(s), and its solutions are elliptic functions — the same functions that describe a pendulum. Depending on the energy level, the solutions sweep through a remarkable family of shapes.</p>
+  </section>
+
+  <!-- ==================== FIGURE 1: EULER ELASTICA ==================== -->
+  <div class="figure" id="fig-elastica">
+    <div class="figure-label">Interactive · Euler elastica: the shapes that minimize bending energy</div>
+    <div class="split-canvas">
+      <canvas id="canvas-elastica-phase" width="800" height="700"></canvas>
+      <canvas id="canvas-elastica-curve" width="800" height="700"></canvas>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>phase orbit</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>current curve</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3A7D44"></div>soliton separatrix</div>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>energy level</label>
+        <input type="range" id="elastica-energy" min="0" max="1000" value="500">
+        <div class="value" id="elastica-e-val">0.50</div>
+      </div>
+      <div class="control-group">
+        <label>λ</label>
+        <input type="range" id="elastica-lambda" min="100" max="1000" value="500">
+        <div class="value" id="elastica-l-val">1.00</div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">∫κ² ds = <span id="elastica-bend">0.00</span></div>
+      <div class="readout-item">type: <span id="elastica-type">undulating</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>At low energy, the curvature oscillates gently — these are <em class="def">undulating elastica</em>, smooth wave-like bends. At high energy, the curvature rotates through all values — these are <em class="def">rotating elastica</em> that form looping figures. But right at the boundary between these two regimes lies something special.</p>
+    <p>The <em class="def">separatrix</em> — the green curve in the phase portrait — corresponds to a curvature profile that is a hyperbolic secant: <span class="math">κ(s) = 2η·sech(ηs)</span>. This is a single localized bend on an otherwise straight line. It's the <em class="def">soliton</em> — the unique shape that balances nonlinearity against dispersion. We'll see it again very soon.</p>
+  </section>
+
+  <!-- ==================== VFE ==================== -->
+  <section>
+    <h2>The Vortex Filament Equation</h2>
+    <p>Now let's go to three dimensions. In 1906, Da Rios — a student of Levi-Civita — discovered the law governing how a thin vortex filament moves in an ideal fluid. Each point on the filament moves in the <em class="def">binormal direction</em> at a speed proportional to the curvature:</p>
+    <div class="equation">γ_t = κ B</div>
+    <p>Think about this: where the filament is bent sharply (high κ), it moves fast. Where it's straight, it doesn't move at all. And the direction of motion is always perpendicular to the plane of curvature. This makes a ring vortex translate along its axis (the curvature is constant and the binormal points along the axis everywhere), while a straight filament stays still.</p>
+    <p>What's remarkable about this equation is what it <em>preserves</em>. The total length of the curve doesn't change. The total bending energy <span class="math">∫κ² ds</span> stays constant. In fact, it preserves an <em>infinite</em> family of conserved quantities. The VFE is an <em class="def">integrable system</em> — it has a hidden mathematical structure that makes it exactly solvable.</p>
+  </section>
+
+  <!-- ==================== FIGURE 2: VFE ANIMATION ==================== -->
+  <div class="figure" id="fig-vfe">
+    <div class="figure-label">Interactive · Vortex filament equation: γ_t = κB</div>
+    <div style="display:flex;gap:2px;">
+      <div class="three-container" id="container-vfe" style="height:380px;flex:3;border-radius:4px;"></div>
+      <canvas id="canvas-vfe-plots" width="500" height="760" style="flex:1;border-radius:4px;"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>play</label>
+        <div class="btn-group">
+          <button class="btn active" id="vfe-play">▶ play</button>
+          <button class="btn" id="vfe-pause">⏸ pause</button>
+          <button class="btn" id="vfe-reset">↺ reset</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>speed</label>
+        <input type="range" id="vfe-speed" min="1" max="200" value="50">
+      </div>
+      <div class="control-group">
+        <label>shape</label>
+        <div class="btn-group">
+          <button class="btn active" data-shape="soliton">soliton</button>
+          <button class="btn" data-shape="helix">helix</button>
+          <button class="btn" data-shape="ring">ring</button>
+        </div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">t = <span id="vfe-time">0.00</span></div>
+      <div class="readout-item">∫κ² ds = <span id="vfe-energy">0.00</span></div>
+      <div class="readout-item">max κ = <span id="vfe-maxk">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>Watch the soliton mode carefully. A localized helical kink — a bump of curvature — travels along the filament without changing shape. It's the 3D cousin of the elastica soliton we saw on the plane. The helix translates rigidly. The ring does too, but also precesses.</p>
+    <p>The existence of these traveling-wave solutions hints at deep structure. To reveal it, we need a change of variables that Hasimoto discovered in 1972.</p>
+  </section>
+
+  <!-- ==================== HASIMOTO ==================== -->
+  <section>
+    <h2>The Hasimoto Transform</h2>
+    <p>This is the key insight of the entire story. Hasimoto defined a complex-valued function along the curve:</p>
+    <div class="equation">ψ(s,t) = κ(s,t) · exp(i ∫₀ˢ τ(η,t) dη)</div>
+    <p>The amplitude of ψ is the curvature. The phase accumulates torsion. In the Bishop frame, this is simply <span class="math">ψ = κ₁ + iκ₂</span>, where κ₁ and κ₂ are the two components of curvature in the twist-free basis. It's the most natural complex number you could build from a space curve.</p>
+    <p>Hasimoto's theorem: if the curve evolves by the vortex filament equation, then ψ satisfies the <em class="def">focusing nonlinear Schrödinger equation</em>:</p>
+    <div class="equation">iψ_t + ψ_ss + ½|ψ|²ψ = 0</div>
+    <p>This is one of the great equations of mathematical physics. It describes everything from rogue waves in the ocean to light pulses in optical fibers to Bose-Einstein condensates. And here it is, hiding inside the geometry of a moving curve.</p>
+  </section>
+
+  <!-- ==================== FIGURE 3: HASIMOTO + NLS SOLITON ==================== -->
+  <div class="figure" id="fig-hasimoto">
+    <div class="figure-label">Interactive · The Hasimoto transform: curve ↔ NLS wavefunction</div>
+    <div style="display:flex;gap:2px;flex-wrap:wrap;">
+      <div class="three-container" id="container-hasimoto" style="height:340px;flex:2;min-width:300px;border-radius:4px;"></div>
+      <canvas id="canvas-hasimoto-psi" width="700" height="680" style="flex:1;min-width:200px;border-radius:4px;"></canvas>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#2A2520"></div>filament γ(s)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>|ψ| = κ amplitude</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>Re(ψ)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7B4DAA"></div>Im(ψ)</div>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>time</label>
+        <input type="range" id="hasimoto-time" min="0" max="2000" value="0">
+        <div class="value" id="hasimoto-t-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>η (amplitude)</label>
+        <input type="range" id="hasimoto-eta" min="100" max="800" value="400">
+        <div class="value" id="hasimoto-eta-val">0.40</div>
+      </div>
+      <div class="control-group">
+        <label>ξ (velocity/torsion)</label>
+        <input type="range" id="hasimoto-xi" min="0" max="600" value="200">
+        <div class="value" id="hasimoto-xi-val">0.20</div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">∫|ψ|² ds = <span id="hasimoto-H0">0.00</span></div>
+      <div class="readout-item">max|ψ| = <span id="hasimoto-maxpsi">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>The NLS 1-soliton is <span class="math">ψ = 2η·sech(2η(s−4ξt))·exp(i(2ξs−4(ξ²−η²)t))</span>. The parameter η controls the amplitude and width of the soliton — the curvature bump. The parameter ξ controls the velocity and the constant torsion — how helical the kink is.</p>
+    <p>Watch the curve in 3D as you drag the time slider. The sech-shaped envelope of |ψ| travels along the filament, and the 3D curve shows a helical kink translating without distortion. The amplitude <span class="math">∫|ψ|² ds = ∫κ² ds</span> is conserved — the bending energy is constant, as promised by the integrability of the VFE.</p>
+
+    <div class="note">
+      <strong>Why NLS?</strong> The nonlinear Schrödinger equation appears whenever you have dispersive waves with a cubic nonlinearity. In our setting, the dispersion comes from the curve's elastic resistance to bending (the ψ_ss term), and the nonlinearity comes from the geometric coupling between curvature and the frame (the |ψ|²ψ term). The balance between these two effects is what allows solitons to exist.
+    </div>
+  </section>
+
+  <!-- ==================== PLANE TO SPACE ==================== -->
+  <section>
+    <h2>From Plane to Space</h2>
+    <p>There's a beautiful organizing principle here. In the plane, a curve has only one intrinsic quantity: curvature κ(s). Its evolution equation is the <em class="def">modified Korteweg–de Vries equation</em>:</p>
+    <div class="equation">κ_t = κ_sss + (3/2)κ²κ_s &nbsp; (mKdV)</div>
+    <p>In 3D, a curve has two intrinsic quantities — κ and τ — combined into the complex Hasimoto variable ψ = κ·exp(i∫τ). The evolution equation is NLS. The mKdV equation is simply the <em>restriction of NLS to real-valued potentials</em>, which means zero torsion, which means planar curves.</p>
+    <p>The slider below lets you interpolate. Start with a planar mKdV soliton (ξ = 0, so ψ is real and the curve lies flat). Gradually increase ξ to introduce torsion — the imaginary part of ψ grows, and the curve lifts off the plane into a helical kink.</p>
+  </section>
+
+  <!-- ==================== FIGURE 4: mKdV → NLS ==================== -->
+  <div class="figure" id="fig-plane-to-space">
+    <div class="figure-label">Interactive · From plane to space: mKdV → NLS</div>
+    <div style="display:flex;gap:2px;flex-wrap:wrap;">
+      <div class="three-container" id="container-p2s" style="height:340px;flex:2;min-width:300px;border-radius:4px;"></div>
+      <canvas id="canvas-p2s-psi" width="700" height="680" style="flex:1;min-width:200px;border-radius:4px;"></canvas>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>torsion ξ</label>
+        <input type="range" id="p2s-xi" min="0" max="1000" value="0">
+        <div class="value" id="p2s-xi-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>time</label>
+        <input type="range" id="p2s-time" min="0" max="2000" value="0">
+        <div class="value" id="p2s-t-val">0.00</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>|ψ| = κ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>Re(ψ)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7B4DAA"></div>Im(ψ)</div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">ξ = <span id="p2s-xi-read">0.00</span> → <span id="p2s-eq-label">mKdV (planar)</span></div>
+      <div class="readout-item">∫κ² ds = <span id="p2s-energy">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>This is the grand pattern: <em>the dimension of the ambient space selects the integrable equation</em>. Plane curves give mKdV. Space curves give NLS. Curves on the 3-sphere give the Ablowitz–Ladik lattice (a discrete NLS). Each step up in dimension promotes a real equation to a complex one, a scalar to a matrix, a continuous system to a discrete one.</p>
+
+    <div class="note">
+      <strong>The Miura web.</strong> The mKdV → KdV connection via the Miura transformation <span class="math">u = κ² + κ_s</span> has a beautiful geometric meaning: it transforms curvature (a Euclidean invariant) into the Schwarzian derivative (a conformal invariant). The AKNS scattering system at spectral parameter λ = 0 is <em>literally the Bishop frame equation</em>. The spectral parameter deforms geometry into a scattering problem.
+    </div>
+
+    <p>In Part 3, we'll bring these ideas to life with discrete elastic rods — the computational framework that makes real-time simulation possible — and connect everything to DNA supercoiling, where the interplay of twist, writhe, and elastic energy has concrete biological consequences.</p>
+  </section>
+
+  <div class="next-part">
+    <div class="label">Coming in Part 3</div>
+    <h3>From Solitons to DNA</h3>
+    <p style="color:var(--text-secondary);font-size:0.92rem;margin-top:8px;">Discrete elastic rods, supercoiling, spectral data, and the full five-level synchronized visualization.</p>
+  </div>
+
+</article>
+
+<script>
+// ========================================================================
+//  UTILITY
+// ========================================================================
+const V = {
+  add(a,b){ return [a[0]+b[0],a[1]+b[1],a[2]+b[2]]; },
+  sub(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; },
+  scale(a,s){ return [a[0]*s,a[1]*s,a[2]*s]; },
+  dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; },
+  cross(a,b){ return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]; },
+  len(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); },
+  norm(a){ const l=V.len(a); return l>1e-12?[a[0]/l,a[1]/l,a[2]/l]:[0,0,1]; },
+};
+
+// Reconstruct 3D curve from Hasimoto wavefunction ψ(s)
+// ψ = κ₁ + iκ₂ (Bishop curvatures)
+// Integrate Bishop frame ODE to get points
+function curveFromPsi(psiRe, psiIm, ds, N) {
+  // Initial frame: T along x, U along y, V along z
+  let T = [1, 0, 0], U = [0, 1, 0], Vb = [0, 0, 1];
+  const pts = [[0, 0, 0]];
+  for (let i = 0; i < N; i++) {
+    const k1 = psiRe[i], k2 = psiIm[i];
+    // Darboux: T' = k1*U + k2*V, U' = -k1*T, V' = -k2*T
+    const dT = V.add(V.scale(U, k1 * ds), V.scale(Vb, k2 * ds));
+    const dU = V.scale(T, -k1 * ds);
+    const dV = V.scale(T, -k2 * ds);
+    T = V.norm(V.add(T, dT));
+    U = V.add(U, dU);
+    // Re-orthogonalize
+    U = V.sub(U, V.scale(T, V.dot(U, T)));
+    U = V.norm(U);
+    Vb = V.cross(T, U);
+    pts.push(V.add(pts[pts.length - 1], V.scale(T, ds)));
+  }
+  return pts;
+}
+
+// NLS 1-soliton: ψ(s,t) = 2η sech(2η(s - 4ξt)) exp(i(2ξs - 4(ξ²-η²)t))
+function nlsSoliton(s, t, eta, xi) {
+  const arg = 2 * eta * (s - 4 * xi * t);
+  const amp = 2 * eta / Math.cosh(arg);
+  const phase = 2 * xi * s - 4 * (xi * xi - eta * eta) * t;
+  return [amp * Math.cos(phase), amp * Math.sin(phase)];
+}
+
+// ========================================================================
+//  FIGURE 1: EULER ELASTICA (Canvas2D)
+// ========================================================================
+(function(){
+  const canvasP = document.getElementById('canvas-elastica-phase');
+  const canvasC = document.getElementById('canvas-elastica-curve');
+  const ctxP = canvasP.getContext('2d');
+  const ctxC = canvasC.getContext('2d');
+  const energySlider = document.getElementById('elastica-energy');
+  const lambdaSlider = document.getElementById('elastica-lambda');
+  const eValEl = document.getElementById('elastica-e-val');
+  const lValEl = document.getElementById('elastica-l-val');
+  const bendEl = document.getElementById('elastica-bend');
+  const typeEl = document.getElementById('elastica-type');
+
+  let Wp, Hp, Wc, Hc, dpr;
+
+  function resize() {
+    const parent = canvasP.parentElement;
+    const totalW = parent.getBoundingClientRect().width;
+    dpr = window.devicePixelRatio || 1;
+    Wp = Math.floor((totalW - 2) / 2);
+    Hp = Math.min(350, Wp * 0.9);
+    Wc = Wp; Hc = Hp;
+    for (const [cv, w, h] of [[canvasP, Wp, Hp], [canvasC, Wc, Hc]]) {
+      cv.style.width = w + 'px'; cv.style.height = h + 'px';
+      cv.width = w * dpr; cv.height = h * dpr;
+      cv.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    draw();
+  }
+
+  // Solve κ'' + ½κ³ - λκ = 0 as a Hamiltonian system
+  // H = ½κ'² + ¼κ⁴ - ½λκ² = const (energy)
+  // Phase portrait: κ' vs κ
+  function elasticaODE(kappa, kappaDot, lambda) {
+    return -0.5 * kappa * kappa * kappa + lambda * kappa;
+  }
+
+  function solveElastica(energy, lambda, sMax, ds) {
+    // At s=0: κ = κ₀, κ' = 0 (start at turning point)
+    // H = ¼κ₀⁴ - ½λκ₀² = energy
+    // Find κ₀ from energy
+    // ¼κ₀⁴ - ½λκ₀² - energy = 0 → quadratic in κ₀²
+    // κ₀² = (½λ ± √(¼λ² + energy)) / (¼·2) = λ ± √(λ² + 4·energy)
+    // We want the positive root
+    const disc = lambda * lambda + 4 * energy;
+    if (disc < 0) return { kappas: [0], kappaDots: [0] };
+    const k0sq = lambda + Math.sqrt(disc);
+    if (k0sq < 0) return { kappas: [0], kappaDots: [0] };
+    const k0 = Math.sqrt(k0sq);
+
+    const n = Math.floor(sMax / ds);
+    const kappas = [k0];
+    const kappaDots = [0];
+    let k = k0, kd = 0;
+    for (let i = 1; i <= n; i++) {
+      // RK4
+      const k1k = kd;
+      const k1kd = elasticaODE(k, kd, lambda);
+      const k2k = kd + 0.5 * ds * k1kd;
+      const k2kd = elasticaODE(k + 0.5 * ds * k1k, kd + 0.5 * ds * k1kd, lambda);
+      const k3k = kd + 0.5 * ds * k2kd;
+      const k3kd = elasticaODE(k + 0.5 * ds * k2k, kd + 0.5 * ds * k2kd, lambda);
+      const k4k = kd + ds * k3kd;
+      const k4kd = elasticaODE(k + ds * k3k, kd + ds * k3kd, lambda);
+      k += ds / 6 * (k1k + 2 * k2k + 2 * k3k + k4k);
+      kd += ds / 6 * (k1kd + 2 * k2kd + 2 * k3kd + k4kd);
+      kappas.push(k);
+      kappaDots.push(kd);
+    }
+    return { kappas, kappaDots };
+  }
+
+  function curveFromKappa(kappas, ds) {
+    let theta = 0;
+    const pts = [{ x: 0, y: 0 }];
+    for (let i = 0; i < kappas.length; i++) {
+      theta += kappas[i] * ds;
+      const last = pts[pts.length - 1];
+      pts.push({ x: last.x + Math.cos(theta) * ds, y: last.y + Math.sin(theta) * ds });
+    }
+    return pts;
+  }
+
+  function draw() {
+    const eNorm = energySlider.value / 1000; // 0..1
+    const lambda = lambdaSlider.value / 500;  // 0.2..2.0
+    lValEl.textContent = lambda.toFixed(2);
+
+    // Separatrix energy: H = 0 at κ₀ = √(2λ) with κ'=0
+    // H = ¼(2λ)² - ½λ(2λ) = λ² - λ² = 0 ← the separatrix IS H=0
+    // Below: undulating (H < 0). Above: rotating (H > 0).
+    const maxE = 0.8 * lambda * lambda;
+    const energy = (eNorm - 0.5) * 2 * maxE; // range: -maxE to +maxE
+
+    eValEl.textContent = energy.toFixed(3);
+
+    // Classify
+    let typeStr;
+    if (Math.abs(energy) < 0.02 * maxE) typeStr = 'soliton (separatrix)';
+    else if (energy < 0) typeStr = 'undulating';
+    else typeStr = 'rotating';
+    typeEl.textContent = typeStr;
+
+    const ds = 0.02;
+    const sMax = 14;
+    const sol = solveElastica(energy, lambda, sMax, ds);
+
+    // --- Phase portrait ---
+    ctxP.clearRect(0, 0, Wp, Hp);
+    ctxP.fillStyle = '#F2F0EB';
+    ctxP.fillRect(0, 0, Wp, Hp);
+
+    const kRange = 3.5;
+    const kdRange = 3.0;
+    const mapK = k => Wp / 2 + (k / kRange) * (Wp / 2 - 20);
+    const mapKd = kd => Hp / 2 - (kd / kdRange) * (Hp / 2 - 20);
+
+    // Axes
+    ctxP.strokeStyle = '#ddd';
+    ctxP.lineWidth = 1;
+    ctxP.beginPath();
+    ctxP.moveTo(10, Hp / 2); ctxP.lineTo(Wp - 10, Hp / 2);
+    ctxP.moveTo(Wp / 2, 10); ctxP.lineTo(Wp / 2, Hp - 10);
+    ctxP.stroke();
+    ctxP.fillStyle = '#aaa';
+    ctxP.font = '11px JetBrains Mono';
+    ctxP.fillText('κ', Wp - 18, Hp / 2 - 6);
+    ctxP.fillText("κ'", Wp / 2 + 6, 18);
+
+    // Draw several energy level curves
+    for (let eIdx = 0; eIdx <= 10; eIdx++) {
+      const eI = (eIdx / 10 - 0.5) * 2 * maxE;
+      const solI = solveElastica(eI, lambda, sMax * 2, ds);
+      ctxP.beginPath();
+      let started = false;
+      for (let i = 0; i < solI.kappas.length; i++) {
+        const x = mapK(solI.kappas[i]);
+        const y = mapKd(solI.kappaDots[i]);
+        if (x < 0 || x > Wp || y < 0 || y > Hp) { started = false; continue; }
+        if (!started) { ctxP.moveTo(x, y); started = true; }
+        else ctxP.lineTo(x, y);
+      }
+      const isSep = Math.abs(eI) < 0.04 * maxE;
+      ctxP.strokeStyle = isSep ? '#3A7D44' : 'rgba(45,106,159,0.15)';
+      ctxP.lineWidth = isSep ? 2.5 : 1;
+      ctxP.stroke();
+
+      // Mirror (κ' → -κ')
+      ctxP.beginPath();
+      started = false;
+      for (let i = 0; i < solI.kappas.length; i++) {
+        const x = mapK(solI.kappas[i]);
+        const y = mapKd(-solI.kappaDots[i]);
+        if (x < 0 || x > Wp || y < 0 || y > Hp) { started = false; continue; }
+        if (!started) { ctxP.moveTo(x, y); started = true; }
+        else ctxP.lineTo(x, y);
+      }
+      ctxP.strokeStyle = isSep ? '#3A7D44' : 'rgba(45,106,159,0.15)';
+      ctxP.lineWidth = isSep ? 2.5 : 1;
+      ctxP.stroke();
+    }
+
+    // Current orbit — highlighted
+    ctxP.beginPath();
+    let started = false;
+    for (let i = 0; i < sol.kappas.length; i++) {
+      const x = mapK(sol.kappas[i]);
+      const y = mapKd(sol.kappaDots[i]);
+      if (x < 0 || x > Wp || y < 0 || y > Hp) { started = false; continue; }
+      if (!started) { ctxP.moveTo(x, y); started = true; }
+      else ctxP.lineTo(x, y);
+    }
+    ctxP.strokeStyle = '#C4601D';
+    ctxP.lineWidth = 2.5;
+    ctxP.stroke();
+
+    // Mirror
+    ctxP.beginPath();
+    started = false;
+    for (let i = 0; i < sol.kappas.length; i++) {
+      const x = mapK(sol.kappas[i]);
+      const y = mapKd(-sol.kappaDots[i]);
+      if (x < 0 || x > Wp || y < 0 || y > Hp) { started = false; continue; }
+      if (!started) { ctxP.moveTo(x, y); started = true; }
+      else ctxP.lineTo(x, y);
+    }
+    ctxP.strokeStyle = '#C4601D';
+    ctxP.lineWidth = 2.5;
+    ctxP.stroke();
+
+    // --- Curve shape ---
+    ctxC.clearRect(0, 0, Wc, Hc);
+    ctxC.fillStyle = '#F2F0EB';
+    ctxC.fillRect(0, 0, Wc, Hc);
+
+    const curvePts = curveFromKappa(sol.kappas, ds);
+
+    // Bounding box
+    let minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
+    for (const p of curvePts) {
+      minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x);
+      miny = Math.min(miny, p.y); maxy = Math.max(maxy, p.y);
+    }
+    const cx = (minx + maxx) / 2, cy = (miny + maxy) / 2;
+    const span = Math.max(maxx - minx, maxy - miny, 0.1) * 1.15;
+    const sc = Math.min(Wc, Hc) / span;
+    const ox = Wc / 2, oy = Hc / 2;
+
+    ctxC.beginPath();
+    for (let i = 0; i < curvePts.length; i++) {
+      const x = ox + (curvePts[i].x - cx) * sc;
+      const y = oy + (curvePts[i].y - cy) * sc;
+      i === 0 ? ctxC.moveTo(x, y) : ctxC.lineTo(x, y);
+    }
+    ctxC.strokeStyle = '#C4601D';
+    ctxC.lineWidth = 2.5;
+    ctxC.stroke();
+
+    // Start dot
+    ctxC.beginPath();
+    ctxC.arc(ox + (curvePts[0].x - cx) * sc, oy + (curvePts[0].y - cy) * sc, 4, 0, Math.PI * 2);
+    ctxC.fillStyle = '#2A2520';
+    ctxC.fill();
+
+    // Bending energy
+    let bendE = 0;
+    for (let i = 0; i < sol.kappas.length; i++) bendE += sol.kappas[i] * sol.kappas[i] * ds;
+    bendEl.textContent = bendE.toFixed(2);
+  }
+
+  energySlider.addEventListener('input', draw);
+  lambdaSlider.addEventListener('input', draw);
+  window.addEventListener('resize', resize);
+  resize();
+})();
+
+// ========================================================================
+//  FIGURE 2: VORTEX FILAMENT EQUATION (Three.js + Canvas2D)
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-vfe');
+  const plotCanvas = document.getElementById('canvas-vfe-plots');
+  const plotCtx = plotCanvas.getContext('2d');
+
+  let scene, camera, renderer, curveMesh, frameGroup;
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let camTheta = 0.5, camPhi = 0.9, camDist = 7;
+  let playing = true, time = 0;
+  let currentShape = 'soliton';
+
+  const NV = 250;
+  const ds = 0.08;
+  const sRange = NV * ds; // total arc length
+
+  function initScene() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xF2F0EB);
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    updateCam();
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+    dl.position.set(3, 5, 4);
+    scene.add(dl);
+    frameGroup = new THREE.Group();
+    scene.add(frameGroup);
+  }
+
+  function updateCam() {
+    camera.position.set(
+      camDist * Math.sin(camPhi) * Math.cos(camTheta),
+      camDist * Math.cos(camPhi),
+      camDist * Math.sin(camPhi) * Math.sin(camTheta)
+    );
+    camera.lookAt(0, 0, 0);
+  }
+
+  function getPsiForShape(shape, t) {
+    const psiRe = new Float64Array(NV);
+    const psiIm = new Float64Array(NV);
+    const eta = 0.4, xi = 0.3;
+    for (let i = 0; i < NV; i++) {
+      const s = (i - NV / 2) * ds;
+      if (shape === 'soliton') {
+        const [re, im] = nlsSoliton(s, t, eta, xi);
+        psiRe[i] = re; psiIm[i] = im;
+      } else if (shape === 'helix') {
+        const k = 0.5;
+        const tau = 0.3;
+        const phase = tau * s + 0.5 * t;
+        psiRe[i] = k * Math.cos(phase);
+        psiIm[i] = k * Math.sin(phase);
+      } else { // ring
+        const k = 0.6;
+        const phase = 0.2 * s + 0.3 * t;
+        psiRe[i] = k * Math.cos(phase);
+        psiIm[i] = k * Math.sin(phase);
+      }
+    }
+    return { psiRe, psiIm };
+  }
+
+  function updateCurve() {
+    const { psiRe, psiIm } = getPsiForShape(currentShape, time);
+    const pts = curveFromPsi(psiRe, psiIm, ds, NV);
+
+    // Center the curve
+    let cx = 0, cy = 0, cz = 0;
+    for (const p of pts) { cx += p[0]; cy += p[1]; cz += p[2]; }
+    cx /= pts.length; cy /= pts.length; cz /= pts.length;
+
+    // Remove old mesh
+    const old = scene.getObjectByName('vfeCurve');
+    if (old) scene.remove(old);
+
+    const threePoints = pts.map(p => new THREE.Vector3(p[0] - cx, p[1] - cy, p[2] - cz));
+    const path = new THREE.CatmullRomCurve3(threePoints);
+    const tubeGeo = new THREE.TubeGeometry(path, NV, 0.03, 8, false);
+    const tubeMat = new THREE.MeshStandardMaterial({ color: 0x2A2520, roughness: 0.7 });
+    const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+    mesh.name = 'vfeCurve';
+    scene.add(mesh);
+
+    // Plot κ(s) and τ(s) approximation
+    drawVfePlots(psiRe, psiIm);
+
+    // Readouts
+    let energy = 0, maxK = 0;
+    for (let i = 0; i < NV; i++) {
+      const k2 = psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i];
+      energy += k2 * ds;
+      maxK = Math.max(maxK, Math.sqrt(k2));
+    }
+    document.getElementById('vfe-time').textContent = time.toFixed(2);
+    document.getElementById('vfe-energy').textContent = energy.toFixed(3);
+    document.getElementById('vfe-maxk').textContent = maxK.toFixed(3);
+  }
+
+  function drawVfePlots(psiRe, psiIm) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = plotCanvas.parentElement.getBoundingClientRect();
+    const W = Math.max(100, Math.floor(rect.width * 0.25));
+    const H = Math.floor(plotCanvas.height / dpr);
+    plotCanvas.style.width = W + 'px';
+    plotCanvas.style.height = H + 'px';
+    plotCanvas.width = W * dpr;
+    plotCanvas.height = H * dpr;
+    plotCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    plotCtx.clearRect(0, 0, W, H);
+    plotCtx.fillStyle = '#F2F0EB';
+    plotCtx.fillRect(0, 0, W, H);
+
+    const halfH = H / 2;
+    const pad = 12;
+    const maxVal = 1.2;
+
+    // κ(s) = |ψ|
+    plotCtx.fillStyle = '#aaa';
+    plotCtx.font = '10px JetBrains Mono';
+    plotCtx.fillText('κ(s)', pad, pad + 8);
+
+    plotCtx.beginPath();
+    plotCtx.moveTo(pad, halfH * 0.5);
+    plotCtx.lineTo(W - pad, halfH * 0.5);
+    plotCtx.strokeStyle = '#ddd'; plotCtx.lineWidth = 1; plotCtx.stroke();
+
+    plotCtx.beginPath();
+    for (let i = 0; i < NV; i++) {
+      const x = pad + (i / NV) * (W - 2 * pad);
+      const kappa = Math.sqrt(psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i]);
+      const y = halfH * 0.5 - (kappa / maxVal) * (halfH * 0.4);
+      i === 0 ? plotCtx.moveTo(x, y) : plotCtx.lineTo(x, y);
+    }
+    plotCtx.strokeStyle = '#C4601D'; plotCtx.lineWidth = 2; plotCtx.stroke();
+
+    // Re(ψ) and Im(ψ)
+    plotCtx.fillStyle = '#aaa';
+    plotCtx.fillText('Re(ψ)', pad, halfH + pad + 8);
+
+    plotCtx.beginPath();
+    plotCtx.moveTo(pad, halfH + halfH * 0.5);
+    plotCtx.lineTo(W - pad, halfH + halfH * 0.5);
+    plotCtx.strokeStyle = '#ddd'; plotCtx.lineWidth = 1; plotCtx.stroke();
+
+    for (const [arr, col] of [[psiRe, '#2D6A9F'], [psiIm, '#7B4DAA']]) {
+      plotCtx.beginPath();
+      for (let i = 0; i < NV; i++) {
+        const x = pad + (i / NV) * (W - 2 * pad);
+        const y = halfH + halfH * 0.5 - (arr[i] / maxVal) * (halfH * 0.4);
+        i === 0 ? plotCtx.moveTo(x, y) : plotCtx.lineTo(x, y);
+      }
+      plotCtx.strokeStyle = col; plotCtx.lineWidth = 1.5; plotCtx.stroke();
+    }
+  }
+
+  let animFrame;
+  function animate() {
+    if (playing) {
+      const speed = document.getElementById('vfe-speed').value / 1000;
+      time += speed;
+      updateCurve();
+    }
+    renderer.render(scene, camera);
+    animFrame = requestAnimationFrame(animate);
+  }
+
+  // Controls
+  document.getElementById('vfe-play').addEventListener('click', function() {
+    playing = true;
+    document.querySelectorAll('#fig-vfe .btn-group')[0].querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+  document.getElementById('vfe-pause').addEventListener('click', function() {
+    playing = false;
+    document.querySelectorAll('#fig-vfe .btn-group')[0].querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+  document.getElementById('vfe-reset').addEventListener('click', function() {
+    time = 0;
+    updateCurve();
+  });
+
+  document.querySelectorAll('[data-shape]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-shape]').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentShape = this.dataset.shape;
+      time = 0;
+      updateCurve();
+    });
+  });
+
+  // Orbit
+  container.addEventListener('pointerdown', e => {
+    isDragging = true; prevMouse = { x: e.clientX, y: e.clientY };
+    container.setPointerCapture(e.pointerId);
+  });
+  container.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    camTheta += (e.clientX - prevMouse.x) * 0.008;
+    camPhi = Math.max(0.2, Math.min(2.9, camPhi - (e.clientY - prevMouse.y) * 0.008));
+    prevMouse = { x: e.clientX, y: e.clientY };
+    updateCam();
+  });
+  container.addEventListener('pointerup', () => { isDragging = false; });
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    camDist = Math.max(3, Math.min(15, camDist + e.deltaY * 0.005));
+    updateCam();
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  initScene();
+  updateCurve();
+  animate();
+})();
+
+// ========================================================================
+//  FIGURE 3: HASIMOTO TRANSFORM (Three.js + Canvas2D)
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-hasimoto');
+  const psiCanvas = document.getElementById('canvas-hasimoto-psi');
+  const psiCtx = psiCanvas.getContext('2d');
+
+  const timeSlider = document.getElementById('hasimoto-time');
+  const etaSlider = document.getElementById('hasimoto-eta');
+  const xiSlider = document.getElementById('hasimoto-xi');
+  const tValEl = document.getElementById('hasimoto-t-val');
+  const etaValEl = document.getElementById('hasimoto-eta-val');
+  const xiValEl = document.getElementById('hasimoto-xi-val');
+  const h0El = document.getElementById('hasimoto-H0');
+  const maxPsiEl = document.getElementById('hasimoto-maxpsi');
+
+  let scene, camera, renderer;
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let camTheta = 0.3, camPhi = 1.1, camDist = 8;
+
+  const NH = 400;
+  const dsH = 0.06;
+
+  function initScene() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xF2F0EB);
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    updateCam();
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+    dl.position.set(3, 5, 4); scene.add(dl);
+  }
+
+  function updateCam() {
+    camera.position.set(
+      camDist * Math.sin(camPhi) * Math.cos(camTheta),
+      camDist * Math.cos(camPhi),
+      camDist * Math.sin(camPhi) * Math.sin(camTheta)
+    );
+    camera.lookAt(0, 0, 0);
+  }
+
+  function update() {
+    const t = timeSlider.value / 1000 * 3;
+    const eta = etaSlider.value / 1000;
+    const xi = xiSlider.value / 1000;
+
+    tValEl.textContent = t.toFixed(2);
+    etaValEl.textContent = eta.toFixed(2);
+    xiValEl.textContent = xi.toFixed(2);
+
+    const psiRe = new Float64Array(NH);
+    const psiIm = new Float64Array(NH);
+    let energy = 0, maxPsi = 0;
+
+    for (let i = 0; i < NH; i++) {
+      const s = (i - NH / 2) * dsH;
+      const [re, im] = nlsSoliton(s, t, eta, xi);
+      psiRe[i] = re; psiIm[i] = im;
+      const amp2 = re * re + im * im;
+      energy += amp2 * dsH;
+      maxPsi = Math.max(maxPsi, Math.sqrt(amp2));
+    }
+
+    h0El.textContent = energy.toFixed(3);
+    maxPsiEl.textContent = maxPsi.toFixed(3);
+
+    // 3D curve
+    const pts = curveFromPsi(psiRe, psiIm, dsH, NH);
+    let cx = 0, cy = 0, cz = 0;
+    for (const p of pts) { cx += p[0]; cy += p[1]; cz += p[2]; }
+    cx /= pts.length; cy /= pts.length; cz /= pts.length;
+
+    const old = scene.getObjectByName('hasimotoCurve');
+    if (old) scene.remove(old);
+
+    const threePoints = pts.map(p => new THREE.Vector3(p[0] - cx, p[1] - cy, p[2] - cz));
+    const path = new THREE.CatmullRomCurve3(threePoints);
+    const tubeGeo = new THREE.TubeGeometry(path, NH, 0.025, 8, false);
+
+    // Color by curvature
+    const colors = new Float32Array(tubeGeo.attributes.position.count * 3);
+    for (let i = 0; i < tubeGeo.attributes.position.count; i++) {
+      const segIdx = Math.floor(i / 16) % NH; // approximate
+      const k2 = psiRe[Math.min(segIdx, NH - 1)] ** 2 + psiIm[Math.min(segIdx, NH - 1)] ** 2;
+      const intensity = Math.min(1, Math.sqrt(k2) / (2 * eta + 0.01));
+      colors[i * 3] = 0.16 + 0.6 * intensity;
+      colors[i * 3 + 1] = 0.14 - 0.06 * intensity;
+      colors[i * 3 + 2] = 0.12 - 0.04 * intensity;
+    }
+    tubeGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    const tubeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
+    const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+    mesh.name = 'hasimotoCurve';
+    scene.add(mesh);
+
+    // Draw ψ plots
+    drawPsiPlots(psiRe, psiIm, eta);
+  }
+
+  function drawPsiPlots(psiRe, psiIm, eta) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = psiCanvas.parentElement.getBoundingClientRect();
+    const W = Math.max(150, Math.floor(rect.width * 0.32));
+    const H = Math.floor(340);
+    psiCanvas.style.width = W + 'px';
+    psiCanvas.style.height = H + 'px';
+    psiCanvas.width = W * dpr;
+    psiCanvas.height = H * dpr;
+    psiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    psiCtx.clearRect(0, 0, W, H);
+    psiCtx.fillStyle = '#F2F0EB';
+    psiCtx.fillRect(0, 0, W, H);
+
+    const pad = 12;
+    const topH = H * 0.45;
+    const botH = H * 0.45;
+    const botY = topH + H * 0.1;
+    const maxAmp = 2 * eta + 0.2;
+
+    // Top: |ψ| amplitude
+    psiCtx.fillStyle = '#aaa';
+    psiCtx.font = '10px JetBrains Mono';
+    psiCtx.fillText('|ψ| = κ', pad, pad + 8);
+
+    // Zero line
+    const zeroY1 = pad + topH * 0.85;
+    psiCtx.beginPath();
+    psiCtx.moveTo(pad, zeroY1); psiCtx.lineTo(W - pad, zeroY1);
+    psiCtx.strokeStyle = '#ddd'; psiCtx.lineWidth = 1; psiCtx.stroke();
+
+    // |ψ| fill
+    psiCtx.beginPath();
+    psiCtx.moveTo(pad, zeroY1);
+    for (let i = 0; i < NH; i++) {
+      const x = pad + (i / NH) * (W - 2 * pad);
+      const amp = Math.sqrt(psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i]);
+      const y = zeroY1 - (amp / maxAmp) * topH * 0.7;
+      psiCtx.lineTo(x, y);
+    }
+    psiCtx.lineTo(W - pad, zeroY1);
+    psiCtx.closePath();
+    psiCtx.fillStyle = 'rgba(196,96,29,0.15)';
+    psiCtx.fill();
+
+    // |ψ| line
+    psiCtx.beginPath();
+    for (let i = 0; i < NH; i++) {
+      const x = pad + (i / NH) * (W - 2 * pad);
+      const amp = Math.sqrt(psiRe[i] * psiRe[i] + psiIm[i] * psiIm[i]);
+      const y = zeroY1 - (amp / maxAmp) * topH * 0.7;
+      i === 0 ? psiCtx.moveTo(x, y) : psiCtx.lineTo(x, y);
+    }
+    psiCtx.strokeStyle = '#C4601D'; psiCtx.lineWidth = 2; psiCtx.stroke();
+
+    // Bottom: Re(ψ) and Im(ψ)
+    psiCtx.fillStyle = '#aaa';
+    psiCtx.fillText('Re(ψ), Im(ψ)', pad, botY + 8);
+    const zeroY2 = botY + botH * 0.5;
+
+    psiCtx.beginPath();
+    psiCtx.moveTo(pad, zeroY2); psiCtx.lineTo(W - pad, zeroY2);
+    psiCtx.strokeStyle = '#ddd'; psiCtx.lineWidth = 1; psiCtx.stroke();
+
+    for (const [arr, col] of [[psiRe, '#2D6A9F'], [psiIm, '#7B4DAA']]) {
+      psiCtx.beginPath();
+      for (let i = 0; i < NH; i++) {
+        const x = pad + (i / NH) * (W - 2 * pad);
+        const y = zeroY2 - (arr[i] / maxAmp) * botH * 0.4;
+        i === 0 ? psiCtx.moveTo(x, y) : psiCtx.lineTo(x, y);
+      }
+      psiCtx.strokeStyle = col; psiCtx.lineWidth = 1.5; psiCtx.stroke();
+    }
+  }
+
+  function render() {
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+  }
+
+  timeSlider.addEventListener('input', update);
+  etaSlider.addEventListener('input', update);
+  xiSlider.addEventListener('input', update);
+
+  // Orbit
+  container.addEventListener('pointerdown', e => {
+    isDragging = true; prevMouse = { x: e.clientX, y: e.clientY };
+    container.setPointerCapture(e.pointerId);
+  });
+  container.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    camTheta += (e.clientX - prevMouse.x) * 0.008;
+    camPhi = Math.max(0.2, Math.min(2.9, camPhi - (e.clientY - prevMouse.y) * 0.008));
+    prevMouse = { x: e.clientX, y: e.clientY }; updateCam();
+  });
+  container.addEventListener('pointerup', () => { isDragging = false; });
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    camDist = Math.max(3, Math.min(15, camDist + e.deltaY * 0.005)); updateCam();
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  initScene();
+  update();
+  render();
+})();
+
+// ========================================================================
+//  FIGURE 4: mKdV → NLS (Three.js + Canvas2D)
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-p2s');
+  const psiCanvas = document.getElementById('canvas-p2s-psi');
+  const psiCtx = psiCanvas.getContext('2d');
+
+  const xiSlider = document.getElementById('p2s-xi');
+  const timeSlider = document.getElementById('p2s-time');
+  const xiValEl = document.getElementById('p2s-xi-val');
+  const tValEl = document.getElementById('p2s-t-val');
+  const xiReadEl = document.getElementById('p2s-xi-read');
+  const eqLabel = document.getElementById('p2s-eq-label');
+  const energyEl = document.getElementById('p2s-energy');
+
+  let scene, camera, renderer;
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let camTheta = 0.2, camPhi = 1.2, camDist = 9;
+
+  const NP = 400;
+  const dsP = 0.06;
+  const eta = 0.5;
+
+  function initScene() {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xF2F0EB);
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    updateCam();
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+    dl.position.set(3, 5, 4); scene.add(dl);
+
+    // Ground plane for reference
+    const planeGeo = new THREE.PlaneGeometry(25, 25);
+    const planeMat = new THREE.MeshStandardMaterial({
+      color: 0xE8E4DD, side: THREE.DoubleSide, transparent: true, opacity: 0.3
+    });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -0.01;
+    plane.name = 'groundPlane';
+    scene.add(plane);
+  }
+
+  function updateCam() {
+    camera.position.set(
+      camDist * Math.sin(camPhi) * Math.cos(camTheta),
+      camDist * Math.cos(camPhi),
+      camDist * Math.sin(camPhi) * Math.sin(camTheta)
+    );
+    camera.lookAt(0, 0, 0);
+  }
+
+  function update() {
+    const xi = xiSlider.value / 1000 * 0.6;
+    const t = timeSlider.value / 1000 * 3;
+
+    xiValEl.textContent = xi.toFixed(2);
+    tValEl.textContent = t.toFixed(2);
+    xiReadEl.textContent = xi.toFixed(2);
+    eqLabel.textContent = xi < 0.01 ? 'mKdV (planar)' : xi < 0.15 ? 'near-planar' : 'NLS (3D)';
+
+    const psiRe = new Float64Array(NP);
+    const psiIm = new Float64Array(NP);
+    let energy = 0;
+
+    for (let i = 0; i < NP; i++) {
+      const s = (i - NP / 2) * dsP;
+      const [re, im] = nlsSoliton(s, t, eta, xi);
+      psiRe[i] = re; psiIm[i] = im;
+      energy += (re * re + im * im) * dsP;
+    }
+
+    energyEl.textContent = energy.toFixed(3);
+
+    // 3D curve
+    const pts = curveFromPsi(psiRe, psiIm, dsP, NP);
+    let cx = 0, cy = 0, cz = 0;
+    for (const p of pts) { cx += p[0]; cy += p[1]; cz += p[2]; }
+    cx /= pts.length; cy /= pts.length; cz /= pts.length;
+
+    const old = scene.getObjectByName('p2sCurve');
+    if (old) scene.remove(old);
+
+    const threePoints = pts.map(p => new THREE.Vector3(p[0] - cx, p[1] - cy, p[2] - cz));
+    const path = new THREE.CatmullRomCurve3(threePoints);
+    const tubeGeo = new THREE.TubeGeometry(path, NP, 0.03, 8, false);
+
+    // Color: blue where planar, orange where 3D (by curvature)
+    const colors = new Float32Array(tubeGeo.attributes.position.count * 3);
+    for (let i = 0; i < tubeGeo.attributes.position.count; i++) {
+      const segIdx = Math.min(Math.floor(i / 16) % NP, NP - 1);
+      const k2 = psiRe[segIdx] ** 2 + psiIm[segIdx] ** 2;
+      const intensity = Math.min(1, Math.sqrt(k2) / (2 * eta + 0.01));
+      // Blend from blue (planar) to orange (3D)
+      const blend = Math.min(1, xi / 0.3);
+      colors[i * 3] = 0.17 * (1 - blend * intensity) + 0.77 * blend * intensity;
+      colors[i * 3 + 1] = 0.42 * (1 - blend * intensity) + 0.38 * blend * intensity;
+      colors[i * 3 + 2] = 0.62 * (1 - blend * intensity) + 0.11 * blend * intensity;
+    }
+    tubeGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    const tubeMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
+    const mesh = new THREE.Mesh(tubeGeo, tubeMat);
+    mesh.name = 'p2sCurve';
+    scene.add(mesh);
+
+    // ψ plots
+    drawP2sPlots(psiRe, psiIm);
+  }
+
+  function drawP2sPlots(psiRe, psiIm) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = psiCanvas.parentElement.getBoundingClientRect();
+    const W = Math.max(150, Math.floor(rect.width * 0.32));
+    const H = 340;
+    psiCanvas.style.width = W + 'px'; psiCanvas.style.height = H + 'px';
+    psiCanvas.width = W * dpr; psiCanvas.height = H * dpr;
+    psiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    psiCtx.clearRect(0, 0, W, H);
+    psiCtx.fillStyle = '#F2F0EB';
+    psiCtx.fillRect(0, 0, W, H);
+
+    const pad = 12;
+    const maxAmp = 2 * eta + 0.2;
+    const topH = H * 0.4;
+    const botY = topH + H * 0.15;
+    const botH = H * 0.4;
+
+    // |ψ|
+    psiCtx.fillStyle = '#aaa';
+    psiCtx.font = '10px JetBrains Mono';
+    psiCtx.fillText('|ψ| = κ', pad, pad + 8);
+
+    const zeroY1 = pad + topH * 0.85;
+    psiCtx.beginPath();
+    psiCtx.moveTo(pad, zeroY1); psiCtx.lineTo(W - pad, zeroY1);
+    psiCtx.strokeStyle = '#ddd'; psiCtx.lineWidth = 1; psiCtx.stroke();
+
+    psiCtx.beginPath();
+    psiCtx.moveTo(pad, zeroY1);
+    for (let i = 0; i < NP; i++) {
+      const x = pad + (i / NP) * (W - 2 * pad);
+      const amp = Math.sqrt(psiRe[i] ** 2 + psiIm[i] ** 2);
+      const y = zeroY1 - (amp / maxAmp) * topH * 0.7;
+      psiCtx.lineTo(x, y);
+    }
+    psiCtx.lineTo(W - pad, zeroY1);
+    psiCtx.closePath();
+    psiCtx.fillStyle = 'rgba(196,96,29,0.15)';
+    psiCtx.fill();
+
+    psiCtx.beginPath();
+    for (let i = 0; i < NP; i++) {
+      const x = pad + (i / NP) * (W - 2 * pad);
+      const amp = Math.sqrt(psiRe[i] ** 2 + psiIm[i] ** 2);
+      const y = zeroY1 - (amp / maxAmp) * topH * 0.7;
+      i === 0 ? psiCtx.moveTo(x, y) : psiCtx.lineTo(x, y);
+    }
+    psiCtx.strokeStyle = '#C4601D'; psiCtx.lineWidth = 2; psiCtx.stroke();
+
+    // Re + Im
+    psiCtx.fillStyle = '#aaa';
+    psiCtx.fillText('Re(ψ), Im(ψ)', pad, botY + 8);
+    const zeroY2 = botY + botH * 0.5;
+    psiCtx.beginPath();
+    psiCtx.moveTo(pad, zeroY2); psiCtx.lineTo(W - pad, zeroY2);
+    psiCtx.strokeStyle = '#ddd'; psiCtx.lineWidth = 1; psiCtx.stroke();
+
+    for (const [arr, col] of [[psiRe, '#2D6A9F'], [psiIm, '#7B4DAA']]) {
+      psiCtx.beginPath();
+      for (let i = 0; i < NP; i++) {
+        const x = pad + (i / NP) * (W - 2 * pad);
+        const y = zeroY2 - (arr[i] / maxAmp) * botH * 0.4;
+        i === 0 ? psiCtx.moveTo(x, y) : psiCtx.lineTo(x, y);
+      }
+      psiCtx.strokeStyle = col; psiCtx.lineWidth = 1.5; psiCtx.stroke();
+    }
+  }
+
+  function render() {
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+  }
+
+  xiSlider.addEventListener('input', update);
+  timeSlider.addEventListener('input', update);
+
+  // Orbit
+  container.addEventListener('pointerdown', e => {
+    isDragging = true; prevMouse = { x: e.clientX, y: e.clientY };
+    container.setPointerCapture(e.pointerId);
+  });
+  container.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    camTheta += (e.clientX - prevMouse.x) * 0.008;
+    camPhi = Math.max(0.2, Math.min(2.9, camPhi - (e.clientY - prevMouse.y) * 0.008));
+    prevMouse = { x: e.clientX, y: e.clientY }; updateCam();
+  });
+  container.addEventListener('pointerup', () => { isDragging = false; });
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    camDist = Math.max(3, Math.min(15, camDist + e.deltaY * 0.005)); updateCam();
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  initScene();
+  update();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Geometry of Curves — Part 1</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400&display=swap');
+
+  :root {
+    --bg: #FAF8F4;
+    --text: #2A2520;
+    --text-secondary: #6B6560;
+    --accent: #C4601D;
+    --accent-light: #E8A56E;
+    --accent-bg: #FDF5EE;
+    --border: #E0DBD4;
+    --canvas-bg: #F2F0EB;
+    --blue: #2D6A9F;
+    --green: #3A7D44;
+    --red: #C4401D;
+    --purple: #7B4DAA;
+    --max-width: 720px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    font-size: 18px;
+    scroll-behavior: smooth;
+    background: var(--bg);
+  }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    color: var(--text);
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .essay {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 24px 120px;
+  }
+
+  /* --- HEADER --- */
+  .hero {
+    text-align: center;
+    padding: 80px 0 48px;
+  }
+  .hero .part-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-size: 2.6rem;
+    font-weight: 300;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  .hero .subtitle {
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: 300;
+  }
+  .hero-divider {
+    width: 48px;
+    height: 2px;
+    background: var(--accent);
+    margin: 40px auto 0;
+  }
+
+  /* --- SECTIONS --- */
+  section { margin-top: 56px; }
+  section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    line-height: 1.3;
+  }
+  p { margin-bottom: 18px; }
+  p:last-child { margin-bottom: 0; }
+
+  em.def {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .math {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: var(--accent-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .equation {
+    display: block;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    padding: 18px 0;
+    color: var(--text);
+  }
+
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: 14px 20px;
+    margin: 24px 0;
+    background: var(--accent-bg);
+    font-size: 0.92rem;
+    border-radius: 0 4px 4px 0;
+  }
+
+  /* --- INTERACTIVE FIGURE --- */
+  .figure {
+    margin: 36px -24px;
+    background: var(--canvas-bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    position: relative;
+  }
+  @media (min-width: 820px) {
+    .figure {
+      margin-left: -60px;
+      margin-right: -60px;
+      padding: 24px 36px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+  }
+  .figure-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .figure canvas, .figure .three-container {
+    display: block;
+    width: 100%;
+    border-radius: 4px;
+    cursor: grab;
+  }
+  .figure canvas:active, .figure .three-container:active { cursor: grabbing; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 14px;
+    align-items: center;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .control-group label {
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .control-group input[type="range"] {
+    width: 120px;
+    accent-color: var(--accent);
+  }
+  .control-group .value {
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    min-width: 36px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 4px;
+  }
+  .btn {
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 10px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .readout {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .readout-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+  .readout-item span { color: var(--accent); font-weight: 600; }
+
+  /* --- FOOTER / NEXT --- */
+  .next-part {
+    margin-top: 64px;
+    text-align: center;
+    padding: 36px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--accent-bg);
+  }
+  .next-part .label {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .next-part h3 {
+    font-size: 1.2rem;
+    font-weight: 400;
+  }
+</style>
+</head>
+<body>
+<article class="essay">
+
+  <!-- ==================== HERO ==================== -->
+  <header class="hero">
+    <div class="part-label">Part 1 of 3</div>
+    <h1>The Geometry of Curves</h1>
+    <p class="subtitle">How bending, twisting, and topology intertwine<br>in the mathematics of thin elastic rods</p>
+    <div class="hero-divider"></div>
+  </header>
+
+  <!-- ==================== INTRO ==================== -->
+  <section>
+    <p>Pick up a phone charger cable and hold it between your hands. Now twist one end. The cable doesn't just twist — it writhes, coils, loops back on itself. Something about the geometry of the curve and the twist stored in the material are deeply coupled.</p>
+    <p>This coupling isn't an accident. It's controlled by a beautiful theorem from topology that connects three numbers: how much the curve <em class="def">links</em> with itself, how much it <em class="def">twists</em>, and how much it <em class="def">writhes</em> in space. To understand that theorem, we first need to understand what it means for a curve to bend.</p>
+  </section>
+
+  <!-- ==================== CURVATURE ==================== -->
+  <section>
+    <h2>Curvature</h2>
+    <p>Imagine driving along a road. At each point, you could ask: how sharply am I turning? That's curvature. A straight road has zero curvature. A tight hairpin turn has high curvature. Formally, curvature <span class="math">κ(s)</span> measures how fast the tangent direction changes as you walk along the curve at unit speed.</p>
+    <p>Drag the control points below to reshape the curve. Watch how the curvature plot responds — peaks where the curve bends sharply, valleys where it straightens out.</p>
+  </section>
+
+  <!-- ==================== FIGURE 1: 2D CURVATURE ==================== -->
+  <div class="figure" id="fig-curvature">
+    <div class="figure-label">Interactive · Curvature of a plane curve</div>
+    <canvas id="canvas-curvature" width="1280" height="700"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#2A2520"></div>curve</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>κ(s) curvature</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>osculating circle</div>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>probe position</label>
+        <input type="range" id="probe-s" min="0" max="1000" value="500">
+        <div class="value" id="probe-val">s=0.50</div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">κ = <span id="kappa-val">0.00</span></div>
+      <div class="readout-item">R = 1/κ = <span id="radius-val">∞</span></div>
+      <div class="readout-item">∫κ² ds = <span id="energy-val">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>Notice something: the <em class="def">osculating circle</em> — the best-fit circle at each point — has radius <span class="math">R = 1/κ</span>. Where curvature is high, the circle is small and tight. Where curvature is low, the circle is enormous, nearly a straight line.</p>
+    <p>The quantity <span class="math">∫κ² ds</span> shown in the readout is the <em class="def">total bending energy</em> of the curve. This is exactly the energy that a thin elastic rod stores when you bend it. An elastic rod, left to itself, minimizes this integral — which is why a relaxed cable hangs in a smooth catenary rather than a zigzag.</p>
+  </section>
+
+  <!-- ==================== MOVING FRAMES ==================== -->
+  <section>
+    <h2>The Moving Frame</h2>
+    <p>Curvature tells us how much a curve bends, but in three dimensions we need more. We need to track not just the tangent direction, but an entire coordinate frame — a set of three perpendicular axes — riding along the curve. This <em class="def">moving frame</em> is what lets us distinguish bending from twisting.</p>
+    <p>The classical choice is the <em class="def">Frenet frame</em>: the tangent <span class="math" style="color:var(--red)">T</span>, the normal <span class="math" style="color:var(--green)">N</span> pointing toward the center of curvature, and the binormal <span class="math" style="color:var(--blue)">B = T × N</span>. It works beautifully — until the curve has an inflection point where curvature passes through zero. There, the normal direction is undefined, and the Frenet frame spins wildly.</p>
+    <p>In 1975, Bishop discovered a better frame. Instead of locking the normal to the curvature direction, he let it <em class="def">parallel transport</em> along the curve — the gentlest possible evolution, with zero twist by construction. The result is a frame that never has singularities, even at inflection points.</p>
+  </section>
+
+  <!-- ==================== FIGURE 2: 3D FRAMES ==================== -->
+  <div class="figure" id="fig-frames">
+    <div class="figure-label">Interactive · Moving frames on a space curve</div>
+    <div class="three-container" id="container-frames" style="height:440px;border-radius:4px;"></div>
+    <div class="controls">
+      <div class="control-group">
+        <label>position s</label>
+        <input type="range" id="frame-s" min="0" max="1000" value="0">
+        <div class="value" id="frame-s-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>frame</label>
+        <div class="btn-group">
+          <button class="btn active" data-frame="bishop">Bishop</button>
+          <button class="btn" data-frame="frenet">Frenet</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>θ material</label>
+        <input type="range" id="theta-material" min="0" max="6283" value="0">
+        <div class="value" id="theta-val">0.00</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#C44030"></div>tangent T</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3A7D44"></div>normal / u</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2D6A9F"></div>binormal / v</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#C4601D"></div>material m₁</div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">κ = <span id="frame-kappa">0.00</span></div>
+      <div class="readout-item">τ = <span id="frame-tau">0.00</span></div>
+      <div class="readout-item">θ = <span id="frame-theta">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>With the Bishop frame <span class="math">{T, u, v}</span> in hand, any other adapted frame is just a rotation by some angle <span class="math">θ(s)</span> around the tangent. The <em class="def">material frame</em> <span class="math">{T, m₁, m₂}</span> — which tracks the actual orientation of our rod's cross-section — is encoded by this single scalar function. This is the key insight from Langer and Singer (1996) that makes discrete elastic rod simulation so efficient: instead of tracking a full 3-vector frame, we only need one angle per edge.</p>
+    <p>The <em class="def">twist</em> of the material frame is simply <span class="math">m = dθ/ds</span> — how fast that angle changes along the curve. Use the θ slider above to rotate the material frame and watch it wind around the tangent.</p>
+  </section>
+
+  <!-- ==================== RIBBONS AND TOPOLOGY ==================== -->
+  <section>
+    <h2>Twist, Writhe, and the Linking Number</h2>
+    <p>Now for the deep result. Take a closed ribbon — a curve with a material frame, which you can think of as a strip of paper bent into a loop. This ribbon has three numbers associated with it:</p>
+    <p>The <em class="def">linking number</em> <span class="math">Lk</span> counts how many times the two edges of the ribbon wind around each other. It's a topological invariant — you can't change it without cutting the ribbon. The <em class="def">twist</em> <span class="math">Tw</span> measures the total winding of the material frame around the tangent: <span class="math">Tw = (1/2π)∫m ds</span>. And the <em class="def">writhe</em> <span class="math">Wr</span> measures how much the curve's centerline coils in space — a signed count of self-crossings as seen from every viewing direction.</p>
+    <p>Călugăreanu's theorem (1961) states that these three are locked together:</p>
+    <div class="equation">Lk = Tw + Wr</div>
+    <p>This is profound. If you hold the linking number fixed (no cutting allowed) and reduce the twist, the writhe <em>must</em> increase to compensate. This is exactly what happens when you twist a phone cord — the stored twist converts into spatial coiling. It's also the mechanism behind DNA supercoiling.</p>
+  </section>
+
+  <!-- ==================== FIGURE 3: RIBBON ==================== -->
+  <div class="figure" id="fig-ribbon">
+    <div class="figure-label">Interactive · Călugăreanu's theorem: Lk = Tw + Wr</div>
+    <div class="three-container" id="container-ribbon" style="height:440px;border-radius:4px;"></div>
+    <div class="controls">
+      <div class="control-group">
+        <label>twist Tw</label>
+        <input type="range" id="ribbon-twist" min="-3000" max="3000" value="0">
+        <div class="value" id="ribbon-twist-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>writhe amplitude</label>
+        <input type="range" id="ribbon-writhe" min="0" max="1000" value="0">
+        <div class="value" id="ribbon-writhe-val">0.00</div>
+      </div>
+      <div class="control-group">
+        <label>view</label>
+        <div class="btn-group">
+          <button class="btn active" data-view="ribbon">ribbon</button>
+          <button class="btn" data-view="tantrix">tantrix</button>
+        </div>
+      </div>
+    </div>
+    <div class="readout">
+      <div class="readout-item">Lk = <span id="lk-val">0</span></div>
+      <div class="readout-item">Tw = <span id="tw-val">0.00</span></div>
+      <div class="readout-item">Wr ≈ <span id="wr-val">0.00</span></div>
+      <div class="readout-item">Tw + Wr = <span id="twwr-val">0.00</span></div>
+    </div>
+  </div>
+
+  <section>
+    <p>Play with the sliders above. When you add twist while keeping the curve circular, <span class="math">Wr ≈ 0</span> and all the linking goes into twist. But push the writhe amplitude up and the curve begins to coil — writhe increases and twist decreases, keeping <span class="math">Lk = Tw + Wr</span> balanced.</p>
+
+    <div class="note">
+      <strong>The ribbon test.</strong> If you've ever tried to straighten a coiled garden hose, you've felt Călugăreanu's theorem. The hose wants to conserve its linking number. Pulling the coils straight (reducing writhe) forces the hose to twist in your hands — the twist increases to compensate.
+    </div>
+
+    <p>This completes our geometric toolkit. We have curvature <span class="math">κ</span> measuring bending, torsion <span class="math">τ</span> measuring the frame's rotation out of the osculating plane, the Bishop frame giving a singularity-free reference, and Călugăreanu's theorem connecting twist and writhe topologically. In Part 2, we'll see what happens when these curves start to <em>move</em> — and discover that the equations governing their motion are among the most beautiful in all of mathematical physics.</p>
+  </section>
+
+  <!-- ==================== NEXT PART ==================== -->
+  <div class="next-part">
+    <div class="label">Coming in Part 2</div>
+    <h3>When Curves Come Alive</h3>
+    <p style="color:var(--text-secondary);font-size:0.92rem;margin-top:8px;">Elastic energy, the vortex filament equation, the Hasimoto transform, and how solitons ride on space curves.</p>
+  </div>
+
+</article>
+
+<script>
+// ========================================================================
+//  UTILITY: Vector math
+// ========================================================================
+const V = {
+  add(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; },
+  sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; },
+  scale(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; },
+  dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; },
+  cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; },
+  len(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); },
+  norm(a){ const l=V.len(a); return l>1e-12?[a[0]/l,a[1]/l,a[2]/l]:[0,0,1]; },
+  lerp(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; },
+};
+
+// ========================================================================
+//  FIGURE 1: 2D Curvature Explorer (Canvas2D)
+// ========================================================================
+(function(){
+  const canvas = document.getElementById('canvas-curvature');
+  const ctx = canvas.getContext('2d');
+  const probeSlider = document.getElementById('probe-s');
+  const probeValEl = document.getElementById('probe-val');
+  const kappaValEl = document.getElementById('kappa-val');
+  const radiusValEl = document.getElementById('radius-val');
+  const energyValEl = document.getElementById('energy-val');
+
+  let W, H, dpr;
+  // Control points for cubic Bezier (in normalized coords 0..1)
+  let cps = [
+    {x:0.08, y:0.55},
+    {x:0.25, y:0.15},
+    {x:0.50, y:0.75},
+    {x:0.75, y:0.20},
+    {x:0.92, y:0.60}
+  ];
+  let dragIdx = -1;
+
+  function resize(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    W = rect.width - 48;
+    H = Math.min(380, W * 0.55);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+
+  // Evaluate composite cubic Bezier through control points using Catmull-Rom → Bezier conversion
+  function sampleCurve(n){
+    const pts = cps.map(p=>({x:p.x*W, y:p.y*H}));
+    // Catmull-Rom spline through points
+    const result = [];
+    for(let i=0;i<n;i++){
+      const t = i/(n-1);
+      const seg = Math.min(Math.floor(t*(pts.length-1)), pts.length-2);
+      const lt = t*(pts.length-1) - seg;
+      const p0 = pts[Math.max(seg-1,0)];
+      const p1 = pts[seg];
+      const p2 = pts[Math.min(seg+1,pts.length-1)];
+      const p3 = pts[Math.min(seg+2,pts.length-1)];
+      const tt=lt, tt2=tt*tt, tt3=tt2*tt;
+      const x = 0.5*((-p0.x+3*p1.x-3*p2.x+p3.x)*tt3 + (2*p0.x-5*p1.x+4*p2.x-p3.x)*tt2 + (-p0.x+p2.x)*tt + 2*p1.x);
+      const y = 0.5*((-p0.y+3*p1.y-3*p2.y+p3.y)*tt3 + (2*p0.y-5*p1.y+4*p2.y-p3.y)*tt2 + (-p0.y+p2.y)*tt + 2*p1.y);
+      result.push({x,y});
+    }
+    return result;
+  }
+
+  function computeCurvature(pts){
+    const n = pts.length;
+    const kappas = new Float64Array(n);
+    const arcLen = new Float64Array(n);
+    arcLen[0] = 0;
+    for(let i=1;i<n;i++){
+      const dx=pts[i].x-pts[i-1].x, dy=pts[i].y-pts[i-1].y;
+      arcLen[i] = arcLen[i-1] + Math.sqrt(dx*dx+dy*dy);
+    }
+    for(let i=1;i<n-1;i++){
+      const dx1=pts[i].x-pts[i-1].x, dy1=pts[i].y-pts[i-1].y;
+      const dx2=pts[i+1].x-pts[i].x, dy2=pts[i+1].y-pts[i].y;
+      const ds1=Math.sqrt(dx1*dx1+dy1*dy1), ds2=Math.sqrt(dx2*dx2+dy2*dy2);
+      if(ds1<1e-6||ds2<1e-6){kappas[i]=0;continue;}
+      // Cross product / product of lengths = sin(angle)
+      const cross = dx1*dy2 - dy1*dx2;
+      const dot = dx1*dx2 + dy1*dy2;
+      const angle = Math.atan2(cross, dot);
+      kappas[i] = angle / ((ds1+ds2)*0.5);
+    }
+    kappas[0] = kappas[1];
+    kappas[n-1] = kappas[n-2];
+    return {kappas, arcLen};
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const pts = sampleCurve(300);
+    const {kappas, arcLen} = computeCurvature(pts);
+    const totalLen = arcLen[arcLen.length-1];
+    const probeT = probeSlider.value/1000;
+    const probeArc = probeT * totalLen;
+
+    // Find probe index
+    let probeIdx = 0;
+    for(let i=1;i<pts.length;i++){
+      if(arcLen[i]>=probeArc){probeIdx=i;break;}
+    }
+
+    // --- Draw curvature plot (bottom strip) ---
+    const plotH = H * 0.28;
+    const plotY0 = H - 10;
+    const plotTop = H - plotH - 10;
+    const maxK = 0.025;
+
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = '#C4601D';
+    ctx.fillRect(10, plotTop, W-20, plotH);
+    ctx.restore();
+
+    // Curvature curve
+    ctx.beginPath();
+    for(let i=0;i<pts.length;i++){
+      const x = 10 + (arcLen[i]/totalLen)*(W-20);
+      const y = plotY0 - (Math.abs(kappas[i])/maxK)*plotH;
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = '#C4601D';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Zero line
+    ctx.beginPath();
+    ctx.moveTo(10,plotY0); ctx.lineTo(W-10,plotY0);
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Probe line on plot
+    const probeX = 10 + probeT*(W-20);
+    ctx.beginPath();
+    ctx.moveTo(probeX, plotTop); ctx.lineTo(probeX, plotY0);
+    ctx.strokeStyle = 'rgba(196,96,29,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // --- Draw main curve (top area) ---
+    const curveAreaH = H - plotH - 30;
+    ctx.beginPath();
+    for(let i=0;i<pts.length;i++){
+      const x=pts[i].x, y=pts[i].y * (curveAreaH/H);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = '#2A2520';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Osculating circle at probe
+    const kAtProbe = kappas[probeIdx];
+    const absK = Math.abs(kAtProbe);
+    if(absK > 1e-5){
+      const R = 1/absK;
+      const px = pts[probeIdx].x;
+      const py = pts[probeIdx].y * (curveAreaH/H);
+      // Normal direction
+      let dx1=0,dy1=0;
+      if(probeIdx>0 && probeIdx<pts.length-1){
+        dx1 = pts[probeIdx+1].x - pts[probeIdx-1].x;
+        dy1 = (pts[probeIdx+1].y - pts[probeIdx-1].y)*(curveAreaH/H);
+      }
+      const dl = Math.sqrt(dx1*dx1+dy1*dy1);
+      if(dl>1e-6){
+        // Normal = perpendicular to tangent, toward center of curvature
+        const sign = kAtProbe>0?1:-1;
+        const nx = -dy1/dl * sign;
+        const ny = dx1/dl * sign;
+        const cx = px + nx*R;
+        const cy = py + ny*R;
+        const drawR = Math.min(R, 500);
+        ctx.beginPath();
+        ctx.arc(cx,cy,drawR,0,Math.PI*2);
+        ctx.strokeStyle = 'rgba(45,106,159,0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    // Probe dot
+    const ppx = pts[probeIdx].x;
+    const ppy = pts[probeIdx].y * (curveAreaH/H);
+    ctx.beginPath();
+    ctx.arc(ppx, ppy, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#C4601D';
+    ctx.fill();
+
+    // Control points
+    for(let i=0;i<cps.length;i++){
+      const cx=cps[i].x*W, cy=cps[i].y*curveAreaH;
+      ctx.beginPath();
+      ctx.arc(cx,cy,7,0,Math.PI*2);
+      ctx.fillStyle = (i===dragIdx) ? '#C4601D' : 'rgba(42,37,32,0.25)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx,cy,7,0,Math.PI*2);
+      ctx.strokeStyle = '#2A2520';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Update readouts
+    const kappaDisplay = Math.abs(kAtProbe * 100).toFixed(2);
+    const radiusDisplay = absK > 1e-5 ? (1/absK).toFixed(1) : '∞';
+    probeValEl.textContent = `s=${probeT.toFixed(2)}`;
+    kappaValEl.textContent = kappaDisplay;
+    radiusValEl.textContent = radiusDisplay;
+
+    // Bending energy
+    let energy = 0;
+    for(let i=1;i<pts.length;i++){
+      const ds = arcLen[i]-arcLen[i-1];
+      energy += kappas[i]*kappas[i]*ds;
+    }
+    energyValEl.textContent = (energy*1000).toFixed(2);
+  }
+
+  // Drag interaction
+  const curveAreaRatio = ()=> (H * 0.28 + 30) < H ? (H - H*0.28 - 30)/H : 0.6;
+
+  canvas.addEventListener('pointerdown', e=>{
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX-rect.left), my = (e.clientY-rect.top);
+    const car = curveAreaRatio();
+    let best = 20, bi = -1;
+    for(let i=0;i<cps.length;i++){
+      const dx = cps[i].x*W - mx, dy = cps[i].y*H*car - my;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if(d<best){best=d;bi=i;}
+    }
+    dragIdx = bi;
+    if(bi>=0) canvas.setPointerCapture(e.pointerId);
+    draw();
+  });
+  canvas.addEventListener('pointermove', e=>{
+    if(dragIdx<0) return;
+    const rect = canvas.getBoundingClientRect();
+    const car = curveAreaRatio();
+    cps[dragIdx].x = Math.max(0.02, Math.min(0.98, (e.clientX-rect.left)/W));
+    cps[dragIdx].y = Math.max(0.05, Math.min(0.95, (e.clientY-rect.top)/(H*car)));
+    draw();
+  });
+  canvas.addEventListener('pointerup', ()=>{ dragIdx=-1; draw(); });
+  probeSlider.addEventListener('input', draw);
+
+  window.addEventListener('resize', resize);
+  resize();
+})();
+
+// ========================================================================
+//  FIGURE 2: 3D Moving Frames (Three.js)
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-frames');
+  const sSlider = document.getElementById('frame-s');
+  const sValEl = document.getElementById('frame-s-val');
+  const thetaSlider = document.getElementById('theta-material');
+  const thetaValEl = document.getElementById('theta-val');
+  const kappaEl = document.getElementById('frame-kappa');
+  const tauEl = document.getElementById('frame-tau');
+  const thetaReadout = document.getElementById('frame-theta');
+  const frameButtons = document.querySelectorAll('[data-frame]');
+
+  let frameMode = 'bishop'; // or 'frenet'
+  let scene, camera, renderer, curveObj, frameGroup;
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let cameraTheta = 0.6, cameraPhi = 0.8, cameraDist = 6;
+
+  // Generate a space curve with an inflection point
+  const N = 400;
+  function spaceCurve(t){
+    // Trefoil-like but with varying curvature
+    const s = t * Math.PI * 2;
+    const x = Math.sin(s) + 0.5*Math.sin(2*s);
+    const y = Math.cos(s) - 0.5*Math.cos(2*s);
+    const z = -0.6*Math.sin(3*s);
+    return [x, y, z];
+  }
+
+  // Sample curve and compute frames
+  let curvePoints = [];
+  let tangents = [], normals = [], binormals = [];
+  let bishopU = [], bishopV = [];
+  let curvatures = [], torsions = [], arcLens = [];
+
+  function computeFrames(){
+    curvePoints = [];
+    tangents = []; curvatures = []; torsions = []; arcLens = [];
+    bishopU = []; bishopV = [];
+    normals = []; binormals = [];
+
+    for(let i=0;i<=N;i++){
+      curvePoints.push(spaceCurve(i/N));
+    }
+
+    // Arc lengths
+    arcLens = [0];
+    for(let i=1;i<=N;i++){
+      arcLens.push(arcLens[i-1] + V.len(V.sub(curvePoints[i], curvePoints[i-1])));
+    }
+
+    // Tangents via finite differences
+    for(let i=0;i<=N;i++){
+      const ip = Math.min(i+1,N), im = Math.max(i-1,0);
+      tangents.push(V.norm(V.sub(curvePoints[ip], curvePoints[im])));
+    }
+
+    // Curvature and Frenet normal
+    for(let i=0;i<=N;i++){
+      const ip = Math.min(i+1,N), im = Math.max(i-1,0);
+      const dT = V.sub(tangents[ip], tangents[im]);
+      const ds = arcLens[ip] - arcLens[im];
+      if(ds < 1e-10){ curvatures.push(0); normals.push([0,1,0]); continue; }
+      const kVec = V.scale(dT, 1/ds);
+      const kappa = V.len(kVec);
+      curvatures.push(kappa);
+      normals.push(kappa > 1e-6 ? V.scale(kVec, 1/kappa) : [0,1,0]);
+    }
+
+    // Binormals
+    for(let i=0;i<=N;i++){
+      binormals.push(V.norm(V.cross(tangents[i], normals[i])));
+    }
+
+    // Torsion
+    for(let i=0;i<=N;i++){
+      const ip = Math.min(i+1,N), im = Math.max(i-1,0);
+      const dB = V.sub(binormals[ip], binormals[im]);
+      const ds = arcLens[ip] - arcLens[im];
+      if(ds<1e-10){torsions.push(0);continue;}
+      torsions.push(-V.dot(V.scale(dB,1/ds), normals[i]));
+    }
+
+    // Bishop frame via parallel transport
+    // Start with a vector perpendicular to T[0]
+    let u0;
+    const t0 = tangents[0];
+    if(Math.abs(t0[1]) < 0.9){
+      u0 = V.norm(V.cross(t0, [0,1,0]));
+    } else {
+      u0 = V.norm(V.cross(t0, [1,0,0]));
+    }
+    bishopU = [u0];
+    bishopV = [V.cross(tangents[0], u0)];
+
+    for(let i=1;i<=N;i++){
+      // Parallel transport u from edge i-1 to edge i
+      const t1 = tangents[i-1], t2 = tangents[i];
+      const axis = V.cross(t1, t2);
+      const axisLen = V.len(axis);
+      let u = bishopU[i-1];
+      if(axisLen > 1e-10){
+        // Rotate u around axis by the angle between t1 and t2
+        const cosA = Math.max(-1, Math.min(1, V.dot(t1, t2)));
+        const angle = Math.acos(cosA);
+        const a = V.norm(axis);
+        // Rodrigues rotation
+        u = V.add(V.add(
+          V.scale(u, cosA),
+          V.scale(V.cross(a, u), Math.sin(angle))
+        ), V.scale(a, V.dot(a, u)*(1-cosA)));
+      }
+      // Re-orthogonalize
+      u = V.norm(V.sub(u, V.scale(t2, V.dot(u, t2))));
+      bishopU.push(u);
+      bishopV.push(V.cross(t2, u));
+    }
+  }
+
+  function init(){
+    computeFrames();
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xF2F0EB);
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+    updateCamera();
+
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.5);
+    dl.position.set(3,5,4);
+    scene.add(dl);
+
+    // Curve as tube
+    const curveVec = curvePoints.map(p=>new THREE.Vector3(p[0],p[1],p[2]));
+    const path = new THREE.CatmullRomCurve3(curveVec);
+    const tubeGeo = new THREE.TubeGeometry(path, N, 0.025, 8, false);
+    const tubeMat = new THREE.MeshStandardMaterial({color:0x2A2520, roughness:0.7});
+    curveObj = new THREE.Mesh(tubeGeo, tubeMat);
+    scene.add(curveObj);
+
+    // Frame arrows group
+    frameGroup = new THREE.Group();
+    scene.add(frameGroup);
+
+    // Grid
+    const gridHelper = new THREE.GridHelper(6, 12, 0xDDD8D0, 0xEBE8E2);
+    gridHelper.position.y = -2;
+    scene.add(gridHelper);
+
+    updateFrame();
+    render();
+  }
+
+  function updateCamera(){
+    camera.position.set(
+      cameraDist * Math.sin(cameraPhi) * Math.cos(cameraTheta),
+      cameraDist * Math.cos(cameraPhi),
+      cameraDist * Math.sin(cameraPhi) * Math.sin(cameraTheta)
+    );
+    camera.lookAt(0,0,0);
+  }
+
+  function makeArrow(dir, origin, color, len){
+    const d = new THREE.Vector3(dir[0],dir[1],dir[2]);
+    const o = new THREE.Vector3(origin[0],origin[1],origin[2]);
+    return new THREE.ArrowHelper(d, o, len, color, len*0.18, len*0.1);
+  }
+
+  function updateFrame(){
+    // Clear old arrows
+    while(frameGroup.children.length) frameGroup.remove(frameGroup.children[0]);
+
+    const t = sSlider.value/1000;
+    const idx = Math.round(t * N);
+    const pt = curvePoints[idx];
+    const T = tangents[idx];
+    const theta = thetaSlider.value / 1000;
+    const arrowLen = 0.7;
+
+    // Tangent always shown
+    frameGroup.add(makeArrow(T, pt, 0xC44030, arrowLen));
+
+    if(frameMode === 'frenet'){
+      const N_f = normals[idx], B_f = binormals[idx];
+      frameGroup.add(makeArrow(N_f, pt, 0x3A7D44, arrowLen));
+      frameGroup.add(makeArrow(B_f, pt, 0x2D6A9F, arrowLen));
+    } else {
+      const U = bishopU[idx], Vb = bishopV[idx];
+      frameGroup.add(makeArrow(U, pt, 0x3A7D44, arrowLen * 0.85));
+      frameGroup.add(makeArrow(Vb, pt, 0x2D6A9F, arrowLen * 0.85));
+
+      // Material frame rotated by theta
+      if(Math.abs(theta) > 0.001){
+        const m1 = V.add(V.scale(U, Math.cos(theta)), V.scale(Vb, Math.sin(theta)));
+        const m2 = V.add(V.scale(U, -Math.sin(theta)), V.scale(Vb, Math.cos(theta)));
+        frameGroup.add(makeArrow(m1, pt, 0xC4601D, arrowLen * 0.75));
+        frameGroup.add(makeArrow(m2, pt, 0xE8A56E, arrowLen * 0.6));
+      }
+    }
+
+    // Dot at position
+    const dotGeo = new THREE.SphereGeometry(0.05, 12, 12);
+    const dotMat = new THREE.MeshStandardMaterial({color:0xC4601D});
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(pt[0],pt[1],pt[2]);
+    frameGroup.add(dot);
+
+    // Show ribbon strip along curve
+    const ribbonWidth = 0.12;
+    const ribbonVerts = [];
+    const step = Math.max(1, Math.floor(N/200));
+    for(let i=0;i<=N;i+=step){
+      const p = curvePoints[i];
+      let side;
+      if(frameMode === 'bishop'){
+        const u = bishopU[i], v = bishopV[i];
+        side = V.add(V.scale(u, Math.cos(theta)*ribbonWidth), V.scale(v, Math.sin(theta)*ribbonWidth));
+      } else {
+        side = V.scale(normals[i], ribbonWidth);
+      }
+      ribbonVerts.push(
+        p[0]-side[0], p[1]-side[1], p[2]-side[2],
+        p[0]+side[0], p[1]+side[1], p[2]+side[2]
+      );
+    }
+    const nStrips = ribbonVerts.length/6 - 1;
+    if(nStrips > 0){
+      const indices = [];
+      for(let i=0;i<nStrips;i++){
+        indices.push(i*2, i*2+1, i*2+2, i*2+1, i*2+3, i*2+2);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(ribbonVerts, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xC4601D, side: THREE.DoubleSide,
+        transparent: true, opacity: 0.3, roughness: 0.8
+      });
+      frameGroup.add(new THREE.Mesh(geo, mat));
+    }
+
+    // Readouts
+    sValEl.textContent = t.toFixed(2);
+    thetaValEl.textContent = theta.toFixed(2);
+    kappaEl.textContent = curvatures[idx].toFixed(3);
+    tauEl.textContent = torsions[idx].toFixed(3);
+    thetaReadout.textContent = theta.toFixed(2);
+  }
+
+  function render(){
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+  }
+
+  // Controls
+  sSlider.addEventListener('input', updateFrame);
+  thetaSlider.addEventListener('input', updateFrame);
+
+  frameButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      frameButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      frameMode = btn.dataset.frame;
+      updateFrame();
+    });
+  });
+
+  // Orbit controls (simple)
+  const el = container;
+  el.addEventListener('pointerdown', e=>{
+    if(e.target.tagName==='INPUT' || e.target.tagName==='BUTTON') return;
+    isDragging = true;
+    prevMouse = {x:e.clientX, y:e.clientY};
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!isDragging) return;
+    const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+    cameraTheta += dx * 0.008;
+    cameraPhi = Math.max(0.2, Math.min(2.9, cameraPhi - dy*0.008));
+    prevMouse = {x:e.clientX, y:e.clientY};
+    updateCamera();
+  });
+  el.addEventListener('pointerup', ()=>{ isDragging=false; });
+  el.addEventListener('wheel', e=>{
+    e.preventDefault();
+    cameraDist = Math.max(2, Math.min(15, cameraDist + e.deltaY*0.005));
+    updateCamera();
+  }, {passive:false});
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  init();
+})();
+
+// ========================================================================
+//  FIGURE 3: Ribbon & Călugăreanu Theorem (Three.js)
+// ========================================================================
+(function(){
+  const container = document.getElementById('container-ribbon');
+  const twistSlider = document.getElementById('ribbon-twist');
+  const twistValEl = document.getElementById('ribbon-twist-val');
+  const writheSlider = document.getElementById('ribbon-writhe');
+  const writheValEl = document.getElementById('ribbon-writhe-val');
+  const lkEl = document.getElementById('lk-val');
+  const twEl = document.getElementById('tw-val');
+  const wrEl = document.getElementById('wr-val');
+  const twwrEl = document.getElementById('twwr-val');
+  const viewButtons = document.querySelectorAll('[data-view]');
+
+  let viewMode = 'ribbon';
+  let scene, camera, renderer;
+  let ribbonMesh, tantrixLine;
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let cTheta = 0.4, cPhi = 1.0, cDist = 5.5;
+
+  const NR = 300;
+
+  // Curve: circle with figure-8 writhe perturbation
+  function ribbonCurve(writheAmp){
+    const pts = [];
+    for(let i=0;i<=NR;i++){
+      const t = (i/NR) * Math.PI * 2;
+      const r = 1.5;
+      const x = r * Math.cos(t);
+      const y = r * Math.sin(t);
+      const z = writheAmp * Math.sin(2*t); // figure-8 out-of-plane
+      pts.push([x, y, z]);
+    }
+    return pts;
+  }
+
+  function computeRibbonData(){
+    const twistTotal = twistSlider.value / 1000; // in units of 2π
+    const writheAmp = writheSlider.value / 1000 * 1.2;
+    const pts = ribbonCurve(writheAmp);
+
+    // Tangents
+    const tangents = [];
+    for(let i=0;i<=NR;i++){
+      const ip = (i+1)%NR, im = (i-1+NR)%NR;
+      tangents.push(V.norm(V.sub(pts[ip===0?NR:ip], pts[im])));
+    }
+
+    // Bishop frame via parallel transport
+    let u0;
+    const t0 = tangents[0];
+    if(Math.abs(t0[2]) < 0.9) u0 = V.norm(V.cross(t0, [0,0,1]));
+    else u0 = V.norm(V.cross(t0, [0,1,0]));
+
+    const bU = [u0], bV = [V.cross(t0, u0)];
+    for(let i=1;i<=NR;i++){
+      const t1 = tangents[i-1], t2 = tangents[i];
+      const axis = V.cross(t1, t2);
+      const axisLen = V.len(axis);
+      let u = bU[i-1];
+      if(axisLen > 1e-10){
+        const cosA = Math.max(-1, Math.min(1, V.dot(t1, t2)));
+        const angle = Math.acos(cosA);
+        const a = V.norm(axis);
+        u = V.add(V.add(V.scale(u, cosA), V.scale(V.cross(a,u), Math.sin(angle))),
+                    V.scale(a, V.dot(a,u)*(1-cosA)));
+      }
+      u = V.norm(V.sub(u, V.scale(t2, V.dot(u, t2))));
+      bU.push(u);
+      bV.push(V.cross(t2, u));
+    }
+
+    // Holonomy: angle between bU[0] and parallel-transported bU[NR]
+    // Since the curve is closed, bU[NR] may differ from bU[0] by the holonomy angle
+    const holonomy = Math.atan2(V.dot(bU[NR], bV[0]), V.dot(bU[NR], bU[0]));
+
+    // Material frame: theta(s) = twist * (s/L) * 2π + correction for holonomy
+    // Twist parameter: total integrated twist in units of turns
+    // Linking number must be integer for a closed ribbon
+    // Lk = Tw + Wr, where Wr ≈ holonomy/2π for small writhe
+    const wr = holonomy / (2*Math.PI);
+    const tw = twistTotal;
+    const lk = Math.round(tw + wr); // nearest integer
+
+    // Build ribbon mesh
+    const ribbonWidth = 0.08;
+    const verts = [], indices = [], colors = [];
+    const tantrixPts = [];
+
+    for(let i=0;i<=NR;i++){
+      const t = i/NR;
+      // Material frame angle: total twist distributed uniformly + holonomy correction
+      const thetaI = twistTotal * 2 * Math.PI * t;
+      const u = bU[i], v = bV[i];
+      const m1 = V.add(V.scale(u, Math.cos(thetaI)), V.scale(v, Math.sin(thetaI)));
+      const side = V.scale(m1, ribbonWidth);
+      const p = pts[i];
+
+      verts.push(p[0]-side[0], p[1]-side[1], p[2]-side[2]);
+      verts.push(p[0]+side[0], p[1]+side[1], p[2]+side[2]);
+
+      // Color: cycle hue along ribbon
+      const hue = t;
+      const c = new THREE.Color().setHSL(hue * 0.8 + 0.05, 0.55, 0.55);
+      colors.push(c.r,c.g,c.b, c.r,c.g,c.b);
+
+      // Tantrix
+      tantrixPts.push(tangents[i]);
+    }
+    for(let i=0;i<NR;i++){
+      indices.push(i*2, i*2+1, i*2+2, i*2+1, i*2+3, i*2+2);
+    }
+
+    return {verts, indices, colors, tantrixPts, tw, wr, lk};
+  }
+
+  function init(){
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xF2F0EB);
+
+    camera = new THREE.PerspectiveCamera(45, container.clientWidth/container.clientHeight, 0.1, 100);
+    updateCam();
+
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const dl = new THREE.DirectionalLight(0xffffff, 0.45);
+    dl.position.set(3,5,4);
+    scene.add(dl);
+
+    // Tantrix sphere (unit sphere wireframe)
+    const sphereGeo = new THREE.SphereGeometry(0.98, 32, 24);
+    const sphereMat = new THREE.MeshBasicMaterial({color:0xDDD8D0, wireframe:true, transparent:true, opacity:0.15});
+    const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+    sphere.visible = false;
+    sphere.name = 'tantrixSphere';
+    scene.add(sphere);
+
+    updateRibbon();
+    render();
+  }
+
+  function updateCam(){
+    camera.position.set(
+      cDist * Math.sin(cPhi) * Math.cos(cTheta),
+      cDist * Math.cos(cPhi),
+      cDist * Math.sin(cPhi) * Math.sin(cTheta)
+    );
+    camera.lookAt(0,0,0);
+  }
+
+  function updateRibbon(){
+    const data = computeRibbonData();
+
+    // Remove old meshes
+    const old1 = scene.getObjectByName('ribbonMesh');
+    const old2 = scene.getObjectByName('tantrixLine');
+    const old3 = scene.getObjectByName('curveTube');
+    if(old1) scene.remove(old1);
+    if(old2) scene.remove(old2);
+    if(old3) scene.remove(old3);
+
+    if(viewMode === 'ribbon'){
+      // Ribbon
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(data.verts, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(data.colors, 3));
+      geo.setIndex(data.indices);
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({
+        vertexColors:true, side:THREE.DoubleSide, roughness:0.6, metalness:0.05
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = 'ribbonMesh';
+      scene.add(mesh);
+
+      // Centerline tube
+      const writheAmp = writheSlider.value / 1000 * 1.2;
+      const cPts = ribbonCurve(writheAmp).map(p=>new THREE.Vector3(p[0],p[1],p[2]));
+      const path = new THREE.CatmullRomCurve3(cPts, true);
+      const tubeGeo = new THREE.TubeGeometry(path, NR, 0.015, 6, true);
+      const tubeMat = new THREE.MeshStandardMaterial({color:0x2A2520});
+      const tube = new THREE.Mesh(tubeGeo, tubeMat);
+      tube.name = 'curveTube';
+      scene.add(tube);
+
+      scene.getObjectByName('tantrixSphere').visible = false;
+    } else {
+      // Tantrix on unit sphere
+      const tpts = data.tantrixPts.map(p=>new THREE.Vector3(p[0],p[1],p[2]));
+      const tgeo = new THREE.BufferGeometry().setFromPoints(tpts);
+      const tmat = new THREE.LineBasicMaterial({color:0xC4601D, linewidth:2});
+      const tline = new THREE.Line(tgeo, tmat);
+      tline.name = 'tantrixLine';
+      scene.add(tline);
+      scene.getObjectByName('tantrixSphere').visible = true;
+    }
+
+    // Readouts
+    twistValEl.textContent = data.tw.toFixed(2);
+    writheValEl.textContent = (writheSlider.value/1000).toFixed(2);
+    lkEl.textContent = data.lk;
+    twEl.textContent = data.tw.toFixed(2);
+    wrEl.textContent = data.wr.toFixed(2);
+    twwrEl.textContent = (data.tw + data.wr).toFixed(2);
+  }
+
+  function render(){
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+  }
+
+  twistSlider.addEventListener('input', updateRibbon);
+  writheSlider.addEventListener('input', updateRibbon);
+
+  viewButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      viewButtons.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      viewMode = btn.dataset.view;
+      updateRibbon();
+    });
+  });
+
+  // Orbit
+  container.addEventListener('pointerdown', e=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return;
+    isDragging=true; prevMouse={x:e.clientX,y:e.clientY};
+    container.setPointerCapture(e.pointerId);
+  });
+  container.addEventListener('pointermove', e=>{
+    if(!isDragging) return;
+    cTheta += (e.clientX-prevMouse.x)*0.008;
+    cPhi = Math.max(0.2,Math.min(2.9, cPhi-(e.clientY-prevMouse.y)*0.008));
+    prevMouse={x:e.clientX,y:e.clientY};
+    updateCam();
+  });
+  container.addEventListener('pointerup', ()=>{isDragging=false;});
+  container.addEventListener('wheel', e=>{
+    e.preventDefault();
+    cDist=Math.max(2,Math.min(12,cDist+e.deltaY*0.005));
+    updateCam();
+  }, {passive:false});
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = container.clientWidth/container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
