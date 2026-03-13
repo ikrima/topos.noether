@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solitons ↔ DNA Supercoiling</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --bg-card: #111118;
+  --bg-elevated: #1a1a24;
+  --text: #c8c5d0;
+  --text-bright: #eae8f0;
+  --text-dim: #6b6880;
+  --accent: #e8a44a;
+  --accent-dim: #c4833a;
+  --accent-glow: rgba(232,164,74,0.15);
+  --blue: #5b8fd9;
+  --blue-dim: #3a6ab8;
+  --green: #5dba7d;
+  --red: #d95b6b;
+  --purple: #9b6bdf;
+  --border: #2a2835;
+  --border-bright: #3a384a;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'EB Garamond', serif;
+  font-size: 18px;
+  line-height: 1.75;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+::selection { background: var(--accent); color: var(--bg); }
+
+h1, h2, h3, h4 {
+  font-family: 'Crimson Pro', serif;
+  color: var(--text-bright);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.article-container {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.hero {
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--text-bright) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero .subtitle {
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  font-style: italic;
+  max-width: 540px;
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  margin: 4rem 0 1.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+
+.section-title .section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+p { margin-bottom: 1.25rem; }
+
+.math-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.math-inline { padding: 0 2px; }
+
+code, .mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+}
+
+.highlight { color: var(--accent); }
+.blue { color: var(--blue); }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.purple { color: var(--purple); }
+
+/* Interactive Widget Styles */
+.widget-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 2rem 0;
+  overflow: hidden;
+}
+
+.widget-header {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.widget-header .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+.widget-body {
+  padding: 1rem;
+  position: relative;
+}
+
+.widget-canvas-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media(max-width:700px) {
+  .widget-canvas-row { grid-template-columns: 1fr; }
+}
+
+canvas.plot-canvas {
+  width: 100%;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.three-container {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: grab;
+}
+
+.three-container:active { cursor: grabbing; }
+
+.three-container canvas { width: 100% !important; height: 100% !important; }
+
+/* Slider Controls */
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.control-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.control-value {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 8px var(--accent-glow);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Chain diagram */
+.chain-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 1.5rem 0;
+}
+
+.chain-node {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  transition: all 0.3s ease;
+  cursor: default;
+  position: relative;
+}
+
+.chain-node:hover {
+  border-color: var(--accent);
+  background: var(--bg-card);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.chain-node .node-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--accent-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.15rem;
+}
+
+.chain-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.15rem 0;
+  line-height: 1.2;
+}
+
+.chain-arrow::before {
+  content: '↓';
+  font-size: 1rem;
+  color: var(--accent-dim);
+}
+
+/* Analogy table */
+.analogy-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+.analogy-table th {
+  font-family: 'Crimson Pro', serif;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 0.6rem 1rem;
+  border-bottom: 2px solid var(--border-bright);
+  text-align: left;
+}
+
+.analogy-table td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.analogy-table tr:hover td {
+  background: var(--accent-glow);
+}
+
+/* Frame comparison */
+.frame-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+}
+
+.frame-tab {
+  padding: 0.5rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.frame-tab.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  border-color: var(--border-bright);
+}
+
+/* Level cards */
+.level-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+  transition: border-color 0.3s;
+}
+
+.level-card:hover { border-color: var(--accent-dim); }
+
+.level-card h4 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.level-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+/* Genus progression */
+.genus-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media(max-width:600px) { .genus-row { grid-template-columns: 1fr; } }
+
+.genus-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.genus-card h4 {
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+.genus-card canvas {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.genus-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--accent-dim);
+}
+
+/* Scroll progress */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+  z-index: 1000;
+  transition: width 0.1s;
+}
+
+/* Fade-in on scroll */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Topology icons */
+.topo-demo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.topo-value {
+  text-align: center;
+}
+
+.topo-value .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+.topo-value .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.equals-sign {
+  font-size: 2rem;
+  color: var(--text-dim);
+}
+
+.plus-sign {
+  font-size: 1.5rem;
+  color: var(--text-dim);
+}
+
+/* Tooltip for sliders */
+.note {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin: 0.5rem 0 1rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--border);
+}
+
+.katex { font-size: 1em; }
+.katex-display { margin: 0; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- ═══════ HERO ═══════ -->
+<section class="hero">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%, rgba(232,164,74,0.06) 0%, transparent 60%);pointer-events:none;"></div>
+  <div class="article-container" style="position:relative;z-index:1;">
+    <h1>Solitons &amp; DNA Supercoiling</h1>
+    <p class="subtitle">The complete mathematical architecture — from elastic rods to spectral curves, made tangible through interactive visualization.</p>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-dim);letter-spacing:0.15em;text-transform:uppercase;">Scroll to explore</div>
+    <div style="margin-top:1rem;animation: float 3s ease-in-out infinite;">
+      <svg width="20" height="30" viewBox="0 0 20 30" fill="none" stroke="var(--text-dim)" stroke-width="1.5">
+        <rect x="1" y="1" width="18" height="28" rx="9"/>
+        <circle cx="10" cy="10" r="2" fill="var(--accent)">
+          <animate attributeName="cy" values="8;18;8" dur="2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+  </div>
+  <style>@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}</style>
+</section>
+
+<div class="article-container">
+
+<!-- ═══════ THE CHAIN OF MAPS ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§ Prelude</span>
+  The Chain of Mathematical Maps
+</h2>
+<p>
+  The soliton–DNA connection is not a single result but a <em>sequence of exact, invertible transformations</em>, each step compressing geometric information into increasingly algebraic form. You can go all the way from spectral data on an algebraic curve back up to the physical shape of supercoiled DNA, losing nothing.
+</p>
+
+<div class="widget-container">
+  <div class="widget-header"><span class="dot"></span> Transformation Pipeline</div>
+  <div class="widget-body">
+    <div class="chain-container" id="chainDiagram">
+      <div class="chain-node" data-level="0">
+        <div class="node-label">Physical</div>
+        DNA double helix
+      </div>
+      <div class="chain-arrow">continuum limit</div>
+      <div class="chain-node" data-level="1">
+        <div class="node-label">Geometry</div>
+        Framed space curve &ensp;<span class="mono" style="font-size:0.8em">γ(s) ∈ ℝ³ + Φ(s) ∈ SO(3)</span>
+      </div>
+      <div class="chain-arrow">Călugăreanu–White–Fuller</div>
+      <div class="chain-node" data-level="2">
+        <div class="node-label">Topology</div>
+        <span class="mono" style="font-size:0.85em">Lk = Tw + Wr</span>
+      </div>
+      <div class="chain-arrow">Kirchhoff kinetic analogy</div>
+      <div class="chain-node" data-level="3">
+        <div class="node-label">Mechanics</div>
+        Euler top equations &ensp;≅&ensp; elastic rod equilibria
+      </div>
+      <div class="chain-arrow">Hasimoto transform</div>
+      <div class="chain-node" data-level="4">
+        <div class="node-label">PDE</div>
+        Nonlinear Schrödinger equation (NLS)
+      </div>
+      <div class="chain-arrow">AKNS / Lax pair</div>
+      <div class="chain-node" data-level="5">
+        <div class="node-label">Gauge Theory</div>
+        Flat SU(2) connection with spectral parameter λ
+      </div>
+      <div class="chain-arrow">inverse scattering</div>
+      <div class="chain-node" data-level="6">
+        <div class="node-label">Algebraic Geometry</div>
+        Spectral data on algebraic curves of genus <em>g</em>
+      </div>
+      <div class="chain-arrow">theta functions</div>
+      <div class="chain-node" data-level="7">
+        <div class="node-label">Explicit Solutions</div>
+        Elliptic (<em>g</em>=1) &ensp;·&ensp; Hyperelliptic (<em>g</em>≥2)
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="note">Every arrow is invertible. Hover each node to highlight it. The interactive visualizations below let you directly manipulate each level and see changes propagate through the chain.</p>
+</section>
+
+<!-- ═══════ §1 FRAMED SPACE CURVE ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§1</span>
+  The Framed Space Curve
+</h2>
+
+<p>
+  Model the DNA centerline as a smooth, arclength-parameterized curve
+  $\gamma : [0,L] \to \mathbb{R}^3$ with $|\gamma'(s)|=1$. At each point, attach an orthonormal frame — the <em>material frame</em> — representing the cross-section orientation. The configuration lives in the special Euclidean group $\mathrm{SE}(3) = \mathbb{R}^3 \rtimes \mathrm{SO}(3)$.
+</p>
+
+<p>
+  The frame evolves along the rod via the <em>Darboux vector</em> $\boldsymbol{\kappa} = (\kappa_1, \kappa_2, \tau)$, where $\kappa_1, \kappa_2$ are bending curvatures and $\tau$ is the twist rate. The elastic energy is
+</p>
+
+<div class="math-block">
+  $E[\gamma, \Phi] = \frac{1}{2}\int_0^L \bigl[ A(\kappa_1^2 + \kappa_2^2) + C\tau^2 \bigr]\,ds$
+</div>
+
+<p>
+  For DNA, $A \approx 50\,k_BT\!\cdot\!\mathrm{nm}$ (bending) and $C \approx 75\,k_BT\!\cdot\!\mathrm{nm}$ (torsion), giving the important ratio $A/C \approx 2/3$.
+</p>
+
+<h3 style="font-size:1.2rem;margin:2rem 0 1rem;color:var(--text-bright);">Three Framings Compared</h3>
+
+<p>The choice of frame matters enormously for both theory and computation. The <span class="highlight">Frenet frame</span> fails at inflection points. The <span class="blue">Bishop frame</span> (parallel transport) is everywhere smooth, and the <span class="green">material frame</span> is the physical DNA cross-section, related to Bishop by a twist angle $\theta(s)$.</p>
+
+<div class="widget-container">
+  <div class="widget-header"><span class="dot"></span> Interactive — Frame Visualization</div>
+  <div class="widget-body">
+    <div class="frame-tabs">
+      <button class="frame-tab active" data-frame="bishop">Bishop</button>
+      <button class="frame-tab" data-frame="frenet">Frenet</button>
+      <button class="frame-tab" data-frame="material">Material</button>
+    </div>
+    <div class="three-container" id="frameViewer"></div>
+    <div class="controls-grid">
+      <div class="control-item">
+        <div class="control-label"><span>Frame Position <span class="mono">s</span></span><span class="control-value" id="framePosVal">0.50</span></div>
+        <input type="range" id="framePosSlider" min="0" max="1" step="0.005" value="0.5">
+      </div>
+      <div class="control-item">
+        <div class="control-label"><span>Twist angle <span class="mono">θ</span></span><span class="control-value" id="frameTwistVal">0.0</span></div>
+        <input type="range" id="frameTwistSlider" min="0" max="6.28" step="0.05" value="0">
+      </div>
+    </div>
+    <p class="note" style="margin-top:0.5rem;">Drag to rotate. The colored arrows show the frame vectors at position <em>s</em> along the curve. Switch between frame types to see how they differ — note how Frenet fails near low-curvature regions.</p>
+  </div>
+</div>
+</section>
+
+<!-- ═══════ §2 CALUGAREANU ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§2</span>
+  Călugăreanu–White–Fuller: Topology Constraining Geometry
+</h2>
+
+<p>
+  Model the double helix as a ribbon: a curve $\gamma$ plus a normal $\mathbf{u}$. For closed (circular) DNA, three quantities are locked together:
+</p>
+
+<div class="math-block" style="font-size:1.1em;">
+  $\mathrm{Lk} = \mathrm{Tw} + \mathrm{Wr}$
+</div>
+
+<p>
+  <strong>Linking number</strong> (Lk) is a topological invariant — it can only change when a strand is cut (topoisomerase action). <strong>Twist</strong> (Tw) measures helical winding; <strong>Writhe</strong> (Wr) measures visible supercoiling. When enzymes change Lk, the change partitions: about 75% goes into writhe, 25% into twist.
+</p>
+
+<div class="widget-container">
+  <div class="widget-header"><span class="dot"></span> Interactive — Twist ↔ Writhe Partition</div>
+  <div class="widget-body">
+    <div class="topo-demo" id="topoDemo">
+      <div class="topo-value"><div class="val highlight" id="lkVal">10</div><div class="label">Lk (linking)</div></div>
+      <div class="equals-sign">=</div>
+      <div class="topo-value"><div class="val blue" id="twVal">5.0</div><div class="label">Tw (twist)</div></div>
+      <div class="plus-sign">+</div>
+      <div class="topo-value"><div class="val green" id="wrVal">5.0</div><div class="label">Wr (writhe)</div></div>
+    </div>
+    <div class="controls-grid">
+      <div class="control-item">
+        <div class="control-label"><span>Linking Number <span class="mono">Lk</span></span><span class="control-value" id="lkSliderVal">10</span></div>
+        <input type="range" id="lkSlider" min="0" max="20" step="1" value="10">
+      </div>
+      <div class="control-item">
+        <div class="control-label"><span>Writhe fraction</span><span class="control-value" id="wrFracVal">0.50</span></div>
+        <input type="range" id="wrFracSlider" min="0" max="1" step="0.01" value="0.5">
+      </div>
+    </div>
+    <canvas id="writhePlot" class="plot-canvas" height="180" style="width:100%;margin-top:0.5rem;"></canvas>
+    <p class="note" style="margin-top:0.5rem;">The bar shows how the linking number deficit is partitioned. For real DNA, approximately 75% goes to writhe (supercoiling) and 25% to twist change.</p>
+  </div>
+</div>
+
+<p>
+  <strong>Fuller's visual interpretation:</strong> Writhe is the average, over all projection directions, of the algebraic crossing number. Imagine holding a supercoiled loop and slowly rotating it — from each viewing angle, count signed crossings. The average is the writhe.
+</p>
+</section>
+
+<!-- ═══════ §3 KIRCHHOFF ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§3</span>
+  Kirchhoff's Elastic Rod ≅ Euler's Spinning Top
+</h2>
+
+<p>
+  Kirchhoff's great insight: the equilibrium equations for an elastic rod have <em>exactly the same mathematical structure</em> as Euler's equations for a spinning top under gravity. Arclength plays the role of time.
+</p>
+
+<table class="analogy-table">
+  <thead>
+    <tr><th>Elastic Rod (spatial)</th><th>Spinning Top (temporal)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Arclength $s$</td><td>Time $t$</td></tr>
+    <tr><td>Tangent $\mathbf{T}(s)$</td><td>Angular momentum direction</td></tr>
+    <tr><td>Curvatures $\kappa_1, \kappa_2$</td><td>Euler angles $\dot\theta, \dot\phi$</td></tr>
+    <tr><td>Twist $\tau$</td><td>Spin rate $\dot\psi$</td></tr>
+    <tr><td>Bending stiffness $A$</td><td>Moments of inertia $I_1=I_2$</td></tr>
+    <tr><td>Torsional stiffness $C$</td><td>Axial moment $I_3$</td></tr>
+    <tr><td>Force $\mathbf{F}$</td><td>Gravity vector</td></tr>
+  </tbody>
+</table>
+
+<p>The top solutions map directly to rod shapes: precession → helix, large nutation → plectonemic supercoil, and the <em>separatrix</em> (homoclinic orbit) — the orbit connecting the unstable equilibrium to itself — is the <span class="highlight">soliton</span>: a single localized kink.</p>
+</section>
+
+<!-- ═══════ §4 HASIMOTO ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§4</span>
+  The Hasimoto Transform
+</h2>
+
+<p>
+  Hasimoto's 1972 construction compresses the complete intrinsic geometry of a space curve into a single complex function:
+</p>
+
+<div class="math-block">
+  $\psi(s) = \kappa(s)\,\exp\!\Bigl(i\!\int_0^s\!\tau(s')\,ds'\Bigr)$
+</div>
+
+<p>
+  The modulus $|\psi| = \kappa$ encodes bending; the phase $\arg\psi = \int\tau\,ds$ encodes accumulated torsion. Under the vortex filament equation, $\psi$ satisfies the <em>cubic focusing nonlinear Schrödinger equation</em>:
+</p>
+
+<div class="math-block">
+  $i\psi_t + \psi_{ss} + \tfrac{1}{2}|\psi|^2\psi = 0$
+</div>
+
+<p>
+  The 1-soliton solution is the centerpiece of the entire construction:
+</p>
+
+<div class="math-block">
+  $\psi_\mathrm{sol}(s) = 2\eta\,\mathrm{sech}\bigl(2\eta(s-s_0)\bigr)\,e^{i(2\xi s + \phi_0)}$
+</div>
+
+<p>
+  Four parameters control everything: $\eta$ (amplitude/width), $\xi$ (torsion/pitch), $s_0$ (position), $\phi_0$ (phase). The visualization below lets you manipulate them in real time and see the full reconstruction pipeline in action.
+</p>
+</section>
+
+<!-- ═══════ THE BIG INTERACTIVE: SOLITON EXPLORER ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§ Interactive Core</span>
+  Soliton Curve Explorer
+</h2>
+
+<p>
+  This is the complete reconstruction pipeline running in real time:
+  <span class="mono" style="font-size:0.85em;">ψ(s) → {κ(s), τ(s)} → Bishop ODE → γ(s)</span>.
+  Drag the sliders to reshape the soliton and watch the 3D curve update instantly.
+</p>
+
+<div class="widget-container" style="border-color:var(--accent-dim);">
+  <div class="widget-header" style="border-color:var(--accent-dim);"><span class="dot"></span> Soliton Reconstruction Pipeline</div>
+  <div class="widget-body">
+    <!-- 3D view -->
+    <div class="three-container" id="solitonViewer" style="aspect-ratio:16/10;"></div>
+
+    <!-- Controls -->
+    <div class="controls-grid" style="margin-top:0.75rem;">
+      <div class="control-item">
+        <div class="control-label"><span>Amplitude <span class="mono">η</span></span><span class="control-value" id="etaVal">0.60</span></div>
+        <input type="range" id="etaSlider" min="0.05" max="1.5" step="0.01" value="0.6">
+      </div>
+      <div class="control-item">
+        <div class="control-label"><span>Torsion <span class="mono">ξ</span></span><span class="control-value" id="xiVal">0.40</span></div>
+        <input type="range" id="xiSlider" min="-1.5" max="1.5" step="0.01" value="0.4">
+      </div>
+      <div class="control-item">
+        <div class="control-label"><span>Position <span class="mono">s₀</span></span><span class="control-value" id="s0Val">0.00</span></div>
+        <input type="range" id="s0Slider" min="-5" max="5" step="0.05" value="0">
+      </div>
+      <div class="control-item">
+        <div class="control-label"><span>Phase <span class="mono">φ₀</span></span><span class="control-value" id="phi0Val">0.00</span></div>
+        <input type="range" id="phi0Slider" min="0" max="6.28" step="0.02" value="0">
+      </div>
+    </div>
+
+    <!-- 2D Plots -->
+    <div class="widget-canvas-row" style="margin-top:0.75rem;">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;text-align:center;">Curvature κ(s) &amp; Torsion τ(s)</div>
+        <canvas id="curvaturePlot" class="plot-canvas" height="200"></canvas>
+      </div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.25rem;text-align:center;">Hasimoto ψ(s) — Re &amp; Im</div>
+        <canvas id="hasimotoPlot" class="plot-canvas" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════ §5 LAX PAIR ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§5</span>
+  The Lax Pair: Gauge Theory Enters
+</h2>
+
+<p>
+  The NLS admits a Lax pair — two matrix equations (the AKNS system) whose compatibility condition <em>is</em> the NLS. The spatial part
+</p>
+
+<div class="math-block">
+  $\partial_s\Psi = U\Psi, \quad U = \begin{pmatrix} -i\zeta & \psi \\ -\bar\psi & i\zeta \end{pmatrix}$
+</div>
+
+<p>
+  defines a flat $\mathrm{SU}(2)$ connection parameterized by the spectral parameter $\zeta$. At $\zeta = 0$, this <em>is</em> the Bishop frame equation in the $\mathrm{SU}(2)$ double cover. The spectral parameter continuously deforms the frame into a scattering problem.
+</p>
+
+<p>
+  The Hasimoto transform is revealed as a <em>gauge transformation</em> between the NLS and Heisenberg ferromagnet Lax pairs — Lakshmanan's 1977 observation. A soliton has three simultaneous incarnations: a pulse in $|\psi|^2$ (NLS), a spin wave in $\mathbf{S}$ (Heisenberg), and a helical kink on $\gamma$ (geometry).
+</p>
+
+<div class="widget-container">
+  <div class="widget-header"><span class="dot"></span> Interactive — Spectral Plane</div>
+  <div class="widget-body">
+    <canvas id="spectralPlot" class="plot-canvas" height="300" style="width:100%;"></canvas>
+    <p class="note" style="margin-top:0.5rem;">The eigenvalue $\zeta = \xi + i\eta$ in the upper half-plane encodes the soliton. Imaginary part $\eta$ controls amplitude; real part $\xi$ controls velocity/torsion. Drag on the plane to move it — the soliton curve above will update.</p>
+  </div>
+</div>
+</section>
+
+<!-- ═══════ §6 IST ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§6</span>
+  Inverse Scattering &amp; Soliton Solutions
+</h2>
+
+<p>
+  The miracle of the Inverse Scattering Transform: under NLS flow, the scattering data evolves <em>linearly</em>. Eigenvalues are time-independent (soliton parameters are conserved); everything else just picks up a phase. The nonlinearity is exactly linearized.
+</p>
+
+<p>
+  The 1-soliton gives $\kappa(s) = 2\eta\,\mathrm{sech}(2\eta(s - vt))$ — a localized bump of curvature traveling without distortion — and constant torsion $\tau = 2\xi$. On the filament, this is a straight line developing a single traveling helical loop.
+</p>
+
+<p>
+  Multi-soliton solutions ($N$ eigenvalues) produce $N$ helical kinks that scatter elastically — emerging from collisions with identical shapes but acquired phase shifts.
+</p>
+</section>
+
+<!-- ═══════ §7 ALGEBRO-GEOMETRIC ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§7</span>
+  Spectral Curves &amp; Theta Functions
+</h2>
+
+<p>
+  For periodic solutions (closed DNA), the spectral data lives on a Riemann surface of genus $g$. Each genus level adds topological complexity:
+</p>
+
+<div class="genus-row">
+  <div class="genus-card">
+    <canvas id="genus0Canvas" height="180"></canvas>
+    <h4>Genus 0</h4>
+    <div class="genus-label">Plane wave → Helix</div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-top:0.3rem;">Uniform curvature and torsion</p>
+  </div>
+  <div class="genus-card">
+    <canvas id="genus1Canvas" height="180"></canvas>
+    <h4>Genus 1</h4>
+    <div class="genus-label">Elliptic → Euler Elastica</div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-top:0.3rem;">Undulating, looping, soliton limit</p>
+  </div>
+  <div class="genus-card">
+    <canvas id="genus2Canvas" height="180"></canvas>
+    <h4>Genus 2</h4>
+    <div class="genus-label">Hyperelliptic → Supercoils</div>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-top:0.3rem;">Branched plectonemic structures</p>
+  </div>
+</div>
+
+<p>
+  Calini and Ivey proved that the <em>knot type</em> of a finite-gap filament is determined by the spectral curve. Each "unpinching" of a double point (increasing genus by 1) corresponds to a cabling operation on the knot. The spectral curve is a control panel for curve topology.
+</p>
+</section>
+
+<!-- ═══════ §8 KNOT SOLITONS ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§8</span>
+  Knot Solitons &amp; DNA Free Energy
+</h2>
+
+<p>
+  Decomposing the tangent vector via $\phi$-mapping topological current theory reveals that the DNA free-energy density has the same structure as a <em>two-condensate (two-gap) superconductor</em>. Such systems support <strong>Faddeev–Niemi knot solitons</strong> — topologically stable torus knots $T(p,q)$ classified by the Hopf invariant:
+</p>
+
+<div class="math-block">
+  $\text{Hopf invariant} = \mathrm{Lk} = \mathrm{Tw} + \mathrm{Wr}$
+</div>
+
+<p>
+  The torus knot $T(p,q)$ has linking number $pq$, connecting soliton topology directly to the Călugăreanu constraint on DNA.
+</p>
+</section>
+
+<!-- ═══════ §9 FIVE LEVELS ═══════ -->
+<section class="fade-in">
+<h2 class="section-title">
+  <span class="section-number">§9</span>
+  The Five Levels of Structure
+</h2>
+
+<div class="level-card">
+  <span class="level-number">Level 1</span>
+  <h4>The Space Curve</h4>
+  <p style="font-size:0.9rem;margin:0;">The 3D curve $\gamma(s)$ with its framing — what you <em>see</em>. Controllable by direct 3D manipulation. ↑ Visualized above in the frame viewer.</p>
+</div>
+
+<div class="level-card">
+  <span class="level-number">Level 2</span>
+  <h4>Intrinsic Geometry</h4>
+  <p style="font-size:0.9rem;margin:0;">Plots of curvature $\kappa(s)$ and torsion $\tau(s)$ — the Darboux vector and elastic energy density. ↑ The curvature/torsion plot in the Soliton Explorer.</p>
+</div>
+
+<div class="level-card">
+  <span class="level-number">Level 3</span>
+  <h4>Hasimoto Wavefunction</h4>
+  <p style="font-size:0.9rem;margin:0;">The complex function $\psi(s) = \kappa\,e^{i\!\int\!\tau}$ plotted as real and imaginary parts. ↑ The Re/Im plot in the Explorer.</p>
+</div>
+
+<div class="level-card">
+  <span class="level-number">Level 4</span>
+  <h4>Spectral Data</h4>
+  <p style="font-size:0.9rem;margin:0;">Eigenvalues $\zeta_n$ in the complex plane encoding soliton parameters. ↑ The spectral plane widget.</p>
+</div>
+
+<div class="level-card">
+  <span class="level-number">Level 5</span>
+  <h4>Topological Invariants</h4>
+  <p style="font-size:0.9rem;margin:0;">Real-time Lk, Tw, Wr with visual encoding. ↑ The twist-writhe partition widget.</p>
+</div>
+</section>
+
+<!-- ═══════ FOOTER ═══════ -->
+<section class="fade-in" style="padding:4rem 0;text-align:center;">
+  <div style="width:60px;height:1px;background:var(--border-bright);margin:0 auto 2rem;"></div>
+  <p style="font-size:0.85rem;color:var(--text-dim);font-style:italic;">
+    Based on the mathematical architecture spanning Hasimoto (1972), Bishop (1975), Lakshmanan (1977), Călugăreanu–White–Fuller, Shi–Hearst (1994), Matsutani et al. (2021), and Ren–Duan (2017).
+  </p>
+</section>
+
+</div><!-- end article-container -->
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     JAVASCRIPT — All interactive functionality
+     ═══════════════════════════════════════════════════════════════════ -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+// ── Scroll progress ──
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('scrollProgress').style.width = (window.scrollY / h * 100) + '%';
+});
+
+// ── Fade-in on scroll ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ── KaTeX auto-render ──
+if (typeof renderMathInElement === 'function') {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false }
+    ],
+    throwOnError: false
+  });
+}
+
+// ══════════════════════════════════════════════════
+// SOLITON MATH ENGINE
+// ══════════════════════════════════════════════════
+
+const N = 400; // discretization points
+const sRange = 16; // s from -sRange/2 to sRange/2
+const ds = sRange / N;
+
+function solitonPsi(s, eta, xi, s0, phi0) {
+  const amp = 2 * eta / Math.cosh(2 * eta * (s - s0));
+  const phase = 2 * xi * s + phi0;
+  return { re: amp * Math.cos(phase), im: amp * Math.sin(phase), amp, phase };
+}
+
+function reconstructCurve(eta, xi, s0, phi0) {
+  // Bishop frame integration via RK4-like Euler for speed
+  const points = [];
+  const kappas = [];
+  const taus = [];
+  const psiRe = [];
+  const psiIm = [];
+
+  // Initial frame: T along z, u along x, v along y
+  let T = [0, 0, 1];
+  let u = [1, 0, 0];
+  let v = [0, 1, 0];
+  let pos = [0, 0, 0];
+
+  for (let i = 0; i <= N; i++) {
+    const s = -sRange / 2 + i * ds;
+    const psi = solitonPsi(s, eta, xi, s0, phi0);
+    const k1 = psi.re;
+    const k2 = psi.im;
+    const kappa = psi.amp;
+    const tau = 2 * xi;
+
+    kappas.push(kappa);
+    taus.push(tau);
+    psiRe.push(psi.re);
+    psiIm.push(psi.im);
+
+    points.push([pos[0], pos[1], pos[2]]);
+
+    if (i < N) {
+      // Bishop ODE: T' = k1*u + k2*v, u' = -k1*T, v' = -k2*T
+      const dT = [k1 * u[0] + k2 * v[0], k1 * u[1] + k2 * v[1], k1 * u[2] + k2 * v[2]];
+      const du = [-k1 * T[0], -k1 * T[1], -k1 * T[2]];
+      const dv = [-k2 * T[0], -k2 * T[1], -k2 * T[2]];
+
+      T = normalize([T[0] + dT[0] * ds, T[1] + dT[1] * ds, T[2] + dT[2] * ds]);
+      u = normalize([u[0] + du[0] * ds, u[1] + du[1] * ds, u[2] + du[2] * ds]);
+      v = normalize([v[0] + dv[0] * ds, v[1] + dv[1] * ds, v[2] + dv[2] * ds]);
+
+      // Re-orthogonalize (Gram-Schmidt)
+      const udotT = dot(u, T);
+      u = normalize([u[0] - udotT * T[0], u[1] - udotT * T[1], u[2] - udotT * T[2]]);
+      v = cross(T, u);
+
+      pos = [pos[0] + T[0] * ds, pos[1] + T[1] * ds, pos[2] + T[2] * ds];
+    }
+  }
+
+  // Center the curve
+  const cx = points.reduce((a, p) => a + p[0], 0) / points.length;
+  const cy = points.reduce((a, p) => a + p[1], 0) / points.length;
+  const cz = points.reduce((a, p) => a + p[2], 0) / points.length;
+  for (const p of points) { p[0] -= cx; p[1] -= cy; p[2] -= cz; }
+
+  return { points, kappas, taus, psiRe, psiIm };
+}
+
+function normalize(v) {
+  const len = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) || 1;
+  return [v[0]/len, v[1]/len, v[2]/len];
+}
+function dot(a,b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function cross(a,b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+
+// ══════════════════════════════════════════════════
+// THREE.JS — SOLITON VIEWER
+// ══════════════════════════════════════════════════
+
+let solitonScene, solitonCamera, solitonRenderer, solitonTube, solitonLine;
+let sAutoRotate = true;
+
+function initSolitonViewer() {
+  const container = document.getElementById('solitonViewer');
+  const w = container.clientWidth, h = container.clientHeight;
+
+  solitonScene = new THREE.Scene();
+  solitonScene.background = new THREE.Color(0x0a0a0f);
+  solitonScene.fog = new THREE.FogExp2(0x0a0a0f, 0.04);
+
+  solitonCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 100);
+  solitonCamera.position.set(4, 3, 6);
+  solitonCamera.lookAt(0, 0, 0);
+
+  solitonRenderer = new THREE.WebGLRenderer({ antialias: true });
+  solitonRenderer.setSize(w, h);
+  solitonRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(solitonRenderer.domElement);
+
+  // Lights
+  solitonScene.add(new THREE.AmbientLight(0x404050, 0.6));
+  const dl = new THREE.DirectionalLight(0xe8a44a, 0.8);
+  dl.position.set(5, 8, 5);
+  solitonScene.add(dl);
+  const dl2 = new THREE.DirectionalLight(0x5b8fd9, 0.4);
+  dl2.position.set(-5, -3, 3);
+  solitonScene.add(dl2);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(20, 40, 0x1a1a24, 0x111118);
+  gridHelper.position.y = -3;
+  solitonScene.add(gridHelper);
+
+  // Axes helper (small)
+  const axLen = 0.8;
+  const axMat = (c) => new THREE.LineBasicMaterial({ color: c, transparent: true, opacity: 0.4 });
+  [[axLen,0,0,0xff5555],[0,axLen,0,0x55ff55],[0,0,axLen,0x5555ff]].forEach(([x,y,z,c]) => {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(x,y,z)]);
+    solitonScene.add(new THREE.Line(g, axMat(c)));
+  });
+
+  // Mouse orbit
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let rotY = 0.5, rotX = 0.4, dist = 8;
+
+  container.addEventListener('mousedown', e => { isDragging = true; prevMouse = {x:e.clientX,y:e.clientY}; sAutoRotate = false; });
+  container.addEventListener('touchstart', e => { isDragging = true; prevMouse = {x:e.touches[0].clientX,y:e.touches[0].clientY}; sAutoRotate = false; }, {passive:true});
+  window.addEventListener('mouseup', () => isDragging = false);
+  window.addEventListener('touchend', () => isDragging = false);
+
+  const onMove = (cx, cy) => {
+    if (!isDragging) return;
+    rotY += (cx - prevMouse.x) * 0.008;
+    rotX += (cy - prevMouse.y) * 0.008;
+    rotX = Math.max(-1.4, Math.min(1.4, rotX));
+    prevMouse = {x:cx, y:cy};
+  };
+  container.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  container.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY), {passive:true});
+
+  container.addEventListener('wheel', e => {
+    dist = Math.max(3, Math.min(20, dist + e.deltaY * 0.01));
+    e.preventDefault();
+  }, { passive: false });
+
+  function updateCamera() {
+    if (sAutoRotate) rotY += 0.003;
+    solitonCamera.position.set(
+      dist * Math.sin(rotY) * Math.cos(rotX),
+      dist * Math.sin(rotX),
+      dist * Math.cos(rotY) * Math.cos(rotX)
+    );
+    solitonCamera.lookAt(0, 0, 0);
+  }
+
+  // Animation loop
+  function animate() {
+    requestAnimationFrame(animate);
+    updateCamera();
+    solitonRenderer.render(solitonScene, solitonCamera);
+  }
+  animate();
+
+  // Resize
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth, h = container.clientHeight;
+    solitonCamera.aspect = w / h;
+    solitonCamera.updateProjectionMatrix();
+    solitonRenderer.setSize(w, h);
+  });
+
+  updateSolitonCurve();
+}
+
+function updateSolitonCurve() {
+  const eta = parseFloat(document.getElementById('etaSlider').value);
+  const xi = parseFloat(document.getElementById('xiSlider').value);
+  const s0 = parseFloat(document.getElementById('s0Slider').value);
+  const phi0 = parseFloat(document.getElementById('phi0Slider').value);
+
+  document.getElementById('etaVal').textContent = eta.toFixed(2);
+  document.getElementById('xiVal').textContent = xi.toFixed(2);
+  document.getElementById('s0Val').textContent = s0.toFixed(2);
+  document.getElementById('phi0Val').textContent = phi0.toFixed(2);
+
+  const { points, kappas, taus, psiRe, psiIm } = reconstructCurve(eta, xi, s0, phi0);
+
+  // Remove old geometry
+  if (solitonTube) solitonScene.remove(solitonTube);
+  if (solitonLine) solitonScene.remove(solitonLine);
+
+  // Create tube geometry
+  const curvePoints = points.map(p => new THREE.Vector3(p[0], p[1], p[2]));
+  if (curvePoints.length < 2) return;
+
+  try {
+    const path = new THREE.CatmullRomCurve3(curvePoints, false, 'catmullrom', 0.5);
+    const tubeGeo = new THREE.TubeGeometry(path, points.length, 0.06, 8, false);
+
+    // Color by curvature
+    const colors = [];
+    const colorAttr = tubeGeo.attributes.position;
+    const nVerts = colorAttr.count;
+    const segVerts = Math.floor(nVerts / points.length);
+
+    for (let i = 0; i < nVerts; i++) {
+      const segIdx = Math.min(Math.floor(i / segVerts), kappas.length - 1);
+      const k = kappas[Math.max(0, segIdx)];
+      const maxK = 2 * eta;
+      const t = maxK > 0 ? Math.min(k / maxK, 1) : 0;
+      // Accent color (warm) for high curvature, blue for low
+      colors.push(
+        0.36 + t * 0.55,  // R
+        0.56 - t * 0.2,   // G
+        0.85 - t * 0.55   // B
+      );
+    }
+    tubeGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    const tubeMat = new THREE.MeshPhongMaterial({
+      vertexColors: true,
+      shininess: 60,
+      specular: 0x333344
+    });
+
+    solitonTube = new THREE.Mesh(tubeGeo, tubeMat);
+    solitonScene.add(solitonTube);
+  } catch(e) {
+    // Fallback: line
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(curvePoints);
+    const lineMat = new THREE.LineBasicMaterial({ color: 0xe8a44a });
+    solitonLine = new THREE.Line(lineGeo, lineMat);
+    solitonScene.add(solitonLine);
+  }
+
+  // Update 2D plots
+  drawCurvaturePlot(kappas, taus);
+  drawHasimotoPlot(psiRe, psiIm);
+
+  // Update spectral plane
+  drawSpectralPlot(xi, eta);
+}
+
+// ══════════════════════════════════════════════════
+// 2D PLOT DRAWING
+// ══════════════════════════════════════════════════
+
+function setupCanvas(id) {
+  const c = document.getElementById(id);
+  const rect = c.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, w: rect.width, h: rect.height };
+}
+
+function drawCurvaturePlot(kappas, taus) {
+  const { ctx, w, h } = setupCanvas('curvaturePlot');
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = { l: 40, r: 10, t: 15, b: 25 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+
+  // Axis
+  ctx.strokeStyle = '#2a2835';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + ph / 2);
+  ctx.lineTo(pad.l + pw, pad.t + ph / 2);
+  ctx.stroke();
+
+  // Find max
+  const maxK = Math.max(...kappas, 0.1);
+  const maxT = Math.max(Math.abs(Math.max(...taus)), Math.abs(Math.min(...taus)), 0.1);
+  const maxVal = Math.max(maxK, maxT) * 1.2;
+
+  // Labels
+  ctx.fillStyle = '#6b6880';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'right';
+  ctx.fillText(maxVal.toFixed(1), pad.l - 4, pad.t + 12);
+  ctx.fillText('0', pad.l - 4, pad.t + ph / 2 + 4);
+  ctx.fillText((-maxVal).toFixed(1), pad.l - 4, pad.t + ph - 2);
+
+  // κ(s) curve
+  ctx.strokeStyle = '#e8a44a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < kappas.length; i++) {
+    const x = pad.l + (i / (kappas.length - 1)) * pw;
+    const y = pad.t + ph / 2 - (kappas[i] / maxVal) * (ph / 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // τ(s) curve
+  ctx.strokeStyle = '#5b8fd9';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  for (let i = 0; i < taus.length; i++) {
+    const x = pad.l + (i / (taus.length - 1)) * pw;
+    const y = pad.t + ph / 2 - (taus[i] / maxVal) * (ph / 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Legend
+  ctx.fillStyle = '#e8a44a'; ctx.fillRect(pad.l + 8, pad.t + 4, 12, 3);
+  ctx.fillStyle = '#c8c5d0'; ctx.font = '9px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText('κ(s)', pad.l + 24, pad.t + 9);
+  ctx.fillStyle = '#5b8fd9'; ctx.fillRect(pad.l + 60, pad.t + 4, 12, 3);
+  ctx.fillStyle = '#c8c5d0';
+  ctx.fillText('τ(s)', pad.l + 76, pad.t + 9);
+}
+
+function drawHasimotoPlot(psiRe, psiIm) {
+  const { ctx, w, h } = setupCanvas('hasimotoPlot');
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = { l: 40, r: 10, t: 15, b: 25 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
+
+  ctx.strokeStyle = '#2a2835';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + ph / 2);
+  ctx.lineTo(pad.l + pw, pad.t + ph / 2);
+  ctx.stroke();
+
+  const maxVal = Math.max(
+    Math.max(...psiRe.map(Math.abs)),
+    Math.max(...psiIm.map(Math.abs)),
+    0.1
+  ) * 1.2;
+
+  ctx.fillStyle = '#6b6880';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'right';
+  ctx.fillText(maxVal.toFixed(1), pad.l - 4, pad.t + 12);
+  ctx.fillText('0', pad.l - 4, pad.t + ph / 2 + 4);
+
+  // Re(ψ)
+  ctx.strokeStyle = '#5dba7d';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < psiRe.length; i++) {
+    const x = pad.l + (i / (psiRe.length - 1)) * pw;
+    const y = pad.t + ph / 2 - (psiRe[i] / maxVal) * (ph / 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Im(ψ)
+  ctx.strokeStyle = '#9b6bdf';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  for (let i = 0; i < psiIm.length; i++) {
+    const x = pad.l + (i / (psiIm.length - 1)) * pw;
+    const y = pad.t + ph / 2 - (psiIm[i] / maxVal) * (ph / 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Legend
+  ctx.fillStyle = '#5dba7d'; ctx.fillRect(pad.l + 8, pad.t + 4, 12, 3);
+  ctx.fillStyle = '#c8c5d0'; ctx.font = '9px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText('Re(ψ)', pad.l + 24, pad.t + 9);
+  ctx.fillStyle = '#9b6bdf'; ctx.fillRect(pad.l + 75, pad.t + 4, 12, 3);
+  ctx.fillStyle = '#c8c5d0';
+  ctx.fillText('Im(ψ)', pad.l + 91, pad.t + 9);
+}
+
+// ══════════════════════════════════════════════════
+// SPECTRAL PLANE
+// ══════════════════════════════════════════════════
+
+function drawSpectralPlot(xi, eta) {
+  const { ctx, w, h } = setupCanvas('spectralPlot');
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = 50;
+  const pw = w - 2 * pad;
+  const ph = h - 2 * pad;
+  const range = 2.0;
+
+  // Grid
+  ctx.strokeStyle = '#1a1a24';
+  ctx.lineWidth = 1;
+  for (let i = -2; i <= 2; i++) {
+    const x = pad + (i + range) / (2 * range) * pw;
+    const y = pad + (range - i) / (2 * range) * ph;
+    ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, pad + ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(pad + pw, y); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#3a384a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(pad, pad + ph / 2);
+  ctx.lineTo(pad + pw, pad + ph / 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pad + pw / 2, pad);
+  ctx.lineTo(pad + pw / 2, pad + ph);
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#6b6880';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('Re(ζ) = ξ', pad + pw / 2, h - 12);
+  ctx.save();
+  ctx.translate(14, pad + ph / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Im(ζ) = η', 0, 0);
+  ctx.restore();
+
+  // Upper half-plane shading
+  const grd = ctx.createLinearGradient(0, pad, 0, pad + ph / 2);
+  grd.addColorStop(0, 'rgba(91,143,217,0.06)');
+  grd.addColorStop(1, 'rgba(91,143,217,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(pad, pad, pw, ph / 2);
+
+  ctx.fillStyle = '#3a384a';
+  ctx.font = '9px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText('upper half-plane (solitons)', pad + 4, pad + 14);
+
+  // Eigenvalue point
+  const ex = pad + (xi + range) / (2 * range) * pw;
+  const ey = pad + (range - eta) / (2 * range) * ph;
+
+  // Glow
+  const glw = ctx.createRadialGradient(ex, ey, 0, ex, ey, 30);
+  glw.addColorStop(0, 'rgba(232,164,74,0.4)');
+  glw.addColorStop(1, 'rgba(232,164,74,0)');
+  ctx.fillStyle = glw;
+  ctx.beginPath(); ctx.arc(ex, ey, 30, 0, Math.PI * 2); ctx.fill();
+
+  // Crosshairs
+  ctx.strokeStyle = 'rgba(232,164,74,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(ex, pad + ph / 2); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad + pw / 2, ey); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Point
+  ctx.fillStyle = '#e8a44a';
+  ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#0a0a0f';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Label
+  ctx.fillStyle = '#e8a44a';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText(`ζ₁ = ${xi.toFixed(2)} + ${eta.toFixed(2)}i`, ex + 12, ey - 8);
+}
+
+// Make spectral plot draggable
+function initSpectralDrag() {
+  const canvas = document.getElementById('spectralPlot');
+  let dragging = false;
+  const range = 2.0;
+
+  function coordFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX || e.touches[0].clientX) - rect.left;
+    const py = (e.clientY || e.touches[0].clientY) - rect.top;
+    const pad = 50;
+    const pw = rect.width - 2 * pad;
+    const ph = rect.height - 2 * pad;
+    const xi = ((px - pad) / pw) * 2 * range - range;
+    const eta = range - ((py - pad) / ph) * 2 * range;
+    return { xi: Math.max(-1.5, Math.min(1.5, xi)), eta: Math.max(0.05, Math.min(1.5, eta)) };
+  }
+
+  function onDrag(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const { xi, eta } = coordFromEvent(e);
+    document.getElementById('xiSlider').value = xi;
+    document.getElementById('etaSlider').value = eta;
+    updateSolitonCurve();
+  }
+
+  canvas.addEventListener('mousedown', e => { dragging = true; onDrag(e); });
+  canvas.addEventListener('touchstart', e => { dragging = true; onDrag(e); }, {passive:false});
+  window.addEventListener('mouseup', () => dragging = false);
+  window.addEventListener('touchend', () => dragging = false);
+  canvas.addEventListener('mousemove', onDrag);
+  canvas.addEventListener('touchmove', onDrag, {passive:false});
+}
+
+// ══════════════════════════════════════════════════
+// TWIST-WRITHE PARTITION
+// ══════════════════════════════════════════════════
+
+function updateTopology() {
+  const lk = parseInt(document.getElementById('lkSlider').value);
+  const frac = parseFloat(document.getElementById('wrFracSlider').value);
+  const wr = lk * frac;
+  const tw = lk - wr;
+
+  document.getElementById('lkVal').textContent = lk;
+  document.getElementById('twVal').textContent = tw.toFixed(1);
+  document.getElementById('wrVal').textContent = wr.toFixed(1);
+  document.getElementById('lkSliderVal').textContent = lk;
+  document.getElementById('wrFracVal').textContent = frac.toFixed(2);
+
+  drawWrithePlot(lk, tw, wr, frac);
+}
+
+function drawWrithePlot(lk, tw, wr, frac) {
+  const { ctx, w, h } = setupCanvas('writhePlot');
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = { l: 20, r: 20, t: 20, b: 30 };
+  const barH = 30;
+  const barY = pad.t + 20;
+  const barW = w - pad.l - pad.r;
+
+  // Background bar
+  ctx.fillStyle = '#1a1a24';
+  ctx.beginPath();
+  ctx.roundRect(pad.l, barY, barW, barH, 6);
+  ctx.fill();
+
+  if (lk > 0) {
+    // Twist portion
+    const twW = (1 - frac) * barW;
+    ctx.fillStyle = '#5b8fd9';
+    ctx.beginPath();
+    ctx.roundRect(pad.l, barY, Math.max(twW, 4), barH, [6, 0, 0, 6]);
+    ctx.fill();
+
+    // Writhe portion
+    const wrW = frac * barW;
+    ctx.fillStyle = '#5dba7d';
+    ctx.beginPath();
+    ctx.roundRect(pad.l + twW, barY, Math.max(wrW, 4), barH, [0, 6, 6, 0]);
+    ctx.fill();
+  }
+
+  // Labels
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  if (lk > 0 && frac < 0.95) {
+    ctx.fillStyle = '#eae8f0';
+    ctx.fillText(`Tw = ${tw.toFixed(1)}`, pad.l + (1 - frac) * barW / 2, barY + barH / 2 + 4);
+  }
+  if (lk > 0 && frac > 0.05) {
+    ctx.fillStyle = '#eae8f0';
+    ctx.fillText(`Wr = ${wr.toFixed(1)}`, pad.l + (1 - frac) * barW + frac * barW / 2, barY + barH / 2 + 4);
+  }
+
+  // Energy curve below
+  const eY = barY + barH + 30;
+  const eH = h - eY - pad.b;
+
+  // Draw energy as function of writhe fraction for fixed Lk
+  ctx.strokeStyle = '#2a2835';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, eY + eH / 2);
+  ctx.lineTo(pad.l + barW, eY + eH / 2);
+  ctx.stroke();
+
+  if (lk > 0) {
+    const A = 50, C = 75; // DNA stiffness ratio
+    ctx.strokeStyle = '#e8a44a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const f = i / 200;
+      const twE = A * Math.pow(lk * (1 - f), 2);
+      const wrE = C * Math.pow(lk * f, 2);
+      const E = (twE + wrE) / (A * lk * lk + C * lk * lk) * 2;
+      const x = pad.l + f * barW;
+      const y = eY + eH / 2 - E * (eH / 2) * 0.8;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Current point
+    const curE = (A * tw * tw + C * wr * wr) / (A * lk * lk + C * lk * lk) * 2;
+    const cx = pad.l + frac * barW;
+    const cy = eY + eH / 2 - curE * (eH / 2) * 0.8;
+    ctx.fillStyle = '#e8a44a';
+    ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
+
+    // Min marker
+    const optFrac = A / (A + C); // ~0.4
+    const optX = pad.l + optFrac * barW;
+    ctx.strokeStyle = 'rgba(232,164,74,0.3)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(optX, eY);
+    ctx.lineTo(optX, eY + eH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#6b6880';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('energy minimum', optX, eY + eH + 12);
+  }
+
+  ctx.fillStyle = '#6b6880';
+  ctx.font = '9px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText('← more twist', pad.l, eY - 4);
+  ctx.textAlign = 'right';
+  ctx.fillText('more writhe →', pad.l + barW, eY - 4);
+
+  ctx.textAlign = 'center';
+  ctx.fillText('E(Tw,Wr) for fixed Lk', pad.l + barW / 2, eY + eH + 12);
+}
+
+// ══════════════════════════════════════════════════
+// THREE.JS — FRAME VIEWER
+// ══════════════════════════════════════════════════
+
+let frameScene, frameCamera, frameRenderer, frameCurveMesh;
+let frameArrows = [];
+let currentFrameType = 'bishop';
+
+function initFrameViewer() {
+  const container = document.getElementById('frameViewer');
+  const w = container.clientWidth, h = container.clientHeight;
+
+  frameScene = new THREE.Scene();
+  frameScene.background = new THREE.Color(0x0a0a0f);
+
+  frameCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 50);
+  frameCamera.position.set(3, 2, 4);
+  frameCamera.lookAt(0, 0, 0);
+
+  frameRenderer = new THREE.WebGLRenderer({ antialias: true });
+  frameRenderer.setSize(w, h);
+  frameRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(frameRenderer.domElement);
+
+  frameScene.add(new THREE.AmbientLight(0x505060, 0.7));
+  const dl = new THREE.DirectionalLight(0xe8a44a, 0.6);
+  dl.position.set(3, 5, 3);
+  frameScene.add(dl);
+
+  let isDragging = false, prevMouse = {x:0,y:0};
+  let rotY = 0.5, rotX = 0.3, dist = 5;
+
+  container.addEventListener('mousedown', e => { isDragging = true; prevMouse = {x:e.clientX,y:e.clientY}; });
+  container.addEventListener('touchstart', e => { isDragging = true; prevMouse = {x:e.touches[0].clientX,y:e.touches[0].clientY}; }, {passive:true});
+  window.addEventListener('mouseup', () => isDragging = false);
+  window.addEventListener('touchend', () => isDragging = false);
+
+  const onMove = (cx, cy) => {
+    if (!isDragging) return;
+    rotY += (cx - prevMouse.x) * 0.008;
+    rotX += (cy - prevMouse.y) * 0.008;
+    rotX = Math.max(-1.2, Math.min(1.2, rotX));
+    prevMouse = {x:cx, y:cy};
+  };
+  container.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  container.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY), {passive:true});
+  container.addEventListener('wheel', e => { dist = Math.max(2, Math.min(12, dist + e.deltaY * 0.01)); e.preventDefault(); }, {passive:false});
+
+  function animate() {
+    requestAnimationFrame(animate);
+    frameCamera.position.set(
+      dist * Math.sin(rotY) * Math.cos(rotX),
+      dist * Math.sin(rotX),
+      dist * Math.cos(rotY) * Math.cos(rotX)
+    );
+    frameCamera.lookAt(0, 0, 0);
+    frameRenderer.render(frameScene, frameCamera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth, h = container.clientHeight;
+    frameCamera.aspect = w / h;
+    frameCamera.updateProjectionMatrix();
+    frameRenderer.setSize(w, h);
+  });
+
+  updateFrameViewer();
+}
+
+function setFrameType(type, btn) {
+  currentFrameType = type;
+  document.querySelectorAll('.frame-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  updateFrameViewer();
+}
+
+function updateFrameViewer() {
+  // Generate a trefoil-like curve for visual interest
+  const nPts = 300;
+  const pts = [];
+  const frames = { T: [], u: [], v: [] };
+
+  for (let i = 0; i <= nPts; i++) {
+    const t = (i / nPts) * Math.PI * 2;
+    // Trefoil knot parameterization
+    const x = Math.sin(t) + 2 * Math.sin(2 * t);
+    const y = Math.cos(t) - 2 * Math.cos(2 * t);
+    const z = -Math.sin(3 * t);
+    pts.push(new THREE.Vector3(x * 0.5, y * 0.5, z * 0.5));
+  }
+
+  // Compute frames via finite differences
+  for (let i = 0; i < pts.length; i++) {
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(pts.length - 1, i + 1)];
+    const T = new THREE.Vector3().subVectors(next, prev).normalize();
+
+    // Simple Frenet-like computation
+    const prev2 = pts[Math.max(0, i - 2)];
+    const next2 = pts[Math.min(pts.length - 1, i + 2)];
+    const T2 = new THREE.Vector3().subVectors(next2, prev2).normalize();
+    const dT = new THREE.Vector3().subVectors(T2, T);
+
+    let N, B;
+    if (dT.length() > 0.0001) {
+      N = dT.normalize();
+      B = new THREE.Vector3().crossVectors(T, N).normalize();
+      N = new THREE.Vector3().crossVectors(B, T).normalize();
+    } else {
+      // Arbitrary perpendicular
+      N = new THREE.Vector3(0, 1, 0);
+      if (Math.abs(T.dot(N)) > 0.9) N.set(1, 0, 0);
+      B = new THREE.Vector3().crossVectors(T, N).normalize();
+      N = new THREE.Vector3().crossVectors(B, T).normalize();
+    }
+
+    frames.T.push(T.clone());
+    frames.u.push(N.clone());
+    frames.v.push(B.clone());
+  }
+
+  // Bishop frame via parallel transport
+  if (currentFrameType === 'bishop' || currentFrameType === 'material') {
+    let u = frames.u[0].clone();
+    let v = frames.v[0].clone();
+    for (let i = 1; i < pts.length; i++) {
+      const T = frames.T[i];
+      // Project previous u,v onto plane perpendicular to new T
+      u = new THREE.Vector3().copy(u).sub(T.clone().multiplyScalar(u.dot(T))).normalize();
+      v = new THREE.Vector3().crossVectors(T, u).normalize();
+      frames.u[i] = u.clone();
+      frames.v[i] = v.clone();
+    }
+  }
+
+  // Material frame: add twist
+  if (currentFrameType === 'material') {
+    const twistAngle = parseFloat(document.getElementById('frameTwistSlider').value);
+    for (let i = 0; i < pts.length; i++) {
+      const theta = twistAngle * (i / pts.length);
+      const u = frames.u[i];
+      const v = frames.v[i];
+      frames.u[i] = new THREE.Vector3().addScaledVector(u, Math.cos(theta)).addScaledVector(v, Math.sin(theta));
+      frames.v[i] = new THREE.Vector3().addScaledVector(u, -Math.sin(theta)).addScaledVector(v, Math.cos(theta));
+    }
+  }
+
+  // Clear old objects
+  if (frameCurveMesh) frameScene.remove(frameCurveMesh);
+  frameArrows.forEach(a => frameScene.remove(a));
+  frameArrows = [];
+
+  // Draw curve as tube
+  try {
+    const path = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.5);
+    const geo = new THREE.TubeGeometry(path, nPts, 0.025, 8, true);
+    const mat = new THREE.MeshPhongMaterial({ color: 0x6b6880, shininess: 40 });
+    frameCurveMesh = new THREE.Mesh(geo, mat);
+    frameScene.add(frameCurveMesh);
+  } catch(e) {}
+
+  // Draw frame at selected position
+  const sPos = parseFloat(document.getElementById('framePosSlider').value);
+  document.getElementById('framePosVal').textContent = sPos.toFixed(2);
+  document.getElementById('frameTwistVal').textContent = parseFloat(document.getElementById('frameTwistSlider').value).toFixed(1);
+
+  const idx = Math.floor(sPos * (pts.length - 1));
+  const origin = pts[idx];
+  const T = frames.T[idx];
+  const u = frames.u[idx];
+  const v = frames.v[idx];
+  const arrowLen = 0.6;
+
+  const colors = [0xd95b6b, 0x5dba7d, 0x5b8fd9]; // T=red, u=green, v=blue
+  const dirs = [T, u, v];
+  dirs.forEach((dir, j) => {
+    const arrow = new THREE.ArrowHelper(dir, origin, arrowLen, colors[j], 0.12, 0.06);
+    frameScene.add(arrow);
+    frameArrows.push(arrow);
+  });
+
+  // Position marker
+  const markerGeo = new THREE.SphereGeometry(0.05, 12, 12);
+  const markerMat = new THREE.MeshBasicMaterial({ color: 0xe8a44a });
+  const marker = new THREE.Mesh(markerGeo, markerMat);
+  marker.position.copy(origin);
+  frameScene.add(marker);
+  frameArrows.push(marker);
+}
+
+// ══════════════════════════════════════════════════
+// GENUS VISUALIZATIONS (2D curves)
+// ══════════════════════════════════════════════════
+
+function drawGenusCards() {
+  // Genus 0: Helix (2D projection)
+  {
+    const { ctx, w, h } = setupCanvas('genus0Canvas');
+    ctx.fillStyle = '#111118';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#e8a44a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 300; i++) {
+      const t = (i / 300) * Math.PI * 6;
+      const x = w / 2 + Math.cos(t) * w * 0.3;
+      const y = h * 0.1 + (i / 300) * h * 0.8 + Math.sin(t) * 10;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // Add depth effect
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = '#5b8fd9';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= 300; i++) {
+      const t = (i / 300) * Math.PI * 6;
+      const x = w / 2 + Math.cos(t + 1.5) * w * 0.3;
+      const y = h * 0.1 + (i / 300) * h * 0.8 + Math.sin(t + 1.5) * 10;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Genus 1: Elastica (figure-8 like)
+  {
+    const { ctx, w, h } = setupCanvas('genus1Canvas');
+    ctx.fillStyle = '#111118';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#5b8fd9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 400; i++) {
+      const t = (i / 400) * Math.PI * 2;
+      // Lemniscate-like
+      const a = w * 0.35;
+      const denom = 1 + Math.sin(t) * Math.sin(t);
+      const x = w / 2 + a * Math.cos(t) / denom;
+      const y = h / 2 + a * Math.sin(t) * Math.cos(t) / denom;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // Crossing glow
+    ctx.fillStyle = 'rgba(91,143,217,0.15)';
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Genus 2: Plectonemic supercoil
+  {
+    const { ctx, w, h } = setupCanvas('genus2Canvas');
+    ctx.fillStyle = '#111118';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#5dba7d';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 500; i++) {
+      const t = (i / 500) * Math.PI * 4;
+      const r = (0.3 + 0.15 * Math.sin(t * 1.5)) * w * 0.4;
+      const x = w / 2 + r * Math.cos(t) + Math.sin(t * 3) * 8;
+      const y = h / 2 + r * Math.sin(t) * 0.6 + Math.cos(t * 2.5) * 12;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    // Second strand
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = '#9b6bdf';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= 500; i++) {
+      const t = (i / 500) * Math.PI * 4 + 0.15;
+      const r = (0.3 + 0.15 * Math.sin(t * 1.5)) * w * 0.4;
+      const x = w / 2 + r * Math.cos(t) + Math.sin(t * 3) * 8;
+      const y = h / 2 + r * Math.sin(t) * 0.6 + Math.cos(t * 2.5) * 12;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// WIRE EVERYTHING UP
+// ══════════════════════════════════════════════════
+
+// Soliton sliders
+['etaSlider', 'xiSlider', 's0Slider', 'phi0Slider'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateSolitonCurve);
+});
+
+// Topology sliders
+['lkSlider', 'wrFracSlider'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateTopology);
+});
+
+// Frame sliders
+['framePosSlider', 'frameTwistSlider'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateFrameViewer);
+});
+
+// Frame type tabs
+document.querySelectorAll('.frame-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setFrameType(btn.dataset.frame, btn);
+  });
+});
+
+// Initialize everything
+try { initSolitonViewer(); } catch(e) { console.error('Soliton viewer init error:', e); }
+try { initFrameViewer(); } catch(e) { console.error('Frame viewer init error:', e); }
+try { initSpectralDrag(); } catch(e) { console.error('Spectral drag init error:', e); }
+try { updateTopology(); } catch(e) { console.error('Topology init error:', e); }
+try { drawGenusCards(); } catch(e) { console.error('Genus cards error:', e); }
+
+// Redraw canvases on resize
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    try { updateSolitonCurve(); } catch(e) {}
+    try { updateTopology(); } catch(e) {}
+    try { drawGenusCards(); } catch(e) {}
+  }, 200);
+});
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
