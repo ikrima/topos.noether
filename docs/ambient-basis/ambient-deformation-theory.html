@@ -1,0 +1,2420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ambient Deformation Theory — An Interactive Exploration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-card: #12121a;
+  --bg-card-hover: #1a1a28;
+  --bg-surface: #16161f;
+  --amber: #d4a574;
+  --amber-dim: #8a6a44;
+  --teal: #5ab4ac;
+  --teal-dim: #3a7a74;
+  --lavender: #9b8ec4;
+  --red: #e06c75;
+  --green: #98c379;
+  --text-primary: #e8e0d4;
+  --text-secondary: #9a9284;
+  --text-muted: #5a5448;
+  --border: #2a2a3a;
+  --sidebar-width: 280px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  font-size: 17px;
+}
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Source Sans 3', sans-serif;
+  line-height: 1.72;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--amber-dim); border-radius: 3px; }
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 28px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: 0.02em;
+}
+
+.sidebar-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 12px 0;
+  flex: 1;
+}
+
+.nav-item a {
+  display: block;
+  padding: 8px 20px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.82rem;
+  transition: all 0.2s;
+  border-left: 2px solid transparent;
+}
+
+.nav-item a:hover {
+  color: var(--text-primary);
+  background: rgba(212,165,116,0.05);
+}
+
+.nav-item a.active {
+  color: var(--amber);
+  border-left-color: var(--amber);
+  background: rgba(212,165,116,0.08);
+}
+
+.nav-section-label {
+  padding: 14px 20px 4px;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* Progress */
+.reading-progress {
+  position: fixed;
+  top: 0; left: 0;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--amber), var(--teal));
+  z-index: 1000;
+  transition: width 0.1s;
+}
+
+/* Main */
+.main-content {
+  margin-left: var(--sidebar-width);
+  max-width: 820px;
+  padding: 0 48px 120px;
+  margin-right: auto;
+}
+
+/* Hero */
+.hero {
+  padding: 100px 0 60px;
+  text-align: center;
+}
+
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.hero .subtitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 32px;
+}
+
+.hero .abstract-line {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.65;
+}
+
+/* Sections */
+.essay-section {
+  padding-top: 72px;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.essay-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--teal);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--amber);
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 36px 0 12px;
+}
+
+p {
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.math-block {
+  margin: 20px 0;
+  padding: 16px 20px;
+  background: var(--bg-surface);
+  border-left: 2px solid var(--lavender);
+  border-radius: 0 4px 4px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.definition-box {
+  margin: 24px 0;
+  padding: 20px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  border-left: 3px solid var(--amber);
+}
+
+.definition-box .def-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 700;
+  color: var(--amber);
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+.proposition-box {
+  margin: 24px 0;
+  padding: 20px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  border-left: 3px solid var(--teal);
+}
+
+.proposition-box .prop-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+}
+
+/* Interactive viz containers */
+.viz-container {
+  margin: 28px 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.viz-header {
+  padding: 12px 18px;
+  background: rgba(212,165,116,0.06);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-header .viz-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--amber);
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viz-header .viz-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.viz-body {
+  padding: 20px;
+  position: relative;
+}
+
+.viz-body canvas {
+  display: block;
+  margin: 0 auto;
+  border-radius: 4px;
+}
+
+.viz-controls {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-group label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.control-group input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 140px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+.control-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--amber);
+  cursor: pointer;
+}
+
+.control-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--amber);
+  min-width: 36px;
+}
+
+.btn-toggle {
+  padding: 5px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-toggle:hover, .btn-toggle.active {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(212,165,116,0.1);
+}
+
+.insight {
+  margin: 20px 0;
+  padding: 14px 18px;
+  background: rgba(90,180,172,0.06);
+  border-left: 2px solid var(--teal);
+  border-radius: 0 4px 4px 0;
+  font-size: 0.92rem;
+  color: var(--teal);
+  font-style: italic;
+}
+
+.katex { font-size: 1.05em; }
+.katex-display { margin: 0; }
+
+/* Mobile */
+.mobile-nav-toggle {
+  display: none;
+  position: fixed;
+  top: 14px; left: 14px;
+  z-index: 200;
+  width: 36px; height: 36px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--amber);
+  font-size: 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-nav-toggle { display: flex; }
+  .main-content { margin-left: 0; padding: 0 20px 80px; }
+  .hero h1 { font-size: 2.2rem; }
+  h2 { font-size: 1.6rem; }
+  html { font-size: 16px; }
+  .viz-controls { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="reading-progress" id="progress"></div>
+
+<button class="mobile-nav-toggle" id="navToggle">☰</button>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">Ambient Deformation Theory</div>
+    <div class="sidebar-subtitle">An interactive exploration</div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-section-label">Foundations</li>
+    <li class="nav-item"><a href="#hero">Introduction</a></li>
+    <li class="nav-item"><a href="#sec-basic">1 · Basic Setup</a></li>
+    <li class="nav-item"><a href="#sec-negative">Negative-Space Profile</a></li>
+    <li class="nav-item"><a href="#sec-linearized">2 · Linearized Deformation</a></li>
+    <li class="nav-section-label">Toy Examples</li>
+    <li class="nav-item"><a href="#sec-ex1">3a · Metric Deformation</a></li>
+    <li class="nav-item"><a href="#sec-ex2">3b · Obstacle Insertion</a></li>
+    <li class="nav-item"><a href="#sec-ex3">3c · Nested Channel Worlds</a></li>
+    <li class="nav-section-label">Higher Structure</li>
+    <li class="nav-item"><a href="#sec-category">4 · Categorical Lift</a></li>
+    <li class="nav-item"><a href="#sec-castfill">Cast / Fill Duality</a></li>
+    <li class="nav-section-label">Dynamics</li>
+    <li class="nav-item"><a href="#sec-fluid">5 · Fluid-Dynamical Lift</a></li>
+    <li class="nav-item"><a href="#sec-directions">6 · Research Directions</a></li>
+  </ul>
+</nav>
+
+<main class="main-content">
+
+<!-- ======================== HERO ======================== -->
+<section class="hero" id="hero">
+  <h1>Ambient Deformation Theory</h1>
+  <div class="subtitle">A first formal sketch with categorical and fluid-dynamical lifts</div>
+  <p class="abstract-line">
+    The governing intuition is <em>mold/cast duality</em>: first shape the negative space, then let a realization fill it.
+    This essay formalizes a geometry of pairs \((M \hookrightarrow E, \sigma)\), where \(M\) is the object, \(E\) the ambient carrier,
+    and \(\sigma\) ambient structure — treating ambient variation itself as the primary deformation variable.
+  </p>
+</section>
+
+<!-- Hero visualization: the mold/cast duality animation -->
+<div class="viz-container" id="heroVizContainer">
+  <div class="viz-header">
+    <div class="viz-icon"></div>
+    <span class="viz-title">mold / cast duality</span>
+  </div>
+  <div class="viz-body">
+    <canvas id="heroCanvas" width="720" height="300"></canvas>
+  </div>
+  <div class="viz-controls">
+    <div class="control-group">
+      <label>phase</label>
+      <input type="range" id="heroPhase" min="0" max="100" value="0">
+      <span class="control-value" id="heroPhaseVal">object</span>
+    </div>
+    <button class="btn-toggle" id="heroAnimate">▶ animate</button>
+  </div>
+</div>
+
+
+<!-- ======================== SECTION 1 ======================== -->
+<section class="essay-section" id="sec-basic">
+  <div class="section-number">§ 1</div>
+  <h2>Basic Setup</h2>
+
+  <div class="definition-box">
+    <div class="def-label">Definition 1 — Ambient Realization</div>
+    <p>An <strong>ambient realization</strong> is a quadruple</p>
+    <div class="math-block">
+      \[X = (M,\; E,\; i,\; \sigma)\]
+    </div>
+    <p>where \(M\) is a smooth manifold or geometric object, \(E\) is an ambient carrier space,
+    \(i: M \hookrightarrow E\) is an embedding, and \(\sigma \in \mathcal{A}(E)\) is ambient structure on \(E\).</p>
+  </div>
+
+  <p>
+    Classical deformation theory privileges \(M\). This framework inverts that perspective:
+    the pair \((M, \text{world})\) is the primitive object, and often the world comes first.
+  </p>
+
+  <div class="definition-box">
+    <div class="def-label">Definition 2 — Object vs. Ambient Deformation</div>
+    <p>A <strong>pure object deformation</strong> is a curve \(t \mapsto (i_t, \sigma_0)\) — the object moves while the world stays fixed.</p>
+    <p>A <strong>pure ambient deformation</strong> is a curve \(t \mapsto (E_t, i_t, \sigma_t)\) — the world changes while the abstract object \(M\) is fixed.</p>
+  </div>
+
+  <!-- Viz: object vs ambient deformation -->
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">object vs. ambient deformation</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="objAmbCanvas" width="720" height="320"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>deformation t</label>
+        <input type="range" id="objAmbT" min="0" max="100" value="0">
+        <span class="control-value" id="objAmbTVal">0.00</span>
+      </div>
+      <button class="btn-toggle active" id="btnObjDef" data-mode="object">object deformation</button>
+      <button class="btn-toggle" id="btnAmbDef" data-mode="ambient">ambient deformation</button>
+    </div>
+  </div>
+
+  <p class="insight">
+    Drag the slider: in <em>object deformation</em> the shape moves through a frozen world.
+    In <em>ambient deformation</em> the shape is pinned but the world's metric reshapes around it.
+  </p>
+</section>
+
+
+<!-- ======================== NEGATIVE SPACE ======================== -->
+<section class="essay-section" id="sec-negative">
+  <div class="section-number">§ 1.3</div>
+  <h2>Negative-Space Profile</h2>
+
+  <div class="definition-box">
+    <div class="def-label">Definition 3 — Negative-Space Profile</div>
+    <p>The <strong>negative-space profile</strong> of \(X\) is the complement</p>
+    <div class="math-block">
+      \[C(X) := E \setminus i(M)\]
+    </div>
+    <p>or, more stably for analysis, \(C_\varepsilon(X) := E \setminus N_\varepsilon(i(M))\) where \(N_\varepsilon\) is a tubular neighborhood.</p>
+  </div>
+
+  <p>
+    This is where the mold intuition lives. Alexander duality tells us that homology of an embedded
+    compact subspace is controlled by the homology of its complement. Complement topology is a genuine invariant source —
+    not secondary decoration.
+  </p>
+
+  <!-- Viz: Negative space -->
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">negative-space profile C_ε(X)</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="negSpaceCanvas" width="720" height="360"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>ε (tubular radius)</label>
+        <input type="range" id="negEps" min="5" max="80" value="25">
+        <span class="control-value" id="negEpsVal">0.25</span>
+      </div>
+      <div class="control-group">
+        <label>shape</label>
+        <button class="btn-toggle active" id="negCircle">circle</button>
+        <button class="btn-toggle" id="negTrefoil">trefoil</button>
+        <button class="btn-toggle" id="negFigure8">figure-8</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================== SECTION 2 ======================== -->
+<section class="essay-section" id="sec-linearized">
+  <div class="section-number">§ 2</div>
+  <h2>Linearized Ambient Deformation</h2>
+
+  <div class="definition-box">
+    <div class="def-label">Definition 4 — Double Tangent Space</div>
+    <p>At a reference realization \(X_0\), define</p>
+    <div class="math-block">
+      \[T_{X_0}^{\mathrm{tot}} = T^{\mathrm{obj}}_{X_0} \oplus T^{\mathrm{amb}}_{X_0}\]
+    </div>
+    <p>The first summand encodes modes of the object. The second encodes modes of the surrounding possibility space.</p>
+  </div>
+
+  <div class="proposition-box">
+    <div class="prop-label">Proposition 1 — Induced Response Equation</div>
+    <p>If realizable configurations satisfy \(F(i, \sigma) = 0\), then first-order mixed deformations satisfy</p>
+    <div class="math-block">
+      \[D_i F \cdot \dot{i} + D_\sigma F \cdot \dot{\sigma} = 0\]
+    </div>
+    <p>Ambient perturbations act as <em>forcing terms</em> on the object. When \(D_i F\) is invertible modulo gauge:</p>
+    <div class="math-block">
+      \[\dot{i} = -(D_i F)^{-1}\, D_\sigma F[\dot{\sigma}]\]
+    </div>
+  </div>
+
+  <p class="insight">
+    This is the cleanest formal summary of the inversion: ambient deformation defines an induced operator from ambient modes to object response modes.
+  </p>
+
+  <!-- Viz: Double tangent space -->
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">double tangent space decomposition</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="tangentCanvas" width="720" height="340"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>object mode</label>
+        <input type="range" id="tangObj" min="-100" max="100" value="0">
+        <span class="control-value" id="tangObjVal">0.00</span>
+      </div>
+      <div class="control-group">
+        <label>ambient mode</label>
+        <input type="range" id="tangAmb" min="-100" max="100" value="0">
+        <span class="control-value" id="tangAmbVal">0.00</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================== EXAMPLE 1 ======================== -->
+<section class="essay-section" id="sec-ex1">
+  <div class="section-number">§ 3a — Example 1</div>
+  <h2>Metric-Only Ambient Deformation</h2>
+
+  <p>
+    Let \(M = S^1\), \(E = \mathbb{R}^2\), with the unit circle fixed as a set.
+    Vary the ambient metric:
+  </p>
+  <div class="math-block">
+    \[g_\lambda = dr^2 + \lambda^2 r^2\, d\theta^2, \qquad \lambda > 0\]
+  </div>
+  <p>
+    The embedded image \(i(S^1) \subset E\) is the same subset, but its ambient geometric meaning changes.
+    Geodesicity, curvature relations, and neighborhood geometry all depend on \(g_\lambda\).
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">ambient metric g_λ around a fixed circle</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="metricCanvas" width="720" height="420"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>λ</label>
+        <input type="range" id="metricLambda" min="20" max="300" value="100">
+        <span class="control-value" id="metricLambdaVal">1.00</span>
+      </div>
+      <button class="btn-toggle active" id="metricShowGrid">show grid</button>
+      <button class="btn-toggle" id="metricShowGeodesic">show geodesics</button>
+    </div>
+  </div>
+
+  <p class="insight">
+    Even before topology changes, ambient deformation already changes what it means for an object to "sit" in a world.
+  </p>
+</section>
+
+
+<!-- ======================== EXAMPLE 2 ======================== -->
+<section class="essay-section" id="sec-ex2">
+  <div class="section-number">§ 3b — Example 2</div>
+  <h2>Topological Ambient Deformation</h2>
+
+  <p>
+    Let \(E_0 = D^2\) (the unit disk). Remove a centered disk of radius \(\rho\):
+  </p>
+  <div class="math-block">
+    \[E_\rho = D^2 \setminus \overline{D_\rho(0)}, \qquad 0 < \rho < 1\]
+  </div>
+  <p>The ambient topology changes from simply connected to annular:
+  \(\beta_1(E_0) = 0\), \(\beta_1(E_\rho) = 1\).
+  Nothing about \(M\) had to change first — the world changed by introducing a hole.</p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">obstacle insertion — topology of the ambient</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="obstacleCanvas" width="720" height="420"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>ρ (obstacle radius)</label>
+        <input type="range" id="obstacleRho" min="0" max="85" value="0">
+        <span class="control-value" id="obstacleRhoVal">0.00</span>
+      </div>
+      <button class="btn-toggle active" id="obstacleShowFlow">show flow</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================== EXAMPLE 3 ======================== -->
+<section class="essay-section" id="sec-ex3">
+  <div class="section-number">§ 3c — Example 3</div>
+  <h2>Nested Channel Worlds</h2>
+
+  <p>
+    Take a nested family \(\Omega_0 \supset \Omega_1 \supset \Omega_2 \supset \cdots\) formed by adding barriers.
+    Fix a graph-like skeleton \(\Gamma\). The moduli problem becomes:
+  </p>
+  <p class="insight">
+    Not only "how can the object vary?" but "through what hierarchy of ambient worlds can this object be induced or stabilized?"
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">tower of nested channel worlds</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="nestedCanvas" width="720" height="420"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>barrier level j</label>
+        <input type="range" id="nestedLevel" min="0" max="5" value="0" step="1">
+        <span class="control-value" id="nestedLevelVal">Ω₀</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================== SECTION 4 ======================== -->
+<section class="essay-section" id="sec-category">
+  <div class="section-number">§ 4</div>
+  <h2>Category-Theoretic Lift</h2>
+
+  <h3>4.1 — A 2-Category of Ambient Realizations</h3>
+  <p>
+    Define a 2-category \(\mathsf{AmbRel}\) whose objects are ambient realizations \(X = (M, E, i, \sigma)\),
+    whose 1-morphisms are commuting squares pairing an object map \(f\) with a world map \(g\),
+    and whose 2-morphisms are isotopies between such squares.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">2-category AmbRel — morphism structure</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="categoryCanvas" width="720" height="380"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>isotopy t</label>
+        <input type="range" id="catT" min="0" max="100" value="0">
+        <span class="control-value" id="catTVal">0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>4.2 — Open Ambient Systems as Structured Cospans</h3>
+  <p>
+    An open ambient realization is a structured cospan
+    \(L(B_{\mathrm{in}}) \to E \leftarrow L(B_{\mathrm{out}})\)
+    decorated by an embedded object, ambient data, and optionally a PDE.
+    The apex is the mold/world; the feet are its ports.
+  </p>
+</section>
+
+<!-- ======================== CAST/FILL ======================== -->
+<section class="essay-section" id="sec-castfill">
+  <div class="section-number">§ 4.3</div>
+  <h2>Cast / Fill Duality</h2>
+
+  <p>
+    The mold/cast duality suggests an adjoint-like pair:
+  </p>
+  <div class="math-block">
+    \[\mathsf{Cast} : \mathsf{Real} \rightleftarrows \mathsf{Mold} : \mathsf{Fill}\]
+  </div>
+  <p>
+    \(\mathsf{Cast}\) extracts the thickened complement. \(\mathsf{Fill}\) solves the variational filling problem.
+    The desired universal property: first world-formation, then object-realization.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">Cast ⊣ Fill adjunction — mold/cast animation</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="castFillCanvas" width="720" height="360"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>phase</label>
+        <input type="range" id="castFillPhase" min="0" max="100" value="0">
+        <span class="control-value" id="castFillPhaseVal">object</span>
+      </div>
+      <button class="btn-toggle" id="castFillAnimate">▶ animate cycle</button>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================== SECTION 5 ======================== -->
+<section class="essay-section" id="sec-fluid">
+  <div class="section-number">§ 5</div>
+  <h2>Fluid-Dynamical Lift</h2>
+
+  <p>
+    Let \(D\) be a fixed computational box and \(\phi(x,t) \in [0,1]\) encode the ambient channel world.
+    Solve the penalized Navier–Stokes on all of \(D\):
+  </p>
+  <div class="math-block">
+    \[\partial_t u + (u \cdot \nabla)u = -\nabla p + \nu \Delta u - \kappa(\phi)\, u + f, \qquad \nabla \cdot u = 0\]
+  </div>
+  <p>
+    The ambient channel field \(\phi\) is the primary variable. The realized flow is what fills the mold.
+    And the world itself can evolve:
+  </p>
+  <div class="math-block">
+    \[\tau\, \partial_t \phi = -\frac{\delta \mathcal{J}}{\delta \phi} + \eta\, \mathcal{S}(u, \omega)\]
+  </div>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">phase field φ with penalized flow</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="fluidCanvas" width="720" height="420"></canvas>
+    </div>
+    <div class="viz-controls">
+      <div class="control-group">
+        <label>κ (penalization)</label>
+        <input type="range" id="fluidKappa" min="0" max="100" value="50">
+        <span class="control-value" id="fluidKappaVal">5.0</span>
+      </div>
+      <div class="control-group">
+        <label>η (feedback)</label>
+        <input type="range" id="fluidEta" min="0" max="100" value="30">
+        <span class="control-value" id="fluidEtaVal">0.30</span>
+      </div>
+      <button class="btn-toggle" id="fluidRun">▶ run simulation</button>
+      <button class="btn-toggle" id="fluidReset">↺ reset</button>
+    </div>
+  </div>
+
+  <p class="insight">
+    The fluid reshapes its ambient world, and the ambient world channels the flow. This is the two-phase story: ambient geometry and realized dynamics in mutual feedback.
+  </p>
+</section>
+
+
+<!-- ======================== SECTION 6 ======================== -->
+<section class="essay-section" id="sec-directions">
+  <div class="section-number">§ 6</div>
+  <h2>Research Directions</h2>
+
+  <h3>A — Complement-Sensitive Moduli</h3>
+  <p>
+    The correct moduli space is not just \(\mathrm{Def}(M \hookrightarrow E)\) but
+    \(\mathrm{Def}^{\mathrm{amb}}(M \hookrightarrow E, \sigma)\),
+    where two realizations are equivalent only after comparing both embedding data and negative-space profiles.
+  </p>
+
+  <h3>B — Double-Basis Normal Form</h3>
+  <p>
+    Near a regular realization, mixed deformations should split into object modes, ambient modes, and gauge modes —
+    making "basis of the object" and "basis of the world" mathematically sharp.
+  </p>
+
+  <h3>C — Phase-Switch Factorization</h3>
+  <p>
+    Many realization problems may factor through
+  </p>
+  <div class="math-block">
+    \[\text{object} \xrightarrow{\mathsf{Cast}} \text{mold/world} \xrightarrow{\mathsf{Fill}} \text{realized object}\]
+  </div>
+  <p>
+    If that holds, negative space is not merely complementary. It is the main computational state.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <div class="viz-icon"></div>
+      <span class="viz-title">synthesis — the formal core</span>
+    </div>
+    <div class="viz-body">
+      <canvas id="synthesisCanvas" width="720" height="300"></canvas>
+    </div>
+  </div>
+
+  <div style="margin-top:48px; padding-top:32px; border-top:1px solid var(--border); text-align:center;">
+    <p style="color:var(--text-muted); font-size:0.85rem; font-style:italic;">
+      An interactive exploration of ambient deformation theory.<br>
+      Visualizations by Claude · Mathematical content from the original sketch.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+// ====== KATEX ======
+if (typeof renderMathInElement !== 'undefined') {
+  renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '\\[', right: '\\]', display: true},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '$', right: '$', display: false}
+    ],
+    throwOnError: false
+  });
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof renderMathInElement !== 'undefined') {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\\[', right: '\\]', display: true},
+          {left: '\\(', right: '\\)', display: false},
+          {left: '$', right: '$', display: false}
+        ],
+        throwOnError: false
+      });
+    }
+  });
+}
+
+// ====== COLORS ======
+const C = {
+  bg: '#0a0a0f',
+  card: '#12121a',
+  amber: '#d4a574',
+  amberDim: '#8a6a44',
+  teal: '#5ab4ac',
+  tealDim: '#3a7a74',
+  lavender: '#9b8ec4',
+  red: '#e06c75',
+  green: '#98c379',
+  text: '#e8e0d4',
+  textSec: '#9a9284',
+  muted: '#5a5448',
+  grid: '#1e1e2e',
+  gridBright: '#2a2a3f'
+};
+
+// ====== UTILITIES ======
+function getCtx(id) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  return { ctx, w: rect.width, h: rect.height, canvas };
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
+
+// ====== SCROLL/NAV ======
+const sections = document.querySelectorAll('.essay-section, .hero');
+const navLinks = document.querySelectorAll('.nav-item a');
+const progressBar = document.getElementById('progress');
+
+function updateScroll() {
+  const scrollTop = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (scrollTop / docH * 100) + '%';
+
+  sections.forEach(s => {
+    const rect = s.getBoundingClientRect();
+    if (rect.top < window.innerHeight * 0.8) s.classList.add('visible');
+  });
+
+  let current = '';
+  sections.forEach(s => {
+    if (s.getBoundingClientRect().top < 200) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', updateScroll);
+updateScroll();
+
+// Mobile nav
+document.getElementById('navToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+navLinks.forEach(a => a.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+}));
+
+
+// ====================================================================
+// VIZ 1: HERO — Mold/Cast Duality
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('heroCanvas');
+  const slider = document.getElementById('heroPhase');
+  const valEl = document.getElementById('heroPhaseVal');
+  const animBtn = document.getElementById('heroAnimate');
+  let animating = false, animT = 0;
+
+  function drawShape(cx, cy, r, t) {
+    // A star-like shape that morphs
+    const pts = [];
+    const n = 6;
+    for (let i = 0; i < 120; i++) {
+      const a = (i / 120) * Math.PI * 2;
+      const k = Math.floor(i / 120 * n);
+      const localA = (i / 120 * n - k) * Math.PI * 2 / n;
+      const wobble = 1 + 0.3 * Math.sin(n * a) * (1 - t) + 0.15 * Math.sin(3 * a + t * 2);
+      pts.push({x: cx + r * wobble * Math.cos(a), y: cy + r * wobble * Math.sin(a)});
+    }
+    return pts;
+  }
+
+  function draw() {
+    const t = parseFloat(slider.value) / 100;
+    ctx.clearRect(0, 0, w, h);
+
+    // Labels
+    if (t < 0.33) valEl.textContent = 'object';
+    else if (t < 0.66) valEl.textContent = 'cast';
+    else valEl.textContent = 'fill';
+
+    const cx1 = w * 0.25, cx2 = w * 0.75, cy = h * 0.5;
+    const R = Math.min(w * 0.14, h * 0.35);
+
+    // Left: object view
+    const pts = drawShape(cx1, cy, R, t);
+
+    // Draw ambient box left
+    ctx.fillStyle = C.card;
+    ctx.fillRect(cx1 - R * 1.8, cy - R * 1.6, R * 3.6, R * 3.2);
+    ctx.strokeStyle = C.amberDim;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx1 - R * 1.8, cy - R * 1.6, R * 3.6, R * 3.2);
+
+    // Negative space (complement) highlight based on t
+    if (t > 0.1) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, t * 1.5);
+      ctx.beginPath();
+      ctx.rect(cx1 - R * 1.8, cy - R * 1.6, R * 3.6, R * 3.2);
+      // Cut out the shape
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(90,180,172,0.12)';
+      ctx.fill('evenodd');
+      ctx.restore();
+    }
+
+    // Draw shape
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+
+    const objAlpha = 1 - Math.max(0, (t - 0.3) / 0.4);
+    ctx.fillStyle = `rgba(212,165,116,${0.3 * objAlpha})`;
+    ctx.fill();
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = lerp(1, 0.3, clamp((t - 0.2) / 0.3, 0, 1));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Right: the inverse view — mold
+    const moldAlpha = clamp((t - 0.2) / 0.5, 0, 1);
+    if (moldAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = moldAlpha;
+
+      // Ambient box right
+      ctx.fillStyle = 'rgba(90,180,172,0.08)';
+      ctx.fillRect(cx2 - R * 1.8, cy - R * 1.6, R * 3.6, R * 3.2);
+      ctx.strokeStyle = C.teal;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx2 - R * 1.8, cy - R * 1.6, R * 3.6, R * 3.2);
+
+      // Draw the mold (complement filled, object hollow)
+      ctx.beginPath();
+      ctx.rect(cx2 - R * 1.8, cy - R * 1.6, R * 3.6, R * 3.2);
+      const offset = cx2 - cx1;
+      ctx.moveTo(pts[0].x + offset, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x + offset, pts[i].y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(90,180,172,0.2)';
+      ctx.fill('evenodd');
+
+      // If in fill phase, show filling
+      const fillT = clamp((t - 0.6) / 0.4, 0, 1);
+      if (fillT > 0) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x + offset, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x + offset, pts[i].y);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(152,195,121,${0.35 * fillT})`;
+        ctx.fill();
+        ctx.strokeStyle = C.green;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Arrow
+    const arrowAlpha = clamp((t - 0.1) / 0.3, 0, 1);
+    if (arrowAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = arrowAlpha;
+      const ax = w * 0.44, ay = cy;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + w * 0.12, ay);
+      ctx.strokeStyle = C.textSec;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ax + w * 0.12 + 6, ay);
+      ctx.lineTo(ax + w * 0.12 - 4, ay - 5);
+      ctx.lineTo(ax + w * 0.12 - 4, ay + 5);
+      ctx.fillStyle = C.textSec;
+      ctx.fill();
+
+      // Labels
+      ctx.font = '12px "JetBrains Mono"';
+      ctx.fillStyle = C.textSec;
+      ctx.textAlign = 'center';
+      const labelY = cy + R * 1.6 + 20;
+      ctx.fillText('object in world', cx1, labelY);
+      ctx.fillText(t < 0.5 ? 'Cast →' : '← Fill', w * 0.5, labelY);
+      ctx.fillText('mold / negative space', cx2, labelY);
+      ctx.restore();
+    }
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+
+  let animFrame;
+  animBtn.addEventListener('click', () => {
+    animating = !animating;
+    animBtn.textContent = animating ? '⏸ pause' : '▶ animate';
+    animBtn.classList.toggle('active', animating);
+    if (animating) tickAnim();
+    else cancelAnimationFrame(animFrame);
+  });
+
+  function tickAnim() {
+    if (!animating) return;
+    animT += 0.004;
+    if (animT > 1) animT = 0;
+    slider.value = animT * 100;
+    draw();
+    animFrame = requestAnimationFrame(tickAnim);
+  }
+})();
+
+
+// ====================================================================
+// VIZ 2: Object vs Ambient Deformation
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('objAmbCanvas');
+  const slider = document.getElementById('objAmbT');
+  const valEl = document.getElementById('objAmbTVal');
+  const btnObj = document.getElementById('btnObjDef');
+  const btnAmb = document.getElementById('btnAmbDef');
+  let mode = 'object';
+
+  btnObj.addEventListener('click', () => { mode = 'object'; btnObj.classList.add('active'); btnAmb.classList.remove('active'); draw(); });
+  btnAmb.addEventListener('click', () => { mode = 'ambient'; btnAmb.classList.add('active'); btnObj.classList.remove('active'); draw(); });
+
+  function draw() {
+    const t = parseFloat(slider.value) / 100;
+    valEl.textContent = t.toFixed(2);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) * 0.28;
+
+    // Draw grid (ambient metric)
+    const gridN = 12;
+    for (let i = -gridN; i <= gridN; i++) {
+      for (let j = -gridN; j <= gridN; j++) {
+        const gx = cx + i * (R * 2.5 / gridN);
+        const gy = cy + j * (R * 2.5 / gridN);
+        if (gx < 0 || gx > w || gy < 0 || gy > h) continue;
+
+        let px = gx, py = gy;
+        if (mode === 'ambient') {
+          // Ambient deformation: warp the grid
+          const dx = gx - cx, dy = gy - cy;
+          const r = Math.sqrt(dx*dx + dy*dy);
+          const a = Math.atan2(dy, dx);
+          const warpR = r * (1 + t * 0.3 * Math.sin(3 * a + t * 2));
+          px = cx + warpR * Math.cos(a);
+          py = cy + warpR * Math.sin(a);
+        }
+
+        ctx.beginPath();
+        ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = C.grid;
+        ctx.fill();
+      }
+    }
+
+    // Draw grid lines
+    ctx.strokeStyle = C.grid;
+    ctx.lineWidth = 0.5;
+    // Radial lines
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+      ctx.beginPath();
+      for (let r = 0; r <= R * 1.5; r += 3) {
+        let px, py;
+        if (mode === 'ambient') {
+          const warpR = r * (1 + t * 0.3 * Math.sin(3 * a + t * 2));
+          px = cx + warpR * Math.cos(a);
+          py = cy + warpR * Math.sin(a);
+        } else {
+          px = cx + r * Math.cos(a);
+          py = cy + r * Math.sin(a);
+        }
+        if (r === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    // Concentric circles
+    for (let r = R * 0.3; r <= R * 1.5; r += R * 0.3) {
+      ctx.beginPath();
+      for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.05) {
+        let pr, pa = a;
+        if (mode === 'ambient') {
+          pr = r * (1 + t * 0.3 * Math.sin(3 * a + t * 2));
+        } else {
+          pr = r;
+        }
+        const px = cx + pr * Math.cos(a);
+        const py = cy + pr * Math.sin(a);
+        if (a === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    // Draw the object (circle/ellipse)
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.03) {
+      let px, py;
+      if (mode === 'object') {
+        // Object deformation: the circle deforms into an ellipse
+        const rx = R * (1 + t * 0.4);
+        const ry = R * (1 - t * 0.25);
+        px = cx + rx * Math.cos(a) + t * 40 * Math.sin(2 * a);
+        py = cy + ry * Math.sin(a);
+      } else {
+        // Ambient deformation: circle stays put
+        px = cx + R * Math.cos(a);
+        py = cy + R * Math.sin(a);
+      }
+      if (a === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(212,165,116,0.12)';
+    ctx.fill();
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Labels
+    ctx.font = '12px "JetBrains Mono"';
+    ctx.fillStyle = C.textSec;
+    ctx.textAlign = 'left';
+    ctx.fillText(mode === 'object' ? 'σ₀ fixed, i_t varies' : 'i₀ fixed, σ_t varies', 16, 24);
+
+    ctx.fillStyle = mode === 'object' ? C.amber : C.teal;
+    ctx.fillText(mode === 'object' ? 'object deformation' : 'ambient deformation', 16, h - 16);
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+})();
+
+
+// ====================================================================
+// VIZ 3: Negative-Space Profile
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('negSpaceCanvas');
+  const epsSlider = document.getElementById('negEps');
+  const epsVal = document.getElementById('negEpsVal');
+  let shape = 'circle';
+
+  document.getElementById('negCircle').addEventListener('click', function() {
+    shape = 'circle'; updateBtns(); draw();
+  });
+  document.getElementById('negTrefoil').addEventListener('click', function() {
+    shape = 'trefoil'; updateBtns(); draw();
+  });
+  document.getElementById('negFigure8').addEventListener('click', function() {
+    shape = 'figure8'; updateBtns(); draw();
+  });
+
+  function updateBtns() {
+    document.getElementById('negCircle').classList.toggle('active', shape === 'circle');
+    document.getElementById('negTrefoil').classList.toggle('active', shape === 'trefoil');
+    document.getElementById('negFigure8').classList.toggle('active', shape === 'figure8');
+  }
+
+  function getShapePoints(cx, cy, R) {
+    const pts = [];
+    const n = 200;
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * Math.PI * 2;
+      let x, y;
+      if (shape === 'circle') {
+        x = cx + R * Math.cos(t);
+        y = cy + R * Math.sin(t);
+      } else if (shape === 'trefoil') {
+        const r = R * 0.5 * (1 + 0.6 * Math.cos(3 * t));
+        x = cx + r * Math.cos(t);
+        y = cy + r * Math.sin(t);
+      } else {
+        const r = R * 0.6 * Math.sqrt(Math.abs(Math.cos(2 * t)) + 0.3);
+        x = cx + r * Math.cos(t);
+        y = cy + r * Math.sin(t);
+      }
+      pts.push({x, y});
+    }
+    return pts;
+  }
+
+  function draw() {
+    const eps = parseFloat(epsSlider.value);
+    epsVal.textContent = (eps / 100).toFixed(2);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) * 0.3;
+    const E_R = R * 1.5; // ambient disk radius
+
+    // Draw ambient E
+    ctx.beginPath();
+    ctx.arc(cx, cy, E_R, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(90,180,172,0.06)';
+    ctx.fill();
+    ctx.strokeStyle = C.tealDim;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const pts = getShapePoints(cx, cy, R);
+
+    // Draw negative space C_ε(X) = E \ N_ε(M)
+    // We'll paint it by filling the ambient, then cutting out the ε-neighborhood
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, E_R, 0, Math.PI * 2);
+
+    // Create the ε-thickened shape by drawing offset contours
+    // For simplicity, we'll use a thick stroke clip approach
+    ctx.fillStyle = 'rgba(90,180,172,0.15)';
+    ctx.fill();
+
+    // Now draw the tubular neighborhood
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.lineWidth = eps * 2;
+    ctx.strokeStyle = C.card;
+    ctx.stroke();
+    ctx.fillStyle = C.card;
+    ctx.fill();
+    ctx.restore();
+
+    // Draw the object M itself
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw ε boundary (dashed)
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.lineWidth = eps * 2;
+    ctx.strokeStyle = 'rgba(212,165,116,0.15)';
+    ctx.stroke();
+
+    // Labels
+    ctx.font = '12px "JetBrains Mono"';
+    ctx.fillStyle = C.amber;
+    ctx.textAlign = 'center';
+    ctx.fillText('M', cx, cy - 6);
+
+    ctx.fillStyle = C.teal;
+    ctx.fillText('C_ε(X)', cx + E_R * 0.6, cy - E_R * 0.6);
+
+    ctx.fillStyle = C.tealDim;
+    ctx.fillText('E', cx + E_R + 14, cy);
+  }
+
+  epsSlider.addEventListener('input', draw);
+  draw();
+})();
+
+
+// ====================================================================
+// VIZ 4: Double Tangent Space
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('tangentCanvas');
+  const objSlider = document.getElementById('tangObj');
+  const ambSlider = document.getElementById('tangAmb');
+  const objVal = document.getElementById('tangObjVal');
+  const ambVal = document.getElementById('tangAmbVal');
+
+  function draw() {
+    const tObj = parseFloat(objSlider.value) / 100;
+    const tAmb = parseFloat(ambSlider.value) / 100;
+    objVal.textContent = tObj.toFixed(2);
+    ambVal.textContent = tAmb.toFixed(2);
+
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) * 0.25;
+
+    // Reference circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = C.muted;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Deformed circle: object mode = radial oscillation, ambient mode = angular squeeze
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI * 2 + 0.03; a += 0.03) {
+      const objR = R * (1 + tObj * 0.35 * Math.cos(2 * a));
+      const ambWarp = 1 + tAmb * 0.3 * Math.sin(3 * a);
+      const r = objR * ambWarp;
+      const x = cx + r * Math.cos(a);
+      const y = cy + r * Math.sin(a);
+      if (a === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(212,165,116,0.1)';
+    ctx.fill();
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw tangent vectors at a sample point
+    const sampleA = Math.PI / 4;
+    const sampleR = R * (1 + tObj * 0.35 * Math.cos(2 * sampleA)) * (1 + tAmb * 0.3 * Math.sin(3 * sampleA));
+    const sx = cx + sampleR * Math.cos(sampleA);
+    const sy = cy + sampleR * Math.sin(sampleA);
+
+    // Object tangent (radial direction)
+    const objLen = 50 * Math.abs(tObj) + 10;
+    const objDir = tObj > 0 ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + objDir * objLen * Math.cos(sampleA), sy + objDir * objLen * Math.sin(sampleA));
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Arrow head
+    const oex = sx + objDir * objLen * Math.cos(sampleA);
+    const oey = sy + objDir * objLen * Math.sin(sampleA);
+    ctx.beginPath();
+    ctx.arc(oex, oey, 3, 0, Math.PI * 2);
+    ctx.fillStyle = C.amber;
+    ctx.fill();
+
+    // Ambient tangent (tangential direction)
+    const ambLen = 50 * Math.abs(tAmb) + 10;
+    const ambDir = tAmb > 0 ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx - ambDir * ambLen * Math.sin(sampleA), sy + ambDir * ambLen * Math.cos(sampleA));
+    ctx.strokeStyle = C.teal;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const aex = sx - ambDir * ambLen * Math.sin(sampleA);
+    const aey = sy + ambDir * ambLen * Math.cos(sampleA);
+    ctx.beginPath();
+    ctx.arc(aex, aey, 3, 0, Math.PI * 2);
+    ctx.fillStyle = C.teal;
+    ctx.fill();
+
+    // Sample point
+    ctx.beginPath();
+    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = C.text;
+    ctx.fill();
+
+    // Labels
+    ctx.font = '11px "JetBrains Mono"';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = C.amber;
+    ctx.fillText('T^obj (object mode)', 16, 24);
+    ctx.fillStyle = C.teal;
+    ctx.fillText('T^amb (ambient mode)', 16, 40);
+    ctx.fillStyle = C.text;
+    ctx.fillText('T^tot = T^obj ⊕ T^amb', 16, h - 16);
+  }
+
+  objSlider.addEventListener('input', draw);
+  ambSlider.addEventListener('input', draw);
+  draw();
+})();
+
+
+// ====================================================================
+// VIZ 5: Metric-Only Ambient Deformation (Example 1)
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('metricCanvas');
+  const lambdaSlider = document.getElementById('metricLambda');
+  const lambdaVal = document.getElementById('metricLambdaVal');
+  const btnGrid = document.getElementById('metricShowGrid');
+  const btnGeo = document.getElementById('metricShowGeodesic');
+  let showGrid = true, showGeodesic = false;
+
+  btnGrid.addEventListener('click', () => { showGrid = !showGrid; btnGrid.classList.toggle('active', showGrid); draw(); });
+  btnGeo.addEventListener('click', () => { showGeodesic = !showGeodesic; btnGeo.classList.toggle('active', showGeodesic); draw(); });
+
+  function draw() {
+    const lambda = parseFloat(lambdaSlider.value) / 100;
+    lambdaVal.textContent = lambda.toFixed(2);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const scale = Math.min(w, h) * 0.18;
+
+    // In the metric g_λ = dr² + λ²r²dθ², we visualize by mapping
+    // (r, θ) → (r cos(λθ), r sin(λθ)) to show the angular scaling
+    // Actually let's visualize the metric by drawing coordinate lines
+    // in the (r,θ) plane, where θ-circles have circumference 2πλr
+
+    if (showGrid) {
+      // Radial lines
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 12) {
+        ctx.beginPath();
+        for (let r = 0; r <= 2.2; r += 0.02) {
+          // Under g_λ, the angular coordinate is scaled by λ
+          const visA = a * lambda;
+          const px = cx + r * scale * Math.cos(visA);
+          const py = cy + r * scale * Math.sin(visA);
+          if (r === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+
+      // Concentric circles
+      for (let r = 0.4; r <= 2.2; r += 0.4) {
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.03) {
+          const visA = a * lambda;
+          const px = cx + r * scale * Math.cos(visA);
+          const py = cy + r * scale * Math.sin(visA);
+          if (a === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = r > 0.95 && r < 1.05 ? C.amberDim : C.grid;
+        ctx.lineWidth = r > 0.95 && r < 1.05 ? 1.5 : 0.7;
+        ctx.stroke();
+      }
+    }
+
+    // The fixed circle at r = 1
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.03) {
+      const visA = a * lambda;
+      const px = cx + 1 * scale * Math.cos(visA);
+      const py = cy + 1 * scale * Math.sin(visA);
+      if (a === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = C.amber;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Geodesics (radial lines are geodesics of g_λ)
+    if (showGeodesic) {
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + 0.3;
+        ctx.beginPath();
+        const visA = a * lambda;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + 2.5 * scale * Math.cos(visA), cy + 2.5 * scale * Math.sin(visA));
+        ctx.strokeStyle = C.green;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Labels
+    ctx.font = '12px "JetBrains Mono"';
+    ctx.fillStyle = C.textSec;
+    ctx.textAlign = 'left';
+    ctx.fillText(`g_λ = dr² + ${lambda.toFixed(2)}² r² dθ²`, 16, 24);
+    ctx.fillStyle = C.amber;
+    ctx.fillText('S¹ (fixed as a set)', 16, h - 16);
+
+    if (lambda !== 1) {
+      ctx.fillStyle = C.teal;
+      ctx.textAlign = 'right';
+      ctx.fillText(lambda < 1 ? 'angular compression' : 'angular expansion', w - 16, 24);
+    }
+  }
+
+  lambdaSlider.addEventListener('input', draw);
+  draw();
+})();
+
+
+// ====================================================================
+// VIZ 6: Obstacle Insertion (Example 2)
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('obstacleCanvas');
+  const rhoSlider = document.getElementById('obstacleRho');
+  const rhoVal = document.getElementById('obstacleRhoVal');
+  const btnFlow = document.getElementById('obstacleShowFlow');
+  let showFlow = true;
+  let particles = [];
+
+  btnFlow.addEventListener('click', () => { showFlow = !showFlow; btnFlow.classList.toggle('active', showFlow); draw(); });
+
+  // Initialize particles
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      a: Math.random() * Math.PI * 2,
+      r: 0.3 + Math.random() * 0.6,
+      speed: 0.003 + Math.random() * 0.005
+    });
+  }
+
+  function draw() {
+    const rho = parseFloat(rhoSlider.value) / 100;
+    rhoVal.textContent = rho.toFixed(2);
+    ctx.clearRect(0, 0, w, h);
+
+    const cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) * 0.38;
+
+    // Outer disk E
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(90,180,172,0.05)';
+    ctx.fill();
+    ctx.strokeStyle = C.tealDim;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Inner obstacle D_ρ(0)
+    if (rho > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, rho * R, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(224,108,117,0.15)';
+      ctx.fill();
+      ctx.strokeStyle = C.red;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Hatching
+      ctx.save();
+      ctx.clip();
+      for (let d = -rho * R * 2; d < rho * R * 2; d += 8) {
+        ctx.beginPath();
+        ctx.moveTo(cx + d, cy - rho * R);
+        ctx.lineTo(cx + d + rho * R, cy + rho * R);
+        ctx.strokeStyle = 'rgba(224,108,117,0.2)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Flow particles
+    if (showFlow) {
+      particles.forEach(p => {
+        p.a += p.speed;
+        if (p.a > Math.PI * 2) p.a -= Math.PI * 2;
+
+        // Push particles away from obstacle
+        if (rho > 0 && p.r < rho + 0.08) {
+          p.r = rho + 0.08 + Math.random() * 0.05;
+        }
+
+        const px = cx + p.r * R * Math.cos(p.a);
+        const py = cy + p.r * R * Math.sin(p.a);
+
+        // Trail
+        for (let k = 1; k <= 4; k++) {
+          const ta = p.a - k * p.speed * 3;
+          const tx = cx + p.r * R * Math.cos(ta);
+          const ty = cy + p.r * R * Math.sin(ta);
+          ctx.beginPath();
+          ctx.arc(tx, ty, 1.5 - k * 0.3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(90,180,172,${0.3 - k * 0.06})`;
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fillStyle = C.teal;
+        ctx.fill();
+      });
+    }
+
+    // Topology info
+    ctx.font = '12px "JetBrains Mono"';
+    ctx.fillStyle = C.textSec;
+    ctx.textAlign = 'left';
+    ctx.fillText(`E_ρ = D² \\ D̄_${rho.toFixed(2)}(0)`, 16, 24);
+
+    ctx.fillStyle = rho > 0 ? C.teal : C.muted;
+    ctx.fillText(`β₁ = ${rho > 0 ? '1' : '0'}`, 16, 44);
+
+    if (rho > 0) {
+      ctx.fillStyle = C.teal;
+      ctx.textAlign = 'right';
+      ctx.fillText('annular — nontrivial loop', w - 16, 24);
+    } else {
+      ctx.fillStyle = C.muted;
+      ctx.textAlign = 'right';
+      ctx.fillText('simply connected', w - 16, 24);
+    }
+  }
+
+  rhoSlider.addEventListener('input', draw);
+
+  let animFrame;
+  function animate() {
+    draw();
+    animFrame = requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+
+// ====================================================================
+// VIZ 7: Nested Channel Worlds (Example 3)
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('nestedCanvas');
+  const levelSlider = document.getElementById('nestedLevel');
+  const levelVal = document.getElementById('nestedLevelVal');
+
+  const subscripts = ['₀', '₁', '₂', '₃', '₄', '₅'];
+
+  // Barriers at each level
+  const barriers = [
+    [], // level 0 - no barriers
+    [{cx: 0.3, cy: 0.4, rx: 0.06, ry: 0.25}],
+    [{cx: 0.3, cy: 0.4, rx: 0.06, ry: 0.25}, {cx: 0.7, cy: 0.6, rx: 0.06, ry: 0.22}],
+    [{cx: 0.3, cy: 0.4, rx: 0.06, ry: 0.25}, {cx: 0.7, cy: 0.6, rx: 0.06, ry: 0.22}, {cx: 0.5, cy: 0.2, rx: 0.18, ry: 0.04}],
+    [{cx: 0.3, cy: 0.4, rx: 0.06, ry: 0.25}, {cx: 0.7, cy: 0.6, rx: 0.06, ry: 0.22}, {cx: 0.5, cy: 0.2, rx: 0.18, ry: 0.04}, {cx: 0.5, cy: 0.78, rx: 0.2, ry: 0.04}],
+    [{cx: 0.3, cy: 0.4, rx: 0.06, ry: 0.25}, {cx: 0.7, cy: 0.6, rx: 0.06, ry: 0.22}, {cx: 0.5, cy: 0.2, rx: 0.18, ry: 0.04}, {cx: 0.5, cy: 0.78, rx: 0.2, ry: 0.04}, {cx: 0.5, cy: 0.5, rx: 0.08, ry: 0.08}]
+  ];
+
+  function draw() {
+    const level = parseInt(levelSlider.value);
+    levelVal.textContent = 'Ω' + subscripts[level];
+    ctx.clearRect(0, 0, w, h);
+
+    const pad = 40;
+    const bw = w - pad * 2;
+    const bh = h - pad * 2;
+
+    // Outer domain
+    ctx.fillStyle = 'rgba(90,180,172,0.05)';
+    ctx.fillRect(pad, pad, bw, bh);
+    ctx.strokeStyle = C.tealDim;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(pad, pad, bw, bh);
+
+    // Draw barriers
+    const currentBarriers = barriers[level];
+    currentBarriers.forEach((b, idx) => {
+      const bx = pad + b.cx * bw;
+      const by = pad + b.cy * bh;
+      const brx = b.rx * bw;
+      const bry = b.ry * bh;
+
+      ctx.beginPath();
+      ctx.ellipse(bx, by, brx, bry, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(224,108,117,0.2)';
+      ctx.fill();
+      ctx.strokeStyle = C.red;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+
+    // Draw the skeleton Γ (a simple graph connecting some points)
+    const nodes = [
+      {x: 0.15, y: 0.5},
+      {x: 0.35, y: 0.3},
+      {x: 0.5, y: 0.5},
+      {x: 0.65, y: 0.35},
+      {x: 0.85, y: 0.5},
+      {x: 0.5, y: 0.7},
+      {x: 0.35, y: 0.65}
+    ];
+    const edges = [[0,1],[1,2],[2,3],[3,4],[2,5],[5,6],[6,0]];
+
+    edges.forEach(([a, b]) => {
+      ctx.beginPath();
+      ctx.moveTo(pad + nodes[a].x * bw, pad + nodes[a].y * bh);
+      ctx.lineTo(pad + nodes[b].x * bw, pad + nodes[b].y * bh);
+      ctx.strokeStyle = C.amber;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    nodes.forEach(n => {
+      ctx.beginPath();
+      ctx.arc(pad + n.x * bw, pad + n.y * bh, 4, 0, Math.PI * 2);
+      ctx.fillStyle = C.amber;
+      ctx.fill();
+    });
+
+    // Info
+    ctx.font = '12px "JetBrains Mono"';
+    ctx.fillStyle = C.textSec;
+    ctx.textAlign = 'left';
+    ctx.fillText(`Ω${subscripts[level]} — ${level} barrier${level !== 1 ? 's' : ''}`, 16, 24);
+    ctx.fillStyle = C.teal;
+    ctx.fillText(`β₁ = ${level}`, 16, 44);
+    ctx.fillStyle = C.amber;
+    ctx.fillText('Γ (skeleton)', w - 100, 24);
+  }
+
+  levelSlider.addEventListener('input', draw);
+  draw();
+})();
+
+
+// ====================================================================
+// VIZ 8: Category AmbRel
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('categoryCanvas');
+  const tSlider = document.getElementById('catT');
+  const tVal = document.getElementById('catTVal');
+
+  function draw() {
+    const t = parseFloat(tSlider.value) / 100;
+    tVal.textContent = t.toFixed(2);
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw the commuting square
+    // M --f--> M'
+    // |        |
+    // i        i'
+    // |        |
+    // E --g--> E'
+
+    const x1 = w * 0.2, x2 = w * 0.55;
+    const y1 = h * 0.2, y2 = h * 0.7;
+    const nodeR = 28;
+
+    // Interpolate positions for isotopy (2-morphism)
+    const x2t = x2 + t * w * 0.2;
+    const y1t = y1 - t * 20 * Math.sin(t * Math.PI);
+
+    // Boxes for objects
+    function drawNode(x, y, label, col) {
+      ctx.beginPath();
+      ctx.arc(x, y, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = C.card;
+      ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.font = '14px "Cormorant Garamond"';
+      ctx.fillStyle = col;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, y);
+    }
+
+    // Arrows
+    function drawArrow(x1, y1, x2, y2, label, col, dashed) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      const nx = dx/len, ny = dy/len;
+      const sx = x1 + nx * nodeR, sy = y1 + ny * nodeR;
+      const ex = x2 - nx * nodeR, ey = y2 - ny * nodeR;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.5;
+      if (dashed) ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Arrowhead
+      const aLen = 8;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - aLen * nx + 4 * ny, ey - aLen * ny - 4 * nx);
+      ctx.lineTo(ex - aLen * nx - 4 * ny, ey - aLen * ny + 4 * nx);
+      ctx.fillStyle = col;
+      ctx.fill();
+
+      // Label
+      ctx.font = '13px "Cormorant Garamond"';
+      ctx.fillStyle = col;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+      ctx.fillText(label, mx - ny * 14, my + nx * 14);
+    }
+
+    // Draw reference square
+    drawArrow(x1, y1t, x2t, y1t, 'f', C.amber, false);
+    drawArrow(x1, y1t, x1, y2, 'i', C.lavender, false);
+    drawArrow(x2t, y1t, x2t, y2, "i'", C.lavender, false);
+    drawArrow(x1, y2, x2t, y2, 'g', C.teal, false);
+
+    drawNode(x1, y1t, 'M', C.amber);
+    drawNode(x2t, y1t, "M'", C.amber);
+    drawNode(x1, y2, 'E', C.teal);
+    drawNode(x2t, y2, "E'", C.teal);
+
+    // Sigma labels
+    ctx.font = '11px "JetBrains Mono"';
+    ctx.fillStyle = C.lavender;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('σ', x1 - nodeR - 16, y2 + nodeR + 4);
+    ctx.fillText("σ'", x2t + nodeR + 4, y2 + nodeR + 4);
+
+    // Compatibility
+    if (t > 0.1) {
+      ctx.fillStyle = C.textSec;
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      ctx.fillText(`g*σ → σ'  (isotopy t = ${t.toFixed(2)})`, w * 0.5, h - 20);
+    }
+
+    // 2-morphism label
+    ctx.fillStyle = C.green;
+    ctx.font = '12px "JetBrains Mono"';
+    ctx.textAlign = 'right';
+    ctx.fillText('2-morphism: isotopy', w - 16, 24);
+  }
+
+  tSlider.addEventListener('input', draw);
+  draw();
+})();
+
+
+// ====================================================================
+// VIZ 9: Cast/Fill Duality
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('castFillCanvas');
+  const slider = document.getElementById('castFillPhase');
+  const valEl = document.getElementById('castFillPhaseVal');
+  const animBtn = document.getElementById('castFillAnimate');
+  let animating = false;
+
+  function getShape(cx, cy, R) {
+    const pts = [];
+    for (let a = 0; a < Math.PI * 2; a += 0.03) {
+      const r = R * (0.7 + 0.3 * Math.cos(3 * a) + 0.1 * Math.sin(5 * a));
+      pts.push({x: cx + r * Math.cos(a), y: cy + r * Math.sin(a)});
+    }
+    return pts;
+  }
+
+  function draw() {
+    const t = parseFloat(slider.value) / 100;
+    ctx.clearRect(0, 0, w, h);
+
+    if (t < 0.33) valEl.textContent = 'object → Cast';
+    else if (t < 0.66) valEl.textContent = 'mold (negative space)';
+    else valEl.textContent = 'Fill → realized';
+
+    const stages = [
+      {cx: w * 0.18, label: 'X = (M, E, i, σ)'},
+      {cx: w * 0.5, label: 'Cast(X) = mold'},
+      {cx: w * 0.82, label: 'Fill(mold) = X\''}
+    ];
+
+    const R = Math.min(w * 0.12, h * 0.3);
+    const cy = h * 0.5;
+
+    stages.forEach((s, idx) => {
+      const boxR = R * 1.6;
+      const alpha = idx === 0 ? clamp(1 - (t - 0.1) / 0.3, 0.3, 1) :
+                    idx === 1 ? clamp(Math.min((t - 0.05) / 0.3, 1 - (t - 0.65) / 0.3), 0.3, 1) :
+                    clamp((t - 0.5) / 0.4, 0.3, 1);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Box
+      ctx.fillStyle = C.card;
+      ctx.fillRect(s.cx - boxR, cy - boxR, boxR * 2, boxR * 2);
+      ctx.strokeStyle = idx === 1 ? C.teal : C.amber;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(s.cx - boxR, cy - boxR, boxR * 2, boxR * 2);
+
+      const pts = getShape(s.cx, cy, R);
+
+      if (idx === 0) {
+        // Object filled
+        ctx.beginPath();
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(212,165,116,0.25)';
+        ctx.fill();
+        ctx.strokeStyle = C.amber;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else if (idx === 1) {
+        // Mold (complement filled)
+        ctx.beginPath();
+        ctx.rect(s.cx - boxR, cy - boxR, boxR * 2, boxR * 2);
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(90,180,172,0.2)';
+        ctx.fill('evenodd');
+        ctx.beginPath();
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.strokeStyle = C.teal;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        // Filled (realized)
+        ctx.beginPath();
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(152,195,121,0.25)';
+        ctx.fill();
+        ctx.strokeStyle = C.green;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Label
+      ctx.font = '10px "JetBrains Mono"';
+      ctx.fillStyle = C.textSec;
+      ctx.textAlign = 'center';
+      ctx.fillText(s.label, s.cx, cy + boxR + 16);
+
+      ctx.restore();
+    });
+
+    // Arrows between stages
+    const arrowY = cy;
+    function drawHArrow(x1, x2, label, col, alpha) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(x1, arrowY);
+      ctx.lineTo(x2, arrowY);
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x2, arrowY);
+      ctx.lineTo(x2 - 6, arrowY - 4);
+      ctx.lineTo(x2 - 6, arrowY + 4);
+      ctx.fillStyle = col;
+      ctx.fill();
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.fillStyle = col;
+      ctx.textAlign = 'center';
+      ctx.fillText(label, (x1 + x2) / 2, arrowY - 12);
+      ctx.restore();
+    }
+
+    const R2 = R * 1.6;
+    drawHArrow(stages[0].cx + R2 + 4, stages[1].cx - R2 - 4, 'Cast', C.teal, clamp(t / 0.3, 0, 1));
+    drawHArrow(stages[1].cx + R2 + 4, stages[2].cx - R2 - 4, 'Fill', C.green, clamp((t - 0.4) / 0.3, 0, 1));
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+
+  let af;
+  animBtn.addEventListener('click', () => {
+    animating = !animating;
+    animBtn.textContent = animating ? '⏸ pause' : '▶ animate cycle';
+    animBtn.classList.toggle('active', animating);
+    if (animating) tick();
+    else cancelAnimationFrame(af);
+  });
+
+  let at = 0;
+  function tick() {
+    if (!animating) return;
+    at += 0.003;
+    if (at > 1) at = 0;
+    slider.value = at * 100;
+    draw();
+    af = requestAnimationFrame(tick);
+  }
+})();
+
+
+// ====================================================================
+// VIZ 10: Fluid-Dynamical Lift
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('fluidCanvas');
+  const kappaSlider = document.getElementById('fluidKappa');
+  const kappaVal = document.getElementById('fluidKappaVal');
+  const etaSlider = document.getElementById('fluidEta');
+  const etaVal = document.getElementById('fluidEtaVal');
+  const runBtn = document.getElementById('fluidRun');
+  const resetBtn = document.getElementById('fluidReset');
+
+  const NX = 72, NY = 42;
+  let phi = [], vx = [], vy = [];
+  let running = false;
+
+  function initField() {
+    phi = [];
+    vx = [];
+    vy = [];
+    for (let j = 0; j < NY; j++) {
+      phi[j] = [];
+      vx[j] = [];
+      vy[j] = [];
+      for (let i = 0; i < NX; i++) {
+        // Initial phi: open channel with two obstacles
+        const cx1 = NX * 0.35, cy1 = NY * 0.4;
+        const cx2 = NX * 0.65, cy2 = NY * 0.6;
+        const r1 = Math.sqrt((i - cx1)**2 + (j - cy1)**2);
+        const r2 = Math.sqrt((i - cx2)**2 + (j - cy2)**2);
+        phi[j][i] = (r1 < 5 || r2 < 4) ? 0.0 : 1.0;
+        vx[j][i] = phi[j][i] > 0.5 ? 0.5 : 0;
+        vy[j][i] = 0;
+      }
+    }
+  }
+
+  initField();
+
+  function step() {
+    const kappa = parseFloat(kappaSlider.value) / 10;
+    const eta = parseFloat(etaSlider.value) / 100;
+    const dt = 0.15;
+    const nu = 0.08;
+
+    // Simple velocity update with penalization
+    const nvx = [], nvy = [];
+    for (let j = 0; j < NY; j++) {
+      nvx[j] = [];
+      nvy[j] = [];
+      for (let i = 0; i < NX; i++) {
+        if (j === 0 || j === NY-1 || i === 0 || i === NX-1) {
+          nvx[j][i] = i === 0 ? 0.4 : 0;
+          nvy[j][i] = 0;
+          continue;
+        }
+
+        // Diffusion (Laplacian)
+        const lapVx = vx[j+1][i] + vx[j-1][i] + vx[j][i+1] + vx[j][i-1] - 4*vx[j][i];
+        const lapVy = vy[j+1][i] + vy[j-1][i] + vy[j][i+1] + vy[j][i-1] - 4*vy[j][i];
+
+        // Penalization: -κ(1-φ)u
+        const pen = kappa * (1 - phi[j][i]);
+
+        nvx[j][i] = vx[j][i] + dt * (nu * lapVx - pen * vx[j][i] + 0.02);
+        nvy[j][i] = vy[j][i] + dt * (nu * lapVy - pen * vy[j][i]);
+
+        // Damping
+        nvx[j][i] *= 0.995;
+        nvy[j][i] *= 0.995;
+      }
+    }
+    vx = nvx;
+    vy = nvy;
+
+    // Phi evolution (feedback)
+    if (eta > 0) {
+      for (let j = 1; j < NY-1; j++) {
+        for (let i = 1; i < NX-1; i++) {
+          const speed = Math.sqrt(vx[j][i]**2 + vy[j][i]**2);
+          // Channels open where flow wants to go
+          phi[j][i] += eta * dt * speed * (1 - phi[j][i]) * 0.5;
+          // Smoothing
+          const lapPhi = phi[j+1][i] + phi[j-1][i] + phi[j][i+1] + phi[j][i-1] - 4*phi[j][i];
+          phi[j][i] += 0.01 * lapPhi;
+          phi[j][i] = clamp(phi[j][i], 0, 1);
+        }
+      }
+    }
+  }
+
+  function draw() {
+    kappaVal.textContent = (parseFloat(kappaSlider.value) / 10).toFixed(1);
+    etaVal.textContent = (parseFloat(etaSlider.value) / 100).toFixed(2);
+
+    ctx.clearRect(0, 0, w, h);
+
+    const cellW = w / NX;
+    const cellH = h / NY;
+
+    // Draw phi field
+    for (let j = 0; j < NY; j++) {
+      for (let i = 0; i < NX; i++) {
+        const p = phi[j][i];
+        const speed = Math.sqrt(vx[j][i]**2 + vy[j][i]**2);
+
+        // Color: obstacle = dark red, fluid = teal scaled by speed
+        let r, g, b;
+        if (p < 0.5) {
+          r = lerp(20, 80, 1 - p * 2);
+          g = lerp(18, 30, 1 - p * 2);
+          b = lerp(28, 45, 1 - p * 2);
+        } else {
+          const s = Math.min(speed * 5, 1);
+          r = lerp(14, 90 * s + 20, p);
+          g = lerp(14, 140 * s + 20, p);
+          b = lerp(22, 130 * s + 30, p);
+        }
+
+        ctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+        ctx.fillRect(i * cellW, j * cellH, cellW + 0.5, cellH + 0.5);
+      }
+    }
+
+    // Draw velocity field arrows (sparse)
+    const skip = 4;
+    for (let j = skip; j < NY - skip; j += skip) {
+      for (let i = skip; i < NX - skip; i += skip) {
+        if (phi[j][i] < 0.3) continue;
+        const speed = Math.sqrt(vx[j][i]**2 + vy[j][i]**2);
+        if (speed < 0.02) continue;
+
+        const sx = (i + 0.5) * cellW;
+        const sy = (j + 0.5) * cellH;
+        const scale = Math.min(speed * 40, cellW * 3);
+
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + vx[j][i] / speed * scale, sy + vy[j][i] / speed * scale);
+        ctx.strokeStyle = `rgba(212,165,116,${Math.min(speed * 3, 0.7)})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Labels
+    ctx.font = '11px "JetBrains Mono"';
+    ctx.fillStyle = 'rgba(232,224,212,0.7)';
+    ctx.textAlign = 'left';
+    ctx.fillText('φ(x) — ambient channel field', 8, 16);
+    ctx.fillText('→ velocity field u', 8, 32);
+  }
+
+  draw();
+
+  let animFrame;
+  runBtn.addEventListener('click', () => {
+    running = !running;
+    runBtn.textContent = running ? '⏸ pause' : '▶ run simulation';
+    runBtn.classList.toggle('active', running);
+    if (running) simLoop();
+    else cancelAnimationFrame(animFrame);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    running = false;
+    runBtn.textContent = '▶ run simulation';
+    runBtn.classList.remove('active');
+    cancelAnimationFrame(animFrame);
+    initField();
+    draw();
+  });
+
+  function simLoop() {
+    if (!running) return;
+    for (let k = 0; k < 3; k++) step();
+    draw();
+    animFrame = requestAnimationFrame(simLoop);
+  }
+
+  kappaSlider.addEventListener('input', draw);
+  etaSlider.addEventListener('input', draw);
+})();
+
+
+// ====================================================================
+// VIZ 11: Synthesis
+// ====================================================================
+(function() {
+  const {ctx, w, h} = getCtx('synthesisCanvas');
+  let time = 0;
+
+  function draw() {
+    time += 0.015;
+    ctx.clearRect(0, 0, w, h);
+
+    const concepts = [
+      {x: w*0.1, y: h*0.5, label: 'X = (M, E, i, σ)', col: C.amber},
+      {x: w*0.3, y: h*0.25, label: 'T^obj ⊕ T^amb', col: C.lavender},
+      {x: w*0.3, y: h*0.75, label: 'C_ε(X)', col: C.teal},
+      {x: w*0.55, y: h*0.25, label: 'AmbRel', col: C.green},
+      {x: w*0.55, y: h*0.75, label: 'Cast ⊣ Fill', col: C.teal},
+      {x: w*0.8, y: h*0.5, label: 'φ-evolution', col: C.red},
+    ];
+
+    const links = [[0,1],[0,2],[1,3],[2,4],[3,5],[4,5],[1,4],[2,3]];
+
+    // Draw links
+    links.forEach(([a, b]) => {
+      const ca = concepts[a], cb = concepts[b];
+      ctx.beginPath();
+      ctx.moveTo(ca.x, ca.y);
+      ctx.lineTo(cb.x, cb.y);
+      const pulse = 0.3 + 0.15 * Math.sin(time * 2 + a + b);
+      ctx.strokeStyle = `rgba(90,180,172,${pulse})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // Draw nodes
+    concepts.forEach((c, i) => {
+      const pulse = 1 + 0.08 * Math.sin(time * 2.5 + i * 1.2);
+      const r = 6 * pulse;
+
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r + 12, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(18,18,26,0.8)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = c.col;
+      ctx.fill();
+
+      ctx.font = '11px "JetBrains Mono"';
+      ctx.fillStyle = c.col;
+      ctx.textAlign = 'center';
+      ctx.fillText(c.label, c.x, c.y + r + 16);
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+
+}); // end DOMContentLoaded
+
+// KaTeX fallback
+window.addEventListener('load', () => {
+  if (typeof renderMathInElement === 'function') {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+});
+</script>
+
+</body>
+</html>
