@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descent Theory III — Gaussian Descent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root{--bg-deep:#0a0a0f;--bg-surface:#12121a;--bg-elevated:#1a1a28;--bg-hover:#222236;--amber:#d4a574;--amber-dim:#a37d52;--teal:#5ab4ac;--teal-dim:#3d8a84;--lavender:#9b8ec4;--red:#e06c75;--green:#98c379;--text-primary:#e0dcd0;--text-secondary:#8a8698;--text-dim:#5a5670;--border:#2a2a3e;--rose:#c678a8;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--amber-dim) var(--bg-deep);}
+body{background:var(--bg-deep);color:var(--text-primary);font-family:'Source Sans 3',sans-serif;font-size:17px;line-height:1.75;overflow-x:hidden;}
+#progress-bar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--teal),var(--green));z-index:1000;width:0%;transition:width .1s linear;}
+
+#sidebar{position:fixed;left:0;top:0;width:260px;height:100vh;background:var(--bg-surface);border-right:1px solid var(--border);padding:2rem 1.25rem;z-index:100;display:flex;flex-direction:column;overflow-y:auto;}
+#sidebar .series-label{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.2em;color:var(--teal);margin-bottom:.25rem;}
+#sidebar .part-label{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:var(--amber);margin-bottom:1.5rem;line-height:1.3;}
+#sidebar nav a{display:block;padding:.45rem .75rem;margin-bottom:.2rem;font-size:.82rem;color:var(--text-secondary);text-decoration:none;border-left:2px solid transparent;border-radius:0 4px 4px 0;transition:all .25s;}
+#sidebar nav a:hover{color:var(--text-primary);background:var(--bg-hover);}
+#sidebar nav a.active{color:var(--amber);border-left-color:var(--amber);background:rgba(212,165,116,.06);}
+
+#main{margin-left:260px;max-width:860px;padding:4rem 3rem 8rem;}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--border);margin-bottom:3rem;}
+.hero .part-number{font-family:'JetBrains Mono',monospace;font-size:.75rem;letter-spacing:.25em;text-transform:uppercase;color:var(--teal);margin-bottom:.5rem;}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:700;color:var(--amber);line-height:1.15;margin-bottom:.5rem;}
+.hero .subtitle{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:400;font-style:italic;color:var(--text-secondary);}
+
+.essay-section{margin-bottom:5rem;opacity:0;transform:translateY(30px);transition:opacity .7s,transform .7s;}
+.essay-section.visible{opacity:1;transform:translateY(0);}
+.essay-section h2{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:var(--amber);margin-bottom:.35rem;line-height:1.25;}
+.essay-section .section-number{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--teal);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.5rem;}
+.essay-section p{margin-bottom:1.25rem;}
+
+.math-aside{background:var(--bg-elevated);border-left:3px solid var(--lavender);padding:1rem 1.25rem;margin:1.5rem 0;border-radius:0 6px 6px 0;font-size:.95rem;}
+.math-aside .aside-label{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--lavender);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.5rem;}
+
+.viz-container{background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;margin:2rem 0;overflow:hidden;}
+.viz-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg-elevated);flex-wrap:wrap;gap:.5rem;}
+.viz-header .viz-title{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--teal);letter-spacing:.1em;text-transform:uppercase;}
+.viz-header .viz-controls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;}
+.viz-body{padding:1.25rem;position:relative;}
+.viz-body canvas{display:block;width:100%;border-radius:4px;}
+.viz-status{padding:.5rem 1.25rem;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-dim);background:var(--bg-elevated);}
+
+.btn{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:.35rem .75rem;border-radius:4px;border:1px solid var(--border);background:var(--bg-surface);color:var(--text-secondary);cursor:pointer;transition:all .2s;letter-spacing:.05em;}
+.btn:hover{background:var(--bg-hover);color:var(--text-primary);}
+.btn.active{border-color:var(--amber);color:var(--amber);background:rgba(212,165,116,.08);}
+.btn.teal-active{border-color:var(--teal);color:var(--teal);background:rgba(90,180,172,.08);}
+.btn.green-active{border-color:var(--green);color:var(--green);background:rgba(152,195,121,.08);}
+
+.slider-group{display:flex;align-items:center;gap:.5rem;}
+.slider-group label{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--text-secondary);white-space:nowrap;}
+.slider-group input[type="range"]{width:110px;accent-color:var(--amber);}
+.slider-group .val{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--amber);min-width:3em;text-align:right;}
+
+.legend{display:flex;gap:1.1rem;flex-wrap:wrap;padding:.5rem 1.25rem;font-size:.72rem;font-family:'JetBrains Mono',monospace;}
+.legend-item{display:flex;align-items:center;gap:.4rem;color:var(--text-secondary);}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+.cat-term{color:var(--amber);font-family:'Cormorant Garamond',serif;font-weight:600;font-style:italic;}
+.photo-term{color:var(--teal);font-weight:600;}
+
+.epigraph{border-left:2px solid var(--amber-dim);padding:.75rem 1.25rem;margin:2rem 0;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.1rem;color:var(--text-secondary);}
+.epigraph .attribution{display:block;font-size:.85rem;color:var(--text-dim);margin-top:.5rem;font-style:normal;}
+
+.instruction-badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.6rem;padding:.2rem .5rem;border:1px solid var(--teal-dim);color:var(--teal);border-radius:3px;letter-spacing:.05em;text-transform:uppercase;}
+
+.dict-table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.88rem;}
+.dict-table th{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);padding:.65rem .8rem;text-align:left;border-bottom:2px solid var(--border);}
+.dict-table td{padding:.55rem .8rem;border-bottom:1px solid var(--border);vertical-align:top;}
+.dict-table tr:hover td{background:rgba(212,165,116,.03);}
+.dict-table td:first-child{font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--amber);font-size:.92rem;}
+.dict-table td:nth-child(2){color:var(--teal);font-weight:600;}
+.dict-table td:nth-child(3){color:var(--text-secondary);font-size:.82rem;}
+
+.katex{font-size:1.05em;}.katex-display{margin:1.25rem 0;overflow-x:auto;}
+
+.metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.6rem;margin:.75rem 0;}
+.metric-card{background:var(--bg-elevated);border:1px solid var(--border);border-radius:6px;padding:.5rem .7rem;text-align:center;}
+.metric-card .metric-label{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem;}
+.metric-card .metric-value{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;}
+
+/* Spectrum bar */
+.spectrum-bar{display:flex;margin:1.5rem 0;border-radius:6px;overflow:hidden;border:1px solid var(--border);height:52px;position:relative;}
+.spectrum-segment{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.3rem;cursor:pointer;transition:all .3s;position:relative;}
+.spectrum-segment:hover{filter:brightness(1.2);}
+.spectrum-segment .seg-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.05em;text-transform:uppercase;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);z-index:1;}
+.spectrum-segment .seg-sublabel{font-family:'Source Sans 3',sans-serif;font-size:.55rem;color:rgba(255,255,255,.7);z-index:1;}
+
+.spectrum-arrow{display:flex;justify-content:space-between;padding:0 .5rem;margin-top:.25rem;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--text-dim);}
+
+@media(max-width:900px){#sidebar{display:none;}#main{margin-left:0;padding:2rem 1.25rem 6rem;}.hero h1{font-size:2.1rem;}}
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<aside id="sidebar">
+  <div class="series-label">Descent via Photogrammetry</div>
+  <div class="part-label">Part III: Gaussian Descent</div>
+  <nav id="nav">
+    <a href="#spectrum">The Spectrum of Descent</a>
+    <a href="#gaussian-primitives">3D Gaussians as Measures</a>
+    <a href="#splatting">Splatting as Pushforward</a>
+    <a href="#differentiable">The Differentiable Loop</a>
+    <a href="#compositing">Alpha Compositing</a>
+    <a href="#realtime">Real-Time Rendering</a>
+    <a href="#hierarchy">The Complete Hierarchy</a>
+  </nav>
+</aside>
+
+<div id="main">
+
+<header class="hero">
+  <div class="part-number">Part III of III &mdash; Descent via Photogrammetry</div>
+  <h1>Gaussian Descent</h1>
+  <div class="subtitle">Distributional Objects, Pushforward Rendering, and Real-Time Sheaf Evaluation</div>
+</header>
+
+<div class="epigraph">
+  The mesh is the fully descended object &mdash; combinatorial, rigid, geometric. The NeRF is the sheaf that refuses to descend &mdash; pure functor, never materialized. The 3D Gaussian sits exactly between them: it descends, but into <em>distributions</em>, not geometry. It lives on $X$ as a measure, not a manifold.
+</div>
+
+<p>
+  Parts I and II established the dictionary between Grothendieck&rsquo;s descent theory and photogrammetry. We ended with NeRF &mdash; McLarty&rsquo;s sheaf that refuses to descend, encoding the functor of views without ever constructing a base object. But 2023 introduced a representation that complicates the taxonomy in the most illuminating way: <span class="photo-term">3D Gaussian Splatting</span>.
+</p>
+<p>
+  A 3D Gaussian splat is not a mesh. It is not a NeRF. It is a cloud of anisotropic Gaussians in 3D space &mdash; each one a little oriented ellipsoid with position $\boldsymbol{\mu}$, covariance $\boldsymbol{\Sigma}$, opacity $\alpha$, and view-dependent color encoded in spherical harmonics. It <em>does</em> live on the base space $X$. It <em>has</em> descended. But what has descended is not a geometric submanifold &mdash; it is a <span class="cat-term">measure</span>.
+</p>
+
+<!-- ═══════ SECTION 1: SPECTRUM ═══════ -->
+<section class="essay-section" id="spectrum">
+  <div class="section-number">Section 01</div>
+  <h2>The Spectrum of Descent</h2>
+
+  <p>
+    The representations used in 3D reconstruction form a spectrum, ordered by how much of the base object $X$ they actually materialize:
+  </p>
+
+  <div class="spectrum-bar" id="spectrum-bar">
+    <div class="spectrum-segment" style="background:linear-gradient(135deg,#6b5c3a,#a37d52)" data-idx="0">
+      <span class="seg-label">Mesh</span>
+      <span class="seg-sublabel">Combinatorial</span>
+    </div>
+    <div class="spectrum-segment" style="background:linear-gradient(135deg,#3d6a64,#5ab4ac)" data-idx="1">
+      <span class="seg-label">Point Cloud</span>
+      <span class="seg-sublabel">Discrete</span>
+    </div>
+    <div class="spectrum-segment" style="background:linear-gradient(135deg,#6b5082,#9b8ec4)" data-idx="2">
+      <span class="seg-label">3D Gaussians</span>
+      <span class="seg-sublabel">Distributional</span>
+    </div>
+    <div class="spectrum-segment" style="background:linear-gradient(135deg,#2a5a3a,#98c379)" data-idx="3">
+      <span class="seg-label">NeRF</span>
+      <span class="seg-sublabel">Functional</span>
+    </div>
+  </div>
+  <div class="spectrum-arrow">
+    <span>← fully descended</span>
+    <span>never descends →</span>
+  </div>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <span class="viz-title">The Descent Spectrum</span>
+      <div class="viz-controls">
+        <button class="btn active" id="spec-mesh-btn" data-spec="0">Mesh</button>
+        <button class="btn" id="spec-cloud-btn" data-spec="1">Point Cloud</button>
+        <button class="btn" id="spec-gauss-btn" data-spec="2">3D Gaussians</button>
+        <button class="btn" id="spec-nerf-btn" data-spec="3">NeRF</button>
+      </div>
+    </div>
+    <div class="viz-body">
+      <canvas id="spectrum-canvas" width="780" height="440"></canvas>
+    </div>
+    <div class="viz-status" id="spectrum-status">Mesh: the fully descended object. Vertices, edges, faces — a combinatorial structure on $X$.</div>
+  </div>
+
+  <p>
+    The mesh is $X$ given a CW-complex structure &mdash; combinatorial, rigid, with explicit topology. The point cloud discards the combinatorics but keeps the discrete samples. The 3D Gaussian replaces discrete points with continuous distributions. And the NeRF abandons the base entirely, storing only the functor. Each step trades <em>geometric commitment</em> for <em>representational flexibility</em>.
+  </p>
+
+  <div class="math-aside">
+    <div class="aside-label">Category-Theoretic Reading</div>
+    The mesh lives in $\textbf{Top}$ (topological spaces). The point cloud lives in $\textbf{Set}$ (discrete). The 3D Gaussian representation lives in $\textbf{Meas}$ (measurable spaces / the category of measures on $X$). The NeRF lives in $\textbf{Fun}(\mathcal{C}^{\mathrm{op}}, \textbf{Set})$ — the presheaf category. Each is a different target category for the descended object.
+  </div>
+</section>
+
+<!-- ═══════ SECTION 2: GAUSSIAN PRIMITIVES ═══════ -->
+<section class="essay-section" id="gaussian-primitives">
+  <div class="section-number">Section 02</div>
+  <h2>3D Gaussians as Measures on $X$</h2>
+
+  <p>
+    Each 3D Gaussian is defined by five attributes: a <span class="photo-term">position</span> $\boldsymbol{\mu} \in \mathbb{R}^3$, a <span class="photo-term">covariance</span> $\boldsymbol{\Sigma} \in \text{Sym}^+_3(\mathbb{R})$ (encoded as a rotation quaternion $\mathbf{q}$ and scale vector $\mathbf{s}$), an <span class="photo-term">opacity</span> $\alpha \in [0,1]$, and <span class="photo-term">color</span> coefficients in spherical harmonics $\{c_\ell^m\}$.
+  </p>
+
+  $$G(\mathbf{x}) = \alpha \cdot \exp\!\left(-\tfrac{1}{2}(\mathbf{x}-\boldsymbol{\mu})^\top \boldsymbol{\Sigma}^{-1} (\mathbf{x}-\boldsymbol{\mu})\right)$$
+
+  <p>
+    The full scene is a <span class="cat-term">mixture of measures</span>: $\mu_{\text{scene}} = \sum_{k=1}^{N} \alpha_k \, \mathcal{N}(\boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)$. This object <em>lives on $X$</em> &mdash; it has descended from the views into 3D space. But it is not a submanifold. It is a distribution in the measure-theoretic sense: a weighted sum of Gaussians that approximates the density of the scene.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <span class="viz-title">Gaussian Primitives &mdash; $G_k(\mathbf{x}) = \alpha_k \cdot \mathcal{N}(\boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)$</span>
+      <div class="viz-controls">
+        <div class="slider-group">
+          <label>Gaussians</label>
+          <input type="range" id="gauss-count" min="20" max="500" value="120">
+          <span class="val" id="gauss-count-val">120</span>
+        </div>
+        <div class="slider-group">
+          <label>Scale</label>
+          <input type="range" id="gauss-scale" min="10" max="100" value="50">
+          <span class="val" id="gauss-scale-val">0.5</span>
+        </div>
+        <span class="instruction-badge">drag to orbit</span>
+      </div>
+    </div>
+    <div class="viz-body">
+      <canvas id="gauss-canvas" width="780" height="460"></canvas>
+    </div>
+    <div class="legend" style="padding:.5rem 1.25rem;">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Gaussian center $\boldsymbol{\mu}_k$</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--lavender);opacity:.5"></div>Covariance ellipsoid $\boldsymbol{\Sigma}_k$</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Scene wireframe (reference)</div>
+    </div>
+    <div class="viz-status" id="gauss-status">Each ellipsoid is one 3D Gaussian — an oriented, anisotropic distribution in space. Together they form a measure on $X$.</div>
+  </div>
+
+  <p>
+    Notice how the Gaussians <em>cluster</em> on surfaces, edges, and detail regions. They are not uniformly distributed &mdash; the optimization process (which we&rsquo;ll see shortly) adaptively densifies them where the scene has high-frequency detail and prunes them where the scene is smooth. This is the measure adapting its support to the geometry of $X$.
+  </p>
+</section>
+
+<!-- ═══════ SECTION 3: SPLATTING AS PUSHFORWARD ═══════ -->
+<section class="essay-section" id="splatting">
+  <div class="section-number">Section 03</div>
+  <h2>Splatting as Pushforward $\pi_{i*}$</h2>
+
+  <p>
+    To render a view from the Gaussians, you <em>project</em> each 3D Gaussian through the camera. A 3D Gaussian $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ under an affine projection $\pi_i$ becomes a 2D Gaussian $\mathcal{N}(\pi_i(\boldsymbol{\mu}), J \boldsymbol{\Sigma} J^\top)$ where $J$ is the Jacobian of the projection.
+  </p>
+  <p>
+    This is the <span class="cat-term">pushforward of measures</span>: $\pi_{i*}\mu = \mu \circ \pi_i^{-1}$. In Part I we saw the pullback $\pi_i^*$ &mdash; the camera lifting structure from the base to a flat image. Now we go the other direction. The pushforward takes the 3D measure and <em>splats</em> it onto the image plane.
+  </p>
+
+  $$\boldsymbol{\Sigma}_{2D} = J \, W \, \boldsymbol{\Sigma} \, W^\top J^\top$$
+
+  <p>
+    where $W$ is the world-to-camera transform and $J$ is the projection Jacobian. The 3D ellipsoid becomes a 2D ellipse on screen &mdash; the "splat."
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <span class="viz-title">Splatting &mdash; Pushforward $\pi_{i*}: \textbf{Meas}(X) \to \textbf{Meas}(\mathbb{P}^2)$</span>
+      <div class="viz-controls">
+        <div class="slider-group">
+          <label>Camera</label>
+          <input type="range" id="splat-cam" min="0" max="360" value="30">
+          <span class="val" id="splat-cam-val">30°</span>
+        </div>
+        <button class="btn" id="splat-toggle-3d">Show 3D Ellipsoids</button>
+      </div>
+    </div>
+    <div class="viz-body">
+      <canvas id="splat-canvas" width="780" height="460"></canvas>
+    </div>
+    <div class="legend" style="padding:.5rem 1.25rem;">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--lavender)"></div>3D Gaussian ellipsoids</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>2D splats (pushforward)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Camera + projection rays</div>
+    </div>
+    <div class="viz-status" id="splat-status">Each 3D Gaussian is pushed forward through the camera map to become a 2D elliptical splat. The covariance transforms via the Jacobian.</div>
+  </div>
+
+  <div class="math-aside">
+    <div class="aside-label">Pullback vs Pushforward</div>
+    In Part I: the camera computes the <strong>pullback</strong> $\pi_i^*$ — it lifts geometry from $X$ to the image plane, destroying the fiber. Here: the renderer computes the <strong>pushforward</strong> $\pi_{i*}$ — it projects the 3D measure down to a 2D measure on the image. The pullback is informational (what does the camera see?). The pushforward is computational (how do we render the view?). They are adjoint operations: $\langle \pi_{i*} \mu, f \rangle = \langle \mu, \pi_i^* f \rangle$.
+  </div>
+</section>
+
+<!-- ═══════ SECTION 4: DIFFERENTIABLE RENDERING ═══════ -->
+<section class="essay-section" id="differentiable">
+  <div class="section-number">Section 04</div>
+  <h2>The Differentiable Loop: Gradient Flow on the Descended Object</h2>
+
+  <p>
+    Here is where 3D Gaussian Splatting diverges from classical photogrammetry. In the traditional pipeline, you reconstruct once: establish correspondences, triangulate, adjust, done. In 3DGS, reconstruction is a <em>continuous optimization</em> &mdash; a gradient flow on the space of measures.
+  </p>
+  <p>
+    The loss function is the photometric error between the rendered image and the ground-truth photograph:
+  </p>
+
+  $$\mathcal{L} = (1-\lambda)\,\mathcal{L}_1(\hat{I}, I_{\text{gt}}) + \lambda\,\mathcal{L}_{\text{D-SSIM}}(\hat{I}, I_{\text{gt}})$$
+
+  <p>
+    Because the entire rendering pipeline &mdash; projection, splatting, alpha compositing &mdash; is differentiable, gradients flow back through the image into every Gaussian parameter: $\nabla_{\boldsymbol{\mu}} \mathcal{L}$, $\nabla_{\boldsymbol{\Sigma}} \mathcal{L}$, $\nabla_\alpha \mathcal{L}$, $\nabla_{\text{SH}} \mathcal{L}$.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <span class="viz-title">Differentiable Optimization Loop</span>
+      <div class="viz-controls">
+        <button class="btn" id="opt-step-btn">Step ×10</button>
+        <button class="btn" id="opt-run-btn">Run</button>
+        <button class="btn" id="opt-reset-btn">Reset</button>
+        <div class="slider-group">
+          <label>Learning rate</label>
+          <input type="range" id="opt-lr" min="1" max="50" value="15">
+        </div>
+      </div>
+    </div>
+    <div class="viz-body">
+      <canvas id="opt-canvas" width="780" height="380"></canvas>
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="metric-label">Iteration</div>
+          <div class="metric-value" id="opt-iter" style="color:var(--text-primary)">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Loss (L1)</div>
+          <div class="metric-value" id="opt-loss" style="color:var(--red)">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Active Gaussians</div>
+          <div class="metric-value" id="opt-count" style="color:var(--lavender)">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Densified</div>
+          <div class="metric-value" id="opt-dense" style="color:var(--green)">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Pruned</div>
+          <div class="metric-value" id="opt-pruned" style="color:var(--red)">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="viz-status" id="opt-status">Click Step or Run. Watch Gaussians migrate toward the target, split in high-gradient regions, and get pruned when transparent.</div>
+  </div>
+
+  <p>
+    The adaptive density control is the crucial mechanism. Gaussians in regions of high positional gradient &mdash; where the current rendering poorly matches the ground truth &mdash; get <span class="photo-term">split</span> (large Gaussians) or <span class="photo-term">cloned</span> (small ones) to increase detail. Gaussians with near-zero opacity get <span class="photo-term">pruned</span>. The measure <em>adapts its own support</em> during optimization.
+  </p>
+
+  <div class="math-aside">
+    <div class="aside-label">Descent-Theoretic Reading</div>
+    The optimization is a gradient flow on the moduli space of measures on $X$. The loss function measures the discrepancy between the pushforward $\pi_{i*}\mu$ and the observed image $I_i$. At convergence, $\pi_{i*}\mu \approx I_i$ for all training views $i$ — meaning the measure $\mu$ is a valid descended object whose pullbacks (projections) match the cover data. Densification and pruning are the measure refining its topology to better satisfy the descent condition.
+  </div>
+</section>
+
+<!-- ═══════ SECTION 5: ALPHA COMPOSITING ═══════ -->
+<section class="essay-section" id="compositing">
+  <div class="section-number">Section 05</div>
+  <h2>Alpha Compositing: The Volume Rendering Integral, Discretized</h2>
+
+  <p>
+    Once the 2D splats are computed, they must be <em>composited</em> into a final pixel color. This is done by sorting the Gaussians by depth and blending front-to-back:
+  </p>
+
+  $$C(\mathbf{p}) = \sum_{k=1}^{N} c_k \, \alpha_k \, G_k^{2D}(\mathbf{p}) \prod_{j=1}^{k-1} \left(1 - \alpha_j \, G_j^{2D}(\mathbf{p})\right)$$
+
+  <p>
+    This is the discrete analogue of the <span class="photo-term">volume rendering integral</span> from NeRF:
+  </p>
+
+  $$\hat{C}(\mathbf{r}) = \int_0^\infty T(t)\,\sigma(\mathbf{r}(t))\,\mathbf{c}(\mathbf{r}(t), \mathbf{d})\,dt \quad\text{where}\quad T(t) = \exp\!\left(-\int_0^t \sigma(\mathbf{r}(s))\,ds\right)$$
+
+  <p>
+    The NeRF evaluates this integral by marching along each ray and sampling the density field at discrete points. The Gaussian splatter achieves the same result by projecting each primitive to 2D and blending analytically. Same integral, different computational strategy &mdash; and the Gaussian version is <em>orders of magnitude faster</em>.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <span class="viz-title">Alpha Compositing &mdash; Front-to-Back Blending</span>
+      <div class="viz-controls">
+        <div class="slider-group">
+          <label>Splats</label>
+          <input type="range" id="comp-count" min="3" max="20" value="8">
+          <span class="val" id="comp-count-val">8</span>
+        </div>
+        <button class="btn" id="comp-step-btn">Step Through</button>
+        <button class="btn" id="comp-reset-btn">Reset</button>
+      </div>
+    </div>
+    <div class="viz-body">
+      <canvas id="comp-canvas" width="780" height="420"></canvas>
+    </div>
+    <div class="legend" style="padding:.5rem 1.25rem;">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Individual splat $c_k \alpha_k$</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Accumulated color $C$</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--text-dim)"></div>Transmittance $T_k$</div>
+    </div>
+    <div class="viz-status" id="comp-status">Click "Step Through" to composite one splat at a time. Watch transmittance decrease and color accumulate front-to-back.</div>
+  </div>
+</section>
+
+<!-- ═══════ SECTION 6: REAL-TIME RENDERING ═══════ -->
+<section class="essay-section" id="realtime">
+  <div class="section-number">Section 06</div>
+  <h2>Real-Time Rendering: The Functor Evaluated at 60fps</h2>
+
+  <p>
+    The practical miracle of 3D Gaussian Splatting is that the entire pipeline &mdash; sort by depth, project to 2D ellipses, alpha-composite front-to-back &mdash; runs in <em>real time</em>. Not "research demo" real time. Not "if you have an A100" real time. Consumer GPU, 60+ frames per second, 1080p, real time.
+  </p>
+  <p>
+    What this means, in the descent vocabulary: you can <strong>evaluate the functor of views at interactive rates</strong>. Pick any probe $T$ &mdash; any camera position and orientation &mdash; and the pushforward $\pi_{T*}\mu$ is computed and displayed before the next frame. The sheaf answers queries in real time.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-header">
+      <span class="viz-title">Real-Time Gaussian Splatting &mdash; $\pi_{T*}\mu$ at Interactive Rates</span>
+      <div class="viz-controls">
+        <span class="instruction-badge">drag to orbit &bull; scroll to zoom</span>
+        <div class="slider-group">
+          <label>Quality</label>
+          <input type="range" id="rt-quality" min="1" max="3" value="2">
+        </div>
+        <button class="btn" id="rt-wireframe-btn">Overlay Wireframe</button>
+      </div>
+    </div>
+    <div class="viz-body">
+      <canvas id="rt-canvas" width="780" height="500"></canvas>
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="metric-label">Gaussians Rendered</div>
+          <div class="metric-value" id="rt-count" style="color:var(--lavender)">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Frame Time</div>
+          <div class="metric-value" id="rt-fps" style="color:var(--green)">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Camera Pose</div>
+          <div class="metric-value" id="rt-pose" style="color:var(--teal);font-size:.7rem">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="viz-status" id="rt-status">Orbit the camera freely. Every frame is a fresh evaluation of the pushforward π_{T*}μ — the functor of views computed in real time.</div>
+  </div>
+
+  <p>
+    Each frame you see is a <em>new</em> element of $h_X(T) = \text{Hom}(T, X)$. The 3D Gaussians are the descended object $\mu$ on $X$; the rendering pipeline computes $\pi_{T*}\mu$ for your current camera $T$; and the pixels on screen are the answer. You are querying the Yoneda functor at 60fps.
+  </p>
+
+  <div class="math-aside">
+    <div class="aside-label">The Speed Hierarchy</div>
+    NeRF renders a single frame in seconds to minutes (ray-marching MLP, hundreds of samples per ray). 3DGS renders the same frame in milliseconds (project, sort, blend &mdash; all parallelizable on GPU). The mathematical content is identical: both evaluate $T \mapsto \pi_{T*}\mu$. The difference is computational architecture. The Gaussian representation trades the NeRF&rsquo;s compact implicit encoding for an explicit but larger set of primitives — and gains five orders of magnitude in rendering speed.
+  </div>
+</section>
+
+<!-- ═══════ SECTION 7: COMPLETE HIERARCHY ═══════ -->
+<section class="essay-section" id="hierarchy">
+  <div class="section-number">Section 07</div>
+  <h2>The Complete Hierarchy</h2>
+
+  <p>
+    We can now place every representation in the taxonomy of descent. The question is always the same: <em>how much of $X$ do you materialize?</em>
+  </p>
+
+  <table class="dict-table">
+    <thead><tr><th>Representation</th><th>Descended?</th><th>Category of Object</th><th>Rendering Cost</th></tr></thead>
+    <tbody>
+      <tr><td>Triangle Mesh</td><td>Fully</td><td>$\textbf{Top}$ — combinatorial manifold</td><td>Rasterization — ms</td></tr>
+      <tr><td>Point Cloud</td><td>Discrete samples</td><td>$\textbf{Set}$ — discrete subset of $X$</td><td>Point splatting — ms</td></tr>
+      <tr><td>3D Gaussians</td><td>As a measure</td><td>$\textbf{Meas}$ — mixture of Gaussians on $X$</td><td>Sort + blend — ms</td></tr>
+      <tr><td>NeRF (MLP)</td><td>Never</td><td>$\textbf{Fun}(\mathcal{C}^{\text{op}}, \textbf{Set})$ — sheaf / functor</td><td>Ray march MLP — seconds</td></tr>
+      <tr><td>3D Gaussian + SH</td><td>As a decorated measure</td><td>$\textbf{Meas} \times \textbf{Fun}(S^2, \textbf{Vect})$</td><td>Sort + blend + SH eval — ms</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    The spherical harmonics deserve a footnote. The color of each Gaussian is not a fixed RGB value &mdash; it is a <em>function on the sphere</em> $S^2$ of viewing directions, encoded as spherical harmonic coefficients up to degree $\ell$. This means the color is itself a small sheaf: $\mathbf{d} \mapsto c(\mathbf{d})$. The descended object carries, at each point, a local version of the NeRF functor. The measure descends. The color stays a sheaf.
+  </p>
+
+  <div class="math-aside">
+    <div class="aside-label">The Final Dictionary Entry</div>
+    <table class="dict-table" style="margin:0;">
+      <thead><tr><th>Descent Theory</th><th>3D Gaussian Splatting</th><th>Why It's Not Metaphor</th></tr></thead>
+      <tbody>
+        <tr><td>Descended object in $\textbf{Meas}(X)$</td><td>Cloud of 3D Gaussians</td><td>The measure $\mu = \sum \alpha_k \mathcal{N}(\mu_k, \Sigma_k)$ on the base</td></tr>
+        <tr><td>Pushforward $\pi_{T*}$</td><td>Splatting (projection)</td><td>$J \Sigma J^\top$ transforms 3D Gaussians to 2D ellipses</td></tr>
+        <tr><td>Sheaf evaluation at $T$</td><td>Real-time rendering</td><td>Compute $\pi_{T*}\mu$ at 60fps for any camera $T$</td></tr>
+        <tr><td>Gradient flow on $\textbf{Meas}(X)$</td><td>Differentiable optimization</td><td>$\nabla \mathcal{L}$ flows back through rendering to update $\mu$</td></tr>
+        <tr><td>Refinement of support</td><td>Adaptive density control</td><td>Densification and pruning adapt the measure's topology</td></tr>
+        <tr><td>Section of view-dependent bundle</td><td>Spherical harmonics</td><td>$c(\mathbf{d})$ encodes a local sheaf on $S^2$ at each Gaussian</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="epigraph" style="margin-top:3rem;">
+    The engineers arrived at the same structure by different roads. Grothendieck descended from fibered categories through faithfully flat morphisms. Kerbl, Kopanas, Leimkühler and Drettakis descended from photographs through differentiable Gaussian splatting. The theorem is the same: coherent local data, if they satisfy the cocycle condition, determine a global object. The only question is what category you descend <em>into</em>. A mesh descends into topology. A NeRF refuses to descend at all. And the 3D Gaussian — the surprise of 2023 — descends into measures. The functor of views is primary. The representation is a choice.
+  </div>
+</section>
+
+</div><!-- #main -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════
+const AMBER='#d4a574',TEAL='#5ab4ac',LAVENDER='#9b8ec4',RED='#e06c75',GREEN='#98c379',DIM='#5a5670',BG='#0a0a0f';
+function v3(x,y,z){return{x,y,z}}function v3add(a,b){return v3(a.x+b.x,a.y+b.y,a.z+b.z)}function v3sub(a,b){return v3(a.x-b.x,a.y-b.y,a.z-b.z)}function v3scale(a,s){return v3(a.x*s,a.y*s,a.z*s)}function v3dot(a,b){return a.x*b.x+a.y*b.y+a.z*b.z}function v3cross(a,b){return v3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x)}function v3len(a){return Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z)}function v3norm(a){const l=v3len(a)||1;return v3(a.x/l,a.y/l,a.z/l)}
+function perspProj(p,cam,fwd,right,up,fl,cx,cy){const r=v3sub(p,cam);const z=v3dot(r,fwd);if(z<.15)return null;const s=fl/z;return{x:cx+v3dot(r,right)*s,y:cy-v3dot(r,up)*s,depth:z}}
+
+// Scene geometry
+const SV=[v3(-2,0,-1.5),v3(2,0,-1.5),v3(2,0,1.5),v3(-2,0,1.5),v3(-2,2,-1.5),v3(2,2,-1.5),v3(2,2,1.5),v3(-2,2,1.5),v3(-2,3,0),v3(2,3,0),v3(-2.5,0,-.6),v3(-2,0,-.6),v3(-2,0,.6),v3(-2.5,0,.6),v3(-2.5,3.2,-.6),v3(-2,3.2,-.6),v3(-2,3.2,.6),v3(-2.5,3.2,.6),v3(-2.25,4.2,0),v3(-.4,0,-1.5),v3(.4,0,-1.5),v3(.4,1.2,-1.5),v3(-.4,1.2,-1.5),v3(-1.3,1,-1.5),v3(-.8,1,-1.5),v3(-.8,1.7,-1.5),v3(-1.3,1.7,-1.5),v3(.8,1,-1.5),v3(1.3,1,-1.5),v3(1.3,1.7,-1.5),v3(.8,1.7,-1.5),v3(0,3,0),v3(1.5,1,1.5),v3(-1.5,1.5,1.5)];
+const SE=[[0,1],[1,2],[2,3],[3,0],[0,4],[1,5],[2,6],[3,7],[4,5],[5,6],[6,7],[7,4],[4,8],[5,9],[7,8],[6,9],[8,9],[10,11],[11,12],[12,13],[13,10],[14,15],[15,16],[16,17],[17,14],[10,14],[11,15],[12,16],[13,17],[14,18],[15,18],[16,18],[17,18],[19,20],[20,21],[21,22],[22,19],[23,24],[24,25],[25,26],[26,23],[27,28],[28,29],[29,30],[30,27]];
+
+function makeCamera(angY,angX,dist){
+  const pos=v3(dist*Math.sin(angY)*Math.cos(angX),dist*Math.sin(angX)+1.5,dist*Math.cos(angY)*Math.cos(angX));
+  const tgt=v3(0,1.5,0);const fwd=v3norm(v3sub(tgt,pos));
+  const right=v3norm(v3cross(fwd,v3(0,1,0)));const up=v3cross(right,fwd);
+  return{pos,fwd,right,up};
+}
+
+function drawWireframe(ctx,cam,fl,cx,cy,color,alpha,lw){
+  const ps=SV.map(v=>perspProj(v,cam.pos,cam.fwd,cam.right,cam.up,fl,cx,cy));
+  ctx.strokeStyle=color;ctx.lineWidth=lw||.7;ctx.globalAlpha=alpha||.2;
+  for(const[a,b]of SE){if(ps[a]&&ps[b]){ctx.beginPath();ctx.moveTo(ps[a].x,ps[a].y);ctx.lineTo(ps[b].x,ps[b].y);ctx.stroke()}}
+  ctx.globalAlpha=1;return ps;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Generate Gaussians on the cathedral
+// ═══════════════════════════════════════════════════════════════
+function generateGaussians(n){
+  const gs=[];
+  for(let i=0;i<n;i++){
+    // Sample near edges
+    const ei=Math.floor(Math.random()*SE.length);
+    const[a,b]=SE[ei];const t=Math.random();
+    const va=SV[a],vb=SV[b];
+    const px=va.x+(vb.x-va.x)*t+(Math.random()-.5)*.3;
+    const py=va.y+(vb.y-va.y)*t+(Math.random()-.5)*.3;
+    const pz=va.z+(vb.z-va.z)*t+(Math.random()-.5)*.3;
+    // Random anisotropic scale
+    const sx=.08+Math.random()*.25;
+    const sy=.08+Math.random()*.25;
+    const sz=.08+Math.random()*.25;
+    // Random rotation
+    const rotAngle=Math.random()*Math.PI;
+    const alpha=.3+Math.random()*.6;
+    // Color: warm tones biased by position
+    const hue=.06+py*.02+Math.random()*.04;
+    const r=Math.min(1,.5+hue*6);
+    const g=Math.min(1,.3+hue*4);
+    const b_=Math.min(1,.2+hue*2);
+    gs.push({pos:v3(px,py,pz),sx,sy,sz,rot:rotAngle,alpha,r,g,b:b_});
+  }
+  return gs;
+}
+
+let GAUSSIANS=generateGaussians(300);
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 1: SPECTRUM VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('spectrum-canvas');const ctx=canvas.getContext('2d');
+  const statusEl=document.getElementById('spectrum-status');
+  let W,H,dpr,currentSpec=0;
+  let rotY=0.5,rotX=0.25,dragging=false,lastMx,lastMy;
+
+  const specBtns=document.querySelectorAll('[data-spec]');
+  const specDescs=[
+    'Mesh: the fully descended object. Vertices, edges, faces — a combinatorial structure on X. Lives in Top.',
+    'Point Cloud: discrete samples of X. The combinatorial structure is discarded. Lives in Set.',
+    '3D Gaussians: oriented distributions in 3D space. A measure on X — descended but not geometric. Lives in Meas.',
+    'NeRF: the implicit radiance field. Never materializes X. Only the functor T ↦ view(T) exists. Lives in Fun(C^op, Set).'
+  ];
+  specBtns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      currentSpec=parseInt(btn.dataset.spec);
+      specBtns.forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+      statusEl.textContent=specDescs[currentSpec];draw();
+    });
+  });
+
+  function resize(){dpr=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+
+  function draw(){
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    const cam=makeCamera(rotY,rotX,9);
+    const fl=W*.5;const cx=W/2,cy=H/2;
+
+    if(currentSpec===0){
+      // Mesh: wireframe with filled faces
+      const ps=SV.map(v=>perspProj(v,cam.pos,cam.fwd,cam.right,cam.up,fl,cx,cy));
+      // Faces (simplified)
+      const faces=[[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7],[4,5,9,8],[7,6,9,8],[10,11,15,14],[11,12,16,15],[12,13,17,16],[13,10,14,17]];
+      faces.forEach(f=>{
+        const pts=f.map(i=>ps[i]).filter(Boolean);if(pts.length<3)return;
+        ctx.fillStyle='rgba(212,165,116,.08)';ctx.beginPath();
+        ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.closePath();ctx.fill();
+      });
+      ctx.strokeStyle=AMBER;ctx.lineWidth=1.2;ctx.globalAlpha=.7;
+      for(const[a,b]of SE){if(ps[a]&&ps[b]){ctx.beginPath();ctx.moveTo(ps[a].x,ps[a].y);ctx.lineTo(ps[b].x,ps[b].y);ctx.stroke()}}
+      ctx.globalAlpha=1;
+      for(const v of SV){const p=perspProj(v,cam.pos,cam.fwd,cam.right,cam.up,fl,cx,cy);if(p){ctx.fillStyle=AMBER;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}}
+    }
+    else if(currentSpec===1){
+      // Point cloud
+      const points=[];
+      for(let i=0;i<400;i++){const ei=Math.floor(Math.random()*1e6)%SE.length;const[a,b]=SE[ei];const t=(i*0.618)%1;
+        const v=v3(SV[a].x+(SV[b].x-SV[a].x)*t+Math.sin(i)*.15,SV[a].y+(SV[b].y-SV[a].y)*t+Math.cos(i*1.3)*.15,SV[a].z+(SV[b].z-SV[a].z)*t+Math.sin(i*2.1)*.15);
+        points.push(v);
+      }
+      points.forEach(v=>{const p=perspProj(v,cam.pos,cam.fwd,cam.right,cam.up,fl,cx,cy);if(p){
+        ctx.fillStyle=TEAL;ctx.globalAlpha=Math.max(.3,1-p.depth*.08);ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}});
+    }
+    else if(currentSpec===2){
+      // 3D Gaussians
+      drawWireframe(ctx,cam,fl,cx,cy,AMBER,.1,.5);
+      const sorted=GAUSSIANS.map((g,i)=>{const p=perspProj(g.pos,cam.pos,cam.fwd,cam.right,cam.up,fl,cx,cy);return{g,p,i}}).filter(d=>d.p).sort((a,b)=>b.p.depth-a.p.depth);
+      sorted.forEach(({g,p})=>{
+        const scl=fl/p.depth;const rx=g.sx*scl,ry=g.sy*scl;
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(g.rot);
+        const grad=ctx.createRadialGradient(0,0,0,0,0,Math.max(rx,ry));
+        grad.addColorStop(0,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},${g.alpha*.6})`);
+        grad.addColorStop(1,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},0)`);
+        ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.restore();
+      });
+    }
+    else if(currentSpec===3){
+      // NeRF: volume render
+      const res=80;const imgW=W*.6,imgH=H*.8;const ox=(W-imgW)/2,oy=(H-imgH)/2;
+      ctx.fillStyle='#080810';ctx.fillRect(ox,oy,imgW,imgH);
+      function density(x,y,z){let d=0;if(Math.abs(x)<2.1&&y>-.1&&y<2.1&&Math.abs(z)<1.6)d+=.6;if(Math.abs(x)<2.1&&y>1.8&&y<3.1&&y>(2+Math.abs(z)*.67-.01))d+=.5;if(x>-2.6&&x<-1.9&&Math.abs(z)<.7&&y>-.1&&y<3.3)d+=.6;if(x>-2.6&&x<-1.9&&Math.abs(z)<Math.max(0,.5-(y-3.2)*.7)&&y>3.2&&y<4.3)d+=.4;return Math.min(1,d);}
+      for(let py=0;py<res;py++){for(let px=0;px<res;px++){
+        const u=(px/res-.5)*1.3,v_=(-(py/res-.5))*1.1;
+        const rayDir=v3norm(v3add(v3add(cam.fwd,v3scale(cam.right,u)),v3scale(cam.up,v_)));
+        let accC=0,accA=0;
+        for(let t=2;t<15&&accA<.95;t+=.4){const pt=v3add(cam.pos,v3scale(rayDir,t));const d=density(pt.x,pt.y,pt.z);if(d>.05){
+          const light=.3+.7*Math.max(0,(pt.y/4));const a=d*(1-accA)*.5;accC+=a*light;accA+=a;}}
+        if(accA>.01){const br=Math.min(1,accC);
+          ctx.fillStyle=`rgba(${Math.round(152*br+80)},${Math.round(195*br+40)},${Math.round(121*br+30)},${Math.min(1,accA)})`;
+          ctx.fillRect(ox+px*imgW/res,oy+py*imgH/res,imgW/res+.5,imgH/res+.5);}
+      }}
+      ctx.strokeStyle=GREEN;ctx.lineWidth=1;ctx.strokeRect(ox,oy,imgW,imgH);
+      ctx.fillStyle=GREEN;ctx.font='11px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('F(x,d) → (c,σ) — no geometry, only the functor',W/2,oy-8);
+    }
+  }
+
+  canvas.addEventListener('mousedown',e=>{dragging=true;lastMx=e.offsetX;lastMy=e.offsetY;});
+  canvas.addEventListener('mousemove',e=>{if(!dragging)return;rotY+=(e.offsetX-lastMx)*.008;rotX+=(e.offsetY-lastMy)*.008;rotX=Math.max(-1.2,Math.min(1.2,rotX));lastMx=e.offsetX;lastMy=e.offsetY;draw();});
+  canvas.addEventListener('mouseup',()=>dragging=false);canvas.addEventListener('mouseleave',()=>dragging=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();dragging=true;lastMx=e.touches[0].clientX;lastMy=e.touches[0].clientY;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragging)return;rotY+=(e.touches[0].clientX-lastMx)*.008;rotX+=(e.touches[0].clientY-lastMy)*.008;rotX=Math.max(-1.2,Math.min(1.2,rotX));lastMx=e.touches[0].clientX;lastMy=e.touches[0].clientY;draw();},{passive:false});
+  canvas.addEventListener('touchend',()=>dragging=false);
+  window.addEventListener('resize',resize);resize();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 2: GAUSSIAN PRIMITIVES
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('gauss-canvas');const ctx=canvas.getContext('2d');
+  const countSlider=document.getElementById('gauss-count');const countVal=document.getElementById('gauss-count-val');
+  const scaleSlider=document.getElementById('gauss-scale');const scaleVal=document.getElementById('gauss-scale-val');
+  let W,H,dpr,rotY=0.6,rotX=0.3,dragging=false,lastMx,lastMy;
+
+  function resize(){dpr=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+
+  function draw(){
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    const n=parseInt(countSlider.value);countVal.textContent=n;
+    const scl=parseInt(scaleSlider.value)/100;scaleVal.textContent=scl.toFixed(1);
+    if(GAUSSIANS.length!==n)GAUSSIANS=generateGaussians(n);
+
+    const cam=makeCamera(rotY,rotX,9);const fl=W*.5,cx=W/2,cy=H/2;
+    drawWireframe(ctx,cam,fl,cx,cy,TEAL,.12,.5);
+
+    const sorted=GAUSSIANS.map(g=>{const p=perspProj(g.pos,cam.pos,cam.fwd,cam.right,cam.up,fl,cx,cy);return{g,p}}).filter(d=>d.p).sort((a,b)=>b.p.depth-a.p.depth);
+    sorted.forEach(({g,p})=>{
+      const s=fl/p.depth;const rx=g.sx*scl*s*2,ry=g.sy*scl*s*2;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(g.rot);
+      // Ellipse outline
+      ctx.strokeStyle=LAVENDER;ctx.lineWidth=.5;ctx.globalAlpha=g.alpha*.3;
+      ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);ctx.stroke();
+      // Filled
+      const grad=ctx.createRadialGradient(0,0,0,0,0,Math.max(rx,ry));
+      grad.addColorStop(0,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},${g.alpha*.35})`);
+      grad.addColorStop(1,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},0)`);
+      ctx.fillStyle=grad;ctx.globalAlpha=1;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      // Center dot
+      ctx.fillStyle=AMBER;ctx.globalAlpha=.7;ctx.beginPath();ctx.arc(p.x,p.y,1.5,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    });
+  }
+
+  canvas.addEventListener('mousedown',e=>{dragging=true;lastMx=e.offsetX;lastMy=e.offsetY;});
+  canvas.addEventListener('mousemove',e=>{if(!dragging)return;rotY+=(e.offsetX-lastMx)*.008;rotX+=(e.offsetY-lastMy)*.008;rotX=Math.max(-1.2,Math.min(1.2,rotX));lastMx=e.offsetX;lastMy=e.offsetY;draw();});
+  canvas.addEventListener('mouseup',()=>dragging=false);canvas.addEventListener('mouseleave',()=>dragging=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();dragging=true;lastMx=e.touches[0].clientX;lastMy=e.touches[0].clientY;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragging)return;rotY+=(e.touches[0].clientX-lastMx)*.008;rotX+=(e.touches[0].clientY-lastMy)*.008;rotX=Math.max(-1.2,Math.min(1.2,rotX));lastMx=e.touches[0].clientX;lastMy=e.touches[0].clientY;draw();},{passive:false});
+  canvas.addEventListener('touchend',()=>dragging=false);
+  countSlider.addEventListener('input',()=>{GAUSSIANS=generateGaussians(parseInt(countSlider.value));draw();});
+  scaleSlider.addEventListener('input',draw);
+  window.addEventListener('resize',resize);resize();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 3: SPLATTING AS PUSHFORWARD
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('splat-canvas');const ctx=canvas.getContext('2d');
+  const camSlider=document.getElementById('splat-cam');const camVal=document.getElementById('splat-cam-val');
+  const show3dBtn=document.getElementById('splat-toggle-3d');
+  let W,H,dpr,show3d=false;
+
+  show3dBtn.addEventListener('click',()=>{show3d=!show3d;show3dBtn.classList.toggle('active',show3d);draw();});
+
+  function resize(){dpr=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+
+  function draw(){
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    const ang=parseFloat(camSlider.value)*Math.PI/180;camVal.textContent=camSlider.value+'°';
+
+    // Observer (fixed view of the whole setup)
+    const obs=makeCamera(0.7,0.35,12);const obsFL=W*.32;
+
+    // Rendering camera
+    const renderCam=makeCamera(ang,0.1,7);
+
+    // Left: 3D scene with camera
+    const lcx=W*.28,lcy=H*.5;
+    // Draw wireframe
+    const ps=SV.map(v=>perspProj(v,obs.pos,obs.fwd,obs.right,obs.up,obsFL,lcx,lcy));
+    ctx.strokeStyle=AMBER;ctx.lineWidth=.5;ctx.globalAlpha=.15;
+    for(const[a,b]of SE){if(ps[a]&&ps[b]){ctx.beginPath();ctx.moveTo(ps[a].x,ps[a].y);ctx.lineTo(ps[b].x,ps[b].y);ctx.stroke()}}ctx.globalAlpha=1;
+
+    // 3D Gaussians in scene view
+    const subset=GAUSSIANS.slice(0,80);
+    if(show3d){
+      const sorted3d=subset.map(g=>{const p=perspProj(g.pos,obs.pos,obs.fwd,obs.right,obs.up,obsFL,lcx,lcy);return{g,p}}).filter(d=>d.p).sort((a,b)=>b.p.depth-a.p.depth);
+      sorted3d.forEach(({g,p})=>{
+        const s=obsFL/p.depth;const rx=g.sx*s*1.5,ry=g.sy*s*1.5;
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(g.rot);
+        ctx.strokeStyle=LAVENDER;ctx.lineWidth=.4;ctx.globalAlpha=g.alpha*.2;
+        ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);ctx.stroke();
+        ctx.globalAlpha=1;ctx.restore();
+      });
+    }
+
+    // Camera in scene view
+    const cp=perspProj(renderCam.pos,obs.pos,obs.fwd,obs.right,obs.up,obsFL,lcx,lcy);
+    if(cp){
+      ctx.fillStyle=TEAL;ctx.beginPath();ctx.arc(cp.x,cp.y,6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=TEAL;ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('camera T',cp.x,cp.y-12);
+    }
+
+    // Arrow
+    ctx.fillStyle=DIM;ctx.font='14px "Cormorant Garamond"';ctx.textAlign='center';
+    ctx.fillText('π_{T*}',W*.48,H*.45);
+    ctx.strokeStyle=DIM;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W*.42,H*.5);ctx.lineTo(W*.54,H*.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(W*.54,H*.5);ctx.lineTo(W*.52,H*.48);ctx.moveTo(W*.54,H*.5);ctx.lineTo(W*.52,H*.52);ctx.stroke();
+
+    // Right: 2D image with splats
+    const imgX=W*.58,imgY=H*.06,imgW=W*.38,imgH=H*.88;
+    ctx.fillStyle='#0a0a14';ctx.fillRect(imgX,imgY,imgW,imgH);ctx.strokeStyle=AMBER;ctx.lineWidth=1;ctx.strokeRect(imgX,imgY,imgW,imgH);
+    ctx.fillStyle=AMBER;ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('Image plane — 2D splats',imgX+imgW/2,imgY-8);
+
+    const renderFL=imgW*1.1;const rcx=imgX+imgW/2,rcy=imgY+imgH/2;
+
+    // Sort and splat
+    const sorted=subset.map(g=>{
+      const rel=v3sub(g.pos,renderCam.pos);const z=v3dot(rel,renderCam.fwd);if(z<.2)return null;
+      const sx=rcx+v3dot(rel,renderCam.right)*renderFL/z;const sy=rcy-v3dot(rel,renderCam.up)*renderFL/z;
+      if(sx<imgX-20||sx>imgX+imgW+20||sy<imgY-20||sy>imgY+imgH+20)return null;
+      const scl=renderFL/z;return{g,sx,sy,z,scl};
+    }).filter(Boolean).sort((a,b)=>b.z-a.z);
+
+    ctx.save();ctx.beginPath();ctx.rect(imgX,imgY,imgW,imgH);ctx.clip();
+    sorted.forEach(({g,sx,sy,scl})=>{
+      const rx=g.sx*scl*2,ry=g.sy*scl*2;
+      ctx.save();ctx.translate(sx,sy);ctx.rotate(g.rot);
+      const grad=ctx.createRadialGradient(0,0,0,0,0,Math.max(rx,ry));
+      grad.addColorStop(0,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},${g.alpha*.5})`);
+      grad.addColorStop(1,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},0)`);
+      ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  camSlider.addEventListener('input',draw);
+  window.addEventListener('resize',resize);resize();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 4: DIFFERENTIABLE OPTIMIZATION
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('opt-canvas');const ctx=canvas.getContext('2d');
+  const stepBtn=document.getElementById('opt-step-btn');const runBtn=document.getElementById('opt-run-btn');
+  const resetBtn=document.getElementById('opt-reset-btn');const lrSlider=document.getElementById('opt-lr');
+  const iterEl=document.getElementById('opt-iter');const lossEl=document.getElementById('opt-loss');
+  const countEl=document.getElementById('opt-count');const denseEl=document.getElementById('opt-dense');const prunedEl=document.getElementById('opt-pruned');
+  let W,H,dpr;
+
+  // 2D Gaussian optimization
+  // Target: a simple cathedral silhouette as 2D density
+  function targetDensity(x,y){
+    let d=0;
+    if(Math.abs(x)<2&&y>0&&y<2)d+=.8; // main body
+    if(Math.abs(x)<2&&y>1.8&&y<3&&y>2+Math.abs(x)*.5-.01)d+=.6; // roof
+    if(x>-2.5&&x<-2&&y>0&&y<3.2)d+=.7; // tower
+    if(x>-2.5&&x<-2&&y>3.2&&y<4.2)d+=.5; // spire
+    return Math.min(1,d);
+  }
+
+  // Generate target image
+  const TGT_RES=60;
+  const tgtImg=[];
+  for(let y=0;y<TGT_RES;y++){tgtImg[y]=[];for(let x=0;x<TGT_RES;x++){
+    const wx=(x/TGT_RES-.5)*7;const wy=(1-y/TGT_RES)*5;tgtImg[y][x]=targetDensity(wx,wy);
+  }}
+
+  let optGaussians,iter,totalDensified,totalPruned;
+
+  function resetOpt(){
+    optGaussians=[];
+    for(let i=0;i<60;i++){optGaussians.push({x:(Math.random()-.5)*5,y:Math.random()*4,sx:.3+Math.random()*.4,sy:.3+Math.random()*.4,alpha:.3+Math.random()*.4});}
+    iter=0;totalDensified=0;totalPruned=0;updateMetrics();draw();
+  }
+
+  function renderGaussians(res){
+    const img=[];
+    for(let y=0;y<res;y++){img[y]=[];for(let x=0;x<res;x++){
+      const wx=(x/res-.5)*7;const wy=(1-y/res)*5;
+      let val=0;
+      for(const g of optGaussians){
+        const dx=(wx-g.x)/g.sx;const dy=(wy-g.y)/g.sy;
+        val+=g.alpha*Math.exp(-(dx*dx+dy*dy)/2);
+      }
+      img[y][x]=Math.min(1,val);
+    }}
+    return img;
+  }
+
+  function computeLoss(){
+    const img=renderGaussians(TGT_RES);let total=0;
+    for(let y=0;y<TGT_RES;y++)for(let x=0;x<TGT_RES;x++)total+=Math.abs(img[y][x]-tgtImg[y][x]);
+    return total/(TGT_RES*TGT_RES);
+  }
+
+  function optimStep(){
+    const lr=parseInt(lrSlider.value)/1000;
+    const eps=.01;
+    const baseLoss=computeLoss();
+    // Numerical gradient for each gaussian parameter
+    for(const g of optGaussians){
+      for(const param of ['x','y','sx','sy','alpha']){
+        const orig=g[param];
+        g[param]=orig+eps;const lossP=computeLoss();
+        g[param]=orig;
+        const grad=(lossP-baseLoss)/eps;
+        g[param]-=lr*grad*10;
+        if(param==='sx'||param==='sy')g[param]=Math.max(.05,g[param]);
+        if(param==='alpha')g[param]=Math.max(0,Math.min(1,g[param]));
+      }
+    }
+    // Adaptive density control every 20 iterations
+    if(iter%20===19&&iter<200){
+      // Densify: split large gaussians
+      const newGs=[];
+      for(const g of optGaussians){
+        if(g.sx>.5||g.sy>.5){
+          newGs.push({x:g.x+g.sx*.3,y:g.y,sx:g.sx*.6,sy:g.sy*.6,alpha:g.alpha*.8});
+          newGs.push({x:g.x-g.sx*.3,y:g.y,sx:g.sx*.6,sy:g.sy*.6,alpha:g.alpha*.8});
+          totalDensified+=2;
+        } else { newGs.push(g); }
+      }
+      // Prune: remove low alpha
+      const before=newGs.length;
+      const filtered=newGs.filter(g=>g.alpha>.02);
+      totalPruned+=(before-filtered.length);
+      optGaussians=filtered;
+    }
+    iter++;
+  }
+
+  function updateMetrics(){
+    iterEl.textContent=iter;
+    const loss=computeLoss();
+    lossEl.textContent=loss.toFixed(4);lossEl.style.color=loss<.05?GREEN:loss<.15?AMBER:RED;
+    countEl.textContent=optGaussians.length;
+    denseEl.textContent=totalDensified;prunedEl.textContent=totalPruned;
+  }
+
+  function resize(){dpr=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+
+  function draw(){
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    const pad=10;const cellW=(W/2-pad*2)/TGT_RES;const cellH=(H-pad*2)/TGT_RES;
+
+    // Left: target
+    ctx.fillStyle=AMBER;ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('Target',W*.25,pad);
+    for(let y=0;y<TGT_RES;y++)for(let x=0;x<TGT_RES;x++){
+      const v=tgtImg[y][x];if(v>.01){ctx.fillStyle=`rgba(212,165,116,${v*.7})`;ctx.fillRect(pad+x*cellW,pad+8+y*cellH,cellW+.5,cellH+.5);}
+    }
+
+    // Right: rendered
+    ctx.fillStyle=TEAL;ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('Rendered (Gaussians)',W*.75,pad);
+    const rImg=renderGaussians(TGT_RES);
+    for(let y=0;y<TGT_RES;y++)for(let x=0;x<TGT_RES;x++){
+      const v=rImg[y][x];if(v>.01){ctx.fillStyle=`rgba(90,180,172,${v*.7})`;ctx.fillRect(W/2+pad+x*cellW,pad+8+y*cellH,cellW+.5,cellH+.5);}
+    }
+
+    // Gaussian centers on right
+    const oxR=W/2+pad,oyR=pad+8;
+    for(const g of optGaussians){
+      const sx=oxR+((g.x/7+.5))*TGT_RES*cellW;
+      const sy=oyR+(1-g.y/5)*TGT_RES*cellH;
+      ctx.fillStyle=LAVENDER;ctx.globalAlpha=g.alpha;ctx.beginPath();ctx.arc(sx,sy,2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    }
+
+    updateMetrics();
+  }
+
+  stepBtn.addEventListener('click',()=>{for(let i=0;i<10;i++)optimStep();draw();});
+  let running=false,rafId;
+  runBtn.addEventListener('click',()=>{
+    if(running){running=false;runBtn.textContent='Run';return;}
+    running=true;runBtn.textContent='Stop';
+    const go=()=>{if(!running)return;for(let i=0;i<5;i++)optimStep();draw();if(iter<500)rafId=requestAnimationFrame(go);else running=false;};go();
+  });
+  resetBtn.addEventListener('click',()=>{running=false;resetOpt();});
+  window.addEventListener('resize',resize);resetOpt();resize();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 5: ALPHA COMPOSITING
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('comp-canvas');const ctx=canvas.getContext('2d');
+  const countSlider=document.getElementById('comp-count');const countVal=document.getElementById('comp-count-val');
+  const stepBtn=document.getElementById('comp-step-btn');const resetBtn=document.getElementById('comp-reset-btn');
+  const statusEl=document.getElementById('comp-status');
+  let W,H,dpr,currentStep=0;
+
+  // Generate splats with known depth order
+  let splats=[];
+  function genSplats(){
+    const n=parseInt(countSlider.value);countVal.textContent=n;
+    splats=[];
+    for(let i=0;i<n;i++){
+      const t=i/(n-1);
+      splats.push({
+        depth:1+t*8,
+        x:.15+Math.sin(i*1.7+.5)*.25+t*.1,
+        y:.3+Math.cos(i*2.1)*.15+t*.05,
+        rx:.06+Math.random()*.08,
+        ry:.04+Math.random()*.06,
+        alpha:.3+Math.random()*.5,
+        r:Math.round(150+t*80),
+        g:Math.round(100+Math.sin(i)*.5*60+60),
+        b:Math.round(80+Math.cos(i)*40+40)
+      });
+    }
+    currentStep=0;
+  }
+
+  function resize(){dpr=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);genSplats();draw();}
+
+  function draw(){
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+
+    // Left: depth-ordered splats
+    const lx=20,ly=30,lw=W*.35,lh=H-60;
+    ctx.strokeStyle=DIM;ctx.lineWidth=.5;ctx.strokeRect(lx,ly,lw,lh);
+    ctx.fillStyle=DIM;ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';ctx.fillText('Depth-sorted splats (front → back)',lx+lw/2,ly-8);
+
+    splats.forEach((s,i)=>{
+      const active=i<currentStep;
+      const isCurrent=i===currentStep-1;
+      const cy=ly+20+(i/(splats.length))*( lh-40);
+      const cx=lx+lw/2;
+      const rx=s.rx*lw*2,ry=s.ry*lh*1.5;
+
+      ctx.globalAlpha=active?.7:.15;
+      ctx.fillStyle=`rgb(${s.r},${s.g},${s.b})`;
+      ctx.beginPath();ctx.ellipse(cx+(s.x-.4)*lw,cy,rx,ry,0,0,Math.PI*2);ctx.fill();
+      if(isCurrent){ctx.strokeStyle=GREEN;ctx.lineWidth=2;ctx.stroke();}
+      ctx.globalAlpha=1;
+
+      // Label
+      ctx.fillStyle=active?(isCurrent?GREEN:AMBER):DIM;ctx.font='9px "JetBrains Mono"';ctx.textAlign='right';
+      ctx.fillText(`k=${i} α=${s.alpha.toFixed(2)}`,lx+lw-8,cy+3);
+    });
+
+    // Right: composited result
+    const rx_=W*.42,ry_=ly,rw=W*.55,rh=lh;
+    ctx.strokeStyle=GREEN;ctx.lineWidth=1;ctx.strokeRect(rx_,ry_,rw,rh);
+    ctx.fillStyle=GREEN;ctx.font='10px "JetBrains Mono"';ctx.textAlign='center';
+    ctx.fillText('Composited pixel color C(p)',rx_+rw/2,ry_-8);
+
+    // Compute composited color at several sample points
+    const sampleRes=60;
+    for(let sy=0;sy<sampleRes;sy++){for(let sx=0;sx<sampleRes;sx++){
+      const px=(sx+.5)/sampleRes;const py=(sy+.5)/sampleRes;
+      let cr=0,cg=0,cb=0,T=1;
+      for(let k=0;k<Math.min(currentStep,splats.length);k++){
+        const s=splats[k];
+        const dx=(px-s.x)/s.rx;const dy=(py-s.y)/s.ry;
+        const g=Math.exp(-(dx*dx+dy*dy)/2);
+        const a=s.alpha*g;
+        cr+=s.r/255*a*T;cg+=s.g/255*a*T;cb+=s.b/255*a*T;
+        T*=(1-a);
+      }
+      if(cr>.01||cg>.01||cb>.01){
+        ctx.fillStyle=`rgb(${Math.round(cr*255)},${Math.round(cg*255)},${Math.round(cb*255)})`;
+        ctx.fillRect(rx_+sx*rw/sampleRes,ry_+sy*rh/sampleRes,rw/sampleRes+.5,rh/sampleRes+.5);
+      }
+    }}
+
+    // Transmittance bar
+    let finalT=1;
+    for(let k=0;k<Math.min(currentStep,splats.length);k++){finalT*=(1-splats[k].alpha*.5);}
+    const barY=H-18;
+    ctx.fillStyle=DIM;ctx.font='10px "JetBrains Mono"';ctx.textAlign='left';
+    ctx.fillText(`Transmittance T = ${finalT.toFixed(3)}`,rx_,barY);
+    ctx.fillStyle=AMBER;ctx.fillRect(rx_+160,barY-8,finalT*100,10);ctx.strokeStyle=DIM;ctx.strokeRect(rx_+160,barY-8,100,10);
+
+    statusEl.textContent=currentStep===0?'Click "Step Through" to composite one splat at a time.':
+      currentStep>=splats.length?`All ${splats.length} splats composited. Transmittance T = ${finalT.toFixed(3)}.`:
+      `Composited ${currentStep}/${splats.length} splats. T = ${finalT.toFixed(3)}. Each splat attenuates remaining transmittance.`;
+  }
+
+  stepBtn.addEventListener('click',()=>{if(currentStep<splats.length)currentStep++;draw();});
+  resetBtn.addEventListener('click',()=>{currentStep=0;draw();});
+  countSlider.addEventListener('input',()=>{genSplats();draw();});
+  window.addEventListener('resize',resize);resize();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SECTION 6: REAL-TIME SPLATTING
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const canvas=document.getElementById('rt-canvas');const ctx=canvas.getContext('2d');
+  const qualSlider=document.getElementById('rt-quality');
+  const wireBtn=document.getElementById('rt-wireframe-btn');
+  const countEl=document.getElementById('rt-count');const fpsEl=document.getElementById('rt-fps');const poseEl=document.getElementById('rt-pose');
+  let W,H,dpr,rotY=0.5,rotX=0.2,zoom=7,dragging=false,lastMx,lastMy,showWire=false;
+  let lastTime=performance.now(),frameCount=0,displayFps='—';
+
+  wireBtn.addEventListener('click',()=>{showWire=!showWire;wireBtn.classList.toggle('teal-active',showWire);});
+
+  // Dense gaussian set for this viz
+  const rtGaussians=generateGaussians(400);
+
+  function resize(){dpr=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+
+  function render(){
+    const t0=performance.now();
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    const cam=makeCamera(rotY,rotX,zoom);const fl=W*.6,cx=W/2,cy=H/2;
+    const quality=parseInt(qualSlider.value);
+    const maxG=quality===1?150:quality===2?300:400;
+    const subset=rtGaussians.slice(0,maxG);
+
+    // Sort by depth
+    const projected=[];
+    for(const g of subset){
+      const rel=v3sub(g.pos,cam.pos);const z=v3dot(rel,cam.fwd);if(z<.3)continue;
+      const sx=cx+v3dot(rel,cam.right)*fl/z;const sy=cy-v3dot(rel,cam.up)*fl/z;
+      if(sx<-50||sx>W+50||sy<-50||sy>H+50)continue;
+      projected.push({g,sx,sy,z,scl:fl/z});
+    }
+    projected.sort((a,b)=>b.z-a.z);
+
+    // Render splats
+    for(const{g,sx,sy,scl}of projected){
+      const rx=g.sx*scl*2.5,ry=g.sy*scl*2.5;
+      if(rx<.5&&ry<.5)continue;
+      ctx.save();ctx.translate(sx,sy);ctx.rotate(g.rot);
+      const grad=ctx.createRadialGradient(0,0,0,0,0,Math.max(rx,ry));
+      grad.addColorStop(0,`rgba(${Math.round(g.r*255)},${Math.round(g.g*255)},${Math.round(g.b*255)},${g.alpha*.55})`);
+      grad.addColorStop(.7,`rgba(${Math.round(g.r*200)},${Math.round(g.g*200)},${Math.round(g.b*200)},${g.alpha*.15})`);
+      grad.addColorStop(1,`rgba(${Math.round(g.r*150)},${Math.round(g.g*150)},${Math.round(g.b*150)},0)`);
+      ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+
+    // Optional wireframe overlay
+    if(showWire){drawWireframe(ctx,cam,fl,cx,cy,TEAL,.2,.8);}
+
+    countEl.textContent=projected.length;
+    poseEl.textContent=`θ=${(rotY*180/Math.PI).toFixed(0)}° φ=${(rotX*180/Math.PI).toFixed(0)}°`;
+
+    // FPS
+    frameCount++;
+    const now=performance.now();
+    if(now-lastTime>500){displayFps=((frameCount/((now-lastTime)/1000))).toFixed(0)+'fps';frameCount=0;lastTime=now;}
+    fpsEl.textContent=displayFps;
+    const dt=performance.now()-t0;
+    fpsEl.style.color=dt<20?GREEN:dt<50?AMBER:RED;
+
+    requestAnimationFrame(render);
+  }
+
+  canvas.addEventListener('mousedown',e=>{dragging=true;lastMx=e.offsetX;lastMy=e.offsetY;});
+  canvas.addEventListener('mousemove',e=>{if(!dragging)return;rotY+=(e.offsetX-lastMx)*.008;rotX+=(e.offsetY-lastMy)*.008;rotX=Math.max(-1.2,Math.min(1.2,rotX));lastMx=e.offsetX;lastMy=e.offsetY;});
+  canvas.addEventListener('mouseup',()=>dragging=false);canvas.addEventListener('mouseleave',()=>dragging=false);
+  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(3,Math.min(15,zoom+e.deltaY*.01));},{passive:false});
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();dragging=true;lastMx=e.touches[0].clientX;lastMy=e.touches[0].clientY;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!dragging)return;rotY+=(e.touches[0].clientX-lastMx)*.008;rotX+=(e.touches[0].clientY-lastMy)*.008;rotX=Math.max(-1.2,Math.min(1.2,rotX));lastMx=e.touches[0].clientX;lastMy=e.touches[0].clientY;},{passive:false});
+  canvas.addEventListener('touchend',()=>dragging=false);
+
+  window.addEventListener('resize',resize);resize();
+  requestAnimationFrame(render);
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SCROLL REVEAL + NAV + PROGRESS
+// ═══════════════════════════════════════════════════════════════
+(function(){
+  const sections=document.querySelectorAll('.essay-section');
+  const navLinks=document.querySelectorAll('#nav a');
+  const bar=document.getElementById('progress-bar');
+  function onScroll(){
+    const y=window.scrollY;const h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(y/h*100)+'%';
+    sections.forEach((sec,i)=>{
+      const r=sec.getBoundingClientRect();
+      if(r.top<window.innerHeight*.8)sec.classList.add('visible');
+      if(r.top<window.innerHeight*.4&&r.bottom>0){navLinks.forEach(l=>l.classList.remove('active'));if(navLinks[i])navLinks[i].classList.add('active');}
+    });
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+})();
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const go=()=>{if(typeof renderMathInElement==='function'){renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})}else setTimeout(go,200)};go();
+});
+</script>
+</body>
+</html>

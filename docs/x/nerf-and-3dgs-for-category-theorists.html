@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeRF & Gaussian Splatting — Sheaves That Refuse to Descend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root{--bg-deep:#0a0a0f;--bg-surface:#12121a;--bg-card:#1a1a28;--bg-hover:#222236;--amber:#d4a574;--teal:#5ab4ac;--lavender:#9b8ec4;--red:#e06c75;--green:#98c379;--text-primary:#e8e0d4;--text-secondary:#a09888;--text-muted:#6a6260;--border:#2a2a3a}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--amber) var(--bg-deep)}
+body{background:linear-gradient(180deg,var(--bg-deep),var(--bg-surface));color:var(--text-primary);font-family:'Source Sans 3',sans-serif;font-size:17px;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--amber),var(--teal));z-index:1000;transition:width .15s}
+#sidebar{position:fixed;left:0;top:0;width:260px;height:100vh;background:var(--bg-deep);border-right:1px solid var(--border);padding:2rem 1.2rem;z-index:100;overflow-y:auto;display:flex;flex-direction:column;gap:.3rem}
+#sidebar .logo{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--amber);margin-bottom:1.5rem;letter-spacing:.04em;line-height:1.3}
+#sidebar a{display:block;padding:.45rem .8rem;border-radius:6px;color:var(--text-muted);text-decoration:none;font-size:.82rem;transition:all .2s;border-left:2px solid transparent}
+#sidebar a:hover{color:var(--text-secondary);background:var(--bg-hover)}
+#sidebar a.active{color:var(--amber);background:rgba(212,165,116,.08);border-left-color:var(--amber)}
+#main{margin-left:260px;max-width:900px;padding:4rem 3rem 6rem}
+h1{font-family:'Cormorant Garamond',serif;font-size:2.6rem;font-weight:700;line-height:1.15;margin-bottom:.3rem}
+.subtitle{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-style:italic;color:var(--amber);margin-bottom:2.5rem}
+h2{font-family:'Cormorant Garamond',serif;font-size:1.85rem;font-weight:600;margin:3rem 0 1rem;padding-top:1rem}
+h3{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--teal);margin:1.8rem 0 .6rem}
+p{margin-bottom:1rem}
+p.note{font-size:.9rem;color:var(--text-secondary);border-left:3px solid var(--lavender);padding-left:1rem;margin:1.2rem 0}
+.viz-container{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:1.5rem 0 2rem;position:relative}
+.viz-title{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--amber);text-transform:uppercase;letter-spacing:.12em;margin-bottom:1rem}
+canvas{display:block;border-radius:8px;background:#0e0e18;width:100%}
+.controls{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;margin-top:1rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text-secondary);display:flex;align-items:center;gap:.5rem}
+.controls input[type="range"]{-webkit-appearance:none;width:140px;height:4px;border-radius:2px;background:var(--border);outline:none}
+.controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--amber);cursor:pointer}
+.controls button{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .9rem;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;cursor:pointer;transition:all .2s}
+.controls button:hover{border-color:var(--text-muted);color:var(--text-secondary)}
+.controls button.active{border-color:var(--amber);color:var(--amber);background:rgba(212,165,116,.1)}
+.legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.6rem}
+.legend-item{display:flex;align-items:center;gap:.35rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-secondary)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.canvas-hint{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted);text-align:center;margin-top:.5rem}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1.5rem 0}
+.compare-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1.2rem}
+.compare-card h4{font-family:'JetBrains Mono',monospace;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.8rem}
+.compare-card.nerf-card h4{color:var(--lavender)}
+.compare-card.gs-card h4{color:var(--teal)}
+.compare-card p{font-size:.88rem;color:var(--text-secondary);margin-bottom:.6rem}
+.compare-card .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:.15rem .5rem;border-radius:3px;margin-right:.3rem}
+.tag-implicit{background:rgba(155,142,196,.15);color:var(--lavender)}
+.tag-explicit{background:rgba(90,180,172,.15);color:var(--teal)}
+.tag-slow{background:rgba(224,108,117,.12);color:var(--red)}
+.tag-fast{background:rgba(152,195,121,.12);color:var(--green)}
+@media(max-width:900px){#sidebar{display:none}#main{margin-left:0;padding:2rem 1.2rem 4rem}h1{font-size:2rem}.compare-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="progress-bar" style="width:0%"></div>
+<nav id="sidebar">
+  <div class="logo">NeRF &amp; 3DGS<br>Sheaves That<br>Refuse to Descend</div>
+  <a href="#sec-departure" class="active">The Departure</a>
+  <a href="#sec-nerf">NeRF: The Implicit Sheaf</a>
+  <a href="#sec-ray-marching">Ray Marching</a>
+  <a href="#sec-volume-rendering">Volume Rendering</a>
+  <a href="#sec-3dgs">3DGS: Explicit Splats</a>
+  <a href="#sec-splatting">Splatting a Gaussian</a>
+  <a href="#sec-comparison">The Comparison</a>
+  <a href="#sec-categorical">The Categorical Reading</a>
+</nav>
+<main id="main">
+
+<header class="reveal">
+  <h1>NeRF &amp; Gaussian Splatting</h1>
+  <div class="subtitle">Sheaves that refuse to descend — and why the base object is optional</div>
+</header>
+
+<section id="sec-departure" class="reveal">
+  <h2>The Departure</h2>
+  <p>Classical photogrammetry descends: it takes a cover (photographs), extracts a descent datum (feature correspondences), enforces the cocycle condition (bundle adjustment), and constructs the descended object (a mesh). The output is a concrete geometric object — vertices, edges, faces — living in \(\mathbb{R}^3\).</p>
+  <p>The methods on this page do something radical. They <strong>never construct the geometric object</strong>. Instead, they learn a <em>function</em> that, given a viewpoint, produces the image you would see. They encode the <strong>functor of views</strong> directly — the sheaf on the site — without ever materializing its representing object.</p>
+  <p class="note">If photogrammetry is effective descent — recovering the object on the base from data on the cover — then NeRF and 3DGS are <em>sheaves that refuse to descend</em>. They stay at the level of the cover and say: the coherent family of views is all there is.</p>
+</section>
+
+<section id="sec-nerf" class="reveal">
+  <h2>NeRF: The Implicit Sheaf</h2>
+  <p>A <strong>Neural Radiance Field</strong> (Mildenhall et al., 2020) represents a scene as a single neural network — a multilayer perceptron (MLP) — that maps a 5D input to a 4D output:</p>
+  <p style="text-align:center;font-size:1.05rem;margin:1rem 0">
+    \(F_\theta : (\underbrace{x, y, z}_{\text{position}},\ \underbrace{\theta, \phi}_{\text{view direction}}) \;\longmapsto\; (\underbrace{r, g, b}_{\text{color}},\ \underbrace{\sigma}_{\text{density}})\)
+  </p>
+  <p>The network's weights \(\theta\) are optimized so that, for any camera pose, shooting rays through the scene and querying the MLP along each ray produces an image that matches the training photograph from that pose. There is no mesh. No point cloud. No triangles. The entire 3D scene is compressed into the weights of a neural network.</p>
+  <p>The 5D input is the key: the <em>same</em> spatial point can return <em>different</em> colors depending on the viewing direction. This is how NeRF captures view-dependent effects — specular reflections, glossy surfaces — that classical photogrammetry bakes into a single texture.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Interactive · The NeRF Function</div>
+    <canvas id="c-nerf-fn" width="840" height="340"></canvas>
+    <div class="canvas-hint">Hover over 3D space to query the "MLP" · Move the eye icon to change viewing direction</div>
+    <div class="controls">
+      <label>View direction <input type="range" id="nerf-viewdir" min="0" max="628" value="0"></label>
+      <label style="margin-left:auto;color:var(--lavender)">
+        F<sub>θ</sub>(<span id="nerf-query">—</span>) → <span id="nerf-output" style="color:var(--green)">—</span>
+      </label>
+    </div>
+  </div>
+</section>
+
+<section id="sec-ray-marching" class="reveal">
+  <h2>Ray Marching</h2>
+  <p>To render a single pixel, NeRF casts a ray from the camera center through that pixel into the scene, then <strong>samples points</strong> along the ray at regular or stratified intervals. At each sample point, the MLP is queried to obtain color and density. This process — shooting a ray and stepping along it — is called <em>ray marching</em>.</p>
+  <p>Below, a camera casts a ray into a scene. Drag the ray endpoint to change which pixel is being rendered. The sampled points are marked along the ray, with their density shown by dot size and their color by fill.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Ray Marching Through the Radiance Field</div>
+    <canvas id="c-ray" width="840" height="420"></canvas>
+    <div class="canvas-hint">Drag the ray direction · Adjust sample count with the slider</div>
+    <div class="controls">
+      <label>Samples per ray <input type="range" id="ray-samples" min="4" max="48" value="16"></label>
+      <label>Ray angle <input type="range" id="ray-angle" min="-80" max="80" value="0"></label>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> Camera</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--lavender)"></div> Ray</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Sample point (size ∝ σ)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Rendered pixel color</div>
+    </div>
+  </div>
+</section>
+
+<section id="sec-volume-rendering" class="reveal">
+  <h2>Volume Rendering: Integrating the Ray</h2>
+  <p>The color and density at each sample point are combined by the <strong>volume rendering equation</strong>:</p>
+  <p style="text-align:center;font-size:1rem;margin:1rem 0">
+    \(\hat{C}(\mathbf{r}) = \sum_{i=1}^{N} T_i \cdot \alpha_i \cdot \mathbf{c}_i \qquad\text{where}\quad T_i = \prod_{j=1}^{i-1}(1-\alpha_j),\quad \alpha_i = 1-e^{-\sigma_i \delta_i}\)
+  </p>
+  <p>Here \(T_i\) is the <em>transmittance</em> — the probability that the ray has not yet been absorbed before reaching sample \(i\). Each sample contributes its color weighted by how opaque it is (\(\alpha_i\)) and how much light reaches it (\(T_i\)). This is fully differentiable, so the whole pipeline — ray casting, MLP query, volume rendering — can be trained end-to-end by backpropagating the pixel-wise loss.</p>
+  <p>Below, watch the volume rendering integration in action. Each bar represents a sample along the ray. Height encodes density \(\sigma\), color encodes the MLP's predicted RGB, and opacity encodes the contribution weight \(T_i \cdot \alpha_i\). The final rendered pixel is the weighted sum.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Volume Rendering Integration</div>
+    <canvas id="c-volrend" width="840" height="320"></canvas>
+    <div class="canvas-hint">Move the density profile to change where the "surface" is</div>
+    <div class="controls">
+      <label>Surface position <input type="range" id="vol-surface" min="10" max="90" value="55"></label>
+      <label>Surface sharpness <input type="range" id="vol-sharp" min="1" max="50" value="20"></label>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Density σ (bar height)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Contribution weight Tᵢ·αᵢ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red);width:20px;height:4px;border-radius:2px"></div> Final pixel color</div>
+    </div>
+  </div>
+
+  <p class="note">The key insight: volume rendering turns a <em>continuous implicit function</em> into a <em>pixel color</em> through integration. The scene has no surfaces — only a density field. Surfaces emerge as regions where \(\sigma\) is high. This is why NeRF can handle semi-transparent objects, fog, and fuzzy boundaries that defeat classical photogrammetry.</p>
+</section>
+
+<section id="sec-3dgs" class="reveal">
+  <h2>3D Gaussian Splatting: The Explicit Alternative</h2>
+  <p><strong>3D Gaussian Splatting</strong> (Kerbl et al., SIGGRAPH 2023) takes the opposite approach to NeRF's implicit representation. Instead of encoding the scene as a neural network, it represents it as a collection of millions of <strong>3D Gaussian ellipsoids</strong>, each with explicit parameters:</p>
+  <p style="margin-left:1.5rem;font-size:.95rem">
+    Each Gaussian \(g_k\) carries: <span style="color:var(--amber)">position</span> \(\boldsymbol{\mu}_k \in \mathbb{R}^3\), <span style="color:var(--teal)">covariance</span> \(\Sigma_k \in \mathbb{R}^{3\times 3}\), <span style="color:var(--lavender)">color</span> \(\mathbf{c}_k\) (via spherical harmonics for view-dependence), and <span style="color:var(--text-secondary)">opacity</span> \(\alpha_k \in [0,1]\).
+  </p>
+  <p>To render: project each Gaussian onto the image plane (producing a 2D Gaussian "splat"), sort by depth, and alpha-blend front-to-back. No neural network is queried at render time — just GPU rasterization. This is why 3DGS renders at 100+ FPS while NeRF struggles to reach 5.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Interactive · 3D Gaussians in a Scene</div>
+    <canvas id="c-gaussians" width="840" height="420"></canvas>
+    <div class="canvas-hint">Drag to orbit · Click a Gaussian to inspect it · Adjust count with slider</div>
+    <div class="controls">
+      <label>Gaussians <input type="range" id="gs-count" min="20" max="300" value="100"></label>
+      <label>Show ellipses <input type="checkbox" id="gs-ellipses" checked></label>
+      <button id="gs-spin-btn" onclick="window._gsSpin=!window._gsSpin;this.classList.toggle('active')">Auto-rotate</button>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Gaussian center μ</div>
+      <div class="legend-item"><div class="legend-dot" style="border:2px solid var(--teal);background:transparent"></div> Covariance ellipse Σ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(155,142,196,.5)"></div> Opacity (fill alpha)</div>
+    </div>
+  </div>
+</section>
+
+<section id="sec-splatting" class="reveal">
+  <h2>Splatting: From 3D Blobs to Pixels</h2>
+  <p>The rendering formula for 3DGS is remarkably similar to NeRF's volume rendering. For a pixel \(p\), sort the Gaussians by depth and blend:</p>
+  <p style="text-align:center;font-size:1rem;margin:1rem 0">
+    \(\hat{C}(p) = \sum_{k \in \mathcal{N}} T_k \cdot \alpha_k \cdot G_k(p) \cdot \mathbf{c}_k \qquad\text{where}\quad T_k = \prod_{j=1}^{k-1}(1 - \alpha_j \cdot G_j(p))\)
+  </p>
+  <p>Here \(G_k(p)\) is the 2D Gaussian evaluated at pixel \(p\) — how much the \(k\)-th splat covers this pixel. The formulas are nearly identical to NeRF's; the difference is <em>computational</em>: instead of marching a ray and querying a neural network at every sample, you project a fixed set of blobs and rasterize them with GPU hardware. The image formation model is the same. The implementation is radically different.</p>
+  <p>Below, watch Gaussians being splatted onto the image plane. Each 3D ellipsoid projects to a 2D ellipse that is alpha-blended with everything behind it.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Splatting onto the Image Plane</div>
+    <canvas id="c-splat" width="840" height="380"></canvas>
+    <div class="canvas-hint">Drag the camera position along the bottom</div>
+    <div class="controls">
+      <label>Camera X <input type="range" id="splat-camx" min="100" max="740" value="420"></label>
+      <label>Splat opacity <input type="range" id="splat-opacity" min="10" max="100" value="60"></label>
+    </div>
+  </div>
+</section>
+
+<section id="sec-comparison" class="reveal">
+  <h2>The Comparison</h2>
+  <div class="compare-grid">
+    <div class="compare-card nerf-card">
+      <h4>NeRF — Neural Radiance Field</h4>
+      <p><span class="tag tag-implicit">implicit</span><span class="tag tag-slow">~5 FPS</span></p>
+      <p>Scene = weights of a neural network. Render by marching rays and querying MLP per sample. Captures view-dependent effects via directional input. Training: hours. Rendering: slow (network inference per pixel × samples per ray).</p>
+      <p style="color:var(--lavender);font-size:.85rem">Categorically: the sheaf itself. Stores \(T \mapsto \mathrm{view}(T)\) as a learned function. Never materializes a base object.</p>
+    </div>
+    <div class="compare-card gs-card">
+      <h4>3DGS — 3D Gaussian Splatting</h4>
+      <p><span class="tag tag-explicit">explicit</span><span class="tag tag-fast">100+ FPS</span></p>
+      <p>Scene = millions of Gaussian ellipsoids with position, shape, color, opacity. Render by projecting and rasterizing splats. View-dependence via spherical harmonics. Training: minutes. Rendering: real-time (GPU rasterization, no neural network).</p>
+      <p style="color:var(--teal);font-size:.85rem">Categorically: a representing object — but made of probabilistic blobs rather than simplices. An explicit model you can manipulate.</p>
+    </div>
+  </div>
+  <p>Both share the same training signal (photographic images + camera poses from SfM) and the same image formation model (alpha-blending along depth-sorted contributions). They differ in representation: NeRF compresses everything into network weights (implicit), 3DGS stores explicit geometric primitives (millions of Gaussians).</p>
+</section>
+
+<section id="sec-categorical" class="reveal">
+  <h2>The Categorical Reading</h2>
+  <p>Here is the punchline, in the language you came for.</p>
+  <p><strong>Classical photogrammetry</strong> performs effective descent. It recovers the object \(E\) on the base \(X\) from coherent local data on the cover. The output is a concrete geometric object — a mesh, a representing object for the functor of views.</p>
+  <p><strong>NeRF</strong> encodes the <em>sheaf itself</em>. The MLP is the functor \(T \mapsto (\text{color}, \text{density})\) — it takes a probe (position + direction) and returns an observation. No representing object is ever constructed. If you want a mesh, you can extract one (via marching cubes on the density field), but this is an afterthought. The sheaf is primary. The space is a convenience.</p>
+  <p><strong>3DGS</strong> constructs an explicit representing object — but a strange one. Instead of a simplicial complex (mesh), it produces a measure-theoretic one: a collection of Gaussian measures in \(\mathbb{R}^3\), each carrying color and opacity data. The "3D object" is a signed measure on \(\mathbb{R}^3\) with values in a color space. It is explicit and manipulable, but it is not a manifold. It is not even a CW-complex. It is a cloud of soft blobs.</p>
+  <p class="note">The progression tells a story about what it means for a geometric object to "exist":
+  <br><br>
+  <strong>Photogrammetry</strong>: the object exists as a subspace of \(\mathbb{R}^3\) (a mesh). Descent is effective.
+  <br><strong>3DGS</strong>: the object exists as a measure on \(\mathbb{R}^3\). Descent produces something, but not a space — a distribution.
+  <br><strong>NeRF</strong>: the object does not exist at all. Only the functor of views exists. Descent is refused. The sheaf is the thing.
+  <br><br>
+  This is Grothendieck's insight arriving from engineering: <em>you don't need the space. You need the site and the sheaf.</em> The space, if it exists, is a representing object for the functor. But the functor is primary.
+  </p>
+</section>
+
+</main>
+<script>
+const TAU=Math.PI*2,PI=Math.PI,sin=Math.sin,cos=Math.cos,sqrt=Math.sqrt,abs=Math.abs;
+const lerp=(a,b,t)=>a+(b-a)*t,clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+function mkRng(s){return()=>{s=(s*16807)%2147483647;return s/2147483647}}
+
+// ═══ §1: NERF FUNCTION VIZ ═══
+(function(){
+  const cv=document.getElementById('c-nerf-fn');
+  const vdSlider=document.getElementById('nerf-viewdir');
+  const queryEl=document.getElementById('nerf-query');
+  const outputEl=document.getElementById('nerf-output');
+  let hoverX=-1,hoverY=-1;
+
+  // Fake "scene" density field — a few blobs
+  const blobs=[
+    {x:.3,y:.5,r:.18,color:[210,165,116],sigma:8},
+    {x:.55,y:.4,r:.15,color:[90,180,172],sigma:6},
+    {x:.7,y:.6,r:.2,color:[155,142,196],sigma:5},
+    {x:.45,y:.65,r:.12,color:[152,195,121],sigma:7},
+  ];
+
+  function queryField(px,py,vd){
+    let totalSigma=0,r=0,g=0,b=0;
+    blobs.forEach(bl=>{
+      const dx=px-bl.x,dy=py-bl.y;
+      const d2=dx*dx+dy*dy;
+      const w=Math.exp(-d2/(2*bl.r*bl.r))*bl.sigma;
+      // View-dependent color shift
+      const shift=sin(vd)*0.15;
+      r+=w*(bl.color[0]/255+shift);
+      g+=w*(bl.color[1]/255-shift*0.5);
+      b+=w*(bl.color[2]/255+shift*0.3);
+      totalSigma+=w;
+    });
+    if(totalSigma>0){r/=totalSigma;g/=totalSigma;b/=totalSigma}
+    return{r:clamp(r,0,1),g:clamp(g,0,1),b:clamp(b,0,1),sigma:Math.min(totalSigma,10)};
+  }
+
+  cv.addEventListener('mousemove',e=>{const rect=cv.getBoundingClientRect();hoverX=(e.clientX-rect.left)/rect.width;hoverY=(e.clientY-rect.top)/rect.height;draw()});
+  cv.addEventListener('mouseleave',()=>{hoverX=-1;draw()});
+  vdSlider.addEventListener('input',draw);
+
+  function draw(){
+    const r=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*r;cv.height=H*r;
+    const ctx=cv.getContext('2d');ctx.scale(r,r);ctx.clearRect(0,0,W,H);
+    const vd=parseFloat(vdSlider.value)/100;
+
+    // Draw scene region
+    const scX=40,scY=20,scW=W*0.45,scH=H-40;
+    ctx.strokeStyle='#2a2a3a';ctx.lineWidth=1;
+    ctx.strokeRect(scX,scY,scW,scH);
+    ctx.fillStyle='rgba(232,224,212,.04)';ctx.fillRect(scX,scY,scW,scH);
+
+    // Label
+    ctx.fillStyle='rgba(232,224,212,.4)';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('3D SCENE SPACE (x, y, z)',scX+8,scY+14);
+
+    // Draw density field as faint circles
+    blobs.forEach(bl=>{
+      const bx=scX+bl.x*scW,by=scY+bl.y*scH;
+      const grad=ctx.createRadialGradient(bx,by,0,bx,by,bl.r*scW);
+      const q=queryField(bl.x,bl.y,vd);
+      const c=`${Math.round(q.r*255)},${Math.round(q.g*255)},${Math.round(q.b*255)}`;
+      grad.addColorStop(0,`rgba(${c},.3)`);
+      grad.addColorStop(1,`rgba(${c},0)`);
+      ctx.fillStyle=grad;
+      ctx.beginPath();ctx.arc(bx,by,bl.r*scW*1.5,0,TAU);ctx.fill();
+    });
+
+    // MLP diagram (rounded rect drawn manually for compatibility)
+    const mlpX=scX+scW+40,mlpY=H/2-60,mlpW=120,mlpH=120,mlpR=8;
+    ctx.strokeStyle='#2a2a3a';
+    ctx.fillStyle='rgba(155,142,196,.08)';
+    ctx.beginPath();
+    ctx.moveTo(mlpX+mlpR,mlpY);ctx.lineTo(mlpX+mlpW-mlpR,mlpY);ctx.arcTo(mlpX+mlpW,mlpY,mlpX+mlpW,mlpY+mlpR,mlpR);
+    ctx.lineTo(mlpX+mlpW,mlpY+mlpH-mlpR);ctx.arcTo(mlpX+mlpW,mlpY+mlpH,mlpX+mlpW-mlpR,mlpY+mlpH,mlpR);
+    ctx.lineTo(mlpX+mlpR,mlpY+mlpH);ctx.arcTo(mlpX,mlpY+mlpH,mlpX,mlpY+mlpH-mlpR,mlpR);
+    ctx.lineTo(mlpX,mlpY+mlpR);ctx.arcTo(mlpX,mlpY,mlpX+mlpR,mlpY,mlpR);
+    ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.fillStyle='#9b8ec4';ctx.font='bold 11px "JetBrains Mono"';
+    ctx.fillText('MLP F_θ',mlpX+25,mlpY+20);
+    // Layers
+    for(let l=0;l<4;l++){
+      const ly=mlpY+40+l*20;
+      for(let n=0;n<5;n++){
+        const nx=mlpX+15+n*22;
+        ctx.beginPath();ctx.arc(nx,ly,4,0,TAU);
+        ctx.fillStyle='rgba(155,142,196,.3)';ctx.fill();
+      }
+    }
+
+    // Output region
+    const outX=mlpX+mlpW+40,outY=H/2-40,outW=W-outX-20,outH=80;
+    ctx.strokeStyle='#2a2a3a';ctx.strokeRect(outX,outY,outW,outH);
+    ctx.fillStyle='rgba(152,195,121,.06)';ctx.fillRect(outX,outY,outW,outH);
+    ctx.fillStyle='#98c379';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('OUTPUT',outX+8,outY+14);
+
+    // Arrows
+    ctx.strokeStyle='rgba(232,224,212,.2)';ctx.lineWidth=1;
+    // Scene → MLP
+    ctx.beginPath();ctx.moveTo(scX+scW+5,H/2);ctx.lineTo(mlpX-5,H/2);ctx.stroke();
+    ctx.fillStyle='rgba(232,224,212,.3)';ctx.beginPath();ctx.moveTo(mlpX-5,H/2);ctx.lineTo(mlpX-12,H/2-4);ctx.lineTo(mlpX-12,H/2+4);ctx.fill();
+    // MLP → Output
+    ctx.strokeStyle='rgba(232,224,212,.2)';
+    ctx.beginPath();ctx.moveTo(mlpX+mlpW+5,H/2);ctx.lineTo(outX-5,H/2);ctx.stroke();
+    ctx.fillStyle='rgba(232,224,212,.3)';ctx.beginPath();ctx.moveTo(outX-5,H/2);ctx.lineTo(outX-12,H/2-4);ctx.lineTo(outX-12,H/2+4);ctx.fill();
+
+    // Input labels
+    ctx.fillStyle='rgba(232,224,212,.4)';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('(x,y,z,θ,φ)',scX+scW+5,H/2-12);
+    ctx.fillText('(r,g,b,σ)',mlpX+mlpW+5,H/2-12);
+
+    // Hover query
+    if(hoverX>=0 && hoverX*W>=scX && hoverX*W<=scX+scW && hoverY*H>=scY && hoverY*H<=scY+scH){
+      const px=(hoverX*W-scX)/scW, py=(hoverY*H-scY)/scH;
+      const q=queryField(px,py,vd);
+
+      // Crosshair
+      const sx=hoverX*W,sy=hoverY*H;
+      ctx.strokeStyle='rgba(212,165,116,.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(sx,scY);ctx.lineTo(sx,scY+scH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(scX,sy);ctx.lineTo(scX+scW,sy);ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Query dot
+      ctx.beginPath();ctx.arc(sx,sy,6,0,TAU);ctx.fillStyle='#d4a574';ctx.fill();
+
+      // Output display
+      const col=`rgb(${Math.round(q.r*255)},${Math.round(q.g*255)},${Math.round(q.b*255)})`;
+      ctx.fillStyle=col;
+      ctx.fillRect(outX+15,outY+25,outW-30,40);
+      ctx.fillStyle='rgba(0,0,0,.5)';ctx.font='11px "JetBrains Mono"';
+      ctx.fillText(`σ = ${q.sigma.toFixed(2)}`,outX+20,outY+48);
+
+      queryEl.textContent=`${px.toFixed(2)}, ${py.toFixed(2)}, θ=${(vd).toFixed(1)}`;
+      outputEl.innerHTML=`<span style="color:${col}">■</span> σ=${q.sigma.toFixed(2)}`;
+    }
+  }
+
+  draw();
+})();
+
+// ═══ §2: RAY MARCHING ═══
+(function(){
+  const cv=document.getElementById('c-ray');
+  const sampSlider=document.getElementById('ray-samples');
+  const angSlider=document.getElementById('ray-angle');
+
+  // Fake scene: density peaks at certain depths
+  function sceneDensity(t){
+    // Two "surfaces" at different depths
+    const s1=Math.exp(-(((t-0.4)/0.06)**2))*6;
+    const s2=Math.exp(-(((t-0.75)/0.08)**2))*3;
+    return s1+s2;
+  }
+  function sceneColor(t){
+    const s1w=Math.exp(-(((t-0.4)/0.06)**2));
+    const s2w=Math.exp(-(((t-0.75)/0.08)**2));
+    const tw=s1w+s2w+.001;
+    return{r:lerp(.82,.6,s2w/tw),g:lerp(.65,.7,s2w/tw),b:lerp(.45,.76,s2w/tw)};
+  }
+
+  sampSlider.addEventListener('input',drawRay);
+  angSlider.addEventListener('input',drawRay);
+
+  function drawRay(){
+    const r=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*r;cv.height=H*r;
+    const ctx=cv.getContext('2d');ctx.scale(r,r);ctx.clearRect(0,0,W,H);
+
+    const nSamp=parseInt(sampSlider.value);
+    const ang=parseFloat(angSlider.value)/100;
+
+    // Camera
+    const camX=60,camY=H/2+ang*120;
+    ctx.fillStyle='#5ab4ac';ctx.beginPath();ctx.arc(camX,camY,10,0,TAU);ctx.fill();
+    ctx.fillStyle='#5ab4ac';ctx.font='10px "JetBrains Mono"';ctx.fillText('camera',camX-15,camY+22);
+
+    // Image plane
+    const ipX=110;
+    ctx.strokeStyle='rgba(90,180,172,.4)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(ipX,camY-60);ctx.lineTo(ipX,camY+60);ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Ray
+    const rayEndX=W-40;
+    const rayEndY=H/2;
+    ctx.strokeStyle='rgba(155,142,196,.35)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(camX,camY);ctx.lineTo(rayEndX,rayEndY);ctx.stroke();
+
+    // Near/far planes
+    const nearX=160,farX=W-80;
+    ctx.strokeStyle='rgba(232,224,212,.1)';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+    ctx.beginPath();ctx.moveTo(nearX,20);ctx.lineTo(nearX,H-20);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(farX,20);ctx.lineTo(farX,H-20);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(232,224,212,.25)';ctx.font='9px "JetBrains Mono"';
+    ctx.fillText('near',nearX-10,16);ctx.fillText('far',farX-8,16);
+
+    // Sample points
+    const samples=[];
+    for(let i=0;i<nSamp;i++){
+      const t=(i+.5)/nSamp;
+      const sx=lerp(nearX,farX,t);
+      const sy=lerp(camY,rayEndY,(sx-camX)/(rayEndX-camX));
+      const sigma=sceneDensity(t);
+      const col=sceneColor(t);
+      samples.push({x:sx,y:sy,t,sigma,col});
+    }
+
+    // Draw density profile background
+    ctx.fillStyle='rgba(212,165,116,.06)';
+    ctx.beginPath();ctx.moveTo(nearX,H-30);
+    for(let i=0;i<100;i++){
+      const t=i/100;const x=lerp(nearX,farX,t);
+      const d=sceneDensity(t);
+      ctx.lineTo(x,H-30-d*25);
+    }
+    ctx.lineTo(farX,H-30);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(232,224,212,.2)';ctx.font='9px "JetBrains Mono"';
+    ctx.fillText('density σ(t)',nearX+5,H-35);
+
+    // Volume rendering
+    let finalR=0,finalG=0,finalB=0,T=1;
+    samples.forEach(s=>{
+      const dt=1/nSamp;
+      const alpha=1-Math.exp(-s.sigma*dt*5);
+      const w=T*alpha;
+      finalR+=w*s.col.r;finalG+=w*s.col.g;finalB+=w*s.col.b;
+      T*=(1-alpha);
+    });
+
+    // Draw samples
+    samples.forEach((s,i)=>{
+      const dt=1/nSamp;
+      const alpha=1-Math.exp(-s.sigma*dt*5);
+      const radius=clamp(2+s.sigma*3,2,16);
+      ctx.beginPath();ctx.arc(s.x,s.y,radius,0,TAU);
+      ctx.fillStyle=`rgba(${Math.round(s.col.r*255)},${Math.round(s.col.g*255)},${Math.round(s.col.b*255)},${clamp(alpha+.15,0,1)})`;
+      ctx.fill();
+      ctx.strokeStyle='rgba(212,165,116,.3)';ctx.lineWidth=.5;ctx.stroke();
+    });
+
+    // Rendered pixel
+    const pixCol=`rgb(${Math.round(finalR*255)},${Math.round(finalG*255)},${Math.round(finalB*255)})`;
+    // On image plane
+    const ipY=camY + (rayEndY - camY) * ((ipX - camX) / (rayEndX - camX));
+    ctx.fillStyle=pixCol;
+    ctx.fillRect(ipX-4,ipY-8,8,16);
+    ctx.strokeStyle='#98c379';ctx.lineWidth=1.5;ctx.strokeRect(ipX-4,ipY-8,8,16);
+
+    // Final pixel display
+    ctx.fillStyle=pixCol;
+    ctx.fillRect(W-30,H/2-15,20,30);
+    ctx.strokeStyle='#98c379';ctx.lineWidth=2;ctx.strokeRect(W-30,H/2-15,20,30);
+    ctx.fillStyle='#98c379';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('Ĉ(r)',W-38,H/2+30);
+  }
+  drawRay();
+})();
+
+// ═══ §3: VOLUME RENDERING ═══
+(function(){
+  const cv=document.getElementById('c-volrend');
+  const surfSlider=document.getElementById('vol-surface');
+  const sharpSlider=document.getElementById('vol-sharp');
+
+  surfSlider.addEventListener('input',drawVol);
+  sharpSlider.addEventListener('input',drawVol);
+
+  function drawVol(){
+    const r=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*r;cv.height=H*r;
+    const ctx=cv.getContext('2d');ctx.scale(r,r);ctx.clearRect(0,0,W,H);
+
+    const N=32;
+    const surfPos=parseFloat(surfSlider.value)/100;
+    const sharpness=parseFloat(sharpSlider.value);
+    const barW=(W-120)/N;
+    const baseY=H-50;
+    const maxBarH=H-100;
+
+    // Compute densities and colors
+    const samples=[];
+    for(let i=0;i<N;i++){
+      const t=(i+.5)/N;
+      const sigma=sharpness*Math.exp(-(((t-surfPos)/0.08)**2));
+      // Color gradient: blue far, amber near surface, green close
+      const distToSurf=abs(t-surfPos);
+      const r2=lerp(.82,.35,clamp(t*1.5,0,1));
+      const g2=lerp(.65,.7,clamp(1-distToSurf*5,0,1));
+      const b2=lerp(.45,.76,clamp(t,0,1));
+      samples.push({t,sigma,r:r2,g:g2,b:b2});
+    }
+
+    // Volume rendering
+    let T=1;
+    const weights=[];
+    samples.forEach((s,i)=>{
+      const dt=1/N;
+      const alpha=1-Math.exp(-s.sigma*dt);
+      weights.push(T*alpha);
+      T*=(1-alpha);
+    });
+
+    let finalR=0,finalG=0,finalB=0;
+    samples.forEach((s,i)=>{finalR+=weights[i]*s.r;finalG+=weights[i]*s.g;finalB+=weights[i]*s.b});
+
+    // Draw bars
+    const startX=60;
+    ctx.fillStyle='rgba(232,224,212,.2)';ctx.font='9px "JetBrains Mono"';
+    ctx.fillText('t = 0 (near)',startX,baseY+16);
+    ctx.fillText('t = 1 (far)',startX+(N-2)*barW,baseY+16);
+
+    samples.forEach((s,i)=>{
+      const x=startX+i*barW;
+      const barH=clamp(s.sigma/sharpness*maxBarH,1,maxBarH);
+      const col=`rgb(${Math.round(s.r*255)},${Math.round(s.g*255)},${Math.round(s.b*255)})`;
+
+      // Density bar
+      ctx.fillStyle=col;
+      ctx.globalAlpha=clamp(.15+s.sigma/sharpness*.7,0,.85);
+      ctx.fillRect(x,baseY-barH,barW-2,barH);
+      ctx.globalAlpha=1;
+
+      // Weight overlay (green)
+      const wH=weights[i]*maxBarH*4;
+      ctx.fillStyle='rgba(152,195,121,.5)';
+      ctx.fillRect(x,baseY-wH,barW-2,wH);
+    });
+
+    // Axis
+    ctx.strokeStyle='rgba(232,224,212,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(startX,baseY);ctx.lineTo(startX+N*barW,baseY);ctx.stroke();
+
+    // Surface marker
+    const surfX=startX+surfPos*N*barW;
+    ctx.strokeStyle='#d4a574';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(surfX,30);ctx.lineTo(surfX,baseY);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#d4a574';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('surface',surfX-18,24);
+
+    // Final pixel
+    const pixCol=`rgb(${Math.round(finalR*255)},${Math.round(finalG*255)},${Math.round(finalB*255)})`;
+    ctx.fillStyle=pixCol;
+    ctx.fillRect(W-60,40,40,40);
+    ctx.strokeStyle='#98c379';ctx.lineWidth=2;ctx.strokeRect(W-60,40,40,40);
+    ctx.fillStyle='#98c379';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('Ĉ(r)',W-55,92);
+
+    // Labels
+    ctx.fillStyle='rgba(212,165,116,.5)';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('σ (density)',8,50);
+    ctx.fillStyle='rgba(152,195,121,.5)';
+    ctx.fillText('Tᵢ·αᵢ (weight)',8,66);
+  }
+  drawVol();
+})();
+
+// ═══ §4: 3D GAUSSIANS ═══
+(function(){
+  const cv=document.getElementById('c-gaussians');
+  const cntSlider=document.getElementById('gs-count');
+  const ellCheck=document.getElementById('gs-ellipses');
+  window._gsSpin=false;
+  let az=.6,el=.3,dist=8,drag=false,lx=0,ly=0;
+
+  cv.addEventListener('pointerdown',e=>{drag=true;lx=e.offsetX;ly=e.offsetY});
+  cv.addEventListener('pointermove',e=>{if(!drag)return;az+=(e.offsetX-lx)*.005;el=clamp(el+(e.offsetY-ly)*.005,-.6,.8);lx=e.offsetX;ly=e.offsetY;drawGS()});
+  window.addEventListener('pointerup',()=>drag=false);
+  cntSlider.addEventListener('input',()=>{generateGaussians();drawGS()});
+  ellCheck.addEventListener('change',drawGS);
+
+  let gaussians=[];
+  const rng=mkRng(777);
+
+  function generateGaussians(){
+    const n=parseInt(cntSlider.value);
+    gaussians=[];
+    const r2=mkRng(777);
+    for(let i=0;i<n;i++){
+      gaussians.push({
+        pos:[(r2()-.5)*3,(r2()-.5)*2.5,(r2()-.5)*3],
+        rx:.05+r2()*.25, ry:.05+r2()*.2, rz:.05+r2()*.25,
+        rot:r2()*TAU,
+        color:[.3+r2()*.6,.3+r2()*.5,.3+r2()*.6],
+        alpha:.2+r2()*.6,
+      });
+    }
+  }
+  generateGaussians();
+
+  function drawGS(){
+    const ratio=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*ratio;cv.height=H*ratio;
+    const ctx=cv.getContext('2d');ctx.scale(ratio,ratio);ctx.clearRect(0,0,W,H);
+    const cx=W/2,cy=H/2,fov=Math.min(W,H)*.3;
+    const showEll=ellCheck.checked;
+
+    function xf(p){let v=[p[0],p[1],p[2]];
+      const ca=cos(az),sa=sin(az),ce=cos(el),se=sin(el);
+      const x2=v[0]*ca+v[2]*sa,z2=-v[0]*sa+v[2]*ca;
+      const y2=v[1]*ce-z2*se,z3=v[1]*se+z2*ce;
+      return[x2,y2,z3+dist]}
+
+    // Sort by depth
+    const sorted=gaussians.map((g,i)=>{const t=xf(g.pos);return{g,t,d:t[2]}}).sort((a,b)=>b.d-a.d);
+
+    sorted.forEach(({g,t})=>{
+      if(t[2]<.5)return;
+      const sp=[cx+fov*t[0]/t[2],cy+fov*t[1]/t[2]];
+      const scale=fov/t[2];
+
+      if(showEll){
+        // Draw ellipse
+        const erx=g.rx*scale,ery=g.ry*scale;
+        ctx.save();ctx.translate(sp[0],sp[1]);ctx.rotate(g.rot+az);
+        ctx.beginPath();ctx.ellipse(0,0,Math.max(2,erx),Math.max(2,ery),0,0,TAU);
+        ctx.fillStyle=`rgba(${Math.round(g.color[0]*255)},${Math.round(g.color[1]*255)},${Math.round(g.color[2]*255)},${g.alpha*.3})`;
+        ctx.fill();
+        ctx.strokeStyle=`rgba(90,180,172,${g.alpha*.3})`;ctx.lineWidth=.5;ctx.stroke();
+        ctx.restore();
+      }
+
+      // Center dot
+      ctx.beginPath();ctx.arc(sp[0],sp[1],clamp(2+g.alpha*3,1.5,5),0,TAU);
+      ctx.fillStyle=`rgba(${Math.round(g.color[0]*255)},${Math.round(g.color[1]*255)},${Math.round(g.color[2]*255)},${clamp(g.alpha+.2,0,1)})`;
+      ctx.fill();
+    });
+
+    ctx.fillStyle='rgba(232,224,212,.4)';ctx.font='11px "JetBrains Mono"';
+    ctx.fillText(gaussians.length+' Gaussians',12,20);
+  }
+
+  drawGS();
+  (function anim(){if(window._gsSpin){az+=.003;drawGS()}requestAnimationFrame(anim)})();
+})();
+
+// ═══ §5: SPLATTING ═══
+(function(){
+  const cv=document.getElementById('c-splat');
+  const camxSlider=document.getElementById('splat-camx');
+  const opSlider=document.getElementById('splat-opacity');
+
+  // Fixed set of scene Gaussians (top-down 2D for clarity)
+  const rng=mkRng(42);
+  const splats=[];
+  for(let i=0;i<15;i++){
+    splats.push({
+      x:150+rng()*540,y:40+rng()*160,z:rng(),
+      rx:15+rng()*40,ry:10+rng()*30,
+      color:[.3+rng()*.6,.3+rng()*.5,.3+rng()*.6],
+      alpha:.3+rng()*.5,
+    });
+  }
+
+  camxSlider.addEventListener('input',drawSplat);
+  opSlider.addEventListener('input',drawSplat);
+
+  function drawSplat(){
+    const ratio=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*ratio;cv.height=H*ratio;
+    const ctx=cv.getContext('2d');ctx.scale(ratio,ratio);ctx.clearRect(0,0,W,H);
+
+    const camX=parseFloat(camxSlider.value);
+    const camY=H-40;
+    const opMul=parseFloat(opSlider.value)/100;
+    const planeY=H-80;
+
+    // Image plane
+    ctx.strokeStyle='rgba(90,180,172,.3)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(80,planeY);ctx.lineTo(W-80,planeY);ctx.stroke();
+    ctx.fillStyle='rgba(90,180,172,.3)';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('image plane',W-160,planeY+14);
+
+    // Camera
+    ctx.fillStyle='#5ab4ac';ctx.beginPath();ctx.arc(camX,camY,8,0,TAU);ctx.fill();
+    ctx.fillStyle='#5ab4ac';ctx.font='10px "JetBrains Mono"';ctx.fillText('camera',camX-18,camY+20);
+
+    // Sort splats by depth (y in this 2D view)
+    const sorted=[...splats].sort((a,b)=>a.y-b.y);
+
+    // Draw scene Gaussians and their projections
+    sorted.forEach(s=>{
+      // Scene position
+      ctx.save();ctx.translate(s.x,s.y);
+      ctx.beginPath();ctx.ellipse(0,0,s.rx,s.ry,0,0,TAU);
+      const col=`rgba(${Math.round(s.color[0]*255)},${Math.round(s.color[1]*255)},${Math.round(s.color[2]*255)},${s.alpha*opMul*.6})`;
+      ctx.fillStyle=col;ctx.fill();
+      ctx.restore();
+
+      // Projection ray
+      const projX=camX+(s.x-camX)*((planeY-camY)/(s.y-camY));
+      ctx.strokeStyle='rgba(155,142,196,.12)';ctx.lineWidth=.5;
+      ctx.beginPath();ctx.moveTo(camX,camY);ctx.lineTo(s.x,s.y);ctx.stroke();
+
+      // Projected splat on image plane
+      const projScale=abs((planeY-camY)/(s.y-camY));
+      const projRx=s.rx*projScale*.5;
+      ctx.save();ctx.translate(projX,planeY);
+      ctx.beginPath();ctx.ellipse(0,0,Math.max(3,projRx),6,0,0,TAU);
+      ctx.fillStyle=`rgba(${Math.round(s.color[0]*255)},${Math.round(s.color[1]*255)},${Math.round(s.color[2]*255)},${s.alpha*opMul})`;
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Labels
+    ctx.fillStyle='rgba(232,224,212,.3)';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('3D SCENE (Gaussians)',80,24);
+    ctx.fillText('α-blended splats',350,planeY+14);
+  }
+  drawSplat();
+})();
+
+// ═══ SCROLL + NAV ═══
+(function(){
+  const revs=document.querySelectorAll('.reveal'),links=document.querySelectorAll('#sidebar a'),secs=document.querySelectorAll('section[id]'),bar=document.getElementById('progress-bar');
+  function onS(){revs.forEach(el=>{if(el.getBoundingClientRect().top<window.innerHeight-80)el.classList.add('visible')});
+    let cur='';secs.forEach(s=>{if(s.getBoundingClientRect().top<200)cur=s.id});
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
+    bar.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%'}
+  window.addEventListener('scroll',onS,{passive:true});onS()})();
+
+// KaTeX
+document.addEventListener('DOMContentLoaded',()=>{
+  const go=()=>{if(typeof renderMathInElement==='function')renderMathInElement(document.body,{delimiters:[{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false})};
+  go();const s=document.querySelector('script[src*="auto-render"]');if(s)s.onload=go});
+</script>
+</body>
+</html>

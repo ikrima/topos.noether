@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photogrammetry for the Categorically Minded</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-surface: #12121a;
+  --bg-card: #1a1a28;
+  --bg-hover: #222236;
+  --amber: #d4a574;
+  --teal: #5ab4ac;
+  --lavender: #9b8ec4;
+  --red: #e06c75;
+  --green: #98c379;
+  --text-primary: #e8e0d4;
+  --text-secondary: #a09888;
+  --text-muted: #6a6260;
+  --border: #2a2a3a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--amber) var(--bg-deep)}
+body{
+  background:linear-gradient(180deg,var(--bg-deep) 0%,var(--bg-surface) 100%);
+  color:var(--text-primary);font-family:'Source Sans 3',sans-serif;
+  font-size:17px;line-height:1.75;min-height:100vh;
+}
+#progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--amber),var(--teal));z-index:1000;transition:width .15s}
+#sidebar{
+  position:fixed;left:0;top:0;width:260px;height:100vh;
+  background:var(--bg-deep);border-right:1px solid var(--border);
+  padding:2rem 1.2rem;z-index:100;overflow-y:auto;
+  display:flex;flex-direction:column;gap:.3rem;
+}
+#sidebar .logo{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:600;color:var(--amber);margin-bottom:1.5rem;letter-spacing:.04em;line-height:1.3}
+#sidebar a{display:block;padding:.45rem .8rem;border-radius:6px;color:var(--text-muted);text-decoration:none;font-size:.82rem;font-weight:400;transition:all .2s;border-left:2px solid transparent}
+#sidebar a:hover{color:var(--text-secondary);background:var(--bg-hover)}
+#sidebar a.active{color:var(--amber);background:rgba(212,165,116,.08);border-left-color:var(--amber)}
+#main{margin-left:260px;max-width:900px;padding:4rem 3rem 6rem}
+h1{font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:700;color:var(--text-primary);line-height:1.15;margin-bottom:.3rem}
+.subtitle{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-style:italic;color:var(--amber);margin-bottom:2.5rem}
+h2{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:600;color:var(--text-primary);margin:3rem 0 1rem;padding-top:1rem}
+p{margin-bottom:1rem;color:var(--text-primary)}
+p.note{font-size:.9rem;color:var(--text-secondary);border-left:3px solid var(--lavender);padding-left:1rem;margin:1.2rem 0}
+.viz-container{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin:1.5rem 0 2rem;position:relative}
+.viz-title{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--amber);text-transform:uppercase;letter-spacing:.12em;margin-bottom:1rem}
+canvas{display:block;border-radius:8px;background:#0e0e18;width:100%}
+.controls{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;margin-top:1rem}
+.controls label{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text-secondary);display:flex;align-items:center;gap:.5rem}
+.controls input[type="range"]{-webkit-appearance:none;appearance:none;width:140px;height:4px;border-radius:2px;background:var(--border);outline:none}
+.controls input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--amber);cursor:pointer}
+.controls button,.phase-btn{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.35rem .9rem;background:transparent;border:1px solid var(--border);color:var(--text-muted);border-radius:4px;cursor:pointer;transition:all .2s}
+.controls button:hover,.phase-btn:hover{border-color:var(--text-muted);color:var(--text-secondary)}
+.controls button.active,.phase-btn.active{border-color:var(--amber);color:var(--amber);background:rgba(212,165,116,.1)}
+.legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.6rem}
+.legend-item{display:flex;align-items:center;gap:.35rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-secondary)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.canvas-hint{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--text-muted);text-align:center;margin-top:.5rem}
+.phase-nav{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem}
+.step-explanation{font-size:.88rem;color:var(--text-secondary);line-height:1.65;min-height:3.5em;margin-bottom:.5rem;transition:opacity .3s}
+.step-explanation .cat-term{color:var(--lavender);font-style:italic}
+.step-explanation .photo-term{color:var(--teal)}
+.pipeline-bar{display:flex;gap:2px;margin:0 0 1rem}
+.pipeline-bar .pip-step{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .4s}
+.pipeline-bar .pip-step.done{background:var(--green)}
+.pipeline-bar .pip-step.current{background:var(--amber)}
+.dict-table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+.dict-table th{font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--amber);padding:.7rem .8rem;text-align:left;border-bottom:2px solid var(--amber)}
+.dict-table td{padding:.6rem .8rem;border-bottom:1px solid var(--border);color:var(--text-primary);vertical-align:top}
+.dict-table tr:hover td{background:rgba(212,165,116,.04)}
+.dict-table .cat{color:var(--lavender)}
+.dict-table .photo{color:var(--teal)}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+@media(max-width:900px){
+  #sidebar{display:none}
+  #main{margin-left:0;padding:2rem 1.2rem 4rem}
+  h1{font-size:2rem}
+}
+</style>
+</head>
+<body>
+<div id="progress-bar" style="width:0%"></div>
+<nav id="sidebar">
+  <div class="logo">Photogrammetry<br>for the Categorically<br>Minded</div>
+  <a href="#sec-premise" class="active">The Premise</a>
+  <a href="#sec-rig">The Capture Rig</a>
+  <a href="#sec-pipeline">The Pipeline</a>
+  <a href="#sec-triangulation">Triangulation</a>
+  <a href="#sec-cocycle">The Cocycle Condition</a>
+  <a href="#sec-dictionary">The Dictionary</a>
+</nav>
+<main id="main">
+
+<header class="reveal">
+  <h1>Photogrammetry for the Categorically Minded</h1>
+  <div class="subtitle">A visual primer — no graphics background required</div>
+</header>
+
+<section id="sec-premise" class="reveal">
+  <h2>The Premise</h2>
+  <p>You have played video games. You know that a 3D engine takes geometry and <em>renders</em> a flat image from a virtual camera. This is a projection \(\pi:\mathbb{R}^3\dashrightarrow\mathbb{R}^2\). It is surjective but not injective: every pixel corresponds to a ray, and the depth along that ray is destroyed.</p>
+  <p><strong>Photogrammetry</strong> is the inverse problem: given a collection of flat images taken from different viewpoints, recover the 3D geometry. If rendering is the pullback \(p^*\), photogrammetry is descent.</p>
+  <p class="note">One photograph is not enough — the depth fiber is killed. But multiple photographs from different positions each kill a <em>different</em> fiber direction. The collection of cameras forms a cover, and the problem becomes: given coherent local data on the cover, reconstruct the global object on the base.</p>
+</section>
+
+<section id="sec-rig" class="reveal">
+  <h2>The Capture Rig</h2>
+  <p>Professional studios use <strong>static multi-camera rigs</strong> — 30 to 200+ cameras arranged in rings and domes around a central volume. All cameras fire simultaneously, freezing the subject. The rig geometry is fixed and pre-calibrated; only the subject changes between captures.</p>
+  <p>Below: cameras in three rings (low, mid, high) surround a bust. <strong>Drag to orbit. Click any camera</strong> to see its 2D projection — the pullback \(p^*E\).</p>
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Static Capture Rig</div>
+    <canvas id="c-rig" width="840" height="520"></canvas>
+    <div class="canvas-hint">Drag to orbit · Click a camera to see its view · Scroll to zoom</div>
+    <div class="controls">
+      <label>Cameras / ring <input type="range" id="rig-cams" min="6" max="24" value="12" step="2"></label>
+      <label>Frustums <input type="checkbox" id="rig-frustums" checked></label>
+      <button id="rig-spin" onclick="window._rigSpin=!window._rigSpin;this.classList.toggle('active')">Auto-rotate</button>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> Low ring</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Mid ring</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--lavender)"></div> High ring</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Selected view</div>
+    </div>
+  </div>
+</section>
+
+<section id="sec-pipeline" class="reveal">
+  <h2>The Reconstruction Pipeline</h2>
+  <p>Once the photographs are captured, reconstruction proceeds through stages — each with a categorical analog. Step through them below.</p>
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Reconstruction Pipeline</div>
+    <div class="phase-nav" id="pipeline-nav"></div>
+    <div class="pipeline-bar" id="pipeline-bar"></div>
+    <div class="step-explanation" id="step-text"></div>
+    <canvas id="c-pipeline" width="840" height="480"></canvas>
+    <div class="canvas-hint" id="pipeline-hint"></div>
+    <div class="controls">
+      <label>Noise <input type="range" id="pipe-noise" min="0" max="100" value="0"></label>
+      <button onclick="window._pipeStage=Math.max(0,window._pipeStage-1);window._pipeGo()">← Prev</button>
+      <button onclick="window._pipeStage=Math.min(5,window._pipeStage+1);window._pipeGo()">Next →</button>
+    </div>
+  </div>
+</section>
+
+<section id="sec-triangulation" class="reveal">
+  <h2>Triangulation: Recovering the Fiber</h2>
+  <p>Two cameras, two rays, one intersection. Each matched feature determines a ray from each camera center through the image plane. These rays generically meet in a unique 3D point — effective descent.</p>
+  <p>Drag the <span style="color:var(--amber)">scene point</span>. Watch the rays converge.</p>
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Triangulation (Effective Descent)</div>
+    <canvas id="c-tri" width="840" height="380"></canvas>
+    <div class="canvas-hint">Drag the amber dot to move the scene point</div>
+    <div class="controls">
+      <label>Camera separation <input type="range" id="tri-sep" min="60" max="350" value="220"></label>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> Cameras</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Scene point P</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Reconstructed P̂</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--lavender)"></div> Rays</div>
+    </div>
+  </div>
+  <p class="note">When cameras are too close, rays become nearly parallel and the intersection degenerates. This is the analog of a cover that is faithful but not "flat enough."</p>
+</section>
+
+<section id="sec-cocycle" class="reveal">
+  <h2>The Cocycle Condition</h2>
+  <p>With three or more views, correspondences must be <strong>transitive</strong>:</p>
+  <p style="text-align:center;font-size:1.1rem">\(\varphi_{ik}=\varphi_{jk}\circ\varphi_{ij}\)</p>
+  <p>Failure is measured by <em>reprojection error</em>: project each 3D point back into every camera and measure the residual. <strong>Bundle adjustment</strong> minimizes this globally — enforcing the cocycle condition in a least-squares sense. Crank the noise slider:</p>
+  <div class="viz-container">
+    <div class="viz-title">Interactive · Cocycle Condition & Bundle Adjustment</div>
+    <canvas id="c-cocycle" width="840" height="420"></canvas>
+    <div class="controls">
+      <label>Noise (obstruction) <input type="range" id="cocycle-noise" min="0" max="100" value="0"></label>
+      <label style="margin-left:auto">Reprojection error: <span id="reproj-err" style="color:var(--green);font-weight:500">0.0</span> px</label>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div> Cameras</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> True points</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Reconstructed</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Error</div>
+    </div>
+  </div>
+</section>
+
+<section id="sec-dictionary" class="reveal">
+  <h2>The Dictionary</h2>
+  <p>The correspondence is not an analogy — it is a functor.</p>
+  <table class="dict-table">
+    <thead><tr><th>Descent Theory</th><th>Photogrammetry</th><th>Gloss</th></tr></thead>
+    <tbody>
+      <tr><td class="cat">Base \(X\)</td><td class="photo">3D scene</td><td>The unknown geometry</td></tr>
+      <tr><td class="cat">Cover \(Y\to X\)</td><td class="photo">Camera rig</td><td>Viewpoints whose union covers the scene</td></tr>
+      <tr><td class="cat">Faithful flatness</td><td class="photo">≥ 60% overlap</td><td>Every point visible to ≥ 2 cameras</td></tr>
+      <tr><td class="cat">Pullback \(p^*E\)</td><td class="photo">Photograph</td><td>Depth fiber killed</td></tr>
+      <tr><td class="cat">\(Y\!\times_X\! Y\)</td><td class="photo">Overlap region</td><td>Points visible to cameras \(i\) and \(j\)</td></tr>
+      <tr><td class="cat">Descent datum \(\varphi_{ij}\)</td><td class="photo">Feature correspondence</td><td>Matched keypoints across views</td></tr>
+      <tr><td class="cat">Cocycle on \(Y^3_X\)</td><td class="photo">Trifocal tensor</td><td>Three-view consistency</td></tr>
+      <tr><td class="cat">Cocycle condition</td><td class="photo">Bundle adjustment</td><td>Transitivity of correspondences</td></tr>
+      <tr><td class="cat">Effective descent</td><td class="photo">3D reconstruction</td><td>Point cloud recovered</td></tr>
+      <tr><td class="cat">\(H^1\) obstruction</td><td class="photo">Reprojection error</td><td>The red residuals</td></tr>
+      <tr><td class="cat">\(\mathrm{SE}(3)\)</td><td class="photo">Camera pose group</td><td>Rigid motions</td></tr>
+      <tr><td class="cat">Gauge ambiguity</td><td class="photo">Scale ambiguity</td><td>Up to global similarity</td></tr>
+      <tr><td class="cat">Section</td><td class="photo">Ground control point</td><td>Fixes the gauge</td></tr>
+      <tr><td class="cat">Sheaf, no descent</td><td class="photo">NeRF</td><td>\(T\mapsto\mathrm{view}(T)\) directly</td></tr>
+    </tbody>
+  </table>
+  <p class="note" style="margin-top:1.5rem">The last row is the punchline. A <strong>NeRF</strong> learns \((\mathrm{pos},\mathrm{dir})\mapsto(\mathrm{color},\mathrm{density})\) — the functor of views — without ever constructing a mesh. It is a sheaf that refuses to descend.</p>
+</section>
+
+</main>
+<script>
+// ═══ UTILS ═══
+const TAU=Math.PI*2,PI=Math.PI;
+const sin=Math.sin,cos=Math.cos,sqrt=Math.sqrt,abs=Math.abs;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+function rotY(p,a){return[p[0]*cos(a)+p[2]*sin(a),p[1],-p[0]*sin(a)+p[2]*cos(a)]}
+function rotX(p,a){return[p[0],p[1]*cos(a)-p[2]*sin(a),p[1]*sin(a)+p[2]*cos(a)]}
+function proj3(p,fov,cx,cy){const z=p[2]<.2?.2:p[2];return[cx+fov*p[0]/z,cy+fov*p[1]/z]}
+
+// Seeded RNG
+function mkRng(s){return()=>{s=(s*16807)%2147483647;return s/2147483647}}
+
+// Bust wireframe
+function makeBust(){
+  const V=[],E=[];
+  // Pedestal
+  const pb=[[-0.6,0,-0.4],[0.6,0,-0.4],[0.6,0,0.4],[-0.6,0,0.4]];
+  const pt=[[-0.5,-0.4,-0.35],[0.5,-0.4,-0.35],[0.5,-0.4,0.35],[-0.5,-0.4,0.35]];
+  pb.forEach(v=>V.push(v));pt.forEach(v=>V.push(v));
+  E.push([0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]);
+  // Torso
+  const bi=V.length;
+  [[-0.4,-0.4,-0.3],[0.4,-0.4,-0.3],[0.4,-0.4,0.3],[-0.4,-0.4,0.3],
+   [-0.35,-1.2,-0.25],[0.35,-1.2,-0.25],[0.35,-1.2,0.25],[-0.35,-1.2,0.25]].forEach(v=>V.push(v));
+  E.push([bi,bi+1],[bi+1,bi+2],[bi+2,bi+3],[bi+3,bi],[bi+4,bi+5],[bi+5,bi+6],[bi+6,bi+7],[bi+7,bi+4]);
+  E.push([bi,bi+4],[bi+1,bi+5],[bi+2,bi+6],[bi+3,bi+7]);
+  // Neck
+  const ni=V.length;
+  for(let i=0;i<8;i++){const a=i*TAU/8;V.push([.15*cos(a),-1.2,.15*sin(a)]);V.push([.13*cos(a),-1.5,.13*sin(a)]);E.push([ni+i*2,ni+i*2+1]);if(i>0){E.push([ni+i*2,ni+(i-1)*2]);E.push([ni+i*2+1,ni+(i-1)*2+1])}}
+  E.push([ni,ni+14],[ni+1,ni+15]);
+  // Head
+  const hi=V.length,hY=-1.85;
+  for(let r=0;r<5;r++){const phi=(r+1)*PI/6;for(let s=0;s<8;s++){const th=s*TAU/8;V.push([.22*sin(phi)*cos(th),hY-.3*cos(phi),.2*sin(phi)*sin(th)]);const ci=hi+r*8+s;if(s>0)E.push([ci,ci-1]);if(r>0)E.push([ci,ci-8])}E.push([hi+r*8,hi+r*8+7])}
+  const F=[0,1,2,3,5,6,bi+4,bi+5,bi+6,bi+7,ni,ni+4,ni+8,ni+12,hi,hi+4,hi+8,hi+16,hi+24,hi+32].filter(i=>i<V.length);
+  return{V,E,F}
+}
+const bust=makeBust();
+
+// ═══ §1: RIG ═══
+(function(){
+  const cv=document.getElementById('c-rig');
+  const cSlider=document.getElementById('rig-cams');
+  const fCheck=document.getElementById('rig-frustums');
+  let az=0.5,el=0.35,dist=6.5,drag=false,lx=0,ly=0,selCam=-1;
+  window._rigSpin=false;
+
+  cv.addEventListener('pointerdown',e=>{drag=true;lx=e.offsetX;ly=e.offsetY;
+    const r=cv.getBoundingClientRect();checkCamHit(e.clientX-r.left,e.clientY-r.top)});
+  cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.offsetX-lx,dy=e.offsetY-ly;lx=e.offsetX;ly=e.offsetY;
+    if(abs(dx)+abs(dy)>2)selCam=-1;az+=dx*.005;el=clamp(el+dy*.005,-.8,1.2);draw()});
+  window.addEventListener('pointerup',()=>drag=false);
+  cv.addEventListener('wheel',e=>{e.preventDefault();dist=clamp(dist+e.deltaY*.005,3,12);draw()},{passive:false});
+  cSlider.addEventListener('input',()=>{selCam=-1;draw()});
+  fCheck.addEventListener('change',draw);
+
+  let camSP=[];
+  function checkCamHit(mx,my){for(let i=0;i<camSP.length;i++){const c=camSP[i];if((mx-c[0])**2+(my-c[1])**2<180){selCam=i;drag=false;draw();return}}}
+
+  function getCams(){
+    const n=parseInt(cSlider.value);const cs=[];
+    [{y:-.2,r:2.8,col:'#5ab4ac',n:n,lbl:'low'},{y:-1,r:2.6,col:'#d4a574',n:n,lbl:'mid'},{y:-1.9,r:2.2,col:'#9b8ec4',n:Math.max(4,Math.floor(n*.6)),lbl:'high'}]
+    .forEach(ring=>{for(let i=0;i<ring.n;i++){const a=i*TAU/ring.n;cs.push({pos:[ring.r*cos(a),ring.y,ring.r*sin(a)],lookAt:[0,ring.y*.5-.4,0],angle:a+PI,color:ring.col,ring:ring.lbl})}});
+    return cs;
+  }
+  function xf(p){let v=rotY(p,az);v=rotX(v,el);return[v[0],v[1],v[2]+dist]}
+
+  function draw(){
+    const r=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*r;cv.height=H*r;
+    const ctx=cv.getContext('2d');ctx.scale(r,r);ctx.clearRect(0,0,W,H);
+    const cx=W/2,cy=H/2+20,fov=Math.min(W,H)*.35;
+    const cams=getCams();
+
+    // Bust
+    ctx.strokeStyle='rgba(212,165,116,.22)';ctx.lineWidth=1;
+    bust.E.forEach(([a,b])=>{const pa=proj3(xf(bust.V[a]),fov,cx,cy),pb=proj3(xf(bust.V[b]),fov,cx,cy);ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke()});
+    bust.F.forEach(i=>{const s=proj3(xf(bust.V[i]),fov,cx,cy);ctx.beginPath();ctx.arc(s[0],s[1],2.5,0,TAU);ctx.fillStyle='rgba(212,165,116,.4)';ctx.fill()});
+
+    // Cameras sorted by depth
+    camSP=[];
+    const sorted=cams.map((c,i)=>{const t=xf(c.pos);return{c,i,t,d:t[2]}}).sort((a,b)=>b.d-a.d);
+    const showF=fCheck.checked;
+    sorted.forEach(({c,i,t})=>{
+      const sp=proj3(t,fov,cx,cy);const sel=i===selCam;
+      if(showF){const lt=xf(c.lookAt);const ls=proj3(lt,fov,cx,cy);ctx.strokeStyle=sel?'#98c37960':c.color+'18';ctx.lineWidth=sel?1.5:.7;ctx.beginPath();ctx.moveTo(sp[0],sp[1]);ctx.lineTo(ls[0],ls[1]);ctx.stroke()}
+      const sz=sel?7:5;ctx.fillStyle=sel?'#98c379':c.color;ctx.globalAlpha=sel?1:.7;
+      ctx.fillRect(sp[0]-sz,sp[1]-sz*.7,sz*2,sz*1.4);
+      const lt=xf(c.lookAt);const ls=proj3(lt,fov,cx,cy);const dx=ls[0]-sp[0],dy=ls[1]-sp[1],ln=sqrt(dx*dx+dy*dy)||1;
+      ctx.beginPath();ctx.arc(sp[0]+dx/ln*(sz+2),sp[1]+dy/ln*(sz+2),2,0,TAU);ctx.fill();
+      ctx.globalAlpha=1;camSP[i]=[sp[0],sp[1]];
+    });
+
+    // Inset view
+    if(selCam>=0&&selCam<cams.length){
+      const cam=cams[selCam];const inW=200,inH=155,inX=W-inW-16,inY=16;
+      ctx.fillStyle='#0a0a12';ctx.fillRect(inX,inY,inW,inH);ctx.strokeStyle='#98c379';ctx.lineWidth=2;ctx.strokeRect(inX,inY,inW,inH);
+      const vDist=sqrt(cam.pos[0]**2+cam.pos[1]**2+cam.pos[2]**2);
+      const vAng=Math.atan2(cam.pos[0],cam.pos[2]),vEl=Math.atan2(-cam.pos[1],sqrt(cam.pos[0]**2+cam.pos[2]**2));
+      const icx=inX+inW/2,icy=inY+inH/2+5;
+      ctx.save();ctx.beginPath();ctx.rect(inX+2,inY+2,inW-4,inH-4);ctx.clip();
+      ctx.strokeStyle='rgba(212,165,116,.45)';ctx.lineWidth=1;
+      bust.E.forEach(([a,b])=>{let pa=rotY(bust.V[a],vAng);pa=rotX(pa,vEl*.4);pa=[pa[0],pa[1],pa[2]+vDist];let pb=rotY(bust.V[b],vAng);pb=rotX(pb,vEl*.4);pb=[pb[0],pb[1],pb[2]+vDist];const sa=proj3(pa,55,icx,icy),sb=proj3(pb,55,icx,icy);ctx.beginPath();ctx.moveTo(sa[0],sa[1]);ctx.lineTo(sb[0],sb[1]);ctx.stroke()});
+      // Feature points in inset
+      bust.F.forEach(i=>{let p=rotY(bust.V[i],vAng);p=rotX(p,vEl*.4);p=[p[0],p[1],p[2]+vDist];const s=proj3(p,55,icx,icy);
+        if(s[0]>inX+4&&s[0]<inX+inW-4&&s[1]>inY+4&&s[1]<inY+inH-4){ctx.beginPath();ctx.arc(s[0],s[1],3,0,TAU);ctx.fillStyle='#d4a574';ctx.fill()}});
+      ctx.restore();
+      ctx.fillStyle='#98c379';ctx.font='10px "JetBrains Mono"';ctx.fillText('cam '+selCam+' ('+cam.ring+')',inX+6,inY+14);
+      ctx.fillStyle='rgba(232,224,212,.5)';ctx.fillText('p*(E) — the pullback',inX+6,inY+inH-6);
+    }
+    ctx.fillStyle='rgba(232,224,212,.4)';ctx.font='11px "JetBrains Mono"';ctx.fillText(cams.length+' cameras · 3 rings',12,20);
+  }
+  function anim(){if(window._rigSpin){az+=.003;draw()}requestAnimationFrame(anim)}
+  draw();anim();
+})();
+
+// ═══ §2: PIPELINE ═══
+(function(){
+  const cv=document.getElementById('c-pipeline');
+  const navEl=document.getElementById('pipeline-nav');
+  const barEl=document.getElementById('pipeline-bar');
+  const textEl=document.getElementById('step-text');
+  const hintEl=document.getElementById('pipeline-hint');
+  const noiseSlider=document.getElementById('pipe-noise');
+
+  const stages=[
+    {id:'capture',label:'1 · Capture',
+      text:'All cameras fire simultaneously, each producing a 2D projection <span class="cat-term">p*E</span>. Each image is flat — the depth fiber has been killed. No single image suffices; only the collection forms a <span class="cat-term">cover</span>.',
+      hint:'Cameras flash → photographs acquired'},
+    {id:'features',label:'2 · Detect',
+      text:'Algorithms detect distinctive local patterns — corners, edges, texture gradients — called <span class="photo-term">keypoints</span>. These are the generators of the data on each open set.',
+      hint:'Amber dots = detected keypoints in each view'},
+    {id:'matching',label:'3 · Match',
+      text:'For each pair of overlapping images, match keypoints depicting the same scene point. This correspondence <span class="cat-term">φᵢⱼ</span> is the <span class="cat-term">descent datum</span> — the isomorphism on the fiber product.',
+      hint:'Green lines = matched features (the descent datum)'},
+    {id:'sparse',label:'4 · Sparse Cloud',
+      text:'<span class="photo-term">Bundle adjustment</span> optimizes all camera poses and 3D points simultaneously to minimize reprojection error. This enforces the <span class="cat-term">cocycle condition</span>. Result: a sparse point cloud.',
+      hint:'Triangulated 3D points — the skeleton of the descended object'},
+    {id:'dense',label:'5 · Dense Cloud',
+      text:'Dense stereo computes depth for every pixel in every image. Millions of points. The cover has been fully exploited.',
+      hint:'Every visible surface point recovered'},
+    {id:'mesh',label:'6 · Mesh + Texture',
+      text:'Points → mesh (a 2-manifold). Photos → texture. <span class="cat-term">Effective descent is complete.</span> The gauge ambiguity is fixed by scale bars — the <span class="cat-term">choice of a section</span>.',
+      hint:'The descended object'},
+  ];
+  window._pipeStage=0;
+
+  stages.forEach((s,i)=>{
+    const btn=document.createElement('button');btn.className='phase-btn'+(i===0?' active':'');btn.textContent=s.label;btn.onclick=()=>{window._pipeStage=i;window._pipeGo()};navEl.appendChild(btn);
+    const pip=document.createElement('div');pip.className='pip-step';barEl.appendChild(pip);
+  });
+
+  window._pipeGo=function(){
+    const i=window._pipeStage;
+    navEl.querySelectorAll('.phase-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+    barEl.querySelectorAll('.pip-step').forEach((p,j)=>{p.classList.toggle('done',j<i);p.classList.toggle('current',j===i)});
+    textEl.innerHTML=stages[i].text;hintEl.textContent=stages[i].hint;
+  };
+  noiseSlider.addEventListener('input',()=>{});
+
+  const rng=mkRng(42);
+  const scenePts=[];for(let i=0;i<35;i++)scenePts.push([(rng()-.5)*2.2,-rng()*2,(rng()-.5)*2.2]);
+  const nOff=scenePts.map(()=>[rng()-.5,rng()-.5]);
+  const pipeCams=[];for(let i=0;i<10;i++){const a=i*TAU/10;pipeCams.push({pos:[2.8*cos(a),-1,2.8*sin(a)],angle:a+PI,col:i%2===0?'#5ab4ac':'#d4a574'})}
+
+  let pAz=.4;
+  function drawP(){
+    const ratio=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*ratio;cv.height=H*ratio;
+    const ctx=cv.getContext('2d');ctx.scale(ratio,ratio);ctx.clearRect(0,0,W,H);
+    const cx=W/2,cy=H/2+10,fov=Math.min(W,H)*.3,d=6;
+    const noise=parseFloat(noiseSlider.value)/100;
+    const stg=window._pipeStage;
+    function xf(p){let v=rotY(p,pAz);v=rotX(v,.35);return[v[0],v[1],v[2]+d]}
+
+    // Bust
+    const ba=stg>=5?.5:.18;
+    ctx.strokeStyle=`rgba(212,165,116,${ba})`;ctx.lineWidth=stg>=5?1.5:.8;
+    bust.E.forEach(([a,b])=>{const pa=proj3(xf(bust.V[a]),fov,cx,cy),pb=proj3(xf(bust.V[b]),fov,cx,cy);ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke()});
+
+    // Cameras
+    pipeCams.forEach((cam,ci)=>{
+      const tp=xf(cam.pos),sp=proj3(tp,fov,cx,cy);
+      const al=stg===0?1:.45;ctx.fillStyle=cam.col;ctx.globalAlpha=al;
+      ctx.fillRect(sp[0]-4,sp[1]-3,8,6);ctx.globalAlpha=1;
+      if(stg===0){ctx.beginPath();ctx.arc(sp[0],sp[1],12,0,TAU);ctx.fillStyle='rgba(255,255,220,.08)';ctx.fill()}
+      if(stg<=1){const cp=proj3(xf([0,-.9,0]),fov,cx,cy);ctx.strokeStyle=cam.col+'25';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(sp[0],sp[1]);ctx.lineTo(cp[0],cp[1]);ctx.stroke()}
+    });
+
+    // Features
+    if(stg>=1){
+      const fa=stg===1?1:stg<=3?.6:.15;
+      scenePts.forEach((pt,pi)=>{const sp=proj3(xf(pt),fov,cx,cy);ctx.beginPath();ctx.arc(sp[0],sp[1],stg===1?4:3,0,TAU);ctx.fillStyle='#d4a574';ctx.globalAlpha=fa;ctx.fill();ctx.globalAlpha=1});
+    }
+
+    // Matching
+    if(stg>=2&&stg<=3){
+      ctx.globalAlpha=stg===2?.6:.2;
+      for(let i=0;i<pipeCams.length;i++){
+        const j=(i+1)%pipeCams.length;
+        const spi=proj3(xf(pipeCams[i].pos),fov,cx,cy),spj=proj3(xf(pipeCams[j].pos),fov,cx,cy);
+        scenePts.forEach((pt,pi)=>{if(pi%3!==0)return;const sp=proj3(xf(pt),fov,cx,cy);
+          ctx.strokeStyle='#98c379';ctx.lineWidth=.8;ctx.beginPath();
+          ctx.moveTo(lerp(spi[0],sp[0],.3),lerp(spi[1],sp[1],.3));ctx.lineTo(sp[0],sp[1]);ctx.lineTo(lerp(spj[0],sp[0],.3),lerp(spj[1],sp[1],.3));ctx.stroke()});
+      }
+      ctx.globalAlpha=1;
+    }
+
+    // Point cloud
+    if(stg>=3){
+      const density=stg===3?1:stg===4?4:2;const ps=stg>=5?1.5:stg===4?2:3;
+      scenePts.forEach((pt,pi)=>{
+        for(let dd=0;dd<density;dd++){
+          const j=dd===0?[0,0,0]:[(rng()-.5)*.15,(rng()-.5)*.15,(rng()-.5)*.15];
+          const np=[pt[0]+j[0]+nOff[pi][0]*noise*.8,pt[1]+j[1]+nOff[pi][1]*noise*.8,pt[2]+j[2]];
+          const sp=proj3(xf(np),fov,cx,cy);
+          const errD=noise*sqrt(nOff[pi][0]**2+nOff[pi][1]**2);
+          const col=errD<.15?'#98c379':errD<.4?'#d4a574':'#e06c75';
+          ctx.beginPath();ctx.arc(sp[0],sp[1],ps,0,TAU);ctx.fillStyle=dd===0?col:col+'60';ctx.fill();
+          if(dd===0&&noise>.05){const ts=proj3(xf(pt),fov,cx,cy);ctx.strokeStyle='#e06c75';ctx.lineWidth=.8;ctx.globalAlpha=Math.min(1,noise*2.5);ctx.beginPath();ctx.moveTo(ts[0],ts[1]);ctx.lineTo(sp[0],sp[1]);ctx.stroke();ctx.globalAlpha=1}
+        }
+      });
+      if(stg>=4)bust.V.forEach(v=>{const sp=proj3(xf(v),fov,cx,cy);ctx.beginPath();ctx.arc(sp[0],sp[1],1.2,0,TAU);ctx.fillStyle='rgba(152,195,121,.4)';ctx.fill()});
+    }
+
+    // Mesh
+    if(stg>=5){
+      ctx.strokeStyle='rgba(90,180,172,.35)';ctx.lineWidth=1.2;
+      bust.E.forEach(([a,b])=>{const pa=proj3(xf(bust.V[a]),fov,cx,cy),pb=proj3(xf(bust.V[b]),fov,cx,cy);ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);ctx.stroke()});
+      ctx.fillStyle='rgba(212,165,116,.06)';
+      for(let i=0;i<bust.E.length-1;i+=2){const[a1,b1]=bust.E[i],[a2,b2]=bust.E[Math.min(i+1,bust.E.length-1)];
+        const ps=[a1,b1,b2,a2].map(idx=>proj3(xf(bust.V[idx]),fov,cx,cy));ctx.beginPath();ctx.moveTo(ps[0][0],ps[0][1]);ps.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));ctx.closePath();ctx.fill()}
+    }
+
+    ctx.fillStyle='rgba(232,224,212,.5)';ctx.font='11px "JetBrains Mono"';
+    ctx.fillText('Stage '+(stg+1)+'/6: '+stages[stg].id,12,20);
+  }
+
+  window._pipeGo();
+  (function anim(){pAz+=.002;drawP();requestAnimationFrame(anim)})();
+})();
+
+// ═══ §3: TRIANGULATION ═══
+(function(){
+  const cv=document.getElementById('c-tri');
+  const sepSlider=document.getElementById('tri-sep');
+  let tx=420,ty=110,drag=false;
+
+  cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;if((mx-tx)**2+(my-ty)**2<400)drag=true});
+  window.addEventListener('pointerup',()=>drag=false);
+  cv.addEventListener('pointermove',e=>{if(!drag)return;const r=cv.getBoundingClientRect();tx=clamp(e.clientX-r.left,50,r.width-50);ty=clamp(e.clientY-r.top,30,270);drawT()});
+  sepSlider.addEventListener('input',drawT);
+
+  function drawT(){
+    const r=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*r;cv.height=H*r;
+    const ctx=cv.getContext('2d');ctx.scale(r,r);ctx.clearRect(0,0,W,H);
+    const sep=parseFloat(sepSlider.value),camY=340;
+    const cL=[W/2-sep/2,camY],cR=[W/2+sep/2,camY],plY=camY-40;
+
+    ctx.strokeStyle='rgba(90,180,172,.3)';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    [[cL,-60,60],[cR,-60,60]].forEach(([c,a,b])=>{ctx.beginPath();ctx.moveTo(c[0]+a,plY);ctx.lineTo(c[0]+b,plY);ctx.stroke()});
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle='rgba(155,142,196,.5)';ctx.lineWidth=1.5;
+    [cL,cR].forEach(cam=>{const dx=tx-cam[0],dy=ty-cam[1];ctx.beginPath();ctx.moveTo(cam[0],cam[1]);ctx.lineTo(cam[0]+dx*1.8,cam[1]+dy*1.8);ctx.stroke()});
+
+    [cL,cR].forEach((cam,i)=>{const dx=tx-cam[0],dy=ty-cam[1];const t=(plY-cam[1])/dy;const px=cam[0]+dx*t;
+      ctx.fillStyle='#d4a574';ctx.beginPath();ctx.arc(px,plY,4,0,TAU);ctx.fill();
+      ctx.fillStyle='#d4a574';ctx.font='10px "JetBrains Mono"';ctx.fillText(i===0?'p':'q',px-3,plY+16)});
+
+    ctx.fillStyle='#5ab4ac';
+    [cL,cR].forEach((c,i)=>{ctx.beginPath();ctx.arc(c[0],c[1],8,0,TAU);ctx.fill();ctx.font='11px "JetBrains Mono"';ctx.fillText(i===0?'Cam i':'Cam j',c[0]-18,c[1]+22);ctx.fillStyle='#5ab4ac'});
+
+    ctx.fillStyle='#d4a574';ctx.beginPath();ctx.arc(tx,ty,8,0,TAU);ctx.fill();
+    ctx.strokeStyle='rgba(212,165,116,.4)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(tx,ty,14,0,TAU);ctx.stroke();
+    ctx.fillStyle='#98c379';ctx.beginPath();ctx.arc(tx,ty,4,0,TAU);ctx.fill();
+    ctx.fillStyle='#d4a574';ctx.font='12px "JetBrains Mono"';ctx.fillText('P',tx+16,ty+4);
+    ctx.fillStyle='#98c379';ctx.fillText('P̂',tx+16,ty+18);
+
+    const aL=Math.atan2(-(ty-cL[1]),tx-cL[0]),aR=Math.atan2(-(ty-cR[1]),tx-cR[0]);
+    const cross=abs(aL-aR)*180/PI;
+    ctx.fillStyle=cross<10?'#e06c75':cross<25?'#d4a574':'#98c379';
+    ctx.font='11px "JetBrains Mono"';ctx.fillText('intersection angle: '+cross.toFixed(1)+'°',12,25);
+    if(cross<10){ctx.fillStyle='#e06c75';ctx.font='10px "JetBrains Mono"';ctx.fillText('⚠ degenerate — rays nearly parallel',12,42)}
+  }
+  drawT();
+})();
+
+// ═══ §4: COCYCLE ═══
+(function(){
+  const cv=document.getElementById('c-cocycle');
+  const nSlider=document.getElementById('cocycle-noise');
+  const errD=document.getElementById('reproj-err');
+  const rng=mkRng(137);
+  const pts=[];for(let i=0;i<25;i++)pts.push([(rng()-.5)*3,(rng()-.5)*2.5,(rng()-.5)*3]);
+  const nOff=pts.map(()=>[rng()-.5,rng()-.5]);
+  const cams=[0,1,2,3,4].map(i=>{const a=i*TAU/5-PI/2;return{pos:[3.5*cos(a),0,3.5*sin(a)],col:['#5ab4ac','#d4a574','#9b8ec4','#98c379','#e06c75'][i],lbl:'C'+i}});
+
+  nSlider.addEventListener('input',drawC);
+
+  function drawC(){
+    const r=window.devicePixelRatio||1;const rect=cv.getBoundingClientRect();
+    const W=rect.width,H=rect.height;cv.width=W*r;cv.height=H*r;
+    const ctx=cv.getContext('2d');ctx.scale(r,r);ctx.clearRect(0,0,W,H);
+    const cx=W/2,cy=H/2,sc=Math.min(W,H)*.1,noise=parseFloat(nSlider.value)/100;
+
+    ctx.setLineDash([3,3]);
+    cams.forEach((c,i)=>{const n=cams[(i+1)%5];const s1=[cx+c.pos[0]*sc,cy+c.pos[2]*sc],s2=[cx+n.pos[0]*sc,cy+n.pos[2]*sc];
+      ctx.strokeStyle=noise<.3?'rgba(152,195,121,.25)':'rgba(224,108,117,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(s1[0],s1[1]);ctx.lineTo(s2[0],s2[1]);ctx.stroke()});
+    ctx.setLineDash([]);
+
+    cams.forEach(c=>{const sx=cx+c.pos[0]*sc,sy=cy+c.pos[2]*sc;ctx.fillStyle=c.col;ctx.beginPath();ctx.arc(sx,sy,9,0,TAU);ctx.fill();ctx.font='bold 11px "JetBrains Mono"';ctx.fillText(c.lbl,sx+13,sy+4)});
+
+    let tE=0,eC=0;
+    pts.forEach((pt,pi)=>{
+      const sx=cx+pt[0]*sc,sy=cy+pt[2]*sc;
+      ctx.fillStyle='#d4a574';ctx.globalAlpha=.4;ctx.beginPath();ctx.arc(sx,sy,2.5,0,TAU);ctx.fill();ctx.globalAlpha=1;
+      const ex=noise*nOff[pi][0]*sc*.5,ey=noise*nOff[pi][1]*sc*.5;
+      const rx=sx+ex,ry=sy+ey;const dist=sqrt(ex*ex+ey*ey);tE+=dist;eC++;
+      if(noise>.01){ctx.strokeStyle='#e06c75';ctx.lineWidth=1.2;ctx.globalAlpha=Math.min(1,noise*2.5);ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(rx,ry);ctx.stroke();ctx.globalAlpha=1}
+      ctx.fillStyle=dist<2?'#98c379':dist<8?'#d4a574':'#e06c75';ctx.beginPath();ctx.arc(rx,ry,3.5,0,TAU);ctx.fill();
+    });
+
+    const avg=eC>0?tE/eC:0;errD.textContent=avg.toFixed(1);errD.style.color=avg<2?'#98c379':avg<6?'#d4a574':'#e06c75';
+    ctx.fillStyle=noise<.05?'#98c379':noise<.4?'#d4a574':'#e06c75';
+    ctx.font='11px "JetBrains Mono"';
+    ctx.fillText(noise<.05?'φᵢₖ = φⱼₖ ∘ φᵢⱼ  ✓  cocycle closed':noise<.4?'φᵢₖ ≈ φⱼₖ ∘ φᵢⱼ  ~  small obstruction':'φᵢₖ ≠ φⱼₖ ∘ φᵢⱼ  ✗  cocycle broken',12,22);
+  }
+  drawC();
+})();
+
+// ═══ SCROLL + NAV ═══
+(function(){
+  const revs=document.querySelectorAll('.reveal'),links=document.querySelectorAll('#sidebar a'),secs=document.querySelectorAll('section[id]'),bar=document.getElementById('progress-bar');
+  function onS(){revs.forEach(el=>{if(el.getBoundingClientRect().top<window.innerHeight-80)el.classList.add('visible')});
+    let cur='';secs.forEach(s=>{if(s.getBoundingClientRect().top<200)cur=s.id});
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
+    bar.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%'}
+  window.addEventListener('scroll',onS,{passive:true});onS();
+})();
+
+// KaTeX
+document.addEventListener('DOMContentLoaded',()=>{
+  const go=()=>{if(typeof renderMathInElement==='function')renderMathInElement(document.body,{delimiters:[{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}],throwOnError:false})};
+  go();const s=document.querySelector('script[src*="auto-render"]');if(s)s.onload=go;
+});
+</script>
+</body>
+</html>
