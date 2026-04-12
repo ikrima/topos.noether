@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>String(3) Cocycle Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:#e8e6df;font-family:'Cormorant Garamond',serif;overflow:hidden}
+#canvas{position:fixed;inset:0;z-index:0}
+#canvas canvas{display:block;width:100%;height:100%}
+.prose{position:fixed;top:0;left:0;width:280px;height:100%;padding:22px 22px;z-index:2;overflow-y:auto;pointer-events:none}
+.prose h1{font-size:1.75rem;font-weight:500;line-height:1.1;margin-bottom:.7em}
+.prose h2{font-size:0.78rem;font-family:'JetBrains Mono',monospace;color:#e06c75;text-transform:uppercase;letter-spacing:.08em;font-weight:400;margin:1.2em 0 .4em}
+.prose p{font-size:0.84rem;line-height:1.55;margin-bottom:.8em;color:#d8d6cf}
+.prose .math{font-style:italic}
+.prose em{font-style:italic;color:#d4a574}
+#fps{position:fixed;top:6px;left:6px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#888;z-index:3}
+#readout{position:fixed;bottom:12px;left:22px;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:#888;z-index:3;max-width:300px;line-height:1.5}
+#readout .v{color:#5ab4ac}
+.tp-dfwv{top:16px!important;right:16px!important;width:260px!important}
+</style>
+</head>
+<body>
+<div id="canvas"></div>
+<div id="fps">-- FPS</div>
+
+<aside class="prose">
+<h1>String(3) Cocycle Explorer</h1>
+<p>A live computation of David Roberts' explicit cocycle for the nontrivial <span class="math">String(3)</span>-bundle on <span class="math">S⁵</span>. All formulas from <span class="math">arXiv:2203.04544</span>, evaluated in the browser — nothing precomputed.</p>
+
+<h2>Parameter space</h2>
+<p>You are driving five real dimensions: the four components of <span class="math">q ∈ ℍ×</span> (a point in the overlap of the two charts of <span class="math">S⁴ = ℍℙ¹</span>), and the path parameter <span class="math">s ∈ [0,1]</span> (which slides you along the path in <span class="math">Spin(3)</span>).</p>
+
+<h2>Views</h2>
+<p><em>wings</em> — the ruled surface swept out by <span class="math">T±</span> as <span class="math">q</span> traces a loop in ℍ×. What Roberts originally plotted in 2014.</p>
+<p><em>pair</em> — the single pair of paths <span class="math">T+(q)</span> and <span class="math">T−(q)</span> for the current <span class="math">q</span>, each starting at the identity and meeting at a common endpoint. The <span class="math">s</span>-slider animates a bead along both.</p>
+<p><em>fiber</em> — fix <span class="math">s</span>, sweep <span class="math">q</span> over a 2-sphere in <span class="math">ℍ</span>; the image is a 2-dimensional sheet in <span class="math">Spin(3)</span> — a slice of the lift at a single instant.</p>
+<p><em>difference</em> — the based loop <span class="math">TΩ(q) = T−(q)·T+(q)⁻¹</span> in <span class="math">Spin(3)</span>. This is what lives on the triple overlap, and it is the object whose central lift carries the cocycle's essential information.</p>
+
+<p style="color:#666;font-size:.74rem;margin-top:1.5em">Three.js r128 · Tweakpane v4 · after cocycle_0_update.py</p>
+</aside>
+
+<div id="readout"></div>
+
+<script type="module">
+// Tweakpane is loaded dynamically below so that a failed import
+// does not abort the entire module and prevent Three.js from rendering.
+
+// ================= MATH (port of Roberts' Sage) =================
+function mod_squared(q){return q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];}
+function Hopf(q){
+  return [0,
+    q[0]*q[0]+q[1]*q[1]-q[2]*q[2]-q[3]*q[3],
+    2*(q[1]*q[2]-q[0]*q[3]),
+    2*(q[0]*q[2]+q[1]*q[3])];
+}
+function Hopf_i(q){
+  return [-(q[0]*q[0])-q[1]*q[1]+q[2]*q[2]+q[3]*q[3],
+    0,
+    2*(q[0]*q[2]+q[1]*q[3]),
+    -2*(q[1]*q[2]-q[0]*q[3])];
+}
+// T_+(q)(s) as unit quaternion in S^3
+function T_plus_q(q,s){
+  const mq2=mod_squared(q); if(mq2===0) return [1,0,0,0];
+  const mq4=mq2*mq2, den=mq4+s*s, H=Hopf(q);
+  return [(mq4-s*s)/den, 2*s*H[1]/den, 2*s*H[2]/den, 2*s*H[3]/den];
+}
+// T_-(q)(s) as unit quaternion in S^3
+function T_minus_q(q,s){
+  const mq2=mod_squared(q); if(mq2===0) return [1,0,0,0];
+  const mq4=mq2*mq2, s2=s*s;
+  const den=(mq4*s2+1)*(s2+1)*(s2+1);
+  const n1=mq4*s2-1;
+  const n21=(s2-1)*(s2-1)-4*s2;
+  const n22=-4*(s2*s-s);
+  const H=Hopf(q), Hi=Hopf_i(q);
+  return [-(n1*n21+2*s*n22*Hi[0])/den,
+          -(n1*n22+2*s*n21*H[1])/den,
+          -2*s*(n21*H[2]+n22*Hi[2])/den,
+          -2*s*(n21*H[3]+n22*Hi[3])/den];
+}
+// quaternion ops for the difference loop
+function qmul(a,b){return [a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],
+  a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+  a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],
+  a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]];}
+function qinv(a){const n=mod_squared(a)||1;return [a[0]/n,-a[1]/n,-a[2]/n,-a[3]/n];}
+// stereo from -1 : unit quat (w,x,y,z) ↦ (x,y,z)/(1+w)
+function stereo(q){
+  const w=q[0],d=1+w;
+  if(Math.abs(d)<1e-6) return [0,0,0];
+  return [q[1]/d,q[2]/d,q[3]/d];
+}
+function clamp3(v,R){const L=Math.hypot(v[0],v[1],v[2]);if(L>R){const k=R/L;return [v[0]*k,v[1]*k,v[2]*k];}return v;}
+function T_plus(q,s){return clamp3(stereo(T_plus_q(q,s)),20);}
+function T_minus(q,s){return clamp3(stereo(T_minus_q(q,s)),20);}
+
+function hsl(h){
+  h=((h%1)+1)%1;
+  const f=(n,k=(n+h*12)%12)=>0.55-0.55*Math.max(-1,Math.min(k-3,9-k,1));
+  return [f(0),f(8),f(4)];
+}
+
+// ================= THREE.JS SCENE =================
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x000000);
+const cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,0.01,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+document.getElementById('canvas').appendChild(renderer.domElement);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+// axes
+const axesGroup=new THREE.Group();
+[[1,0,0],[0,1,0],[0,0,1]].forEach(d=>{
+  const L=8, g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-d[0]*L,-d[1]*L,-d[2]*L),new THREE.Vector3(d[0]*L,d[1]*L,d[2]*L)]);
+  axesGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0xaaaaaa,transparent:true,opacity:0.35})));
+});
+scene.add(axesGroup);
+// origin marker
+const origin=new THREE.Mesh(new THREE.SphereGeometry(0.05,16,12),new THREE.MeshBasicMaterial({color:0xd4a574}));
+scene.add(origin);
+
+const contentGroup=new THREE.Group();
+scene.add(contentGroup);
+function clearContent(){
+  while(contentGroup.children.length){
+    const c=contentGroup.children[0];
+    if(c.geometry) c.geometry.dispose();
+    if(c.material) c.material.dispose?.();
+    contentGroup.remove(c);
+  }
+}
+
+// ================= BUILDERS =================
+// shared: two-path line (T+ and T-) in one LineSegments with vertex colors
+function buildPair(q, opts={}){
+  const N=opts.N||120, upTo=opts.upTo!==undefined?opts.upTo:1;
+  const K=Math.max(2,Math.round(N*upTo));
+  const pos=new Float32Array((K-1)*2*2*3);
+  const col=new Float32Array((K-1)*2*2*3);
+  let idx=0;
+  const seg=(a,b,c)=>{
+    pos[idx*3]=a[0];pos[idx*3+1]=a[1];pos[idx*3+2]=a[2];col[idx*3]=c[0];col[idx*3+1]=c[1];col[idx*3+2]=c[2];idx++;
+    pos[idx*3]=b[0];pos[idx*3+1]=b[1];pos[idx*3+2]=b[2];col[idx*3]=c[0];col[idx*3+1]=c[1];col[idx*3+2]=c[2];idx++;
+  };
+  let pP=null,pM=null;
+  for(let k=0;k<K;k++){
+    const s=0.001+(k/(N-1))*0.998;
+    const vp=T_plus(q,s), vm=T_minus(q,s);
+    if(pP){
+      const t=k/(K-1);
+      // amber → teal gradient along s for "pair" readability
+      seg(pP,vp,[0.83-0.48*t,0.65-0.05*t,0.45+0.22*t]);
+      seg(pM,vm,[0.60-0.25*t,0.71+0.06*t,0.67+0.1*t]);
+    }
+    pP=vp;pM=vm;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  return new THREE.LineSegments(geo,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.9}));
+}
+// wings: one "rainbow loop" at a parameter angle
+function buildWingsLoop(q,hue){
+  const N=100;
+  const pos=new Float32Array((N-1)*2*2*3);
+  const col=new Float32Array((N-1)*2*2*3);
+  const c=hsl(hue);
+  let idx=0;
+  const seg=(a,b)=>{
+    pos[idx*3]=a[0];pos[idx*3+1]=a[1];pos[idx*3+2]=a[2];col[idx*3]=c[0];col[idx*3+1]=c[1];col[idx*3+2]=c[2];idx++;
+    pos[idx*3]=b[0];pos[idx*3+1]=b[1];pos[idx*3+2]=b[2];col[idx*3]=c[0];col[idx*3+1]=c[1];col[idx*3+2]=c[2];idx++;
+  };
+  let pP=null,pM=null;
+  for(let k=0;k<N;k++){
+    const s=0.001+(k/(N-1))*0.998;
+    const vp=T_plus(q,s),vm=T_minus(q,s);
+    if(pP){seg(pP,vp);seg(pM,vm);}
+    pP=vp;pM=vm;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  return new THREE.LineSegments(geo,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.8}));
+}
+// fiber: fix s, sweep q over a 2-sphere in H (magnitude fixed, 3 imaginary coords vary)
+function buildFiber(s,mag){
+  const U=32,V=16;
+  const posP=[], posM=[];
+  for(let i=0;i<U;i++){
+    for(let j=0;j<V;j++){
+      const phi=(i/U)*Math.PI*2, th=(j/(V-1))*Math.PI;
+      const q=[mag*Math.cos(th), mag*Math.sin(th)*Math.cos(phi), mag*Math.sin(th)*Math.sin(phi), 0.3];
+      posP.push(new THREE.Vector3(...T_plus(q,s)));
+      posM.push(new THREE.Vector3(...T_minus(q,s)));
+    }
+  }
+  const g1=new THREE.BufferGeometry().setFromPoints(posP);
+  const g2=new THREE.BufferGeometry().setFromPoints(posM);
+  const m1=new THREE.PointsMaterial({color:0xd4a574,size:0.06,transparent:true,opacity:0.9});
+  const m2=new THREE.PointsMaterial({color:0x5ab4ac,size:0.06,transparent:true,opacity:0.9});
+  const grp=new THREE.Group();
+  grp.add(new THREE.Points(g1,m1));
+  grp.add(new THREE.Points(g2,m2));
+  return grp;
+}
+// difference loop: TΩ(q)(s) = T_-(q)(s) · T_+(q)(s)^{-1}  as closed curve
+function buildDifference(q){
+  const N=240;
+  const pts=[];
+  for(let k=0;k<=N;k++){
+    const s=0.001+(k/N)*0.998;
+    const plus=T_plus_q(q,s), minus=T_minus_q(q,s);
+    const loop=qmul(minus,qinv(plus));
+    pts.push(new THREE.Vector3(...clamp3(stereo(loop),20)));
+  }
+  const pos=new Float32Array(N*2*3), col=new Float32Array(N*2*3);
+  for(let k=0;k<N;k++){
+    const t=k/N, c=hsl(t*0.7+0.5);
+    pos[k*6]=pts[k].x;pos[k*6+1]=pts[k].y;pos[k*6+2]=pts[k].z;
+    pos[k*6+3]=pts[k+1].x;pos[k*6+4]=pts[k+1].y;pos[k*6+5]=pts[k+1].z;
+    for(let j=0;j<2;j++){col[k*6+j*3]=c[0];col[k*6+j*3+1]=c[1];col[k*6+j*3+2]=c[2];}
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  return new THREE.LineSegments(geo,new THREE.LineBasicMaterial({vertexColors:true,linewidth:2,transparent:true,opacity:0.95}));
+}
+
+// ================= STATE =================
+const PARAMS={
+  q0:2.0, q1:1.5, q2:0.0, q3:1.0, s:1.0,
+  view:'wings',
+  path:'lissajous',
+  animate:true, speed:1.0, theta:0,
+  accumulate:true, axes:true,
+  magnitude:1.4,   // for fiber view
+};
+
+function currentQ(){return [PARAMS.q0,PARAMS.q1,PARAMS.q2,PARAMS.q3];}
+function pathQ(theta){
+  switch(PARAMS.path){
+    case 'lissajous': return [2*Math.sin(theta),1.5*Math.cos(theta),2.1*Math.sin(theta),Math.cos(theta)];
+    case 'circle-12': return [Math.cos(theta),Math.sin(theta),0.4,0.2];
+    case 'circle-34': return [0.4,0.2,Math.cos(theta),Math.sin(theta)];
+    case 'figure-8':  return [Math.sin(theta),Math.sin(2*theta),Math.cos(theta),0.5];
+  }
+  return [1,0,0,0];
+}
+
+let lastRebuildView=null;
+function rebuild(){
+  // wings mode accumulates; others replace
+  if(PARAMS.view!=='wings' || !PARAMS.accumulate || lastRebuildView!==PARAMS.view){
+    clearContent();
+  }
+  lastRebuildView=PARAMS.view;
+
+  if(PARAMS.view==='wings'){
+    const q=PARAMS.animate?pathQ(PARAMS.theta):currentQ();
+    const hue=(PARAMS.theta/(2*Math.PI))%1;
+    contentGroup.add(buildWingsLoop(q,hue));
+    if(PARAMS.accumulate && contentGroup.children.length>500){
+      const old=contentGroup.children[0];
+      old.geometry.dispose();
+      contentGroup.remove(old);
+    }
+  } else if(PARAMS.view==='pair'){
+    contentGroup.add(buildPair(currentQ(),{upTo:PARAMS.s}));
+    // mark the current endpoint
+    const vp=T_plus(currentQ(),PARAMS.s), vm=T_minus(currentQ(),PARAMS.s);
+    const dotP=new THREE.Mesh(new THREE.SphereGeometry(0.08,16,12),new THREE.MeshBasicMaterial({color:0xd4a574}));
+    const dotM=new THREE.Mesh(new THREE.SphereGeometry(0.08,16,12),new THREE.MeshBasicMaterial({color:0x5ab4ac}));
+    dotP.position.set(...vp); dotM.position.set(...vm);
+    contentGroup.add(dotP); contentGroup.add(dotM);
+  } else if(PARAMS.view==='fiber'){
+    contentGroup.add(buildFiber(PARAMS.s,PARAMS.magnitude));
+  } else if(PARAMS.view==='difference'){
+    contentGroup.add(buildDifference(currentQ()));
+  }
+}
+
+// ================= CAMERA =================
+let rx=0.25,ry=0.7,dist=10;
+function updateCam(){cam.position.set(dist*Math.cos(rx)*Math.sin(ry),dist*Math.sin(rx),dist*Math.cos(rx)*Math.cos(ry));cam.lookAt(0,0,0);}
+updateCam();
+let drag=false,lx=0,ly=0;
+renderer.domElement.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{if(!drag)return;ry-=(e.clientX-lx)*0.007;rx+=(e.clientY-ly)*0.007;rx=Math.max(-1.4,Math.min(1.4,rx));lx=e.clientX;ly=e.clientY;updateCam();});
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist*=(1+e.deltaY*0.0012);dist=Math.max(2,Math.min(40,dist));updateCam();},{passive:false});
+renderer.domElement.addEventListener('touchstart',e=>{drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;});
+addEventListener('touchend',()=>drag=false);
+addEventListener('touchmove',e=>{if(!drag||!e.touches[0])return;const t=e.touches[0];ry-=(t.clientX-lx)*0.007;rx+=(t.clientY-ly)*0.007;rx=Math.max(-1.4,Math.min(1.4,rx));lx=t.clientX;ly=t.clientY;updateCam();});
+
+// ================= TWEAKPANE (dynamic, non-blocking) =================
+let pane = null;
+(async () => {
+  try {
+    const tp = await import('https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/+esm');
+    const Pane = tp.Pane;
+    pane = new Pane({title:'cocycle controls'});
+
+    const fView=pane.addFolder({title:'view'});
+    fView.addBinding(PARAMS,'view',{options:{wings:'wings',pair:'pair',fiber:'fiber','difference (TΩ)':'difference'}}).on('change',()=>{clearContent();lastRebuildView=null;rebuild();});
+
+    const fQ=pane.addFolder({title:'parameter q ∈ ℍ×'});
+    ['q0','q1','q2','q3'].forEach(k=>fQ.addBinding(PARAMS,k,{min:-3,max:3,step:0.01}).on('change',()=>{if(PARAMS.view!=='wings'&&!PARAMS.animate)rebuild();}));
+
+    const fPath=pane.addFolder({title:'path parameter'});
+    fPath.addBinding(PARAMS,'s',{min:0,max:1,step:0.005}).on('change',()=>{if(PARAMS.view==='pair'||PARAMS.view==='fiber')rebuild();});
+    fPath.addBinding(PARAMS,'magnitude',{min:0.2,max:3,step:0.01,label:'fiber |q|'}).on('change',()=>{if(PARAMS.view==='fiber')rebuild();});
+
+    const fAnim=pane.addFolder({title:'animation'});
+    fAnim.addBinding(PARAMS,'animate');
+    fAnim.addBinding(PARAMS,'speed',{min:0,max:3,step:0.01});
+    fAnim.addBinding(PARAMS,'path',{options:{'lissajous (Roberts)':'lissajous','circle in (q0,q1)':'circle-12','circle in (q2,q3)':'circle-34','figure-8':'figure-8'}});
+
+    const fRender=pane.addFolder({title:'rendering'});
+    fRender.addBinding(PARAMS,'accumulate').on('change',()=>{if(!PARAMS.accumulate)clearContent();rebuild();});
+    fRender.addBinding(PARAMS,'axes').on('change',()=>{axesGroup.visible=PARAMS.axes;});
+    fRender.addButton({title:'clear'}).on('click',()=>{clearContent();PARAMS.theta=0;rebuild();});
+    fRender.addButton({title:'reset camera'}).on('click',()=>{rx=0.25;ry=0.7;dist=10;updateCam();});
+    console.log('[cocycle] Tweakpane initialized');
+  } catch(e) {
+    console.error('[cocycle] Tweakpane failed to load, rendering continues without controls:', e);
+  }
+})();
+
+rebuild();
+
+// ================= RENDER LOOP =================
+const fpsEl=document.getElementById('fps');
+const roEl=document.getElementById('readout');
+let frameCount=0,lastT=performance.now(),fps=0;
+function loop(){
+  const now=performance.now();
+  frameCount++;
+  if(now-lastT>500){
+    fps=Math.round(frameCount*1000/(now-lastT));
+    frameCount=0;lastT=now;
+    fpsEl.textContent=`${fps} FPS · ${contentGroup.children.length} objs`;
+  }
+  if(PARAMS.animate){
+    PARAMS.theta+=0.015*PARAMS.speed;
+    if(PARAMS.view==='wings'){
+      rebuild();
+    } else {
+      // sync q sliders from path and rebuild
+      const q=pathQ(PARAMS.theta);
+      PARAMS.q0=q[0];PARAMS.q1=q[1];PARAMS.q2=q[2];PARAMS.q3=q[3];
+      if(pane) pane.refresh();
+      rebuild();
+    }
+  }
+  // readout
+  const q=currentQ();
+  const ts=PARAMS.s;
+  const vp=T_plus_q(q,ts),vm=T_minus_q(q,ts);
+  roEl.innerHTML=
+    `q = (<span class="v">${q[0].toFixed(2)}, ${q[1].toFixed(2)}, ${q[2].toFixed(2)}, ${q[3].toFixed(2)}</span>)  s = <span class="v">${ts.toFixed(3)}</span><br>`+
+    `T₊(q)(s) = (<span class="v">${vp[0].toFixed(2)}, ${vp[1].toFixed(2)}, ${vp[2].toFixed(2)}, ${vp[3].toFixed(2)}</span>)<br>`+
+    `T₋(q)(s) = (<span class="v">${vm[0].toFixed(2)}, ${vm[1].toFixed(2)}, ${vm[2].toFixed(2)}, ${vm[3].toFixed(2)}</span>)`;
+  renderer.render(scene,cam);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

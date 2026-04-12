@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Hopf fibration playground — warm-up for the String bundle artifact</title>
+<style>
+  html,body { margin:0; height:100%; background:#0b0d12; color:#dde; font:13px/1.4 system-ui,sans-serif; overflow:hidden; }
+  #ui { position:fixed; top:10px; left:10px; width:300px; padding:12px 14px; background:rgba(18,22,30,.88);
+        border:1px solid #2a3140; border-radius:8px; backdrop-filter: blur(6px); }
+  #ui h1 { font-size:13px; margin:0 0 6px 0; color:#9cf; }
+  #ui .hint { color:#8892a6; font-size:11px; margin:6px 0 10px 0; }
+  #ui label { display:flex; align-items:center; gap:8px; margin:4px 0; font-variant-numeric: tabular-nums; }
+  #ui label span.name { width:22px; color:#9cf; }
+  #ui label span.val  { width:54px; text-align:right; color:#cfd6e4; }
+  #ui input[type=range] { flex:1; accent-color:#6bf; }
+  #ui button { margin-top:10px; width:100%; padding:6px; background:#1a2336; color:#cfe;
+               border:1px solid #35425e; border-radius:5px; cursor:pointer; }
+  #ui button:hover { background:#253150; }
+  #readout { margin-top:10px; padding-top:10px; border-top:1px solid #232a3a;
+             color:#9ab; font-family:ui-monospace,monospace; font-size:11px; }
+  #legend { position:fixed; bottom:10px; left:10px; font-size:11px; color:#8892a6;
+            background:rgba(18,22,30,.7); padding:8px 10px; border-radius:6px; border:1px solid #2a3140; }
+  #legend .sw { display:inline-block; width:10px; height:10px; vertical-align:middle; margin-right:4px; border-radius:50%; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>Hopf fibration h: S³ → S²</h1>
+  <div class="hint">Drag the point n on S² (small blue ball). The artifact computes its Hopf fiber h⁻¹(n) — a great circle on S³ — and draws it in ℝ³ via stereographic projection. Past fibers stay as a "trail" so you can see the linked-ring structure build up.</div>
+  <label><span class="name">θ</span><input id="sTheta" type="range" min="0" max="3.14159" step="0.01" value="1.2"><span class="val" id="vTheta"></span></label>
+  <label><span class="name">φ</span><input id="sPhi" type="range" min="0" max="6.28318" step="0.01" value="0.5"><span class="val" id="vPhi"></span></label>
+  <button id="sweepS2">Sweep a small loop on S² ↻</button>
+  <button id="sweepBig">Sweep the equator of S² ↻</button>
+  <button id="clear">Clear trail</button>
+  <label style="margin-top:8px"><input type="checkbox" id="showS2" checked> show S² (target sphere)</label>
+  <label><input type="checkbox" id="showS3" checked> show S³ reference (equatorial S²)</label>
+  <div id="readout"></div>
+</div>
+<div id="legend">
+  <div><span class="sw" style="background:#44aaff"></span>n ∈ S² (user-draggable via sliders)</div>
+  <div><span class="sw" style="background:#ffcc44"></span>current Hopf fiber h⁻¹(n) on projected S³</div>
+  <div><span class="sw" style="background:#66aaff"></span>trail of past fibers</div>
+  <div><span class="sw" style="background:#33ff88"></span>swept surface (torus built from a loop on S²)</div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ---------- quaternion arithmetic, same convention as the String playground.
+   q = [w, x, y, z] with w the real part. */
+const qmul = (a, b) => [
+  a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
+  a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
+  a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
+  a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0],
+];
+const qconj = a => [a[0], -a[1], -a[2], -a[3]];
+
+/* The Hopf map h: S³ → S² sends q ↦ q i q⁻¹ = q i q̄ (for unit q).
+   We don't actually need to call this function to draw fibers, but it's
+   useful as a sanity check: given a random q we can verify that our
+   parameterization of the fiber really does land on the requested n. */
+function hopf(q) {
+  const qibar = qmul(qmul(q, [0,1,0,0]), qconj(q));
+  // qibar has real part 0 by construction; return the imaginary part as ℝ³.
+  return [qibar[1], qibar[2], qibar[3]];
+}
+
+/* ---------- fiber parameterization ----------
+   Given a unit vector n ∈ S² ⊂ ℝ³, we want to find the great circle on S³
+   consisting of all unit quaternions q satisfying q i q⁻¹ = n. Strategy:
+   (1) find ONE particular q₀ with q₀ i q₀⁻¹ = n, using the standard
+       half-angle rotation that sends i to n.
+   (2) The full fiber is then { q₀ · exp(i θ) : θ ∈ [0, 2π) } because
+       right-multiplying q₀ by a quaternion of the form cos θ + i sin θ
+       commutes with i under conjugation, so it preserves the image under
+       h. This is a clean great circle on S³.
+   Edge case: if n = -i exactly, the half-angle formula is singular; we
+   handle that by returning a fixed fallback q₀ that maps to -i.            */
+function fiberBasepoint(n) {
+  // n is a unit ℝ³ vector. We want q₀ with q₀ i q₀⁻¹ = n.
+  // Rotation from i to n by angle α around axis (i × n)/|i × n|; the
+  // corresponding unit quaternion is cos(α/2) + sin(α/2) · axis.
+  const i = [1, 0, 0];  // the "i" vector in ℝ³ = Im(ℍ)
+  const dot = i[0]*n[0] + i[1]*n[1] + i[2]*n[2];
+  // special case: n = +i exactly, rotation is identity
+  if (dot > 0.99999) return [1, 0, 0, 0];
+  // special case: n = -i, 180° rotation around any axis perpendicular to i
+  if (dot < -0.99999) return [0, 0, 1, 0];  // quaternion j, which sends i to -i
+  // cross product i × n
+  const axis = [
+    i[1]*n[2] - i[2]*n[1],
+    i[2]*n[0] - i[0]*n[2],
+    i[0]*n[1] - i[1]*n[0],
+  ];
+  const axisLen = Math.hypot(axis[0], axis[1], axis[2]);
+  axis[0] /= axisLen; axis[1] /= axisLen; axis[2] /= axisLen;
+  const alpha = Math.acos(dot);
+  const ca = Math.cos(alpha/2), sa = Math.sin(alpha/2);
+  return [ca, sa*axis[0], sa*axis[1], sa*axis[2]];
+}
+
+// Sample the fiber as N points by sweeping θ over [0, 2π).
+function fiberPoints(n, N=64) {
+  const q0 = fiberBasepoint(n);
+  const pts = new Array(N);
+  for (let k = 0; k < N; k++) {
+    const theta = 2 * Math.PI * k / N;
+    // exp(i theta) as a quaternion: cos theta + i sin theta
+    const rot = [Math.cos(theta), Math.sin(theta), 0, 0];
+    pts[k] = qmul(q0, rot);
+  }
+  return pts;
+}
+
+// Stereographic projection S³ → ℝ³ from the north pole (w=1).
+function stereo(q) {
+  const d = 1 - q[0];
+  if (Math.abs(d) < 1e-4) return [NaN, NaN, NaN];
+  return [q[1]/d, q[2]/d, q[3]/d];
+}
+
+/* ---------- scene ---------- */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0d12);
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 1000);
+camera.position.set(4, 3, 5);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.GridHelper(6, 12, 0x223044, 0x182030));
+
+// Reference S² — the TARGET of the Hopf map. Rendered small and to one side
+// so it doesn't get tangled up with the fibers, which live on the projected S³.
+const s2Group = new THREE.Group();
+s2Group.position.set(-3, 1.5, 0);  // parked to the left so it's visually distinct
+const s2Geom = new THREE.SphereGeometry(0.8, 32, 24);
+const s2Mat  = new THREE.MeshBasicMaterial({ color: 0x1a2540, wireframe: true, transparent:true, opacity:0.4 });
+s2Group.add(new THREE.Mesh(s2Geom, s2Mat));
+// Draggable point n on S²
+const nPoint = new THREE.Mesh(
+  new THREE.SphereGeometry(0.08, 16, 12),
+  new THREE.MeshBasicMaterial({ color: 0x44aaff })
+);
+s2Group.add(nPoint);
+scene.add(s2Group);
+
+// Reference equatorial S² of S³ on the RIGHT side: under stereographic
+// projection from the north pole, the equator {w=0} ⊂ S³ lands on the
+// unit sphere in ℝ³, so this is a useful visual reference for where the
+// fibers live. Same as the String playground.
+const s3refGroup = new THREE.Group();
+const s3refGeom = new THREE.SphereGeometry(1, 48, 32);
+const s3refMat  = new THREE.MeshBasicMaterial({ color: 0x1e2a40, wireframe: true, transparent:true, opacity:0.25 });
+s3refGroup.add(new THREE.Mesh(s3refGeom, s3refMat));
+scene.add(s3refGroup);
+
+// Current fiber (yellow). Preallocated line.
+const FIBER_N = 128;
+function makeLine(color, maxN, opacity=0.9, width=2) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxN*3), 3));
+  const m = new THREE.LineBasicMaterial({ color, transparent:true, opacity, linewidth:width });
+  const l = new THREE.LineLoop(g, m);  // LineLoop closes the curve automatically
+  scene.add(l);
+  return l;
+}
+const fiberLine = makeLine(0xffcc44, FIBER_N, 1.0, 3);
+
+// Trail of past fibers. Rather than accumulating a huge pile of LineLoop
+// objects, we keep a rolling set of line objects and recycle them.
+const TRAIL_LINES = 80;
+const trailLines = [];
+for (let i = 0; i < TRAIL_LINES; i++) trailLines.push(makeLine(0x66aaff, FIBER_N, 0.35, 1));
+let trailIdx = 0;
+function pushTrailFiber(pts) {
+  const line = trailLines[trailIdx];
+  const pos = line.geometry.attributes.position.array;
+  let w = 0;
+  for (const q of pts) {
+    const xyz = stereo(q);
+    if (isFinite(xyz[0])) {
+      const r = Math.hypot(xyz[0], xyz[1], xyz[2]);
+      const cap = 8, k = r > cap ? cap/r : 1;
+      pos[w++] = xyz[0]*k;
+      pos[w++] = xyz[1]*k;
+      pos[w++] = xyz[2]*k;
+    } else {
+      pos[w++] = 0; pos[w++] = 0; pos[w++] = 8;
+    }
+  }
+  line.geometry.setDrawRange(0, pts.length);
+  line.geometry.attributes.position.needsUpdate = true;
+  trailIdx = (trailIdx + 1) % TRAIL_LINES;
+}
+function clearTrailFibers() {
+  for (const line of trailLines) line.geometry.setDrawRange(0, 0);
+  trailIdx = 0;
+}
+
+// Swept surface — same infrastructure as the String playground. Built when
+// you sweep a closed path on S², by recording fibers on a grid of (loop-time,
+// fiber-angle) and stitching them into a mesh.
+const SWEPT_T = 48, SWEPT_S = 64;
+const sweptPos = new Float32Array(SWEPT_T * SWEPT_S * 3);
+const sweptGeom = new THREE.BufferGeometry();
+sweptGeom.setAttribute('position', new THREE.BufferAttribute(sweptPos, 3));
+const sweptIdx = [];
+for (let i = 0; i < SWEPT_T; i++) {
+  for (let j = 0; j < SWEPT_S; j++) {
+    const i1 = (i+1) % SWEPT_T, j1 = (j+1) % SWEPT_S;
+    const a = i*SWEPT_S+j, b = i1*SWEPT_S+j, c = i1*SWEPT_S+j1, d = i*SWEPT_S+j1;
+    sweptIdx.push(a,b,c, a,c,d);
+  }
+}
+sweptGeom.setIndex(sweptIdx);
+const sweptMesh = new THREE.Mesh(sweptGeom, new THREE.MeshBasicMaterial({
+  color: 0x33ff88, transparent:true, opacity:0.15, side: THREE.DoubleSide, depthWrite:false
+}));
+const sweptWire = new THREE.Mesh(sweptGeom, new THREE.MeshBasicMaterial({
+  color: 0x33ff88, transparent:true, opacity:0.3, wireframe:true
+}));
+sweptMesh.visible = sweptWire.visible = false;
+scene.add(sweptMesh, sweptWire);
+
+function buildSweptSurface(pathOnS2) {
+  for (let i = 0; i < SWEPT_T; i++) {
+    const n = pathOnS2(i / SWEPT_T);
+    const q0 = fiberBasepoint(n);
+    for (let j = 0; j < SWEPT_S; j++) {
+      const theta = 2 * Math.PI * j / SWEPT_S;
+      const rot = [Math.cos(theta), Math.sin(theta), 0, 0];
+      const q = qmul(q0, rot);
+      const xyz = stereo(q);
+      const idx = (i*SWEPT_S + j) * 3;
+      if (isFinite(xyz[0])) {
+        const r = Math.hypot(xyz[0], xyz[1], xyz[2]);
+        const cap = 10, k = r > cap ? cap/r : 1;
+        sweptPos[idx+0] = xyz[0]*k;
+        sweptPos[idx+1] = xyz[1]*k;
+        sweptPos[idx+2] = xyz[2]*k;
+      } else {
+        sweptPos[idx+0] = 0; sweptPos[idx+1] = 0; sweptPos[idx+2] = 10;
+      }
+    }
+  }
+  sweptGeom.attributes.position.needsUpdate = true;
+  sweptGeom.computeBoundingSphere();
+  sweptMesh.visible = sweptWire.visible = true;
+}
+
+/* ---------- UI wiring ---------- */
+const sTheta = document.getElementById('sTheta');
+const sPhi   = document.getElementById('sPhi');
+const vTheta = document.getElementById('vTheta');
+const vPhi   = document.getElementById('vPhi');
+const readout = document.getElementById('readout');
+
+// Convert (θ, φ) sliders to a unit vector n on S² using the standard
+// spherical-polar convention (θ from the +z axis, φ around z).
+function currentN() {
+  const th = parseFloat(sTheta.value);
+  const ph = parseFloat(sPhi.value);
+  return [
+    Math.sin(th) * Math.cos(ph),
+    Math.sin(th) * Math.sin(ph),
+    Math.cos(th),
+  ];
+}
+
+function updateFromInput(pushTrail=true) {
+  const n = currentN();
+  // move the blue dot on the target S²
+  nPoint.position.set(n[0]*0.8, n[1]*0.8, n[2]*0.8);
+  // compute and render the fiber
+  const pts = fiberPoints(n, FIBER_N);
+  const pos = fiberLine.geometry.attributes.position.array;
+  let w = 0;
+  for (const q of pts) {
+    const xyz = stereo(q);
+    if (isFinite(xyz[0])) {
+      const r = Math.hypot(xyz[0], xyz[1], xyz[2]);
+      const cap = 8, k = r > cap ? cap/r : 1;
+      pos[w++] = xyz[0]*k;
+      pos[w++] = xyz[1]*k;
+      pos[w++] = xyz[2]*k;
+    } else {
+      pos[w++] = 0; pos[w++] = 0; pos[w++] = 8;
+    }
+  }
+  fiberLine.geometry.setDrawRange(0, pts.length);
+  fiberLine.geometry.attributes.position.needsUpdate = true;
+  if (pushTrail) pushTrailFiber(pts);
+  vTheta.textContent = parseFloat(sTheta.value).toFixed(2);
+  vPhi.textContent   = parseFloat(sPhi.value).toFixed(2);
+  // sanity: verify hopf(q₀) ≈ n
+  const q0 = fiberBasepoint(n);
+  const h = hopf(q0);
+  readout.innerHTML =
+    `n     = (${n.map(v=>v.toFixed(3)).join(', ')})<br>` +
+    `h(q₀) = (${h.map(v=>v.toFixed(3)).join(', ')}) <span style="color:#6c9">(should match n)</span>`;
+}
+sTheta.addEventListener('input', () => updateFromInput(true));
+sPhi  .addEventListener('input', () => updateFromInput(true));
+document.getElementById('clear').onclick = () => {
+  clearTrailFibers();
+  sweptMesh.visible = sweptWire.visible = false;
+};
+document.getElementById('showS2').addEventListener('change', e => s2Group.visible = e.target.checked);
+document.getElementById('showS3').addEventListener('change', e => s3refGroup.visible = e.target.checked);
+
+/* ---------- sweep animations ----------
+   Two options: a small circle on S² (sweeps out a torus whose two fiber
+   circles link nontrivially — the classic Hopf linking picture), and
+   the equator of S² (sweeps out a Clifford torus in S³, the most
+   symmetric possible swept surface). */
+
+let sweeping = null, sweepStart = 0;
+
+function smallLoopOnS2(t) {
+  // a small circle on S² centered near the current slider position
+  const n0 = currentN();
+  // build a tangent frame at n0
+  const up = Math.abs(n0[2]) < 0.9 ? [0,0,1] : [1,0,0];
+  const e1 = [n0[1]*up[2] - n0[2]*up[1], n0[2]*up[0] - n0[0]*up[2], n0[0]*up[1] - n0[1]*up[0]];
+  const e1len = Math.hypot(e1[0], e1[1], e1[2]);
+  e1[0]/=e1len; e1[1]/=e1len; e1[2]/=e1len;
+  const e2 = [n0[1]*e1[2] - n0[2]*e1[1], n0[2]*e1[0] - n0[0]*e1[2], n0[0]*e1[1] - n0[1]*e1[0]];
+  const r = 0.5;  // angular radius of the loop on S²
+  const ang = 2 * Math.PI * t;
+  const x = n0[0] + r*(Math.cos(ang)*e1[0] + Math.sin(ang)*e2[0]);
+  const y = n0[1] + r*(Math.cos(ang)*e1[1] + Math.sin(ang)*e2[1]);
+  const z = n0[2] + r*(Math.cos(ang)*e1[2] + Math.sin(ang)*e2[2]);
+  const len = Math.hypot(x, y, z);
+  return [x/len, y/len, z/len];
+}
+function equatorOfS2(t) {
+  const ang = 2 * Math.PI * t;
+  return [Math.cos(ang), Math.sin(ang), 0];
+}
+
+document.getElementById('sweepS2').onclick = () => {
+  sweeping = { fn: smallLoopOnS2, duration: 8 };
+  sweepStart = performance.now();
+  clearTrailFibers();
+  buildSweptSurface(smallLoopOnS2);
+  document.getElementById('sweepS2').textContent = 'Sweeping small loop...';
+};
+document.getElementById('sweepBig').onclick = () => {
+  sweeping = { fn: equatorOfS2, duration: 10 };
+  sweepStart = performance.now();
+  clearTrailFibers();
+  buildSweptSurface(equatorOfS2);
+  document.getElementById('sweepBig').textContent = 'Sweeping equator...';
+};
+
+function sweepTick(t) {
+  if (!sweeping) return;
+  const elapsed = (t - sweepStart) * 0.001;
+  const frac = elapsed / sweeping.duration;
+  if (frac >= 1) {
+    sweeping = null;
+    document.getElementById('sweepS2').textContent = 'Sweep a small loop on S² ↻';
+    document.getElementById('sweepBig').textContent = 'Sweep the equator of S² ↻';
+    return;
+  }
+  const n = sweeping.fn(frac);
+  // convert back to (θ, φ) and update sliders
+  const theta = Math.acos(Math.max(-1, Math.min(1, n[2])));
+  let phi = Math.atan2(n[1], n[0]);
+  if (phi < 0) phi += 2 * Math.PI;
+  sTheta.value = theta.toFixed(3);
+  sPhi.value = phi.toFixed(3);
+  updateFromInput(true);
+}
+
+/* ---------- main loop ---------- */
+updateFromInput(false);
+function frame(t) {
+  requestAnimationFrame(frame);
+  if (sweeping) sweepTick(t);
+  controls.update();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

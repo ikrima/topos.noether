@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SU(3) → Lift → Cocycle</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;color:#e8e6df;font-family:'Cormorant Garamond',serif;overflow:hidden}
+#canvas{position:fixed;inset:0;z-index:0}
+#canvas canvas{display:block;width:100%;height:100%}
+.prose{position:fixed;top:0;left:0;width:260px;height:100%;padding:24px 22px 24px 22px;z-index:2;overflow-y:auto}
+.prose h1{font-size:1.9rem;font-weight:500;line-height:1.1;margin-bottom:1.1em}
+.prose p{font-size:0.86rem;line-height:1.55;margin-bottom:.95em;color:#d8d6cf}
+.prose p em{font-style:italic}
+.prose p strong{font-weight:500;color:#fff}
+.prose .math{font-style:italic}
+#fps{position:fixed;top:6px;left:6px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#888;z-index:3}
+.panel{position:fixed;top:16px;right:20px;width:210px;z-index:3;font-family:'JetBrains Mono',monospace;font-size:.7rem}
+.panel .hdr{color:#888;padding:6px 10px;border-bottom:1px solid #222;margin-bottom:2px}
+.panel .btn{background:rgba(20,20,25,.6);color:#d8d6cf;padding:8px 12px;border-left:2px solid transparent;cursor:pointer;user-select:none;border-bottom:1px solid #1a1a1f;transition:background .15s}
+.panel .btn:hover{background:rgba(40,40,50,.7)}
+.panel .btn.on{border-left-color:#e06c75;color:#fff}
+.panel .row{background:rgba(20,20,25,.4);color:#a8a6a0;padding:7px 12px;border-bottom:1px solid #15151a;display:flex;justify-content:space-between}
+.panel .row .k{color:#e8e6df}
+.panel .row .v{color:#888}
+.panel .slider{padding:7px 12px;background:rgba(20,20,25,.4);border-bottom:1px solid #15151a}
+.panel .slider label{display:flex;justify-content:space-between;color:#a8a6a0;margin-bottom:2px}
+.panel .slider label .v{color:#e06c75;min-width:3em;text-align:right}
+.panel .slider input{width:100%;accent-color:#e06c75;height:3px}
+@media(max-width:900px){.prose{width:210px;padding:14px}.panel{width:180px}}
+</style>
+</head>
+<body>
+<div id="canvas"></div>
+<div id="fps">-- FPS (0)</div>
+
+<aside class="prose">
+<h1>SU(3) → Lift → Cocycle</h1>
+<p>The function <span class="math">SU(3) → S⁵</span>, sending a matrix to its last column, is a principal <span class="math">Spin(3)</span>-bundle. Such a thing is described by a nontrivial function from the equator <span class="math">S⁴ ⊂ S⁵</span> to <span class="math">Spin(3)</span>, and we can then project this into 3-dimensional space.</p>
+<p>What you see here is (part of the data of) a <em>lift</em> of the function to a <em>cocycle</em> valued in a richer algebraic structure, namely a model for the categorical group <span class="math">String(3)</span>. Such a cocycle contains more information than is contained here, but each loop shown is a pair of functions from <span class="math">S⁴</span> minus the north and south poles to the space of paths in <span class="math">Spin(3)</span> that start at the origin (again projecting to 3-dimensional space), and both ending at the same point.</p>
+<p><strong>For the experts:</strong> this is the two object components of the unique nontrivial <span class="math">Ω̂Spin(3) → PSpin(3)</span>-valued cocycle on the 5-sphere, for a specific globular hypercover.</p>
+<p style="color:#888;font-size:0.76rem;margin-top:1.5em;line-height:1.4"><em>Port of Roberts' 2014/2025 Sage code. Formulas computed live in-browser; drive through 5-space with the sliders. arXiv:2203.04544.</em></p>
+</aside>
+
+<div class="panel" id="panel">
+<div class="hdr">Controls (click to toggle)</div>
+<div class="btn on" data-t="anim">animate</div>
+<div class="btn on" data-t="axes">axes</div>
+<div class="btn on" data-t="accum">accumulate</div>
+<div class="hdr" style="margin-top:10px">Parameter q ∈ ℍ×</div>
+<div class="slider"><label>q₀ <span class="v" id="v0"></span></label><input type="range" id="q0" min="-300" max="300" value="100"></div>
+<div class="slider"><label>q₁ <span class="v" id="v1"></span></label><input type="range" id="q1" min="-300" max="300" value="150"></div>
+<div class="slider"><label>q₂ <span class="v" id="v2"></span></label><input type="range" id="q2" min="-300" max="300" value="0"></div>
+<div class="slider"><label>q₃ <span class="v" id="v3"></span></label><input type="range" id="q3" min="-300" max="300" value="200"></div>
+<div class="hdr" style="margin-top:10px">Shortcuts</div>
+<div class="row"><span class="k">space</span><span class="v">animation</span></div>
+<div class="row"><span class="k">x</span><span class="v">axes</span></div>
+<div class="row"><span class="k">a</span><span class="v">accumulate</span></div>
+<div class="row"><span class="k">→</span><span class="v">step</span></div>
+<div class="row"><span class="k">c</span><span class="v">clear</span></div>
+<div class="row"><span class="k">r</span><span class="v">reset cam</span></div>
+</div>
+
+<script>
+// ==================================================================
+// Direct port of David Roberts' Sage script (cocycle_0_update.py).
+// Note: Sage's ^ is exponentiation; the port uses **.
+// ==================================================================
+const SCALE = 1.0; // kept at 1 — camera distance does the scaling
+
+function mod_squared(q){return q[0]**2 + q[1]**2 + q[2]**2 + q[3]**2;}
+function Hopf(q){
+  return [0,
+    q[0]**2 + q[1]**2 - q[2]**2 - q[3]**2,
+    2*(q[1]*q[2] - q[0]*q[3]),
+    2*(q[0]*q[2] + q[1]*q[3])];
+}
+function Hopf_i(q){
+  return [-(q[0]**2) - q[1]**2 + q[2]**2 + q[3]**2,
+    0,
+    2*(q[0]*q[2] + q[1]*q[3]),
+    -2*(q[1]*q[2] - q[0]*q[3])];
+}
+function stereo_minus1(q){
+  const w=q[0],x=q[1],y=q[2],z=q[3];
+  const d=1+w;
+  if(Math.abs(d)<1e-8) return [0,0,0];
+  return [SCALE*x/d, SCALE*y/d, SCALE*z/d];
+}
+// T_+(q)(s) ∈ R^3 (post-stereographic projection)
+function T_plus(q,s){
+  const mq2 = mod_squared(q);
+  if(mq2===0) return [0,0,0];
+  const mq4 = mq2*mq2;
+  const denom = mq4 + s*s;
+  const H = Hopf(q);
+  const w = (mq4 - s*s)/denom;
+  const x = 2*s*H[1]/denom;
+  const y = 2*s*H[2]/denom;
+  const z = 2*s*H[3]/denom;
+  return stereo_minus1([w,x,y,z]);
+}
+// T_-(q)(s) ∈ R^3
+function T_minus(q,s){
+  const mq2 = mod_squared(q);
+  if(mq2===0) return [0,0,0];
+  const mq4 = mq2*mq2;
+  const s2 = s*s;
+  const denom = (mq4*s2 + 1) * (s2+1)**2;
+  const n1  = mq4*s2 - 1;
+  const n21 = (s2 - 1)**2 - 4*s2;
+  const n22 = -4*(s2*s - s);
+  const H = Hopf(q), Hi = Hopf_i(q);
+  const w = -(n1*n21 + 2*s*n22*Hi[0]) / denom;
+  const x = -(n1*n22 + 2*s*n21*H[1])  / denom;
+  const y = -2*s*(n21*H[2] + n22*Hi[2]) / denom;
+  const z = -2*s*(n21*H[3] + n22*Hi[3]) / denom;
+  return stereo_minus1([w,x,y,z]);
+}
+
+// ===== three.js setup =====
+const container = document.getElementById('canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+const cam = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.01, 500);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+container.appendChild(renderer.domElement);
+addEventListener('resize',()=>{
+  cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+// axes — three long grey lines
+const axesGroup = new THREE.Group();
+[[1,0,0],[0,1,0],[0,0,1]].forEach(d=>{
+  const L=8;
+  const g=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-d[0]*L,-d[1]*L,-d[2]*L),
+    new THREE.Vector3( d[0]*L, d[1]*L, d[2]*L)
+  ]);
+  axesGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0xaaaaaa,transparent:true,opacity:0.5})));
+});
+scene.add(axesGroup);
+
+// curves
+const curvesGroup = new THREE.Group();
+scene.add(curvesGroup);
+
+function hsl(h){
+  h=((h%1)+1)%1;
+  const f=(n,k=(n+h*12)%12)=>0.55-0.55*Math.max(-1,Math.min(k-3,9-k,1));
+  return [f(0),f(8),f(4)];
+}
+
+const PTS_PER_PATH = 120;
+
+// Build one "loop" — both T_+ and T_- paths for a single q, as line segments.
+function buildLoop(q, col){
+  const NSEG = PTS_PER_PATH - 1;
+  const pos = new Float32Array(NSEG*2*2*3); // 2 paths × NSEG segments × 2 verts × 3
+  const cols= new Float32Array(NSEG*2*2*3);
+  let idx=0;
+  const push=(a,b)=>{
+    pos[idx*3]=a[0];pos[idx*3+1]=a[1];pos[idx*3+2]=a[2];
+    cols[idx*3]=col[0];cols[idx*3+1]=col[1];cols[idx*3+2]=col[2]; idx++;
+    pos[idx*3]=b[0];pos[idx*3+1]=b[1];pos[idx*3+2]=b[2];
+    cols[idx*3]=col[0];cols[idx*3+1]=col[1];cols[idx*3+2]=col[2]; idx++;
+  };
+  let prevP=null, prevM=null;
+  for(let k=0;k<PTS_PER_PATH;k++){
+    const s=k/(PTS_PER_PATH-1);
+    // Avoid exact endpoints where numerics get rough
+    const ss=0.001 + s*0.998;
+    const vp = T_plus(q,ss);
+    const vm = T_minus(q,ss);
+    // Clamp absurdly far points (near the projection antipode)
+    const clamp=v=>{const L=Math.hypot(v[0],v[1],v[2]); if(L>20){const k=20/L;return [v[0]*k,v[1]*k,v[2]*k];} return v;};
+    const vpc=clamp(vp), vmc=clamp(vm);
+    if(prevP){push(prevP,vpc); push(prevM,vmc);}
+    prevP=vpc; prevM=vmc;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(cols,3));
+  return new THREE.LineSegments(geo, new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.85}));
+}
+
+function clearCurves(){
+  while(curvesGroup.children.length){
+    const c=curvesGroup.children[0];
+    c.geometry.dispose();
+    curvesGroup.remove(c);
+  }
+}
+
+// ===== state =====
+const state={anim:true,axes:true,accum:true,theta:0};
+const sliders=['q0','q1','q2','q3'].map(id=>document.getElementById(id));
+const vouts=['v0','v1','v2','v3'].map(id=>document.getElementById(id));
+
+function readSliderQ(){
+  return sliders.map(s=>+s.value/100);
+}
+function writeSliderQ(q){
+  for(let i=0;i<4;i++){
+    sliders[i].value=Math.round(q[i]*100);
+    vouts[i].textContent=q[i].toFixed(2);
+  }
+}
+function animatedQ(theta){
+  // Roberts' test_points4 path
+  return [2*Math.sin(theta), 1.5*Math.cos(theta), 2.1*Math.sin(theta), Math.cos(theta)];
+}
+
+// initial loop from slider defaults
+writeSliderQ(readSliderQ());
+function addLoopAt(q, hue){
+  const L=buildLoop(q, hsl(hue));
+  if(!state.accum) clearCurves();
+  curvesGroup.add(L);
+  // cap accumulation
+  if(state.accum && curvesGroup.children.length>600){
+    const old=curvesGroup.children[0];
+    old.geometry.dispose();
+    curvesGroup.remove(old);
+  }
+}
+addLoopAt(readSliderQ(), 0);
+
+// slider → re-render current loop (if not animating)
+sliders.forEach((s,i)=>{
+  s.addEventListener('input',()=>{
+    vouts[i].textContent=(+s.value/100).toFixed(2);
+    if(!state.anim){
+      if(!state.accum) clearCurves();
+      addLoopAt(readSliderQ(), (state.theta/(Math.PI*2))%1);
+    }
+  });
+});
+
+// ===== camera orbit =====
+let rx=0.25, ry=0.7, dist=10;
+const updateCam=()=>{
+  cam.position.set(
+    dist*Math.cos(rx)*Math.sin(ry),
+    dist*Math.sin(rx),
+    dist*Math.cos(rx)*Math.cos(ry)
+  );
+  cam.lookAt(0,0,0);
+};
+updateCam();
+let drag=false,lx=0,ly=0;
+renderer.domElement.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{
+  if(!drag) return;
+  ry-=(e.clientX-lx)*0.007; rx+=(e.clientY-ly)*0.007;
+  rx=Math.max(-1.4,Math.min(1.4,rx));
+  lx=e.clientX; ly=e.clientY; updateCam();
+});
+renderer.domElement.addEventListener('wheel',e=>{
+  e.preventDefault();
+  dist*=(1+e.deltaY*0.0012);
+  dist=Math.max(2,Math.min(40,dist));
+  updateCam();
+},{passive:false});
+renderer.domElement.addEventListener('touchstart',e=>{drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;});
+addEventListener('touchend',()=>drag=false);
+addEventListener('touchmove',e=>{
+  if(!drag||!e.touches[0])return;
+  const t=e.touches[0];
+  ry-=(t.clientX-lx)*0.007; rx+=(t.clientY-ly)*0.007;
+  rx=Math.max(-1.4,Math.min(1.4,rx));
+  lx=t.clientX; ly=t.clientY; updateCam();
+});
+
+// ===== controls =====
+function syncButtons(){
+  document.querySelectorAll('.panel .btn').forEach(b=>{
+    b.classList.toggle('on', state[b.dataset.t]);
+  });
+  axesGroup.visible=state.axes;
+}
+document.querySelectorAll('.panel .btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const k=b.dataset.t;
+    if(k==='anim'){state.anim=!state.anim;}
+    else if(k==='axes'){state.axes=!state.axes;}
+    else if(k==='accum'){state.accum=!state.accum;if(!state.accum){clearCurves();addLoopAt(readSliderQ(),(state.theta/(Math.PI*2))%1);}}
+    syncButtons();
+  });
+});
+addEventListener('keydown',e=>{
+  if(e.key===' '){e.preventDefault();state.anim=!state.anim;syncButtons();}
+  else if(e.key==='x'){state.axes=!state.axes;syncButtons();}
+  else if(e.key==='a'){state.accum=!state.accum;if(!state.accum){clearCurves();addLoopAt(readSliderQ(),0);}syncButtons();}
+  else if(e.key==='ArrowRight'){state.theta+=0.08; writeSliderQ(animatedQ(state.theta)); addLoopAt(animatedQ(state.theta),(state.theta/(Math.PI*2))%1);}
+  else if(e.key==='c'){clearCurves();addLoopAt(readSliderQ(),0);state.theta=0;}
+  else if(e.key==='r'){rx=0.25;ry=0.7;dist=10;updateCam();}
+});
+syncButtons();
+
+// ===== render loop =====
+const fpsEl=document.getElementById('fps');
+let frameCount=0,totalFrames=0,lastT=performance.now(),fps=0;
+function loop(){
+  const now=performance.now();
+  frameCount++; totalFrames++;
+  if(now-lastT>500){
+    fps=Math.round(frameCount*1000/(now-lastT));
+    frameCount=0; lastT=now;
+    fpsEl.textContent=`${fps} FPS (${totalFrames})`;
+  }
+  if(state.anim){
+    state.theta += 2*Math.PI/200; // ~200 frames per full loop, matching N_frames=100 × step feel
+    const q=animatedQ(state.theta);
+    writeSliderQ(q);
+    const hue=((state.theta)/(2*Math.PI))%1;
+    addLoopAt(q, hue);
+  }
+  renderer.render(scene,cam);
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

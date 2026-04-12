@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paths in S³ — a visual warm-up for String bundles</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0e1117;color:#d8dde6;
+  font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",sans-serif;
+  font-size:15px;line-height:1.7}
+#wrap{max-width:760px;margin:0 auto;padding:48px 20px 120px}
+h1{font-weight:600;font-size:28px;letter-spacing:-0.02em;margin:0 0 6px;color:#f0f2f6}
+h2{font-weight:500;font-size:20px;margin:56px 0 10px;color:#e8ecf3}
+h3{font-weight:500;font-size:16px;margin:28px 0 8px;color:#c8cdd8}
+p{color:#94a0b8;margin:0 0 14px}
+p+p{margin-top:0}
+.byline{color:#5c6780;font-size:13px;margin-bottom:32px}
+a{color:#4cc9f0;text-decoration:none}
+.stage{margin:52px 0 0;padding-top:20px}
+.canvas-wrap{position:relative;width:100%;height:400px;background:#141923;
+  border-radius:8px;overflow:hidden;border:1px solid #1f2632;margin:16px 0 8px}
+canvas{display:block;width:100%;height:100%}
+.vlabels{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.vlabel{position:absolute;font-size:10px;color:#5c6780;text-transform:uppercase;
+  letter-spacing:.08em;top:10px}
+.readout{position:absolute;bottom:10px;left:14px;font-family:"JetBrains Mono",Menlo,monospace;
+  font-size:12px;color:#ffd166;pointer-events:none}
+.legend{display:flex;gap:18px;margin:6px 0 14px;font-size:12px;color:#7a859a;flex-wrap:wrap}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.controls-host{margin:8px 0 18px}
+code{background:#1a2030;padding:1px 5px;border-radius:3px;
+  font-family:"JetBrains Mono",Menlo,monospace;font-size:12.5px;color:#c7d0e0}
+.formula{background:#1a2030;padding:10px 14px;border-radius:6px;
+  font-family:"JetBrains Mono",Menlo,monospace;font-size:13px;color:#c7d0e0;
+  margin:10px 0;overflow-x:auto;line-height:1.8}
+.sep{border:none;border-top:1px solid #1c2230;margin:48px 0}
+.try{background:#161c28;border-left:3px solid #4cc9f0;padding:12px 16px;
+  border-radius:0 6px 6px 0;margin:14px 0 18px;font-size:14px;color:#94a0b8}
+.try strong{color:#c8cdd8;font-weight:500}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- ========== HEADER ========== -->
+<h1>Paths in S³</h1>
+<p style="color:#e8ecf3;font-size:17px;margin-bottom:4px">A visual warm-up for <em>Explicit String Bundles</em></p>
+<p class="byline">Based on <a href="https://arxiv.org/abs/2203.04544">arXiv:2203.04544</a> by David Michael Roberts.
+Interactive essay built with three.js.</p>
+
+<p>You already know that a unit quaternion is a rotation. Every time you slerp a camera
+or blend skinning weights, you are computing inside the 3-sphere S³ of unit quaternions.
+What graphics use of quaternions rarely insists on is that the <em>path you took through S³</em>
+to reach your current rotation carries information that the rotation alone has thrown away —
+and that information, tracked carefully through several floors of abstraction, is the
+entire content of what mathematicians call a <em>String bundle</em>.</p>
+
+<p>This essay builds the intuition for that claim in five interactive stages, each
+earning the vocabulary for the next. Every diagram is live: drag the sliders, scrub the
+parameters, and watch the geometry respond. Nothing appears before you can touch it.</p>
+
+<!-- ========== STAGE 1 ========== -->
+<div class="stage" id="s1">
+<h2>Stage 1 — The plate trick</h2>
+<p>A unit quaternion q acts on a frame by rotation. As q moves through S³, the frame
+rotates. But S³ double-covers the rotation group SO(3): the quaternions q and −q produce
+the <em>same</em> rotation. A 2π rotation corresponds to a path from q = 1 to q = −1 in S³ —
+not a loop, just a path, because 1 and −1 are distinct points that happen to map to the
+same rotation. Only a 4π rotation — going all the way around S³ — closes up into a
+genuine loop. The ribbon records this: one turn twists it; two turns untwist it.</p>
+
+<div class="canvas-wrap"><canvas id="c1"></canvas>
+<div class="vlabels">
+  <div class="vlabel" style="left:14px">S³ — stereographic</div>
+  <div class="vlabel" style="left:34%">SO(3) — frame &amp; ribbon</div>
+  <div class="vlabel" style="left:68%">Axis &amp; angle</div>
+</div></div>
+<div class="legend">
+  <span><sw class="sw" style="background:#ffd166"></sw>path in S³</span>
+  <span><sw class="sw" style="background:#ef476f"></sw>ribbon</span>
+</div>
+<div class="controls-host" id="ctrl1"></div>
+
+<div class="try"><strong>Try:</strong> Set turns to 1 and press play. The ribbon twists.
+Set turns to 2 — the twist comes out. Watch the axis-angle view (right) glitch at
+angle = π: that's the chart seam, the topological fact every gimbal-lock workaround
+quietly acknowledges.</div>
+</div>
+
+<hr class="sep">
+
+<!-- ========== STAGE 2 ========== -->
+<div class="stage" id="s2">
+<h2>Stage 2 — Two paths, one homotopy</h2>
+<p>If the path matters, not just the endpoint, we need to ask: when are two paths
+"the same"? The answer is <em>homotopy</em> — a continuous deformation of one path into
+the other, keeping endpoints fixed. On S³, which is simply connected, every pair of
+paths with the same endpoints is homotopic. The left view shows two such paths; the
+right view shows their <em>difference loop</em> (path A forward, path B backward), which
+contracts to a point because S³ is simply connected.</p>
+
+<div class="canvas-wrap"><canvas id="c2"></canvas>
+<div class="vlabels">
+  <div class="vlabel" style="left:14px">Two paths, shared endpoints</div>
+  <div class="vlabel" style="left:52%">Difference loop</div>
+</div></div>
+<div class="legend">
+  <span><sw class="sw" style="background:#4cc9f0"></sw>Path A</span>
+  <span><sw class="sw" style="background:#ff8c42"></sw>Path B</span>
+  <span><sw class="sw" style="background:#ffd166"></sw>Difference loop</span>
+</div>
+<div class="controls-host" id="ctrl2"></div>
+
+<div class="try"><strong>Try:</strong> Drag <code>blend</code> from 0 to 1 — path B deforms into
+path A. Then reset blend and drag <code>contract</code> — the difference loop shrinks to a point.
+Both are witnesses to the same fact: S³ is simply connected. But what if a loop
+<em>couldn't</em> contract?</div>
+</div>
+
+<hr class="sep">
+
+<!-- ========== STAGE 3 ========== -->
+<div class="stage" id="s3">
+<h2>Stage 3 — Loops in loop space</h2>
+<p>The space of loops in S³ is called ΩS³. Its <em>points</em> are entire loops, and a
+<em>path in ΩS³</em> is a one-parameter family of loops sweeping through S³. Unlike S³ itself,
+ΩS³ is <em>not</em> simply connected — it has π₁ ≅ ℤ, detected by how many times a family of
+loops wraps around S³. This integer is the seed of the central extension the paper
+builds its String 2-group from.</p>
+
+<div class="canvas-wrap"><canvas id="c3"></canvas>
+<div class="vlabels">
+  <div class="vlabel" style="left:14px">Current loop in S³</div>
+  <div class="vlabel" style="left:52%">Swept surface (accumulated)</div>
+</div>
+<div class="readout" id="ro3">wrapping ≈ 0</div>
+</div>
+<div class="controls-host" id="ctrl3"></div>
+
+<div class="try"><strong>Try:</strong> Set winding to 1, drag <code>family</code> to 1. The swept
+surface wraps S³ once — wrapping ≈ 1. Bump winding to 2, 3, 0.
+Each integer is a homotopy class in π₁(ΩS³). The central extension
+ΩSp(1)^ remembers this integer as a U(1) phase.</div>
+</div>
+
+<hr class="sep">
+
+<!-- ========== STAGE 4 ========== -->
+<div class="stage" id="s4">
+<h2>Stage 4 — The actual formula</h2>
+<p>We leave the scaffolding behind. The transition function for the frame bundle of S⁵,
+from page 2 of the paper, is:</p>
+<div class="formula">T(p) = (2 p i p̄ − |p|⁴ + 1) / (|p|⁴ + 1)</div>
+<p>At p = 0, T = 1 (identity). As |p| → ∞, T → −1 (antipode). We slice S⁴ at each
+radius r — the sphere |p| = r in H — and plot the image of a 2-parameter sub-slice
+under T. As r grows, the deformed sphere sweeps from the identity toward the antipode.</p>
+
+<div class="canvas-wrap"><canvas id="c4"></canvas>
+<div class="vlabels">
+  <div class="vlabel" style="left:14px">T at radius r (current slice)</div>
+  <div class="vlabel" style="left:52%">All slices, overlaid</div>
+</div></div>
+<div class="controls-host" id="ctrl4"></div>
+
+<div class="try"><strong>Try:</strong> Drag <code>r</code> slowly from 0 to 3. Watch the deformed sphere
+bloom outward from the origin, pass through the equator near r = 1, and head toward
+infinity. The right view accumulates every slice into an onion of shells — the visible
+image of the paper's formula.</div>
+</div>
+
+<hr class="sep">
+
+<!-- ========== STAGE 5 ========== -->
+<div class="stage" id="s5">
+<h2>Stage 5 — The cocycle, live</h2>
+<p>Page 3 defines two path-valued functions T₊(q) and T₋(p). For each fixed q, these
+are <em>paths</em> in Sp(1) parameterised by s, with the same endpoints. Their difference
+T_Ω(q) is therefore a <em>loop</em> — and that loop is what the central extension lifts.
+Every symbol on page 3 corresponds to a colour on screen.</p>
+<div class="formula">
+T₊(q) = s ↦ (|q|⁴ − s² + 2 q i q̄) / (|q|⁴ + s²)<br>
+T₋(p) = s ↦ ((|p|⁴s² − 1 + 2 p i p̄) / (|p|⁴s² + 1)) · ((s−i)/(s+i))²
+</div>
+
+<div class="canvas-wrap"><canvas id="c5"></canvas>
+<div class="vlabels">
+  <div class="vlabel" style="left:14px">T₊ &amp; T₋ — paths</div>
+  <div class="vlabel" style="left:34%">T_Ω — the loop</div>
+  <div class="vlabel" style="left:68%">Family as q sweeps</div>
+</div></div>
+<div class="legend">
+  <span><sw class="sw" style="background:#4cc9f0"></sw>T₊(q)</span>
+  <span><sw class="sw" style="background:#ff8c42"></sw>T₋(p)</span>
+  <span><sw class="sw" style="background:#ffd166"></sw>T_Ω loop</span>
+</div>
+<div class="controls-host" id="ctrl5"></div>
+
+<div class="try"><strong>Try:</strong> Drag the q sliders and watch T₊ (cyan) and T₋ (orange) deform
+together, tails glued at the endpoints. The yellow loop in the middle is their difference.
+Drag <code>sweep</code> to 1 — the right view accumulates a family of loops as q traces a
+circle. This is the stage-3 picture, recomputed from the actual page-3 formulas.</div>
+</div>
+
+<hr class="sep">
+
+<!-- ========== CLOSING ========== -->
+<h2>What you've seen</h2>
+<p>A rotation is a point in S³. A path in S³ records how you got there. Two paths differ
+by a loop. A family of loops sweeps out a surface whose wrapping integer is the homotopy
+class. The central extension ΩSp(1)^ remembers that integer as a U(1) phase. The
+paper's formulas T₊, T₋, T_Ω are the explicit, coordinates-in-hand instantiation of
+this entire ladder for the frame bundle of S⁵. A <em>String bundle</em> is what you get when
+you insist on tracking all of this data — paths, loops, wrapping phases — coherently
+across a manifold. The word "Explicit" in the paper's title is a complaint about the
+prior literature as much as a description: you can build String bundles by hand,
+with formulas you can compute, and you have just watched them compute.</p>
+
+<p style="color:#5c6780;font-size:13px;margin-top:36px">
+Based on <a href="https://arxiv.org/abs/2203.04544">arXiv:2203.04544</a> by
+David Michael Roberts. Essay structure &amp; code: a conversation between DMR's
+mathematical persona and a rendering engineer, April 2026.</p>
+
+</div><!-- /wrap -->
+
+<script type="importmap">
+{"imports":{
+  "three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js",
+  "tweakpane":"https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/dist/tweakpane.min.js"
+}}
+</script>
+<script type="module">
+import*as THREE from'three';
+import{Pane}from'tweakpane';
+
+// ================================================================
+// SHARED QUATERNION UTILITIES
+// ================================================================
+const QI={w:0,x:1,y:0,z:0}, QID={w:1,x:0,y:0,z:0};
+function qmul(a,b){return{
+  w:a.w*b.w-a.x*b.x-a.y*b.y-a.z*b.z,
+  x:a.w*b.x+a.x*b.w+a.y*b.z-a.z*b.y,
+  y:a.w*b.y-a.x*b.z+a.y*b.w+a.z*b.x,
+  z:a.w*b.z+a.x*b.y-a.y*b.x+a.z*b.w}}
+function qconj(a){return{w:a.w,x:-a.x,y:-a.y,z:-a.z}}
+function qadd(a,b){return{w:a.w+b.w,x:a.x+b.x,y:a.y+b.y,z:a.z+b.z}}
+function qsub(a,b){return{w:a.w-b.w,x:a.x-b.x,y:a.y-b.y,z:a.z-b.z}}
+function qscale(a,s){return{w:a.w*s,x:a.x*s,y:a.y*s,z:a.z*s}}
+function qnorm2(a){return a.w*a.w+a.x*a.x+a.y*a.y+a.z*a.z}
+function qinv(a){const n=qnorm2(a);return qscale(qconj(a),1/n)}
+function rq(s){return{w:s,x:0,y:0,z:0}}
+
+function stereo(q){
+  const d=1+q.w;
+  if(Math.abs(d)<1e-3){const s=50;return new THREE.Vector3(q.x*s,q.y*s,q.z*s)}
+  const v=new THREE.Vector3(q.x/d,q.y/d,q.z/d);
+  if(v.length()>50)v.setLength(50);return v}
+
+// ================================================================
+// SHARED SCENE BUILDERS
+// ================================================================
+function mkRenderer(canvas){
+  const r=new THREE.WebGLRenderer({canvas,antialias:true});
+  r.setPixelRatio(Math.min(devicePixelRatio,2));r.setClearColor(0x141923,1);return r}
+function mkCam(){
+  const c=new THREE.PerspectiveCamera(40,1,.1,200);
+  c.position.set(3,2.2,3.4);c.lookAt(0,0,0);return c}
+function mkScene(){
+  const s=new THREE.Scene();
+  s.add(new THREE.AmbientLight(0xffffff,.55));
+  const d=new THREE.DirectionalLight(0xffffff,.7);d.position.set(4,6,5);s.add(d);
+  const g=new THREE.GridHelper(4,8,0x2a3344,0x1c2230);g.position.y=-1.2;s.add(g);
+  s.add(new THREE.Mesh(new THREE.SphereGeometry(1,32,16),
+    new THREE.MeshBasicMaterial({color:0x2a3344,wireframe:true,transparent:true,opacity:.4})));
+  return s}
+function mkLine(color,n=200){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(n*3),3));
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color}))}
+function fillLine(line,sampler,n=200){
+  const a=line.geometry.attributes.position.array;
+  for(let i=0;i<n;i++){const t=i/(n-1),v=sampler(t);
+    a[i*3]=v.x;a[i*3+1]=v.y;a[i*3+2]=v.z}
+  line.geometry.attributes.position.needsUpdate=true}
+function mkDot(c=0xa8b1c0){return new THREE.Mesh(
+  new THREE.SphereGeometry(.05,12,8),new THREE.MeshBasicMaterial({color:c}))}
+function mkFrame(){
+  const g=new THREE.Group();
+  [[1,0,0,0xef476f],[0,1,0,0x06d6a0],[0,0,1,0x4cc9f0]].forEach(([x,y,z,c])=>{
+    g.add(new THREE.ArrowHelper(new THREE.Vector3(x,y,z),new THREE.Vector3(),1,c,.18,.1))});
+  return g}
+function renderViews(renderer,views,w,h){
+  renderer.setScissorTest(true);
+  const n=views.length,vw=w/n;
+  views.forEach((v,i)=>{
+    renderer.setViewport(i*vw,0,vw,h);renderer.setScissor(i*vw,0,vw,h);
+    v.cam.aspect=vw/h;v.cam.updateProjectionMatrix();
+    renderer.render(v.scene,v.cam)})}
+
+// ================================================================
+// STAGE 1: Plate trick
+// ================================================================
+function initS1(){
+  const R=mkRenderer(document.getElementById('c1'));
+  const sS3=mkScene(),sSO=mkScene(),sAx=mkScene();
+  const cS3=mkCam(),cSO=mkCam(),cAx=mkCam();
+  const dot=mkDot(0xffd166);sS3.add(dot);sS3.add(mkDot());
+  const path=mkLine(0xffd166);sS3.add(path);
+  const ghost=mkFrame();ghost.children.forEach(a=>{
+    a.line.material.transparent=true;a.line.material.opacity=.25;
+    a.cone.material.transparent=true;a.cone.material.opacity=.25});
+  sSO.add(ghost);const live=mkFrame();sSO.add(live);
+  const RN=220,RW=.12,rg=new THREE.BufferGeometry();
+  const rv=new Float32Array(RN*6);
+  rg.setAttribute('position',new THREE.BufferAttribute(rv,3));
+  const ri=[];for(let i=0;i<RN-1;i++){const a=i*2,b=i*2+1,c=(i+1)*2,d=(i+1)*2+1;
+    ri.push(a,b,c,b,d,c)}
+  rg.setIndex(ri);
+  const ribbon=new THREE.Mesh(rg,new THREE.MeshStandardMaterial({
+    color:0xef476f,side:THREE.DoubleSide,metalness:.1,roughness:.6,
+    transparent:true,opacity:.85}));sSO.add(ribbon);
+  const axArr=new THREE.ArrowHelper(new THREE.Vector3(1,0,0),new THREE.Vector3(),1.2,0xffd166,.18,.1);
+  sAx.add(axArr);
+  const wg=new THREE.BufferGeometry();
+  const wedge=new THREE.Mesh(wg,new THREE.MeshBasicMaterial({
+    color:0x4cc9f0,side:THREE.DoubleSide,transparent:true,opacity:.35}));sAx.add(wedge);
+
+  const P={axX:0,axY:1,axZ:0,turns:1,t:0,playing:true,speed:.25};
+  const pane=new Pane({container:document.getElementById('ctrl1'),title:'Stage 1'});
+  pane.addBinding(P,'turns',{min:0,max:4,step:1,label:'turns (×2π)'});
+  pane.addBinding(P,'t',{min:0,max:1,step:.001,label:'t (scrub)'});
+  pane.addBinding(P,'playing');pane.addBinding(P,'speed',{min:.05,max:1,step:.01});
+  const fA=pane.addFolder({title:'axis'});
+  fA.addBinding(P,'axX',{min:-1,max:1,step:.01});
+  fA.addBinding(P,'axY',{min:-1,max:1,step:.01});
+  fA.addBinding(P,'axZ',{min:-1,max:1,step:.01});
+
+  function curQ(){
+    const ax=new THREE.Vector3(P.axX,P.axY,P.axZ);
+    if(ax.lengthSq()<1e-6)ax.set(0,1,0);ax.normalize();
+    return new THREE.Quaternion().setFromAxisAngle(ax,P.t*P.turns*Math.PI*2)}
+  function samplePath(upto,cnt){
+    const ax=new THREE.Vector3(P.axX,P.axY,P.axZ);
+    if(ax.lengthSq()<1e-6)ax.set(0,1,0);ax.normalize();
+    const o=[];for(let i=0;i<cnt;i++){const u=i/(cnt-1)*upto;
+      o.push(new THREE.Quaternion().setFromAxisAngle(ax,u*P.turns*Math.PI*2))}return o}
+
+  let lastT=performance.now();
+  return{active:false,tick(){
+    const now=performance.now(),dt=(now-lastT)/1000;lastT=now;
+    if(P.playing){P.t+=dt*P.speed/Math.max(P.turns,.001);if(P.t>1)P.t=0;pane.refresh()}
+    const q=curQ();dot.position.copy(stereo(q));
+    const N=200,trail=samplePath(P.t,N);
+    fillLine(path,t=>{const i=Math.round(t*(N-1));return stereo(trail[i])},N);
+    live.quaternion.copy(q);
+    const rs=samplePath(P.t,RN),xH=new THREE.Vector3(1,0,0),yH=new THREE.Vector3(0,1,0);
+    for(let i=0;i<RN;i++){
+      const c=xH.clone().applyQuaternion(rs[i]);
+      const u=yH.clone().applyQuaternion(rs[i]).multiplyScalar(RW*.5);
+      const a=c.clone().add(u),b=c.clone().sub(u);
+      rv[i*6]=a.x;rv[i*6+1]=a.y;rv[i*6+2]=a.z;
+      rv[i*6+3]=b.x;rv[i*6+4]=b.y;rv[i*6+5]=b.z}
+    rg.attributes.position.needsUpdate=true;rg.computeVertexNormals();
+    let ang=2*Math.acos(THREE.MathUtils.clamp(q.w,-1,1));
+    let ss=Math.sqrt(Math.max(0,1-q.w*q.w));
+    let ax2=ss<1e-4?new THREE.Vector3(1,0,0):new THREE.Vector3(q.x/ss,q.y/ss,q.z/ss);
+    axArr.setDirection(ax2);
+    {const NN=32,vv=[0,0,0];
+      const seed2=Math.abs(ax2.x)<.9?new THREE.Vector3(1,0,0):new THREE.Vector3(0,1,0);
+      const uu=new THREE.Vector3().crossVectors(ax2,seed2).normalize();
+      const vvv=new THREE.Vector3().crossVectors(ax2,uu).normalize();
+      for(let i=0;i<=NN;i++){const a2=i/NN*ang;
+        const pp=new THREE.Vector3().addScaledVector(uu,Math.cos(a2)*.9).addScaledVector(vvv,Math.sin(a2)*.9);
+        vv.push(pp.x,pp.y,pp.z)}
+      const idx=[];for(let i=1;i<=NN;i++)idx.push(0,i,i+1);
+      wg.setAttribute('position',new THREE.Float32BufferAttribute(vv,3));
+      wg.setIndex(idx);wg.computeVertexNormals()}
+  },render(){
+    const el=R.domElement,w=el.clientWidth,h=el.clientHeight;
+    if(el.width!==w*R.getPixelRatio()||el.height!==h*R.getPixelRatio())R.setSize(w,h,false);
+    renderViews(R,[{scene:sS3,cam:cS3},{scene:sSO,cam:cSO},{scene:sAx,cam:cAx}],w,h)}}
+}
+
+// ================================================================
+// STAGE 2: Two paths & homotopy
+// ================================================================
+function initS2(){
+  const R=mkRenderer(document.getElementById('c2'));
+  const sL=mkScene(),sR=mkScene();const cL=mkCam(),cR=mkCam();
+  const lA=mkLine(0x4cc9f0),lB=mkLine(0xff8c42);sL.add(lA);sL.add(lB);
+  sL.add(mkDot());const ed=mkDot();sL.add(ed);
+  const lLoop=mkLine(0xffd166);sR.add(lLoop);sR.add(mkDot());
+
+  const P={tAx:1,tAy:.4,tAz:0,tAng:Math.PI*.85,
+    bAx:0,bAy:0,bAz:1,bend:.9,blend:0,contract:0};
+  const pane=new Pane({container:document.getElementById('ctrl2'),title:'Stage 2'});
+  pane.addBinding(P,'blend',{min:0,max:1,step:.001,label:'blend B→A'});
+  pane.addBinding(P,'contract',{min:0,max:1,step:.001,label:'contract loop'});
+  pane.addBinding(P,'bend',{min:0,max:1.4,step:.01,label:'bend amount'});
+
+  function tgt(){const a=new THREE.Vector3(P.tAx,P.tAy,P.tAz);
+    if(a.lengthSq()<1e-6)a.set(1,0,0);a.normalize();
+    return new THREE.Quaternion().setFromAxisAngle(a,P.tAng)}
+  function pA(s,t){const q=new THREE.Quaternion();
+    q.slerpQuaternions(new THREE.Quaternion(0,0,0,1),t,s);return q}
+  function pB(s,t,bl){const a=pA(s,t);const bump=Math.sin(Math.PI*s)*P.bend*(1-bl);
+    const ba=new THREE.Vector3(P.bAx,P.bAy,P.bAz);
+    if(ba.lengthSq()<1e-6)ba.set(0,0,1);ba.normalize();
+    return new THREE.Quaternion().setFromAxisAngle(ba,bump*Math.PI).multiply(a)}
+  function diffLoop(s,t,bl){return s<.5?pA(2*s,t):pB(2-2*s,t,bl)}
+  function contracted(s,t,bl,co){const q=diffLoop(s,t,bl);
+    const o=new THREE.Quaternion();o.slerpQuaternions(q,new THREE.Quaternion(0,0,0,1),co);return o}
+
+  return{active:false,tick(){
+    const t=tgt();
+    fillLine(lA,s=>stereo(pA(s,t)));fillLine(lB,s=>stereo(pB(s,t,P.blend)));
+    ed.position.copy(stereo(t));
+    fillLine(lLoop,s=>{const q=contracted(s,t,P.blend,P.contract);return stereo(q)});
+  },render(){
+    const el=R.domElement,w=el.clientWidth,h=el.clientHeight;
+    if(el.width!==w*R.getPixelRatio()||el.height!==h*R.getPixelRatio())R.setSize(w,h,false);
+    renderViews(R,[{scene:sL,cam:cL},{scene:sR,cam:cR}],w,h)}}
+}
+
+// ================================================================
+// STAGE 3: Loop space
+// ================================================================
+function initS3(){
+  const R=mkRenderer(document.getElementById('c3'));
+  const sL=mkScene(),sR=mkScene();const cL=mkCam(),cR=mkCam();
+  const lCur=mkLine(0xffd166);sL.add(lCur);sL.add(mkDot());
+
+  const US=60,SS=60,sv=new Float32Array(US*SS*3);
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.BufferAttribute(sv,3));
+  const si=[];for(let i=0;i<US-1;i++)for(let j=0;j<SS-1;j++){
+    const a=i*SS+j,b=(i+1)*SS+j,c=i*SS+j+1,d=(i+1)*SS+j+1;si.push(a,b,c,b,d,c)}
+  sg.setIndex(si);
+  const sm=new THREE.Mesh(sg,new THREE.MeshStandardMaterial({
+    color:0x4cc9f0,side:THREE.DoubleSide,metalness:.05,roughness:.7,
+    transparent:true,opacity:.55}));sR.add(sm);sR.add(mkDot());
+
+  const P={family:0,winding:1,laX:0,laY:1,laZ:0};
+  const pane=new Pane({container:document.getElementById('ctrl3'),title:'Stage 3'});
+  pane.addBinding(P,'family',{min:0,max:1,step:.001,label:'family (u)'});
+  pane.addBinding(P,'winding',{min:0,max:4,step:1});
+
+  function lp(u,s){
+    const sw=new THREE.Vector3(P.laX,P.laY,P.laZ);
+    if(sw.lengthSq()<1e-6)sw.set(0,1,0);sw.normalize();
+    const seed=Math.abs(sw.x)<.9?new THREE.Vector3(1,0,0):new THREE.Vector3(0,1,0);
+    const ba=new THREE.Vector3().crossVectors(sw,seed).normalize();
+    const rot=new THREE.Quaternion().setFromAxisAngle(sw,2*Math.PI*P.winding*u);
+    const ax=ba.clone().applyQuaternion(rot);
+    return new THREE.Quaternion().setFromAxisAngle(ax,2*Math.PI*s)}
+  const ro=document.getElementById('ro3');
+
+  return{active:false,tick(){
+    fillLine(lCur,s=>stereo(lp(P.family,s)));
+    const uM=Math.max(P.family,1e-4);
+    for(let i=0;i<US;i++){const u=i/(US-1)*uM;
+      for(let j=0;j<SS;j++){const s=j/(SS-1);
+        const p=stereo(lp(u,s));const k=(i*SS+j)*3;
+        sv[k]=Math.max(-50,Math.min(50,p.x));
+        sv[k+1]=Math.max(-50,Math.min(50,p.y));
+        sv[k+2]=Math.max(-50,Math.min(50,p.z))}}
+    sg.attributes.position.needsUpdate=true;sg.computeVertexNormals();
+    const pa=P.winding*P.family;
+    ro.textContent=`wrapping ≈ ${pa.toFixed(2)}`+
+      (Math.abs(P.family-1)<1e-3?`  (class: ${Math.round(P.winding)})`:'');
+  },render(){
+    const el=R.domElement,w=el.clientWidth,h=el.clientHeight;
+    if(el.width!==w*R.getPixelRatio()||el.height!==h*R.getPixelRatio())R.setSize(w,h,false);
+    renderViews(R,[{scene:sL,cam:cL},{scene:sR,cam:cR}],w,h)}}
+}
+
+// ================================================================
+// STAGE 4: T(p) formula
+// ================================================================
+function initS4(){
+  const R=mkRenderer(document.getElementById('c4'));
+  const sL=mkScene(),sR=mkScene();const cL=mkCam(),cR=mkCam();
+
+  function Tp(p){const pb=qconj(p),pip=qmul(qmul(p,QI),pb);
+    const n2=qnorm2(p),n4=n2*n2,d=n4+1,rs=-n4+1;
+    return{w:(2*pip.w+rs)/d,x:2*pip.x/d,y:2*pip.y/d,z:2*pip.z/d}}
+  function uOf(a,b){return{w:Math.cos(a),x:Math.sin(a)*Math.cos(b),
+    y:Math.sin(a)*Math.sin(b),z:0}}
+  const AS=36,BS=48;
+  function mkSG(){const v=new Float32Array(AS*BS*3),g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(v,3));
+    const idx=[];for(let i=0;i<AS-1;i++)for(let j=0;j<BS-1;j++){
+      const a=i*BS+j,b=(i+1)*BS+j,c=i*BS+j+1,d=(i+1)*BS+j+1;idx.push(a,b,c,b,d,c)}
+    g.setIndex(idx);return g}
+  function fillSG(g,r){const a=g.attributes.position.array;
+    for(let i=0;i<AS;i++){const al=i/(AS-1)*Math.PI;
+      for(let j=0;j<BS;j++){const be=j/(BS-1)*2*Math.PI;
+        const u=uOf(al,be),p={w:r*u.w,x:r*u.x,y:r*u.y,z:r*u.z};
+        const v=stereo(Tp(p));const k=(i*BS+j)*3;
+        a[k]=v.x;a[k+1]=v.y;a[k+2]=v.z}}
+    g.attributes.position.needsUpdate=true;g.computeVertexNormals()}
+
+  const cg=mkSG();
+  sL.add(new THREE.Mesh(cg,new THREE.MeshStandardMaterial({
+    color:0xffd166,side:THREE.DoubleSide,metalness:.05,roughness:.6,
+    transparent:true,opacity:.85})));
+  const SC=20,shells=[];
+  for(let k=0;k<SC;k++){const g=mkSG();const t=k/(SC-1);
+    const c=new THREE.Color().lerpColors(new THREE.Color(0x4cc9f0),new THREE.Color(0xff8c42),t);
+    const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+      color:c,side:THREE.DoubleSide,metalness:.05,roughness:.7,
+      transparent:true,opacity:.18,depthWrite:false}));
+    m.visible=false;shells.push(m);sR.add(m)}
+
+  const P={r:0,rMax:3};
+  const pane=new Pane({container:document.getElementById('ctrl4'),title:'Stage 4'});
+  pane.addBinding(P,'r',{min:0,max:3,step:.01,label:'radius r'});
+
+  return{active:false,tick(){
+    fillSG(cg,P.r);
+    for(let k=0;k<SC;k++){const u=k/(SC-1);const rk=P.rMax*(.15+.85*u*u);
+      if(rk<=P.r+1e-3){shells[k].visible=true;fillSG(shells[k].geometry,rk)}
+      else shells[k].visible=false}
+  },render(){
+    const el=R.domElement,w=el.clientWidth,h=el.clientHeight;
+    if(el.width!==w*R.getPixelRatio()||el.height!==h*R.getPixelRatio())R.setSize(w,h,false);
+    renderViews(R,[{scene:sL,cam:cL},{scene:sR,cam:cR}],w,h)}}
+}
+
+// ================================================================
+// STAGE 5: Page-3 cocycle
+// ================================================================
+function initS5(){
+  const R=mkRenderer(document.getElementById('c5'));
+  const sL=mkScene(),sM=mkScene(),sR=mkScene();
+  const cL=mkCam(),cM=mkCam(),cR=mkCam();
+
+  function Tplus(q,s){const n2=qnorm2(q),n4=n2*n2;
+    const qiq=qmul(qmul(q,QI),qconj(q));
+    const d=n4+s*s;
+    return qscale({w:n4-s*s+2*qiq.w,x:2*qiq.x,y:2*qiq.y,z:2*qiq.z},1/d)}
+  function Tminus(p,s){const n2=qnorm2(p),n4=n2*n2;
+    const pip=qmul(qmul(p,QI),qconj(p));
+    const d1=n4*s*s+1;
+    const f=qscale({w:n4*s*s-1+2*pip.w,x:2*pip.x,y:2*pip.y,z:2*pip.z},1/d1);
+    const sQ=rq(s),fac=qmul(qsub(sQ,QI),qinv(qadd(sQ,QI)));
+    return qmul(f,qmul(fac,fac))}
+  function TOmega(q,sn){const SM=8;
+    if(sn<.5){const s=-SM+sn*2*2*SM;return Tplus(q,s)}
+    const s=SM-(sn-.5)*2*2*SM;return Tminus(qinv(q),s)}
+
+  const lP=mkLine(0x4cc9f0),lM=mkLine(0xff8c42);sL.add(lP);sL.add(lM);
+  const lO=mkLine(0xffd166);sM.add(lO);
+  [sL,sM,sR].forEach(s=>s.add(mkDot()));
+  const FL=16,fls=[];
+  for(let k=0;k<FL;k++){const t=k/(FL-1);
+    const c=new THREE.Color().lerpColors(new THREE.Color(0x4cc9f0),new THREE.Color(0xff8c42),t);
+    const l=mkLine(0);l.material.color=c;l.material.transparent=true;l.material.opacity=.55;
+    l.visible=false;fls.push(l);sR.add(l)}
+
+  const P={qW:.6,qX:.4,qY:.3,qZ:0,sweep:0};
+  const pane=new Pane({container:document.getElementById('ctrl5'),title:'Stage 5'});
+  const fQ=pane.addFolder({title:'q coordinate'});
+  fQ.addBinding(P,'qW',{min:-1.5,max:1.5,step:.01,label:'w'});
+  fQ.addBinding(P,'qX',{min:-1.5,max:1.5,step:.01,label:'x'});
+  fQ.addBinding(P,'qY',{min:-1.5,max:1.5,step:.01,label:'y'});
+  fQ.addBinding(P,'qZ',{min:-1.5,max:1.5,step:.01,label:'z'});
+  pane.addBinding(P,'sweep',{min:0,max:1,step:.001,label:'sweep q'});
+
+  return{active:false,tick(){
+    const q={w:P.qW,x:P.qX,y:P.qY,z:P.qZ};
+    if(qnorm2(q)<1e-4)q.w=.1;const p=qinv(q);const SM=8;
+    fillLine(lP,t=>{const s=-SM+t*2*SM;return stereo(Tplus(q,s))});
+    fillLine(lM,t=>{const s=-SM+t*2*SM;return stereo(Tminus(p,s))});
+    fillLine(lO,t=>stereo(TOmega(q,t)));
+    for(let k=0;k<FL;k++){const u=k/(FL-1)*P.sweep;
+      if(P.sweep<1e-3){fls[k].visible=false;continue}
+      fls[k].visible=true;const ang=2*Math.PI*u;
+      const qK={w:q.w+.4*Math.cos(ang),x:q.x+.4*Math.sin(ang),y:q.y,z:q.z};
+      fillLine(fls[k],t=>stereo(TOmega(qK,t)))}
+  },render(){
+    const el=R.domElement,w=el.clientWidth,h=el.clientHeight;
+    if(el.width!==w*R.getPixelRatio()||el.height!==h*R.getPixelRatio())R.setSize(w,h,false);
+    renderViews(R,[{scene:sL,cam:cL},{scene:sM,cam:cM},{scene:sR,cam:cR}],w,h)}}
+}
+
+// ================================================================
+// LIFECYCLE: IntersectionObserver + animation loop
+// ================================================================
+const stages=[
+  {id:'s1',init:initS1},{id:'s2',init:initS2},
+  {id:'s3',init:initS3},{id:'s4',init:initS4},{id:'s5',init:initS5}];
+const live=[];
+
+stages.forEach(s=>{
+  const el=document.getElementById(s.id);
+  const inst=s.init();live.push(inst);
+  const obs=new IntersectionObserver(entries=>{
+    inst.active=entries[0].isIntersecting},{threshold:0.05});
+  obs.observe(el)});
+
+function loop(){
+  live.forEach(s=>{if(s.active){s.tick();s.render()}});
+  requestAnimationFrame(loop)}
+loop();
+</script>
+</body>
+</html>
