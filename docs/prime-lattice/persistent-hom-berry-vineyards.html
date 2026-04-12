@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Topology: Vineyards & Berry Phases</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-color: #fbfbfd;
+            --text-color: #1d1d1f;
+            --accent: #0066cc;
+            --gray-light: #f5f5f7;
+            --gray-border: #d2d2d7;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .article-body { max-width: 800px; margin: 0 auto; padding: 4rem 2rem; }
+        h1 { font-size: 2.8rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 1.5rem; line-height: 1.1; }
+        h2 { font-size: 1.8rem; font-weight: 600; margin-top: 3.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--gray-border); padding-bottom: 0.5rem; }
+        p { font-size: 1.15rem; margin-bottom: 1.5rem; color: #333336; }
+        .math { font-family: "Cambria Math", "Latin Modern Math", serif; font-style: italic; white-space: nowrap; }
+        
+        /* Interactive Figure Container */
+        .figure-container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            border: 1px solid var(--gray-border);
+            margin: 3rem 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .canvas-wrapper { position: relative; width: 100%; height: 450px; background: #fafafa; }
+        .controls-bar {
+            padding: 1.2rem;
+            background: #ffffff;
+            border-top: 1px solid var(--gray-border);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .controls-label { font-weight: 600; font-size: 0.9rem; color: #555; text-transform: uppercase; letter-spacing: 0.05em; min-width: 60px;}
+        
+        /* Range Slider Styling */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+            background: var(--accent); cursor: pointer; margin-top: -8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e5ea; border-radius: 2px; }
+        
+        /* Overlays */
+        .overlay-2d {
+            position: absolute; top: 1rem; right: 1rem;
+            width: 200px; height: 200px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid var(--gray-border); border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            pointer-events: none;
+        }
+        .caption { padding: 1rem 1.5rem; background: var(--gray-light); font-size: 0.95rem; color: #666; border-top: 1px solid var(--gray-border); }
+
+        .split-view { display: flex; height: 100%; }
+        .split-left { width: 30%; border-right: 1px solid var(--gray-border); position: relative;}
+        .split-right { width: 70%; position: relative; }
+    </style>
+</head>
+<body>
+
+<main class="article-body">
+    <h1>Dynamic Topology: Tracking Features Through Time</h1>
+    <p>Classical persistent homology provides a static summary of the topological features (components, holes, voids) of a dataset at various scales. It generates a 2D "Persistence Diagram" where each point represents the birth and death scale of a feature.</p>
+    <p>But the real world is dynamic. What happens when the underlying data itself evolves over time? When a physical system morphs, or a network rewires, how do we track the continuity of its topological signature? This leads us to the concept of time-varying persistence, formalized as <strong>Vineyards</strong>.</p>
+
+    <h2>1. The Vineyard</h2>
+    <p>Imagine calculating a persistence diagram at every instant in time <span class="math">t</span>. As the data deforms continuously, the points in the diagram (birth, death) move continuously. When we stack these diagrams along a third axis representing time, the trajectories of the points form continuous curves called <strong>vines</strong>. The collection of all these trajectories is a <strong>vineyard</strong>.</p>
+    
+    <div class="figure-container">
+        <div class="canvas-wrapper" id="vineyard-container">
+            <!-- 3D scene injected here -->
+            <canvas class="overlay-2d" id="vineyard-2d-slice"></canvas>
+            <div style="position:absolute; top:10px; left:10px; font-weight:bold; color:#555; text-shadow: 1px 1px 0 #fff;">3D Vineyard View</div>
+            <div style="position:absolute; top:10px; right:15px; font-weight:bold; color:#555; font-size: 0.8rem; z-index:10;">2D Slice at t</div>
+        </div>
+        <div class="controls-bar">
+            <span class="controls-label">Time <span class="math">t</span></span>
+            <input type="range" id="time-slider" min="0" max="100" value="0">
+        </div>
+        <div class="caption">
+            <strong>Interactive:</strong> Drag the slider to advance time. The semi-transparent plane represents the current moment. The inset on the right shows the classical 2D Persistence Diagram corresponding exactly to the intersection of the plane and the vines. Notice how the features trace continuous paths.
+        </div>
+    </div>
+
+    <h2>2. Zigzag Persistence & Conservation</h2>
+    <p>Standard persistence requires a strict nested sequence of spaces (a filtration): <span class="math">X_0 &subseteq; X_1 &subseteq; X_2 ...</span> This only allows features to be born and die as spaces grow. But what if we want to model insertions <em>and</em> deletions? What if parts of our system annihilate?</p>
+    <p>To accommodate this, we use <strong>Zigzag Persistence</strong>. Instead of one-way arrows, we allow maps to go backwards: <span class="math">X_1 &hookrightarrow; X_2 &hookleftarrow X_3 &hookrightarrow; X_4</span>. This allows us to track features through non-monotonic waves or symplectic systems where structures appear, stabilize, and vanish, preserving a sort of "topological conserved charge" (like tracking a specific homology generator through its lifespan, regardless of whether edges are added or removed).</p>
+
+    <div class="figure-container">
+        <div class="canvas-wrapper" style="height: 350px;">
+            <canvas id="zigzag-canvas" width="800" height="350" style="width:100%; height:100%;"></canvas>
+        </div>
+        <div class="controls-bar">
+            <span class="controls-label">Sequence</span>
+            <input type="range" id="zigzag-slider" min="0" max="4" value="0" step="0.01">
+        </div>
+        <div class="caption">
+            <strong>Interactive:</strong> Slide to step through a sequence of complexes. Notice step <span class="math">X_3</span> is smaller than <span class="math">X_2</span> (a deletion/annihilation event). The barcode at the bottom tracks the connected components (H0) and the loop (H1) seamlessly across both forward (insertions) and backward (deletions) steps in the zigzag module.
+        </div>
+    </div>
+
+    <h2>3. Curvature and Topological Instability</h2>
+    <p>A vineyard is formally a path in the derived moduli stack of persistence modules. Can we define the "curvature" of a vine? Yes. While the space of persistence diagrams isn't a smooth Riemannian manifold, we can analyze the second derivative of a vine's trajectory <span class="math">(B(t), D(t))</span>.</p>
+    <p>The first derivative (velocity) is how fast a feature is changing. The second derivative (curvature) measures <strong>acceleration</strong>. In physical systems, high curvature along a vine indicates a regime of topological instability—a point where the topological feature is ultra-sensitive to deformation, often hinting at a bifurcation or phase transition in the underlying dynamics.</p>
+
+    <div class="figure-container">
+        <div class="canvas-wrapper" style="height: 300px; cursor: crosshair;">
+            <canvas id="curvature-canvas" width="800" height="300" style="width:100%; height:100%;"></canvas>
+            <div style="position:absolute; top:10px; left:10px; font-weight:bold; color:#555;">Drag points to bend the vine</div>
+        </div>
+        <div class="caption" style="display:flex; align-items:center; gap: 1rem;">
+            <span><strong>Curvature map:</strong></span>
+            <div style="width: 100px; height: 10px; background: linear-gradient(to right, #3b82f6, #ef4444); border-radius: 5px;"></div>
+            <span><span style="color:#3b82f6; font-weight:bold;">Low (Stable)</span> &rarr; <span style="color:#ef4444; font-weight:bold;">High (Unstable)</span></span>
+        </div>
+    </div>
+
+    <h2>4. The Topological Berry Phase</h2>
+    <p>Perhaps the most profound consequence of dynamic topology is its analogy to quantum mechanics. In a quantum system, a cyclical change in parameters can induce a geometric phase shift known as the Berry phase.</p>
+    <p>In TDA, suppose our parameter space is a closed loop. We slowly deform our data, and after time <span class="math">T</span>, the data returns <em>exactly</em> to its initial state. The persistence diagram at <span class="math">t=0</span> and <span class="math">t=T</span> must be identical. However, as we trace the vineyard over this cycle, the individual vines can braid around each other. When we return to the start, the specific generators of homology may have permuted—a discrete <strong>monodromy action</strong> manifesting as a topological Berry phase.</p>
+
+    <div class="figure-container" style="height: 500px;">
+        <div class="split-view">
+            <div class="split-left">
+                <div style="position:absolute; top:10px; left:10px; font-weight:bold; color:#555; z-index:10; font-size:0.8rem;">Parameter Space</div>
+                <canvas id="parameter-canvas" width="240" height="400" style="width:100%; height:100%;"></canvas>
+            </div>
+            <div class="split-right" id="berry-container">
+                <div style="position:absolute; top:10px; left:10px; font-weight:bold; color:#555; z-index:10; text-shadow: 1px 1px 0 #fff; font-size:0.8rem;">Moduli Space Path (Braid)</div>
+                <!-- 3D braid goes here -->
+            </div>
+        </div>
+        <div class="controls-bar">
+            <span class="controls-label">Phase <span class="math">&theta;</span></span>
+            <input type="range" id="berry-slider" min="0" max="100" value="0">
+        </div>
+        <div class="caption">
+            <strong>Interactive:</strong> Drag to move the system around a closed loop in parameter space (left). Notice the 3D path (right). After one full rotation (<span class="math">2&pi;</span>), the system returns to the same state, but the two topological features (red and blue tubes) have swapped positions, creating a non-trivial braid. It takes two full rotations to untangle.
+        </div>
+    </div>
+</main>
+
+<script>
+    // --- UTILS ---
+    function smoothstep(min, max, value) {
+        var x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+        return x * x * (3 - 2 * x);
+    }
+
+    // --- 1. VINEYARD 3D SETUP ---
+    const initVineyard = () => {
+        const container = document.getElementById('vineyard-container');
+        const slider = document.getElementById('time-slider');
+        const canvas2d = document.getElementById('vineyard-2d-slice');
+        const ctx2d = canvas2d.getContext('2d');
+        
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xfafafa);
+        
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(12, 8, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(5, 5, 5);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        scene.add(dirLight);
+
+        // Axes (t, birth, death)
+        const axesHelper = new THREE.AxesHelper(10);
+        // Custom colors for axes
+        const colors = axesHelper.geometry.attributes.color;
+        colors.setXYZ(0, 0,0,0); colors.setXYZ(1, 0,0,0); // X (Time) - black
+        colors.setXYZ(2, 0,0,0); colors.setXYZ(3, 0,0,0); // Y (Birth) - black
+        colors.setXYZ(4, 0,0,0); colors.setXYZ(5, 0,0,0); // Z (Death) - black
+        scene.add(axesHelper);
+
+        // Generate Vines (Paths)
+        // Format: Vector3(t, birth, death) - wait, Y is up in ThreeJS. 
+        // Let's use X=Time, Y=Death, Z=Birth for better visual orientation
+        const vinesData = [];
+        const numPoints = 200;
+        const maxT = 10;
+        
+        // Vine 1 (Oscillating feature)
+        const pts1 = [];
+        for(let i=0; i<=numPoints; i++) {
+            let t = (i/numPoints) * maxT;
+            let b = 2 + Math.sin(t*0.8);
+            let d = 5 + Math.cos(t*0.8)*1.5;
+            pts1.push(new THREE.Vector3(t, d, b));
+        }
+        vinesData.push({ color: 0xef4444, path: new THREE.CatmullRomCurve3(pts1) });
+
+        // Vine 2 (Growing feature)
+        const pts2 = [];
+        for(let i=0; i<=numPoints; i++) {
+            let t = (i/numPoints) * maxT;
+            let b = 1 + t*0.2;
+            let d = 3 + t*0.5 + Math.sin(t)*0.5;
+            pts2.push(new THREE.Vector3(t, d, b));
+        }
+        vinesData.push({ color: 0x3b82f6, path: new THREE.CatmullRomCurve3(pts2) });
+
+        // Vine 3 (Short-lived)
+        const pts3 = [];
+        for(let i=0; i<=numPoints; i++) {
+            let t = (i/numPoints) * maxT;
+            let b = 4 + Math.sin(t*0.5);
+            let d = 4.5 + Math.sin(t*0.5); // close to diagonal
+            pts3.push(new THREE.Vector3(t, d, b));
+        }
+        vinesData.push({ color: 0x10b981, path: new THREE.CatmullRomCurve3(pts3) });
+
+        // Create Tubes for vines
+        vinesData.forEach(vine => {
+            const geometry = new THREE.TubeGeometry(vine.path, numPoints, 0.1, 8, false);
+            const material = new THREE.MeshPhongMaterial({ color: vine.color, shininess: 50 });
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+        });
+
+        // Time Slice Plane
+        const planeGeom = new THREE.PlaneGeometry(12, 12);
+        const planeMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.1, side: THREE.DoubleSide });
+        const timePlane = new THREE.Mesh(planeGeom, planeMat);
+        timePlane.rotation.y = Math.PI / 2;
+        scene.add(timePlane);
+
+        // Grid on plane
+        const gridHelper = new THREE.GridHelper(12, 12, 0x000000, 0xcccccc);
+        gridHelper.rotation.z = Math.PI / 2;
+        gridHelper.position.y = 6;
+        gridHelper.position.z = 6;
+        timePlane.add(gridHelper);
+        
+        // Diagonal on plane (Birth = Death)
+        const diagGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0, 12, 12)]);
+        const diagLine = new THREE.Line(diagGeom, new THREE.LineBasicMaterial({color: 0x999999, dashSize: 0.2, gapSize: 0.2}));
+        diagLine.computeLineDistances();
+        timePlane.add(diagLine);
+
+        // Intersect Points on plane
+        const intersectSpheres = [];
+        vinesData.forEach(vine => {
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshPhongMaterial({color: vine.color}));
+            scene.add(sphere);
+            intersectSpheres.push(sphere);
+        });
+
+        // Animation Loop
+        const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // Update time slice
+            const tParam = slider.value / 100; // 0 to 1
+            const t = tParam * maxT;
+            timePlane.position.x = t;
+
+            // Draw 2D Overlay
+            ctx2d.clearRect(0, 0, 200, 200);
+            
+            // Draw axes and diagonal on 2D
+            ctx2d.strokeStyle = '#ccc';
+            ctx2d.beginPath(); ctx2d.moveTo(20, 180); ctx2d.lineTo(180, 180); ctx2d.stroke(); // Birth (X)
+            ctx2d.beginPath(); ctx2d.moveTo(20, 180); ctx2d.lineTo(20, 20); ctx2d.stroke(); // Death (Y)
+            ctx2d.setLineDash([4, 4]);
+            ctx2d.beginPath(); ctx2d.moveTo(20, 180); ctx2d.lineTo(180, 20); ctx2d.stroke(); // Diagonal
+            ctx2d.setLineDash([]);
+            
+            // Labels
+            ctx2d.fillStyle = '#666'; ctx2d.font = '10px sans-serif';
+            ctx2d.fillText('Birth', 150, 195);
+            ctx2d.save(); ctx2d.translate(10, 50); ctx2d.rotate(-Math.PI/2); ctx2d.fillText('Death', 0, 0); ctx2d.restore();
+
+            // Update spheres and 2D points
+            vinesData.forEach((vine, idx) => {
+                const pt = vine.path.getPointAt(tParam);
+                intersectSpheres[idx].position.copy(pt);
+
+                // Map 3D (Z=birth, Y=death) to 2D canvas (X=birth, Y=death, inverted Y)
+                const px = 20 + (pt.z / 10) * 160;
+                const py = 180 - (pt.y / 10) * 160;
+
+                ctx2d.fillStyle = '#' + vine.color.toString(16).padStart(6, '0');
+                ctx2d.beginPath();
+                ctx2d.arc(px, py, 5, 0, Math.PI*2);
+                ctx2d.fill();
+            });
+
+            renderer.render(scene, camera);
+        };
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            if(container.clientWidth === 0) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    };
+
+    // --- 2. ZIGZAG 2D SETUP ---
+    const initZigzag = () => {
+        const canvas = document.getElementById('zigzag-canvas');
+        const ctx = canvas.getContext('2d');
+        const slider = document.getElementById('zigzag-slider');
+
+        // Define the complexes X0, X1, X2, X3, X4
+        // A complex is an array of points and edges
+        const pts = [
+            {id: 0, x: 200, y: 100}, {id: 1, x: 300, y: 80}, {id: 2, x: 250, y: 150},
+            {id: 3, x: 600, y: 120}, {id: 4, x: 650, y: 80}
+        ];
+        
+        // States: what points and edges exist at each integer step
+        const states = [
+            { p: [0, 1], e: [], label: "X0" }, // 2 disjoint points
+            { p: [0, 1, 2], e: [[0,1]], label: "X1" }, // 3 points, 1 edge (1 component)
+            { p: [0, 1, 2, 3], e: [[0,1], [1,2], [2,0]], label: "X2" }, // triangle (1 loop) + 1 point
+            { p: [0, 1, 2], e: [[0,1], [1,2]], label: "X3" }, // edge removed, point removed (deletion step -> backward arrow)
+            { p: [0, 1, 2, 4], e: [[0,1], [1,2], [2,0]], label: "X4" } // loop closed again
+        ];
+
+        const drawComplex = (stateObj, alpha) => {
+            ctx.globalAlpha = alpha;
+            // Draw edges
+            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 3;
+            stateObj.e.forEach(e => {
+                const p1 = pts[e[0]], p2 = pts[e[1]];
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            });
+            // Draw points
+            stateObj.p.forEach(pid => {
+                const p = pts[pid];
+                ctx.fillStyle = '#1d1d1f';
+                ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const val = parseFloat(slider.value);
+            const idx = Math.floor(val);
+            const frac = val - idx;
+
+            // Background timeline
+            ctx.strokeStyle = '#e5e5ea'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(50, 250); ctx.lineTo(750, 250); ctx.stroke();
+            
+            for(let i=0; i<states.length; i++) {
+                const px = 100 + i * 150;
+                // Tick mark
+                ctx.fillStyle = '#999'; ctx.fillRect(px - 1, 245, 2, 10);
+                // Label & Arrows
+                ctx.fillStyle = '#111'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText(states[i].label, px, 275);
+                
+                if(i < states.length - 1) {
+                    ctx.font = '20px sans-serif';
+                    // Determine arrow direction (insertion vs deletion)
+                    // Simplified for narrative: X2 to X3 is deletion (backward map)
+                    if(i === 2) {
+                        ctx.fillStyle = '#ef4444'; // Red for backward
+                        ctx.fillText('\u2190', px + 75, 275); // Left arrow
+                    } else {
+                        ctx.fillStyle = '#10b981'; // Green for forward
+                        ctx.fillText('\u2192', px + 75, 275); // Right arrow
+                    }
+                }
+            }
+
+            // Draw complexes with crossfade
+            if (idx < states.length) {
+                drawComplex(states[idx], 1 - frac);
+            }
+            if (idx + 1 < states.length) {
+                drawComplex(states[idx+1], frac);
+            }
+
+            // Draw Barcodes (tracking features)
+            // H0 (Components) bar
+            ctx.fillStyle = '#3b82f6';
+            const h0_end = 100 + val * 150; // extends as time goes
+            ctx.fillRect(100, 300, h0_end - 100, 10);
+            ctx.fillStyle = '#333'; ctx.font = '12px sans-serif'; ctx.textAlign='right';
+            ctx.fillText('H0 (Component)', 90, 310);
+
+            // H1 (Loop) bar - exists only during X2 and X4
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText('H1 (Loop)', 90, 330);
+            
+            // Segment 1 (at X2)
+            if (val >= 2) {
+                const start = 100 + 2*150;
+                let end = 100 + Math.min(val, 3)*150;
+                // Fade out between 2 and 3
+                ctx.globalAlpha = 1 - Math.max(0, val - 2); 
+                ctx.fillRect(start, 320, end - start, 10);
+                ctx.globalAlpha = 1;
+            }
+            // Segment 2 (at X4)
+            if (val >= 3) {
+                const start = 100 + 3*150;
+                const end = 100 + val*150;
+                // Fade in between 3 and 4
+                ctx.globalAlpha = Math.max(0, val - 3);
+                ctx.fillRect(start, 320, end - start, 10);
+                ctx.globalAlpha = 1;
+            }
+
+            // Current time indicator
+            const currentX = 100 + val * 150;
+            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+            ctx.beginPath(); ctx.moveTo(currentX, 240); ctx.lineTo(currentX, 350); ctx.stroke();
+            ctx.setLineDash([]);
+        };
+
+        slider.addEventListener('input', draw);
+        draw();
+    };
+
+    // --- 3. CURVATURE SETUP ---
+    const initCurvature = () => {
+        const canvas = document.getElementById('curvature-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width;
+        let height = canvas.height;
+
+        // Control points
+        let points = [
+            {x: 50, y: 150}, {x: 200, y: 50}, {x: 400, y: 250}, {x: 600, y: 100}, {x: 750, y: 150}
+        ];
+        let draggingPoint = null;
+
+        // B-spline or Bezier evaluation
+        const getSplinePoint = (t, pts) => {
+            // Catmull-Rom interpolation for smooth curve through points
+            const p0 = pts[Math.max(0, Math.floor(t) - 1)];
+            const p1 = pts[Math.floor(t)];
+            const p2 = pts[Math.min(pts.length - 1, Math.floor(t) + 1)];
+            const p3 = pts[Math.min(pts.length - 1, Math.floor(t) + 2)];
+            
+            const f = t - Math.floor(t);
+            const f2 = f * f;
+            const f3 = f2 * f;
+
+            const v0 = (p2.x - p0.x) * 0.5;
+            const v1 = (p3.x - p1.x) * 0.5;
+            const x = (2 * p1.x - 2 * p2.x + v0 + v1) * f3 + (-3 * p1.x + 3 * p2.x - 2 * v0 - v1) * f2 + v0 * f + p1.x;
+
+            const vy0 = (p2.y - p0.y) * 0.5;
+            const vy1 = (p3.y - p1.y) * 0.5;
+            const y = (2 * p1.y - 2 * p2.y + vy0 + vy1) * f3 + (-3 * p1.y + 3 * p2.y - 2 * vy0 - vy1) * f2 + vy0 * f + p1.y;
+
+            return {x, y};
+        };
+
+        const draw = () => {
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw axes
+            ctx.strokeStyle = '#e5e5ea'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(50, 250); ctx.lineTo(750, 250); ctx.stroke();
+            ctx.fillStyle = '#999'; ctx.font = '12px sans-serif'; ctx.fillText('Time (t)', 700, 270);
+            ctx.fillText('Birth/Death coord', 10, 20);
+
+            // Generate curve points
+            const curvePts = [];
+            const segments = 200;
+            for(let i=0; i<=segments; i++) {
+                let t = i / segments * (points.length - 1);
+                // Clamp t to prevent reading past array bounds
+                t = Math.max(0, Math.min(points.length - 1.0001, t)); 
+                curvePts.push(getSplinePoint(t, points));
+            }
+
+            // Calculate Curvature (approx 2nd derivative)
+            const curvatures = [];
+            for(let i=1; i<curvePts.length-1; i++) {
+                const p0 = curvePts[i-1];
+                const p1 = curvePts[i];
+                const p2 = curvePts[i+1];
+                
+                // Approximating d^2y/dx^2 assuming dx is roughly constant
+                const dx1 = p1.x - p0.x;
+                const dx2 = p2.x - p1.x;
+                const dy1 = (p1.y - p0.y) / dx1;
+                const dy2 = (p2.y - p1.y) / dx2;
+                
+                // Second derivative magnitude
+                const d2y = Math.abs((dy2 - dy1) / ((dx1+dx2)/2)); 
+                curvatures.push(d2y);
+            }
+            curvatures.unshift(curvatures[0]);
+            curvatures.push(curvatures[curvatures.length-1]);
+
+            // Normalize curvature for coloring
+            const maxCurv = Math.max(...curvatures) || 1;
+
+            // Draw colored segments
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            for(let i=0; i<curvePts.length-1; i++) {
+                ctx.beginPath();
+                ctx.moveTo(curvePts[i].x, curvePts[i].y);
+                ctx.lineTo(curvePts[i+1].x, curvePts[i+1].y);
+                
+                // Map curvature to color (Blue to Red)
+                const normCurv = Math.min(1, curvatures[i] / (maxCurv * 0.5)); // Exaggerate a bit
+                const r = Math.floor(59 + (239 - 59) * normCurv);
+                const g = Math.floor(130 - (130 - 68) * normCurv);
+                const b = Math.floor(246 - (246 - 68) * normCurv);
+                
+                ctx.strokeStyle = `rgb(${r},${g},${b})`;
+                ctx.stroke();
+            }
+
+            // Draw control points
+            points.forEach((p, i) => {
+                ctx.fillStyle = (draggingPoint === i) ? '#ef4444' : '#ffffff';
+                ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); 
+                ctx.fill(); ctx.stroke();
+            });
+        };
+
+        // Interaction
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            for(let i=0; i<points.length; i++) {
+                const dx = x - points[i].x;
+                const dy = y - points[i].y;
+                if(dx*dx + dy*dy < 100) { // 10px radius
+                    draggingPoint = i;
+                    break;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if(draggingPoint !== null) {
+                const rect = canvas.getBoundingClientRect();
+                // Restrict X movement slightly to keep it a function, fully allow Y
+                const curX = points[draggingPoint].x;
+                const newX = e.clientX - rect.left;
+                // Keep order
+                if (draggingPoint > 0 && newX <= points[draggingPoint-1].x + 20) return;
+                if (draggingPoint < points.length-1 && newX >= points[draggingPoint+1].x - 20) return;
+                
+                points[draggingPoint].x = newX;
+                points[draggingPoint].y = e.clientY - rect.top;
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => { draggingPoint = null; });
+        canvas.addEventListener('mouseleave', () => { draggingPoint = null; });
+
+        draw();
+    };
+
+    // --- 4. BERRY PHASE SETUP ---
+    const initBerryPhase = () => {
+        const slider = document.getElementById('berry-slider');
+        const paramCanvas = document.getElementById('parameter-canvas');
+        const pCtx = paramCanvas.getContext('2d');
+        const container = document.getElementById('berry-container');
+
+        // 3D Braid Scene
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xfafafa);
+        const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(0, -15, 12);
+        camera.lookAt(0, 5, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 5, 0);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(5, 10, 5);
+        scene.add(dirLight);
+
+        // Braid Geometry (Time goes up Y axis)
+        const tubeRadius = 0.15;
+        const totalHeight = 10;
+        const numPts = 100;
+        const R = 1.5; // radius of orbit
+        
+        // Path logic: To show monodromy, 2 full cycles in parameter space (0 to 4PI)
+        // corresponds to the tubes swapping (at 2PI) and returning (at 4PI).
+        // Let parameter theta go from 0 to 4PI.
+        // Tube 1 is at angle (theta/2), Tube 2 is at angle (theta/2 + PI).
+        
+        const ptsA = [], ptsB = [];
+        for(let i=0; i<=numPts; i++) {
+            let tParam = i / numPts; // 0 to 1
+            let y = tParam * totalHeight; // height represents time
+            
+            // The mapping from parameter loop to moduli space
+            let angleA = tParam * Math.PI * 2; 
+            let angleB = tParam * Math.PI * 2 + Math.PI;
+
+            ptsA.push(new THREE.Vector3(R * Math.cos(angleA), y, R * Math.sin(angleA)));
+            ptsB.push(new THREE.Vector3(R * Math.cos(angleB), y, R * Math.sin(angleB)));
+        }
+
+        const curveA = new THREE.CatmullRomCurve3(ptsA);
+        const curveB = new THREE.CatmullRomCurve3(ptsB);
+
+        const matA = new THREE.MeshPhongMaterial({color: 0xef4444}); // Red
+        const matB = new THREE.MeshPhongMaterial({color: 0x3b82f6}); // Blue
+
+        // Initially draw full tubes but with a clipping plane to simulate growth
+        const geomA = new THREE.TubeGeometry(curveA, numPts, tubeRadius, 16, false);
+        const geomB = new THREE.TubeGeometry(curveB, numPts, tubeRadius, 16, false);
+        
+        const meshA = new THREE.Mesh(geomA, matA);
+        const meshB = new THREE.Mesh(geomB, matB);
+        scene.add(meshA);
+        scene.add(meshB);
+
+        // Grid plane at bottom
+        const grid = new THREE.GridHelper(8, 8, 0xcccccc, 0xe5e5ea);
+        scene.add(grid);
+
+        // Time indicator plane
+        const timePlaneMat = new THREE.MeshBasicMaterial({color: 0x000000, transparent: true, opacity: 0.1, side: THREE.DoubleSide});
+        const timePlane = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), timePlaneMat);
+        timePlane.rotation.x = -Math.PI/2;
+        scene.add(timePlane);
+
+        // Intersection spheres
+        const sphereA = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), matA);
+        const sphereB = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), matB);
+        scene.add(sphereA);
+        scene.add(sphereB);
+
+        const updateVisuals = () => {
+            const val = slider.value / 100; // 0 to 1
+            
+            // --- 2D Parameter Space Update ---
+            pCtx.clearRect(0, 0, paramCanvas.width, paramCanvas.height);
+            const cx = paramCanvas.width / 2;
+            const cy = paramCanvas.height / 2;
+            const r2d = 60;
+            
+            // Draw circle loop
+            pCtx.strokeStyle = '#ccc'; pCtx.lineWidth = 2;
+            pCtx.beginPath(); pCtx.arc(cx, cy, r2d, 0, Math.PI*2); pCtx.stroke();
+            
+            // Draw parameter point (theta goes from 0 to 4PI based on val)
+            const theta = val * Math.PI * 4; 
+            const px = cx + r2d * Math.cos(theta);
+            const py = cy - r2d * Math.sin(theta); // invert Y for canvas
+            
+            pCtx.fillStyle = '#111';
+            pCtx.beginPath(); pCtx.arc(px, py, 6, 0, Math.PI*2); pCtx.fill();
+
+            pCtx.fillStyle = '#666'; pCtx.textAlign = 'center';
+            pCtx.fillText(`Phase θ: ${(theta / Math.PI).toFixed(2)}π`, cx, cy + r2d + 30);
+
+            // --- 3D Braid Update ---
+            // Move time plane
+            const currentY = val * totalHeight;
+            timePlane.position.y = currentY;
+
+            // Clip geometry above timePlane
+            // A simple hack without shaders: set scale of elements based on time.
+            // Better to use drawRange on buffer geometry.
+            const drawCount = Math.floor(val * numPts * 16 * 6); // roughly based on TubeGeometry indices
+            meshA.geometry.setDrawRange(0, Math.floor(val * meshA.geometry.index.count));
+            meshB.geometry.setDrawRange(0, Math.floor(val * meshB.geometry.index.count));
+
+            // Move Spheres
+            sphereA.position.copy(curveA.getPointAt(val || 0.001));
+            sphereB.position.copy(curveB.getPointAt(val || 0.001));
+
+            renderer.render(scene, camera);
+        };
+
+        slider.addEventListener('input', updateVisuals);
+        
+        // Animation loop for OrbitControls
+        const animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        };
+        animate();
+        updateVisuals(); // initial render
+
+        window.addEventListener('resize', () => {
+            if(container.clientWidth === 0) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    };
+
+    // Initialize all visualizers when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        initVineyard();
+        initZigzag();
+        initCurvature();
+        initBerryPhase();
+    });
+
+</script>
+</body>
+</html>
