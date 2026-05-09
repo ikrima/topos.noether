@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forcing: A Memory Palace Explorable</title>
+  <style>
+    :root{
+      --ink:#14233f;
+      --muted:#5d6d84;
+      --paper:#fffaf0;
+      --paper2:#f7f1e4;
+      --panel:#fffffb;
+      --line:#d9cba8;
+      --blue:#305f8f;
+      --teal:#16837b;
+      --teal2:#2fa69b;
+      --gold:#c9932d;
+      --red:#c8504d;
+      --violet:#6957a8;
+      --green:#477b50;
+      --shadow:0 18px 60px rgba(36, 45, 73, .12), 0 2px 8px rgba(36, 45, 73, .06);
+      --radius:22px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --serif: Georgia, "Times New Roman", Times, serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(47,166,155,.13), transparent 28rem),
+        radial-gradient(circle at 80% 10%, rgba(201,147,45,.12), transparent 24rem),
+        linear-gradient(180deg, #fffaf0 0%, #f4eddf 100%);
+      font-family:var(--sans);
+      line-height:1.55;
+    }
+    a{color:var(--teal); text-decoration:none; border-bottom:1px solid rgba(22,131,123,.35)}
+    a:hover{border-color:var(--teal)}
+    .wrap{width:min(1180px, calc(100% - 34px)); margin:0 auto}
+    header.hero{
+      padding:70px 0 28px;
+      position:relative;
+      overflow:hidden;
+    }
+    .kicker{font:700 12px/1 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--teal); margin-bottom:16px}
+    h1{
+      margin:0;
+      font-family:var(--serif);
+      font-size:clamp(42px, 7vw, 92px);
+      line-height:.93;
+      letter-spacing:-.045em;
+      color:#0e1f3d;
+      text-wrap:balance;
+    }
+    .subtitle{
+      font-family:var(--serif);
+      font-size:clamp(22px,3vw,36px);
+      color:var(--teal);
+      font-style:italic;
+      margin:18px 0 22px;
+      max-width:890px;
+    }
+    .hero p{font-size:18px; max-width:850px; color:#33425c}
+    .hero-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:24px; align-items:stretch; margin-top:30px}
+    .card{
+      background:rgba(255,255,251,.84);
+      border:1px solid rgba(20,35,63,.12);
+      box-shadow:var(--shadow);
+      border-radius:var(--radius);
+      padding:24px;
+      backdrop-filter: blur(10px);
+    }
+    .summary-card{display:grid; grid-template-columns:64px 1fr; gap:18px; align-items:start}
+    .seal{
+      width:58px; height:58px; border-radius:18px;
+      display:grid; place-items:center;
+      background:linear-gradient(135deg, rgba(22,131,123,.13), rgba(201,147,45,.16));
+      border:1px solid rgba(22,131,123,.25);
+      font-size:28px;
+    }
+    .mini-title{font-weight:800; font-size:18px; margin-bottom:4px}
+    .source-note{font-size:13px; color:var(--muted); margin-top:12px}
+    .palace-map{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+    .room-link{
+      display:flex; gap:10px; align-items:center;
+      padding:12px 12px;
+      border-radius:16px;
+      background:rgba(255,250,240,.75);
+      border:1px solid rgba(20,35,63,.1);
+      color:var(--ink);
+      transition:.18s transform, .18s background, .18s border;
+      cursor:pointer;
+    }
+    .room-link:hover{transform:translateY(-1px); background:white; border-color:rgba(22,131,123,.35)}
+    .room-dot{
+      width:26px;height:26px; border-radius:50%; display:grid; place-items:center;
+      background:var(--ink); color:#fff; font:800 12px/1 var(--mono);
+      flex:0 0 auto;
+    }
+    .room-link span:last-child{font-size:13px; font-weight:750; line-height:1.2}
+    .toolbar{
+      position:sticky; top:0; z-index:30;
+      background:rgba(255,250,240,.83);
+      backdrop-filter: blur(18px);
+      border-top:1px solid rgba(20,35,63,.06);
+      border-bottom:1px solid rgba(20,35,63,.1);
+      box-shadow:0 10px 30px rgba(20,35,63,.05);
+    }
+    .toolbar-inner{display:flex; gap:14px; align-items:center; justify-content:space-between; padding:12px 0}
+    .lens{display:flex; gap:6px; padding:5px; border-radius:999px; background:rgba(20,35,63,.06); border:1px solid rgba(20,35,63,.08)}
+    .lens button, .pill-btn, button.control{
+      border:0; background:transparent; color:var(--ink); font-weight:800; cursor:pointer;
+      border-radius:999px; padding:8px 12px; font-size:13px;
+    }
+    .lens button.active{background:white; color:var(--teal); box-shadow:0 2px 12px rgba(20,35,63,.12)}
+    .pill-btn{background:var(--ink); color:white; border:1px solid rgba(255,255,255,.12)}
+    .progress-shell{height:8px; border-radius:999px; background:rgba(20,35,63,.1); overflow:hidden; width:min(270px, 30vw)}
+    .progress{height:100%; width:0%; background:linear-gradient(90deg,var(--teal),var(--gold)); border-radius:999px}
+    main{padding:34px 0 70px}
+    .essay-section{
+      display:grid; grid-template-columns: minmax(0, .82fr) minmax(360px, 1.18fr);
+      gap:24px;
+      align-items:start;
+      margin:34px 0;
+      scroll-margin-top:86px;
+    }
+    .essay-section:nth-child(even){grid-template-columns: minmax(360px, 1.18fr) minmax(0, .82fr)}
+    .essay-section:nth-child(even) .text-panel{order:2}
+    .essay-section:nth-child(even) .viz-panel{order:1}
+    .text-panel, .viz-panel{
+      background:rgba(255,255,251,.9);
+      border:1px solid rgba(20,35,63,.12);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .text-panel{padding:28px}
+    .viz-panel{padding:0; position:relative}
+    .number{
+      display:inline-grid; place-items:center;
+      width:42px; height:42px; border-radius:50%;
+      background:var(--ink); color:#fff; font:900 15px/1 var(--mono);
+      margin-bottom:14px;
+    }
+    h2{
+      margin:0 0 14px;
+      font-family:var(--serif);
+      font-size:clamp(28px, 3.2vw, 45px);
+      line-height:1.05;
+      letter-spacing:-.025em;
+    }
+    .lede{font-size:18px; color:#2e3d56; margin:0 0 18px}
+    .memory{
+      background:linear-gradient(135deg, rgba(22,131,123,.08), rgba(201,147,45,.09));
+      border:1px solid rgba(22,131,123,.18);
+      border-radius:18px;
+      padding:16px 16px 16px 52px;
+      position:relative;
+      margin:18px 0;
+      color:#263a53;
+    }
+    .memory:before{content:"◇"; position:absolute; left:18px; top:14px; color:var(--gold); font-size:24px}
+    .formal{
+      margin-top:18px;
+      border-top:1px solid rgba(20,35,63,.12);
+      padding-top:16px;
+      color:#37465e;
+      font-size:15px;
+    }
+    .formal code, code.inline{font-family:var(--mono); background:rgba(20,35,63,.06); border:1px solid rgba(20,35,63,.08); border-radius:7px; padding:2px 5px}
+    .viz-header{display:flex; justify-content:space-between; align-items:center; padding:16px 18px; border-bottom:1px solid rgba(20,35,63,.1); background:rgba(255,250,240,.7)}
+    .viz-title{font-weight:900; color:var(--ink)}
+    .hint{font:700 12px/1.35 var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+    canvas{display:block; width:100%; height:430px; background:linear-gradient(180deg, #fffef8, #f9f3e8)}
+    .controls{
+      display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;
+      padding:16px 18px 18px;
+      border-top:1px solid rgba(20,35,63,.1);
+      background:rgba(255,250,240,.62);
+    }
+    .controls.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .control-group{display:flex; flex-direction:column; gap:6px}
+    label{font-size:12px; font-weight:900; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+    input[type="range"]{width:100%; accent-color:var(--teal)}
+    select, .small-input{
+      border:1px solid rgba(20,35,63,.15); border-radius:12px; padding:9px 10px; background:white; color:var(--ink); font-weight:750;
+    }
+    .button-row{display:flex; gap:8px; flex-wrap:wrap}
+    button.control{background:white; border:1px solid rgba(20,35,63,.12); box-shadow:0 2px 9px rgba(20,35,63,.05)}
+    button.control:hover{border-color:rgba(22,131,123,.4)}
+    .statusbar{
+      padding:12px 18px;
+      border-top:1px solid rgba(20,35,63,.1);
+      display:flex; gap:10px; flex-wrap:wrap;
+      background:rgba(255,255,251,.85);
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:6px; border-radius:999px;
+      padding:6px 10px; font:800 12px/1 var(--mono);
+      background:rgba(20,35,63,.06); border:1px solid rgba(20,35,63,.08); color:#22314b;
+    }
+    .chip.good{background:rgba(22,131,123,.1); color:#11645e; border-color:rgba(22,131,123,.18)}
+    .chip.warn{background:rgba(201,147,45,.13); color:#7b5815; border-color:rgba(201,147,45,.25)}
+    .chip.bad{background:rgba(200,80,77,.11); color:#93403e; border-color:rgba(200,80,77,.2)}
+    .callout-final{
+      margin-top:44px;
+      padding:34px;
+      border-radius:30px;
+      background:linear-gradient(135deg, rgba(20,35,63,.96), rgba(14,31,61,.93));
+      color:white;
+      box-shadow:var(--shadow);
+      display:grid; grid-template-columns:80px 1fr; gap:22px;
+      align-items:start;
+    }
+    .callout-final .seal{background:rgba(255,255,255,.08); color:#ffd77c; border-color:rgba(255,255,255,.18)}
+    .callout-final h2{color:white; margin-bottom:10px}
+    .callout-final p{color:rgba(255,255,255,.82); margin:0}
+    .trace{
+      margin-top:18px;
+      padding:16px;
+      border-radius:18px;
+      background:#0f1d36;
+      color:#dce8ff;
+      font-family:var(--mono);
+      font-size:12px;
+      overflow:auto;
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .trace .green{color:#8ce5d6}.trace .gold{color:#ffd37a}.trace .red{color:#ffaaa8}
+    .legend{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-top:10px}
+    .swatch{width:13px;height:13px;border-radius:4px; display:inline-block; vertical-align:-2px; border:1px solid rgba(20,35,63,.15)}
+    .footer{padding:24px 0 50px; color:var(--muted); font-size:13px}
+    .warning-note{
+      margin-top:12px; color:#45536a; font-size:14px;
+      padding:12px 14px; border-radius:14px;
+      background:rgba(201,147,45,.1); border:1px solid rgba(201,147,45,.22)
+    }
+    @media (max-width: 940px){
+      .hero-grid,.essay-section,.essay-section:nth-child(even){grid-template-columns:1fr}
+      .essay-section:nth-child(even) .text-panel,.essay-section:nth-child(even) .viz-panel{order:unset}
+      .toolbar-inner{align-items:flex-start; flex-direction:column}
+      .progress-shell{width:100%}
+      .palace-map{grid-template-columns:1fr 1fr}
+      canvas{height:360px}
+      .controls,.controls.three{grid-template-columns:1fr}
+    }
+    @media (max-width: 560px){
+      .palace-map{grid-template-columns:1fr}
+      .callout-final{grid-template-columns:1fr}
+      .summary-card{grid-template-columns:1fr}
+      .text-panel{padding:22px}
+      canvas{height:330px}
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="kicker">Interactive visual essay · set theory · forcing</div>
+      <h1>Forcing as a Memory Palace</h1>
+      <div class="subtitle">Do not memorize the machine first. Walk through the rooms, touch the objects, then let the notation name what you already saw.</div>
+      <p>
+        This explorable builds Chow’s beginner-friendly route to forcing into a linked set of scenes: the old universe,
+        missing subsets, finite conditions, dense requirements, Boolean-valued truth, and the final extension <strong>M[U]</strong>.
+      </p>
+      <div class="hero-grid">
+        <div class="card summary-card">
+          <div class="seal">☉</div>
+          <div>
+            <div class="mini-title">The one-sentence map</div>
+            <div>Forcing expands a model of set theory by adding a generic object in a controlled way, so the new model still satisfies ZFC but may satisfy different statements, such as ¬CH.</div>
+            <div class="source-note">Based on Timothy Y. Chow’s <em>A beginner’s guide to forcing</em>. The interface follows explorable-explanation principles: concrete manipulation, explicit variables, abstraction ladders, and linked views.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="mini-title">Six rooms in the palace</div>
+          <div class="palace-map" id="palaceMap">
+            <a class="room-link" href="#room-model"><span class="room-dot">1</span><span>The old universe</span></a>
+            <a class="room-link" href="#room-condition"><span class="room-dot">2</span><span>Finite sketches</span></a>
+            <a class="room-link" href="#room-dense"><span class="room-dot">3</span><span>Dense doors</span></a>
+            <a class="room-link" href="#room-boolean"><span class="room-dot">4</span><span>Boolean truth</span></a>
+            <a class="room-link" href="#room-forces"><span class="room-dot">5</span><span>The forcing sign</span></a>
+            <a class="room-link" href="#room-ch"><span class="room-dot">6</span><span>Many new reals</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="wrap toolbar-inner">
+      <div class="lens" aria-label="Abstraction lens">
+        <button data-lens="ground" class="active">Ground</button>
+        <button data-lens="map">Map</button>
+        <button data-lens="symbols">Symbols</button>
+      </div>
+      <div class="progress-shell" title="Reading progress"><div class="progress" id="progress"></div></div>
+      <button class="pill-btn" id="resetAll">Reset palace</button>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <section class="essay-section" id="room-model" data-room="model">
+      <div class="text-panel">
+        <div class="number">1</div>
+        <h2>The old universe is smaller than it thinks.</h2>
+        <p class="lede">Begin with a countable standard transitive model <strong>M</strong> of ZFC. From outside, it is countable. From inside, it can still believe that its powerset of <strong>ω</strong> is uncountable.</p>
+        <div class="memory"><strong>Memory object:</strong> a little library whose shelves contain every book it can name. The library may be tiny to us, but inside it, there is no catalog listing all its missing books.</div>
+        <div class="formal" data-copy-ground="The key opening is non-absoluteness: powersets and cardinalities can look different from outside and inside the model." data-copy-map="Some concepts commute between V and M; powerset and cardinality do not. This mismatch is the crack through which forcing enters." data-copy-symbols="For a countable transitive M, P(ω)^M = P(ω) ∩ M may be countable in V while M ⊨ ‘P(ω) is uncountable’.">The key opening is non-absoluteness: powersets and cardinalities can look different from outside and inside the model.</div>
+      </div>
+      <div class="viz-panel">
+        <div class="viz-header"><div class="viz-title">Inside / outside viewer</div><div class="hint">drag the slider</div></div>
+        <canvas id="canvas-model" height="430"></canvas>
+        <div class="controls">
+          <div class="control-group"><label for="insideBias">inside confidence</label><input type="range" id="insideBias" min="0" max="100" value="58"></div>
+          <div class="control-group"><label>legend</label><div class="legend"><span><i class="swatch" style="background:#2fa69b"></i> sets M sees</span><span><i class="swatch" style="background:#fff;border-style:dashed"></i> missing subsets</span></div></div>
+        </div>
+        <div class="statusbar"><span class="chip warn">not absolute: powerset</span><span class="chip warn">not absolute: uncountable</span><span class="chip good">absolute: membership</span></div>
+      </div>
+    </section>
+
+    <section class="essay-section" id="room-condition" data-room="condition">
+      <div class="text-panel">
+        <div class="number">2</div>
+        <h2>A condition is a finite sketch.</h2>
+        <p class="lede">We do not add the whole infinite object at once. We add finite commitments: a few bits in a giant table. Stronger conditions fill in more cells without contradicting the old ones.</p>
+        <div class="memory"><strong>Memory object:</strong> a blueprint table. Blank cells are still undecided. A 0 or 1 is a promise that all later refinements must respect.</div>
+        <div class="formal" data-copy-ground="Click cells to make a finite partial function. Press Extend to add compatible information." data-copy-map="Conditions form a partial order. More information means a stronger condition." data-copy-symbols="For the ¬CH sketch, use finite partial functions p: ω₂^M × ω ⇀ 2, ordered by reverse inclusion: q ≤ p means q ⊇ p.">Click cells to make a finite partial function. Press Extend to add compatible information.</div>
+      </div>
+      <div class="viz-panel">
+        <div class="viz-header"><div class="viz-title">Finite partial function</div><div class="hint">click cells</div></div>
+        <canvas id="canvas-condition" height="430"></canvas>
+        <div class="controls three">
+          <div class="control-group"><label>condition actions</label><div class="button-row"><button class="control" id="extendCondition">Extend once</button><button class="control" id="clearCondition">Clear grid</button></div></div>
+          <div class="control-group"><label for="gridRows">rows shown</label><input type="range" id="gridRows" min="4" max="8" value="6"></div>
+          <div class="control-group"><label>rule</label><div class="chip">q ≤ p means q extends p</div></div>
+        </div>
+        <div class="statusbar" id="conditionStatus"></div>
+      </div>
+    </section>
+
+    <section class="essay-section" id="room-dense" data-room="dense">
+      <div class="text-panel">
+        <div class="number">3</div>
+        <h2>Dense sets are doors you cannot avoid.</h2>
+        <p class="lede">A dense set <strong>D</strong> is a requirement: no matter where you start, you can refine your condition until you land in <strong>D</strong>. Genericity means meeting every such requirement that <strong>M</strong> can name.</p>
+        <div class="memory"><strong>Memory object:</strong> a hallway of doors labeled D₀, D₁, D₂, … . A generic path does not know the whole outside world; it simply passes through every door in the old universe’s checklist.</div>
+        <div class="formal" data-copy-ground="Press Build path to hit the visible dense doors one by one." data-copy-map="Genericity is not randomness. It is disciplined unavoidable-meeting." data-copy-symbols="U is M-generic when U intersects every dense D ⊆ P that belongs to M.">Press Build path to hit the visible dense doors one by one.</div>
+      </div>
+      <div class="viz-panel">
+        <div class="viz-header"><div class="viz-title">Generic path through dense doors</div><div class="hint">animate requirements</div></div>
+        <canvas id="canvas-dense" height="430"></canvas>
+        <div class="controls three">
+          <div class="control-group"><label for="denseCount">dense sets shown</label><input type="range" id="denseCount" min="1" max="7" value="5"></div>
+          <div class="control-group"><label>path</label><div class="button-row"><button class="control" id="buildPath">Build path</button><button class="control" id="stepPath">One door</button></div></div>
+          <div class="control-group"><label>genericity meter</label><div class="chip good" id="denseMeter">0 / 5 met</div></div>
+        </div>
+        <div class="statusbar"><span class="chip good">generic ≠ arbitrary</span><span class="chip warn">generic means: meets named dense sets</span></div>
+      </div>
+    </section>
+
+    <section class="essay-section" id="room-boolean" data-room="boolean">
+      <div class="text-panel">
+        <div class="number">4</div>
+        <h2>Before truth is decided, give it a place to live.</h2>
+        <p class="lede">The Boolean-valued model <strong>Mᴮ</strong> lets statements have truth values in a Boolean algebra <strong>B</strong>. This is not ordinary true/false yet; it is a structured map of partial truth.</p>
+        <div class="memory"><strong>Memory object:</strong> a stained-glass window. Each pane carries a truth color. The ultrafilter is the viewing mask that declares which panes count as fully lit.</div>
+        <div class="formal" data-copy-ground="Move the selector. Watch which toy truth-values count as admitted by U." data-copy-map="Mᴮ is the fuzzy workshop; quotienting by U collapses compatible truth-values into an ordinary universe." data-copy-symbols="[[φ ∧ ψ]] = [[φ]] ∧ [[ψ]], [[¬φ]] = [[φ]]*, and Mᴮ/U is the ordinary quotient model.">Move the selector. Watch which toy truth-values count as admitted by U.</div>
+        <div class="warning-note">The selector here is a pedagogical toy. A real ultrafilter is not merely a numeric threshold; it is a maximal coherent truth-choice in the Boolean algebra.</div>
+      </div>
+      <div class="viz-panel">
+        <div class="viz-header"><div class="viz-title">Boolean-valued truth workshop</div><div class="hint">select truth mask</div></div>
+        <canvas id="canvas-boolean" height="430"></canvas>
+        <div class="controls three">
+          <div class="control-group"><label for="truthSelector">toy U selector</label><input type="range" id="truthSelector" min="0" max="100" value="55"></div>
+          <div class="control-group"><label>show operation</label><select id="boolOperation"><option value="and">AND / meet</option><option value="or">OR / join</option><option value="not">NOT / complement</option></select></div>
+          <div class="control-group"><label>quotient view</label><div class="chip good" id="quotientChip">Mᴮ / U → ordinary truth</div></div>
+        </div>
+        <div class="statusbar"><span class="chip">0 = impossible</span><span class="chip good">1 = fully true</span><span class="chip warn">middle = partial information</span></div>
+      </div>
+    </section>
+
+    <section class="essay-section" id="room-forces" data-room="forces">
+      <div class="text-panel">
+        <div class="number">5</div>
+        <h2>The forcing sign names a promise.</h2>
+        <p class="lede"><strong>p ⊩ φ</strong> reads “p forces φ.” It means every generic extension containing <strong>p</strong> will satisfy <strong>φ</strong>. In the Boolean-valued picture, <strong>p ⊩ φ</strong> iff <strong>p ≤ [[φ]]</strong>.</p>
+        <div class="memory"><strong>Memory object:</strong> a sealed envelope. Once your finite sketch contains the decisive bit, every future completion carrying that sketch must open to the same sentence.</div>
+        <div class="formal" data-copy-ground="Use the controls to choose a toy sentence about one table cell. Then click the cell to see when p forces it." data-copy-map="Forcing is local inevitability: a condition has enough information to make a sentence unavoidable in all compatible completions." data-copy-symbols="Toy sentence: φ = ‘F(αᵢ,n)=b’. Here p ⊩ φ exactly when p already contains that assignment; contradiction forces ¬φ; blank leaves it undecided.">Use the controls to choose a toy sentence about one table cell. Then click the cell to see when p forces it.</div>
+      </div>
+      <div class="viz-panel">
+        <div class="viz-header"><div class="viz-title">Forcing relation microscope</div><div class="hint">decide one sentence</div></div>
+        <canvas id="canvas-forces" height="430"></canvas>
+        <div class="controls three">
+          <div class="control-group"><label for="phiRow">sentence row αᵢ</label><input type="range" id="phiRow" min="0" max="5" value="1"></div>
+          <div class="control-group"><label for="phiCol">sentence column n</label><input type="range" id="phiCol" min="0" max="5" value="2"></div>
+          <div class="control-group"><label for="phiBit">sentence bit b</label><select id="phiBit"><option value="1">b = 1</option><option value="0">b = 0</option></select></div>
+        </div>
+        <div class="statusbar" id="forcesStatus"></div>
+      </div>
+    </section>
+
+    <section class="essay-section" id="room-ch" data-room="ch">
+      <div class="text-panel">
+        <div class="number">6</div>
+        <h2>For ¬CH, add many new reals without collapsing the scaffolding.</h2>
+        <p class="lede">A real can be coded as a binary sequence, or a subset of <strong>ω</strong>. The forcing used in Chow’s sketch adds many distinct binary sequences indexed by <strong>ω₂ᴹ</strong>.</p>
+        <div class="memory"><strong>Memory object:</strong> an orchard of infinite ribbons. Each row grows into a new binary ribbon. The guardrail says the cardinal scaffolding must not collapse while the orchard grows.</div>
+        <div class="formal" data-copy-ground="Increase the number of rows. The extension gains many distinct reals." data-copy-map="The headline trick is not just adding subsets; it is adding them while preserving enough cardinal structure to witness ¬CH." data-copy-symbols="Use finite partial functions from ω₂^M × ω to 2. The generic union F yields at least ω₂^M many distinct reals, and the c.c.c. condition prevents cardinal collapse in this case.">Increase the number of rows. The extension gains many distinct reals.</div>
+      </div>
+      <div class="viz-panel">
+        <div class="viz-header"><div class="viz-title">Many new reals garden</div><div class="hint">grow rows</div></div>
+        <canvas id="canvas-ch" height="430"></canvas>
+        <div class="controls three">
+          <div class="control-group"><label for="newReals">rows of new reals</label><input type="range" id="newReals" min="2" max="18" value="10"></div>
+          <div class="control-group"><label>cardinal guard</label><div class="button-row"><button class="control" id="toggleGuard">guard: on</button></div></div>
+          <div class="control-group"><label>statement</label><div class="chip good" id="chChip">extension satisfies ¬CH</div></div>
+        </div>
+        <div class="statusbar"><span class="chip good">new subsets of ω</span><span class="chip warn">check: no cardinal collapse</span><span class="chip">M[U] still satisfies ZFC</span></div>
+      </div>
+    </section>
+
+    <section class="callout-final">
+      <div class="seal">✦</div>
+      <div>
+        <h2>The palace compresses the machine.</h2>
+        <p>
+          The old universe is a library. A condition is a finite sketch. Dense sets are unavoidable doors.
+          A generic filter is a path through every door the library can name. Boolean-valued truth is the stained-glass workshop.
+          The quotient turns the workshop into an ordinary universe. Only after walking this path should the symbols <code class="inline">Mᴮ</code>, <code class="inline">U</code>, <code class="inline">p ⊩ φ</code>, and <code class="inline">M[U]</code> feel like names for familiar objects.
+        </p>
+        <div class="trace" id="tracePanel"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    Single-file HTML. No external dependencies. Built as a conceptual explorable, not as a complete proof assistant for forcing.
+  </footer>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const state = {
+    lens:'ground',
+    insideBias:58,
+    rows:6,
+    cols:6,
+    condition:{},
+    denseCount:5,
+    denseMet:0,
+    denseAnimating:false,
+    truthSelector:55,
+    boolOperation:'and',
+    phiRow:1,
+    phiCol:2,
+    phiBit:1,
+    newReals:10,
+    guard:true,
+    tick:0
+  };
+
+  const palette = {
+    ink:'#14233f', muted:'#5d6d84', blue:'#305f8f', teal:'#16837b', teal2:'#2fa69b',
+    gold:'#c9932d', red:'#c8504d', violet:'#6957a8', green:'#477b50', paper:'#fffaf0', panel:'#fffffb'
+  };
+
+  function setupCanvas(canvas){
+    const dpr = Math.max(1, Math.min(2.25, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(320, Math.round(rect.width * dpr));
+    const h = Math.max(260, Math.round(rect.height * dpr));
+    if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx,w:rect.width,h:rect.height,dpr};
+  }
+
+  function clear(ctx,w,h){
+    const grad = ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,'#fffef8'); grad.addColorStop(1,'#f9f1e2');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+  }
+  function rr(ctx,x,y,w,h,r,fill,stroke){
+    ctx.beginPath();
+    const rr = Math.min(r,w/2,h/2);
+    ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr); ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
+    if(fill){ctx.fillStyle=fill; ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke; ctx.lineWidth=1.2; ctx.stroke();}
+  }
+  function circle(ctx,x,y,r,fill,stroke,lw=1.2){
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    if(fill){ctx.fillStyle=fill; ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke();}
+  }
+  function line(ctx,x1,y1,x2,y2,stroke=palette.ink,lw=1.5,dash=[]){
+    ctx.save(); ctx.setLineDash(dash); ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+  }
+  function arrow(ctx,x1,y1,x2,y2,color=palette.ink,lw=2){
+    line(ctx,x1,y1,x2,y2,color,lw);
+    const a = Math.atan2(y2-y1,x2-x1), len=10;
+    ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-len*Math.cos(a-Math.PI/6), y2-len*Math.sin(a-Math.PI/6)); ctx.lineTo(x2-len*Math.cos(a+Math.PI/6), y2-len*Math.sin(a+Math.PI/6)); ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+  }
+  function text(ctx,str,x,y,size=14,color=palette.ink,weight='700',align='left',font='system'){
+    ctx.save(); ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle';
+    const family = font==='serif' ? 'Georgia, serif' : font==='mono' ? 'ui-monospace, Menlo, monospace' : 'Inter, system-ui, sans-serif';
+    ctx.font=`${weight} ${size}px ${family}`;
+    ctx.fillText(str,x,y);
+    ctx.restore();
+  }
+  function wrapText(ctx,str,x,y,maxWidth,lineHeight,size=14,color=palette.ink,weight='600'){
+    ctx.save(); ctx.fillStyle=color; ctx.font=`${weight} ${size}px Inter, system-ui, sans-serif`; ctx.textBaseline='top';
+    const words=str.split(/\s+/); let line='', yy=y;
+    for(const word of words){
+      const test=line?line+' '+word:word;
+      if(ctx.measureText(test).width>maxWidth && line){ctx.fillText(line,x,yy); line=word; yy+=lineHeight;} else line=test;
+    }
+    if(line) ctx.fillText(line,x,yy);
+    ctx.restore();
+  }
+  function drawBook(ctx,x,y,s=1,c=palette.blue){
+    rr(ctx,x,y,22*s,28*s,3*s,'rgba(48,95,143,.12)',c);
+    line(ctx,x+11*s,y+3*s,x+11*s,y+25*s,c,.8);
+    line(ctx,x+4*s,y+7*s,x+9*s,y+7*s,c,.8);
+    line(ctx,x+14*s,y+7*s,x+19*s,y+7*s,c,.8);
+  }
+
+  function makeDeterministicPoints(n, seed=1){
+    let x = seed|0; const pts=[];
+    for(let i=0;i<n;i++){
+      x = (1664525*x + 1013904223) >>> 0;
+      const a = (x / 4294967295) * Math.PI*2;
+      x = (1664525*x + 1013904223) >>> 0;
+      const r = Math.sqrt(x / 4294967295);
+      pts.push({a,r});
+    }
+    return pts;
+  }
+
+  const ptsA=makeDeterministicPoints(54, 12), ptsB=makeDeterministicPoints(48, 99), ptsC=makeDeterministicPoints(70, 7);
+
+  function drawModel(){
+    const canvas=$('#canvas-model'); if(!canvas) return; const {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+    const bias=state.insideBias/100;
+    text(ctx,'Outside view V',w*.25,36,16,palette.blue,'900','center');
+    text(ctx,'Inside view M',w*.75,36,16,palette.teal,'900','center');
+    const r=Math.min(w*.18, h*.28), y=h*.49, x1=w*.28, x2=w*.73;
+    rr(ctx,24,72,w-48,h-106,24,'rgba(255,255,255,.52)','rgba(20,35,63,.10)');
+    circle(ctx,x1,y,r,'rgba(48,95,143,.06)',palette.blue,2);
+    circle(ctx,x2,y,r,'rgba(47,166,155,.07)',palette.teal,2);
+    line(ctx,w*.5,92,w*.5,h-58,'rgba(20,35,63,.12)',1,[7,7]);
+    arrow(ctx,x1+r+22,y,x2-r-22,y,palette.gold,2.2);
+    wrapText(ctx,'same library, different notion of “all subsets”',w*.5-83,y-48,166,17,13,palette.muted,'700');
+
+    ptsA.forEach((p,i)=>{
+      const rr = r*.86*p.r; const alpha=p.a;
+      circle(ctx,x1+Math.cos(alpha)*rr,y+Math.sin(alpha)*rr, 3.1, i%4===0?'#ffffff':'rgba(48,95,143,.35)', i%4===0?'rgba(48,95,143,.38)':null);
+    });
+    ptsB.forEach((p,i)=>{
+      const rr = r*.86*p.r; const alpha=p.a;
+      if(i<Math.floor(ptsB.length*bias)) circle(ctx,x2+Math.cos(alpha)*rr,y+Math.sin(alpha)*rr, 3.2, 'rgba(22,131,123,.55)');
+      else circle(ctx,x2+Math.cos(alpha)*rr,y+Math.sin(alpha)*rr, 5.3, 'rgba(255,255,255,.05)', 'rgba(22,131,123,.38)', 1.2);
+    });
+    text(ctx,'P(ω) in V',x1,y+r+32,15,palette.blue,'900','center');
+    text(ctx,'P(ω) inside M',x2,y+r+32,15,palette.teal,'900','center');
+    text(ctx,'countable from outside',x1,y+r+55,12,palette.muted,'700','center');
+    text(ctx,'uncountable from inside',x2,y+r+55,12,palette.muted,'700','center');
+    const hidden=Math.max(0, Math.round((1-bias)*ptsB.length));
+    text(ctx,`${hidden} visible “missing” subsets in this toy view`,w/2,h-28,14,palette.gold,'900','center');
+  }
+
+  function key(r,c){return `${r},${c}`}
+  function cycleCondition(r,c){
+    const k=key(r,c); const cur=state.condition[k];
+    if(cur === undefined) state.condition[k]=1;
+    else if(cur === 1) state.condition[k]=0;
+    else delete state.condition[k];
+    renderAll();
+  }
+  function drawGrid(ctx,x,y,rows,cols,cell,condition,highlight){
+    text(ctx,'ω',x+cols*cell/2,y-28,15,palette.ink,'900','center');
+    text(ctx,'ω₂ᴹ',x-34,y+rows*cell/2,15,palette.ink,'900','center');
+    for(let c=0;c<cols;c++) text(ctx,String(c),x+c*cell+cell/2,y-10,11,palette.muted,'800','center','mono');
+    for(let r=0;r<rows;r++) text(ctx,'α'+r,x-14,y+r*cell+cell/2,11,palette.muted,'800','right','mono');
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+      const hi=highlight && highlight.r===r && highlight.c===c;
+      const v=condition[key(r,c)];
+      ctx.fillStyle= hi ? 'rgba(201,147,45,.18)' : 'rgba(255,255,255,.72)';
+      ctx.fillRect(x+c*cell,y+r*cell,cell,cell);
+      ctx.strokeStyle= hi ? palette.gold : 'rgba(20,35,63,.18)'; ctx.lineWidth=hi?2:1;
+      ctx.strokeRect(x+c*cell,y+r*cell,cell,cell);
+      if(v!==undefined){
+        circle(ctx,x+c*cell+cell/2,y+r*cell+cell/2,cell*.28,v? 'rgba(22,131,123,.16)' : 'rgba(105,87,168,.13)', v? palette.teal : palette.violet,1.2);
+        text(ctx,String(v),x+c*cell+cell/2,y+r*cell+cell/2,15,v?palette.teal:palette.violet,'900','center','mono');
+      }
+    }
+  }
+  function drawCondition(){
+    const canvas=$('#canvas-condition'); if(!canvas) return; const {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+    rr(ctx,22,24,w-44,h-48,24,'rgba(255,255,255,.55)','rgba(20,35,63,.09)');
+    const rows=state.rows, cols=state.cols, cell=Math.min(46, (w-150)/cols, (h-150)/rows);
+    const gx=w/2 - cols*cell/2 + 20, gy=92;
+    text(ctx,'Finite partial function p : ω₂ᴹ × ω ⇀ 2',w/2,50,18,palette.ink,'900','center','serif');
+    drawGrid(ctx,gx,gy,rows,cols,cell,state.condition,null);
+    const entries=Object.keys(state.condition).length;
+    const blanks=rows*cols-entries;
+    rr(ctx,40,h-88,w-80,48,16,'rgba(20,35,63,.04)','rgba(20,35,63,.08)');
+    text(ctx,`${entries} committed cells`,w*.33,h-64,15,palette.teal,'900','center');
+    text(ctx,`${blanks} visible blanks`,w*.64,h-64,15,palette.muted,'900','center');
+    text(ctx,'Blank = still free. Filled = must be respected by all stronger conditions.',w/2,h-33,12,palette.muted,'800','center');
+    $('#conditionStatus').innerHTML = `<span class="chip good">entries: ${entries}</span><span class="chip">visible domain: ${rows}×${cols}</span><span class="chip warn">finite sketch, not the whole object</span>`;
+  }
+
+  function canvasClickCondition(e){
+    const canvas=e.currentTarget; const rect=canvas.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top;
+    const rows=state.rows, cols=state.cols, cell=Math.min(46, (rect.width-150)/cols, (rect.height-150)/rows);
+    const gx=rect.width/2 - cols*cell/2 + 20, gy=92;
+    const c=Math.floor((x-gx)/cell), r=Math.floor((y-gy)/cell);
+    if(r>=0 && r<rows && c>=0 && c<cols) cycleCondition(r,c);
+  }
+  function extendCondition(){
+    for(let r=0;r<state.rows;r++) for(let c=0;c<state.cols;c++){
+      if(state.condition[key(r,c)]===undefined){ state.condition[key(r,c)] = ((r*37+c*17+Object.keys(state.condition).length)%3) ? 1 : 0; renderAll(); return; }
+    }
+  }
+
+  function drawDense(){
+    const canvas=$('#canvas-dense'); if(!canvas) return; const {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+    rr(ctx,22,24,w-44,h-48,24,'rgba(255,255,255,.55)','rgba(20,35,63,.09)');
+    text(ctx,'Every dense door can be reached by refining',w/2,48,18,palette.ink,'900','center','serif');
+    const count=state.denseCount, met=Math.min(state.denseMet,count);
+    const left=72, right=w-72, top=92, bottom=h-92;
+    const levels=count;
+    for(let i=0;i<count;i++){
+      const y=top + (bottom-top)*(i+1)/(count+1);
+      const fill=i<met?'rgba(22,131,123,.13)':'rgba(201,147,45,.09)';
+      rr(ctx,left,y-14,right-left,28,12,fill,i<met?'rgba(22,131,123,.35)':'rgba(201,147,45,.25)');
+      text(ctx,'D'+i,left+20,y,13,i<met?palette.teal:palette.gold,'900','left','mono');
+      text(ctx,i<met?'met':'waiting',right-24,y,11,i<met?palette.teal:palette.muted,'900','right','mono');
+    }
+    const nodes=[];
+    for(let i=0;i<=levels+1;i++){
+      const y=top + (bottom-top)*i/(levels+1);
+      const x=w/2 + Math.sin(i*1.32)*w*.18;
+      nodes.push({x,y});
+    }
+    for(let i=0;i<nodes.length-1;i++){
+      const n=nodes[i], m=nodes[i+1];
+      const mx=(n.x+m.x)/2;
+      line(ctx,n.x,n.y,m.x,m.y,i<met?palette.teal:'rgba(20,35,63,.23)',i<met?3:1.4);
+      line(ctx,n.x,n.y,mx-60,m.y,'rgba(20,35,63,.13)',1,[5,5]);
+      line(ctx,n.x,n.y,mx+75,m.y,'rgba(20,35,63,.13)',1,[5,5]);
+    }
+    nodes.forEach((n,i)=> circle(ctx,n.x,n.y, i<=met?8:6, i<=met?'#e6faf5':'#fff', i<=met?palette.teal:'rgba(20,35,63,.25)', i<=met?2.6:1.5));
+    circle(ctx,nodes[Math.min(met,nodes.length-1)].x,nodes[Math.min(met,nodes.length-1)].y,13,'rgba(201,147,45,.14)',palette.gold,2);
+    wrapText(ctx,'A generic filter is a compatible path that hits every dense set named inside M.',w/2-170,h-64,340,17,13,palette.muted,'800');
+    $('#denseMeter').textContent = `${met} / ${count} met`;
+  }
+  function stepPath(){ state.denseMet = Math.min(state.denseMet+1, state.denseCount); renderAll(); }
+  function buildPath(){
+    if(state.denseAnimating) return;
+    state.denseAnimating=true; state.denseMet=0; renderAll();
+    const timer=setInterval(()=>{
+      state.denseMet++;
+      if(state.denseMet>=state.denseCount){ clearInterval(timer); state.denseAnimating=false; }
+      renderAll();
+    },420);
+  }
+
+  const truthItems = [
+    {name:'φ', v:.72, c:palette.teal}, {name:'ψ', v:.38, c:palette.violet}, {name:'χ', v:.58, c:palette.gold}, {name:'ζ', v:.2, c:palette.red}, {name:'ZFC axiom', v:1, c:palette.green}
+  ];
+  function drawBoolean(){
+    const canvas=$('#canvas-boolean'); if(!canvas) return; const {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+    rr(ctx,22,24,w-44,h-48,24,'rgba(255,255,255,.55)','rgba(20,35,63,.09)');
+    text(ctx,'Boolean-valued model Mᴮ',w/2,47,18,palette.ink,'900','center','serif');
+    const x0=70, x1=w-70, y=h*.48;
+    line(ctx,x0,y,x1,y,'rgba(20,35,63,.26)',3);
+    for(let i=0;i<=10;i++){ const x=x0+(x1-x0)*i/10; circle(ctx,x,y,3.5,'#fff','rgba(20,35,63,.22)'); }
+    text(ctx,'0',x0,y+30,14,palette.muted,'900','center','mono'); text(ctx,'1',x1,y+30,14,palette.muted,'900','center','mono');
+    const selector=state.truthSelector/100;
+    const sx=x0+(x1-x0)*selector;
+    rr(ctx,sx-42,y-84,84,44,15,'rgba(201,147,45,.14)',palette.gold); text(ctx,'toy U',sx,y-62,14,palette.gold,'900','center','mono'); arrow(ctx,sx,y-38,sx,y-8,palette.gold,2);
+    truthItems.forEach((it,idx)=>{
+      const x=x0+(x1-x0)*it.v, admitted=it.v>=selector || it.v===1;
+      circle(ctx,x,y,12, admitted ? 'rgba(22,131,123,.18)' : 'rgba(20,35,63,.05)', admitted?palette.teal:'rgba(20,35,63,.25)',2);
+      text(ctx,it.name,x,y-34,13,it.c,'900','center','serif');
+      text(ctx,it.v.toFixed(2),x,y+54,10,palette.muted,'800','center','mono');
+    });
+    const op=state.boolOperation;
+    const a=truthItems[0].v, b=truthItems[1].v;
+    const val=op==='and'?Math.min(a,b):op==='or'?Math.max(a,b):1-a;
+    const formula=op==='and'?'[[φ ∧ ψ]] = [[φ]] ∧ [[ψ]]':op==='or'?'[[φ ∨ ψ]] = [[φ]] ∨ [[ψ]]':'[[¬φ]] = [[φ]]*';
+    const vx=x0+(x1-x0)*val;
+    rr(ctx,w*.22,94,w*.56,74,20,'rgba(20,35,63,.04)','rgba(20,35,63,.09)');
+    text(ctx,formula,w/2,118,15,palette.ink,'900','center','serif');
+    text(ctx,`toy result = ${val.toFixed(2)}`,w/2,146,13,val>=selector?palette.teal:palette.gold,'900','center','mono');
+    arrow(ctx,vx,y+72,vx,y+19,val>=selector?palette.teal:palette.gold,2.2);
+    text(ctx,val>=selector?'admitted by U':'not selected by U',vx,y+91,12,val>=selector?palette.teal:palette.gold,'900','center','mono');
+    wrapText(ctx,'Think of Mᴮ as a workshop where truth can be partially assembled before the quotient turns it into ordinary truth.',50,h-72,w-100,17,13,palette.muted,'800');
+  }
+
+  function toyForcingStatus(){
+    const k=key(state.phiRow,state.phiCol), v=state.condition[k];
+    if(v===undefined) return {kind:'warn', label:'undecided', detail:'p does not yet decide φ'};
+    if(v===state.phiBit) return {kind:'good', label:'p ⊩ φ', detail:'the decisive bit is already in p'};
+    return {kind:'bad', label:'p ⊩ ¬φ', detail:'p contains the opposite bit'};
+  }
+  function drawForces(){
+    const canvas=$('#canvas-forces'); if(!canvas) return; const {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+    rr(ctx,22,24,w-44,h-48,24,'rgba(255,255,255,.55)','rgba(20,35,63,.09)');
+    text(ctx,'Toy forcing sentence: φ = “F(αᵢ,n)=b”',w/2,46,18,palette.ink,'900','center','serif');
+    const rows=6, cols=6, cell=Math.min(43, (w-150)/cols, (h-170)/rows);
+    const gx=w/2 - cols*cell/2 + 10, gy=90;
+    drawGrid(ctx,gx,gy,rows,cols,cell,state.condition,{r:state.phiRow,c:state.phiCol});
+    const status=toyForcingStatus();
+    const color=status.kind==='good'?palette.teal:status.kind==='bad'?palette.red:palette.gold;
+    rr(ctx,54,h-118,w-108,82,22,status.kind==='good'?'rgba(22,131,123,.10)':status.kind==='bad'?'rgba(200,80,77,.10)':'rgba(201,147,45,.12)',color);
+    text(ctx,status.label,w/2,h-88,24,color,'900','center','serif');
+    text(ctx,status.detail,w/2,h-55,14,palette.muted,'800','center');
+    const sentence=`φ: F(α${state.phiRow}, ${state.phiCol}) = ${state.phiBit}`;
+    text(ctx,sentence,w/2,gy+rows*cell+33,13,palette.ink,'900','center','mono');
+    $('#forcesStatus').innerHTML = `<span class="chip ${status.kind}">${status.label}</span><span class="chip">${sentence}</span><span class="chip warn">click highlighted cell to decide</span>`;
+  }
+
+  function bitSeq(row, len=12){ let s=''; for(let i=0;i<len;i++) s += ((row*17+i*31+((i*i+row)%7))%5 < 2) ? '1':'0'; return s; }
+  function drawCH(){
+    const canvas=$('#canvas-ch'); if(!canvas) return; const {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+    rr(ctx,22,24,w-44,h-48,24,'rgba(255,255,255,.55)','rgba(20,35,63,.09)');
+    text(ctx,'Adding rows of binary sequences: new subsets of ω',w/2,46,18,palette.ink,'900','center','serif');
+    const cx1=w*.25, cx2=w*.75, cy=h*.52, r=Math.min(w*.18,h*.25);
+    circle(ctx,cx1,cy,r,'rgba(48,95,143,.05)',palette.blue,2);
+    circle(ctx,cx2,cy,r,'rgba(22,131,123,.07)',palette.teal,2);
+    text(ctx,'M',cx1,cy-r-22,20,palette.blue,'900','center','serif');
+    text(ctx,'M[U]',cx2,cy-r-22,20,palette.teal,'900','center','serif');
+    text(ctx,'few named reals',cx1,cy+r+24,13,palette.muted,'900','center');
+    text(ctx,'many new reals',cx2,cy+r+24,13,palette.teal,'900','center');
+    for(let i=0;i<5;i++) text(ctx,bitSeq(i,9)+'…',cx1,cy-48+i*23,12,palette.blue,'800','center','mono');
+    const n=state.newReals;
+    for(let i=0;i<n;i++){
+      const a=-Math.PI/2 + (i/(Math.max(1,n-1)))*Math.PI;
+      const x=w*.50 + Math.cos(a)*w*.16;
+      const y=cy + Math.sin(a)*h*.18;
+      circle(ctx,x,y,4.5,'rgba(201,147,45,.7)');
+    }
+    arrow(ctx,cx1+r+18,cy,cx2-r-18,cy,palette.gold,3);
+    text(ctx,'force in new reals',w/2,cy-24,13,palette.gold,'900','center');
+    const maxLines=Math.min(n,7);
+    for(let i=0;i<maxLines;i++) text(ctx,bitSeq(20+i,10)+'…',cx2,cy-70+i*22,12,i%2?palette.teal:palette.gold,'900','center','mono');
+    if(n>maxLines) text(ctx,`+ ${n-maxLines} more visible rows`,cx2,cy+96,11,palette.muted,'900','center','mono');
+    const guardColor=state.guard?palette.teal:palette.red;
+    rr(ctx,w*.31,h-78,w*.38,42,15,state.guard?'rgba(22,131,123,.10)':'rgba(200,80,77,.10)',guardColor);
+    text(ctx,state.guard?'cardinal guard: no collapse in this sketch':'guard off: warning, cardinal collapse risk',w/2,h-57,13,guardColor,'900','center','mono');
+    $('#toggleGuard').textContent=`guard: ${state.guard?'on':'off'}`;
+    $('#chChip').textContent=state.guard?'extension satisfies ¬CH':'cannot conclude ¬CH safely';
+    $('#chChip').className=`chip ${state.guard?'good':'bad'}`;
+  }
+
+  function updateCopies(){
+    $$('[data-copy-ground]').forEach(el => { el.textContent = el.dataset['copy'+state.lens[0].toUpperCase()+state.lens.slice(1)] || el.dataset.copyGround; });
+    $$('.lens button').forEach(b => b.classList.toggle('active', b.dataset.lens===state.lens));
+  }
+  function updateTrace(){
+    const entries=Object.keys(state.condition).length;
+    const fs=toyForcingStatus();
+    $('#tracePanel').innerHTML = `
+<span class="gold">state</span> := { lens: <span class="green">:${state.lens}</span>, finite_condition_entries: <span class="green">${entries}</span>, dense_doors_met: <span class="green">${Math.min(state.denseMet,state.denseCount)}/${state.denseCount}</span> }\n
+<span class="gold">forcing_probe</span> := { sentence: <span class="green">F(α${state.phiRow}, ${state.phiCol}) = ${state.phiBit}</span>, status: <span class="${fs.kind==='bad'?'red':fs.kind==='good'?'green':'gold'}">${fs.label}</span> }\n
+<span class="gold">memory_palace_path</span> := M → finite sketches → dense doors → generic U → Boolean quotient → M[U]
+`;
+  }
+
+  function renderAll(){
+    updateCopies();
+    drawModel(); drawCondition(); drawDense(); drawBoolean(); drawForces(); drawCH(); updateTrace();
+  }
+
+  function bind(){
+    $('#insideBias').addEventListener('input', e=>{state.insideBias=+e.target.value; drawModel();});
+    $('#gridRows').addEventListener('input', e=>{state.rows=+e.target.value; renderAll();});
+    $('#canvas-condition').addEventListener('click', canvasClickCondition);
+    $('#canvas-forces').addEventListener('click', canvasClickCondition);
+    $('#extendCondition').addEventListener('click', extendCondition);
+    $('#clearCondition').addEventListener('click', ()=>{state.condition={}; renderAll();});
+    $('#denseCount').addEventListener('input', e=>{state.denseCount=+e.target.value; state.denseMet=Math.min(state.denseMet,state.denseCount); renderAll();});
+    $('#buildPath').addEventListener('click', buildPath);
+    $('#stepPath').addEventListener('click', stepPath);
+    $('#truthSelector').addEventListener('input', e=>{state.truthSelector=+e.target.value; drawBoolean();});
+    $('#boolOperation').addEventListener('change', e=>{state.boolOperation=e.target.value; drawBoolean();});
+    $('#phiRow').addEventListener('input', e=>{state.phiRow=+e.target.value; renderAll();});
+    $('#phiCol').addEventListener('input', e=>{state.phiCol=+e.target.value; renderAll();});
+    $('#phiBit').addEventListener('change', e=>{state.phiBit=+e.target.value; renderAll();});
+    $('#newReals').addEventListener('input', e=>{state.newReals=+e.target.value; drawCH();});
+    $('#toggleGuard').addEventListener('click', ()=>{state.guard=!state.guard; drawCH();});
+    $('#resetAll').addEventListener('click', ()=>{
+      Object.assign(state,{lens:'ground', insideBias:58, rows:6, condition:{}, denseCount:5, denseMet:0, truthSelector:55, boolOperation:'and', phiRow:1, phiCol:2, phiBit:1, newReals:10, guard:true});
+      $('#insideBias').value=58; $('#gridRows').value=6; $('#denseCount').value=5; $('#truthSelector').value=55; $('#boolOperation').value='and'; $('#phiRow').value=1; $('#phiCol').value=2; $('#phiBit').value='1'; $('#newReals').value=10;
+      renderAll();
+    });
+    $$('.lens button').forEach(b => b.addEventListener('click', ()=>{ state.lens=b.dataset.lens; renderAll(); }));
+    window.addEventListener('resize', renderAll);
+    window.addEventListener('scroll', () => {
+      const doc=document.documentElement;
+      const pct=100*(doc.scrollTop)/(doc.scrollHeight-doc.clientHeight);
+      $('#progress').style.width=Math.max(0,Math.min(100,pct))+'%';
+    }, {passive:true});
+  }
+
+  // Seed a few bits so the first view is not empty.
+  state.condition[key(0,0)] = 1;
+  state.condition[key(2,3)] = 0;
+  state.condition[key(4,1)] = 1;
+  bind();
+  renderAll();
+})();
+</script>
+</body>
+</html>
