@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Shape of Infinity — An Interactive Introduction to Functional Analysis</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --panel:#16161f; --panel2:#1a1a28;
+  --ink:#dad8e3; --muted:#8a8699; --faint:#4a4758;
+  --amber:#d4a574; --teal:#5ab4ac; --lav:#9b8ec4; --red:#e06c75; --green:#98c379;
+  --line:#26242f;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:linear-gradient(160deg,var(--bg0),var(--bg1) 60%,#0d0d14);
+  color:var(--ink); font-family:'Source Sans 3',sans-serif; font-weight:300;
+  line-height:1.7; font-size:17px; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:'Cormorant Garamond',serif; font-weight:600; line-height:1.15; color:#efeaf2}
+h2{font-size:2.1rem; margin:0 0 .2em; letter-spacing:.01em}
+h3{font-size:1.45rem; margin:2.2em 0 .4em; color:#e7e2ec}
+.sub{font-family:'JetBrains Mono',monospace; font-size:.72rem; letter-spacing:.28em;
+  text-transform:uppercase; color:var(--amber); font-weight:500}
+em{color:var(--teal); font-style:italic}
+strong{color:#efeaf2; font-weight:600}
+code,.mono{font-family:'JetBrains Mono',monospace; font-size:.86em}
+.kw{color:var(--amber)} .ty{color:var(--lav)} .ct{color:var(--teal)} .cm{color:var(--muted)}
+
+/* progress bar */
+#progress{position:fixed;top:0;left:0;height:3px;width:0%;
+  background:linear-gradient(90deg,var(--amber),var(--teal));z-index:200;transition:width .1s}
+
+/* layout */
+#shell{display:flex;max-width:1280px;margin:0 auto}
+nav{position:sticky;top:0;align-self:flex-start;height:100vh;width:250px;flex:0 0 250px;
+  padding:34px 20px 34px 30px;overflow-y:auto;border-right:1px solid var(--line)}
+nav .title{font-family:'Cormorant Garamond',serif;font-size:1.35rem;color:#efeaf2;line-height:1.1;margin-bottom:4px}
+nav .author{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.18em;color:var(--faint);text-transform:uppercase;margin-bottom:26px}
+nav a{display:block;color:var(--muted);text-decoration:none;font-size:.82rem;padding:5px 0 5px 12px;
+  border-left:2px solid transparent;transition:.18s;line-height:1.3}
+nav a:hover{color:var(--ink)}
+nav a.active{color:var(--amber);border-left-color:var(--amber)}
+nav a .n{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--faint);margin-right:7px}
+main{flex:1;min-width:0;padding:60px 56px 140px;max-width:860px}
+section{margin-bottom:30px;scroll-margin-top:30px}
+p{margin:.7em 0}
+.lead{font-size:1.12rem;color:#c9c5d4}
+.foot-note{font-size:.92rem;color:var(--muted);border-left:2px solid var(--line);padding-left:14px;margin:1.2em 0}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s,transform .7s}
+.reveal.in{opacity:1;transform:none}
+
+/* widgets */
+.viz{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  margin:1.6em 0;padding:18px 18px 16px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.viz .cap{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.viz canvas{display:block;width:100%;border-radius:6px;background:#0c0c12;touch-action:none}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;margin-top:14px;
+  font-family:'JetBrains Mono',monospace;font-size:.76rem}
+.ctrl{display:flex;flex-direction:column;gap:5px;min-width:120px}
+.ctrl label{color:var(--muted);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase}
+.ctrl .val{color:var(--teal)}
+input[type=range]{-webkit-appearance:none;appearance:none;height:3px;background:var(--line);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--amber);cursor:pointer;border:2px solid #0c0c12}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid #0c0c12}
+button,select{font-family:'JetBrains Mono',monospace;font-size:.74rem;background:var(--panel2);
+  color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--amber);color:var(--amber)}
+button.primary{background:var(--amber);color:#1a1208;border-color:var(--amber);font-weight:700}
+button.primary:hover{background:#e3bd92}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--amber);color:#1a1208;font-weight:700}
+.readout{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);margin-top:12px;line-height:1.85}
+.readout b{color:var(--teal);font-weight:500}
+.readout .amber{color:var(--amber)} .readout .red{color:var(--red)} .readout .green{color:var(--green)} .readout .lav{color:var(--lav)}
+.matgrid{display:inline-grid;gap:6px;font-family:'JetBrains Mono',monospace}
+.matgrid input{width:46px;text-align:center;background:#0c0c12;border:1px solid var(--line);color:var(--ink);
+  border-radius:4px;padding:5px 2px;font-family:inherit;font-size:.82rem}
+.matgrid input:focus{outline:none;border-color:var(--teal)}
+.pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.66rem;padding:2px 8px;border-radius:20px;
+  border:1px solid var(--line);color:var(--muted)}
+.pill.ok{color:var(--green);border-color:#2c3a26}
+.pill.no{color:var(--red);border-color:#3a2629}
+.defbox{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--lav);
+  border-radius:8px;padding:14px 18px;margin:1.3em 0;font-size:.98rem}
+.defbox .tag{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--lav)}
+hr{border:0;border-top:1px solid var(--line);margin:48px 0}
+.caveat{background:#15110d;border:1px solid #2a2218;border-radius:10px;padding:20px 24px;margin-top:30px}
+.caveat h4{color:var(--amber);font-size:1.2rem;margin:0 0 .4em}
+.caveat li{margin:.4em 0;font-size:.95rem;color:#bbb6c4}
+.ex{display:flex;gap:14px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:14px 16px;margin:.9em 0}
+.ex .num{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--amber);line-height:1;flex:0 0 auto}
+.ex .body{font-size:.95rem}
+@media(max-width:920px){
+  nav{display:none}
+  main{padding:40px 22px 100px}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="shell">
+<nav>
+  <div class="title">The Shape of Infinity</div>
+  <div class="author">Functional Analysis · after D. A. B. Miller</div>
+  <a href="#vision"><span class="n">00</span>The Bridge</a>
+  <a href="#converge"><span class="n">01</span>Convergence &amp; Cauchy</a>
+  <a href="#bw"><span class="n">02</span>Bolzano–Weierstrass</a>
+  <a href="#inner"><span class="n">03</span>Inner Products</a>
+  <a href="#hilbert"><span class="n">04</span>Hilbert Spaces &amp; Bases</a>
+  <a href="#opnorm"><span class="n">05</span>Operators &amp; the Norm</a>
+  <a href="#compact"><span class="n">06</span>Compactness</a>
+  <a href="#hs"><span class="n">07</span>Hilbert–Schmidt</a>
+  <a href="#spectral"><span class="n">08</span>The Spectral Theorem</a>
+  <a href="#svd"><span class="n">09</span>Singular Values</a>
+  <a href="#exercises"><span class="n">10</span>Exercises</a>
+</nav>
+
+<main>
+
+<section id="vision" class="reveal">
+  <div class="sub">Prologue</div>
+  <h2>The Shape of Infinity</h2>
+  <p class="lead">A scientist's first tool for "operating on a thing" is a matrix multiplying a vector. Functional analysis is what happens when the vector grows infinitely long — when it <em>becomes a function</em> — and we still want everything to work.</p>
+  <p>Miller's tutorial builds exactly that machinery, and only that. It starts from the convergence of plain real numbers and ends at the singular-value decomposition of operators between infinite-dimensional spaces. The arc has a single recurring trick: take a property that is obvious for real numbers, demand only its essential part, and extend it to vectors, functions, and operators.</p>
+  <p>The visual below is the whole motivation in one picture. A "mathematical vector" is just a column of numbers — a mapping from indices <span class="mono">1, 2, 3, …</span> to values. Add more entries and that column starts tracing a continuous curve. Drag the resolution up: the vector <em>is</em> the function.</p>
+
+  <div class="viz" id="w-bridge">
+    <div class="cap"><span>vector → function</span><span class="pill">live sampling</span></div>
+    <canvas height="300"></canvas>
+    <div class="ctrls">
+      <div class="ctrl"><label>resolution N <span class="val" data-out="N">8</span></label>
+        <input type="range" min="3" max="160" value="8" data-in="N"></div>
+      <div class="ctrl"><label>function</label>
+        <div class="seg" data-seg="fn">
+          <button class="on" data-v="0">bump</button>
+          <button data-v="1">wave</button>
+          <button data-v="2">kink</button>
+        </div>
+      </div>
+    </div>
+    <div class="readout">The column vector <span class="lav">φ = (f₁, f₂, …, f<sub>N</sub>)</span> has <b data-r="N">8</b> entries. As N grows it converges to a point in an <span class="amber">infinite-dimensional</span> space.</div>
+  </div>
+</section>
+
+<hr>
+
+<section id="converge" class="reveal">
+  <div class="sub">Section 01 · convergence</div>
+  <h2>What "getting close" means</h2>
+  <p>Everything downstream rests on convergence, and convergence rests on a single number you can measure: the <em>metric</em>, a distance $d(x,y)$ between two elements. For real numbers we just take $d(x,y)=|x-y|$.</p>
+  <div class="defbox">
+    <span class="tag">Definition · convergence &amp; Cauchy</span>
+    <p style="margin:.4em 0 0">A sequence $(x_n)$ <strong>converges to $x$</strong> if $\lim_{n\to\infty} d(x_n,x)=0$: pick any tolerance $\varepsilon$, and past some index $N$ every term sits inside the band. It is <strong>Cauchy</strong> if past some $N$ the terms are within $\varepsilon$ <em>of each other</em> — $d(x_m,x_n)<\varepsilon$ for all $m,n>N$ — without naming a limit.</p>
+  </div>
+  <p>Move the tolerance slider. For a convergent sequence the band $[L-\varepsilon,\,L+\varepsilon]$ eventually swallows the whole tail, and the panel reports the threshold $N(\varepsilon)$. For the oscillating sequence no single $L$ ever works — yet two of its <em>subsequences</em> converge perfectly. Hold that thought; it is the seed of the next section.</p>
+
+  <div class="viz" id="w-converge">
+    <div class="cap"><span>ε–N explorer</span><span class="pill" data-r="status">convergent</span></div>
+    <canvas height="320"></canvas>
+    <div class="ctrls">
+      <div class="ctrl"><label>tolerance ε <span class="val" data-out="eps">0.30</span></label>
+        <input type="range" min="2" max="80" value="30" data-in="eps"></div>
+      <div class="ctrl"><label>sequence</label>
+        <div class="seg" data-seg="seq">
+          <button class="on" data-v="0">1 − 1/n</button>
+          <button data-v="1">(−1)ⁿ/n</button>
+          <button data-v="2">(−1)ⁿ</button>
+        </div>
+      </div>
+    </div>
+    <div class="readout" data-r="msg"></div>
+  </div>
+</section>
+
+<hr>
+
+<section id="bw" class="reveal">
+  <div class="sub">Section 02 · Bolzano–Weierstrass</div>
+  <h2>Every bounded sequence hides a limit</h2>
+  <p>The theorem looks almost too generous: <em>every bounded sequence of real numbers has a convergent subsequence.</em> The standard proof is a hunt by bisection — and watching it run is the best way to believe it.</p>
+  <p>We mark many terms of a bounded sequence with two clusters. Halve the interval; keep the half that still holds terms arbitrarily far out in the sequence; repeat. The interval collapses onto an <em>accumulation point</em>, and the terms it traps, in order, form the convergent subsequence.</p>
+
+  <div class="viz" id="w-bw">
+    <div class="cap"><span>nested-interval bisection</span><span class="pill" data-r="depth">interval I₁</span></div>
+    <canvas height="280"></canvas>
+    <div class="ctrls">
+      <button class="primary" data-act="step">Bisect once</button>
+      <button data-act="auto">Run</button>
+      <button data-act="reset">Reset</button>
+    </div>
+    <div class="readout" data-r="msg">Press <span class="amber">Bisect once</span> to split the current interval.</div>
+  </div>
+  <p class="foot-note">The theorem speaks of an infinite sequence; here a large finite prefix stands in for it, and "still holds terms arbitrarily far out" is decided by scanning indices deep into that prefix. The bisection logic itself is exactly the proof's.</p>
+</section>
+
+<hr>
+
+<section id="inner" class="reveal">
+  <div class="sub">Section 03 · inner products</div>
+  <h2>Length, distance, and right angles</h2>
+  <p>One construction generates the norm, the metric, and the entire geometry of a Hilbert space: the <em>inner product</em> $(\alpha,\beta)$, which eats two vectors and returns a scalar. From it,
+  $\|\alpha\| = \sqrt{(\alpha,\alpha)}$ and $d(\alpha,\beta)=\|\alpha-\beta\|$.</p>
+  <p>The single most useful thing it buys is <strong>orthogonality</strong>: $\alpha\perp\beta$ exactly when $(\alpha,\beta)=0$. Drag either vector below and watch the inner product, the two norms, the distance between the tips, and the angle update. Sweep one vector until the product crosses zero — that is a right angle, generalized.</p>
+
+  <div class="viz" id="w-inner">
+    <div class="cap"><span>drag the vectors</span><span class="pill" data-r="orth">not orthogonal</span></div>
+    <canvas height="360"></canvas>
+    <div class="readout" data-r="msg"></div>
+  </div>
+  <p class="foot-note">Shown for real 2-D vectors so the geometry is visible. The general definition is <em>sesquilinear</em> — for complex vectors the order matters, $(\beta,\alpha)=(\alpha,\beta)^{*}$, and $(\alpha,a\beta)=a(\alpha,\beta)$ but $(a\alpha,\beta)=a^{*}(\alpha,\beta)$.</p>
+</section>
+
+<hr>
+
+<section id="hilbert" class="reveal">
+  <div class="sub">Section 04 · Hilbert spaces</div>
+  <h2>Any function, from a complete set of pieces</h2>
+  <p>A <strong>Hilbert space</strong> is a complete inner-product space — complete meaning no Cauchy sequence converges to a limit that fell out of the space. Its defining luxury: there is always an <em>orthonormal basis</em> $\{\alpha_1,\alpha_2,\dots\}$, and any vector expands as
+  $$\gamma=\sum_j a_j\,\alpha_j,\qquad a_j=(\alpha_j,\gamma).$$</p>
+  <p>Below, the basis is $\alpha_k(x)=\sqrt{2}\,\sin(k\pi x)$ on $[0,1]$ — genuinely orthonormal under $(\,f,g)=\int_0^1 fg\,dx$. We compute each coefficient $a_k$ by real numerical integration and rebuild the target from its first $N$ pieces. Push $N$ up and the reconstruction (teal) climbs onto the target (amber). At a jump, watch the overshoot refuse to die: that is the Gibbs phenomenon, honest and unfaked.</p>
+
+  <div class="viz" id="w-hilbert">
+    <div class="cap"><span>orthonormal expansion · sine basis</span><span class="pill" data-r="err">L² error —</span></div>
+    <canvas height="300"></canvas>
+    <canvas height="120" data-role="coeffs" style="margin-top:8px"></canvas>
+    <div class="ctrls">
+      <div class="ctrl"><label>terms N <span class="val" data-out="N">6</span></label>
+        <input type="range" min="1" max="50" value="6" data-in="N"></div>
+      <div class="ctrl"><label>target</label>
+        <div class="seg" data-seg="fn">
+          <button class="on" data-v="0">triangle</button>
+          <button data-v="1">step</button>
+          <button data-v="2">parabola</button>
+        </div>
+      </div>
+    </div>
+    <div class="readout">Coefficients $a_k=(\alpha_k,\gamma)$ shown below as bars. The expansion converges in the metric — in <span class="amber">energy</span>, not necessarily pointwise.</div>
+  </div>
+</section>
+
+<hr>
+
+<section id="opnorm" class="reveal">
+  <div class="sub">Section 05 · operators</div>
+  <h2>How hard can an operator push?</h2>
+  <p>A linear operator $\mathsf{A}$ maps vectors to vectors; in a basis it becomes a matrix. To compare operators — and to talk about sequences of them converging — we need an <em>operator norm</em>. The natural choice is the <strong>supremum norm</strong>: the largest stretch $\mathsf{A}$ can inflict on a unit vector,
+  $$\|\mathsf{A}\|_{\sup}=\sup_{\|\alpha\|=1}\|\mathsf{A}\alpha\|.$$</p>
+  <p>Feed the unit circle through a $2\times2$ matrix and it comes out an ellipse. The operator norm is simply the ellipse's long semi-axis. Edit the matrix; the white vector marks the input direction that gets stretched most, and its image is the longest spoke. (The computation is a real $2\times2$ SVD — the same machinery we unfold fully in Section 09.)</p>
+
+  <div class="viz" id="w-opnorm">
+    <div class="cap"><span>unit circle ↦ ellipse</span><span class="pill" data-r="norm">‖A‖ —</span></div>
+    <canvas height="340"></canvas>
+    <div class="ctrls">
+      <span class="matgrid" style="grid-template-columns:repeat(2,auto)">
+        <input data-m="0" value="1.4"><input data-m="1" value="0.9">
+        <input data-m="2" value="0.0"><input data-m="3" value="1.1">
+      </span>
+      <span class="readout" style="margin:0" data-r="msg"></span>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section id="compact" class="reveal">
+  <div class="sub">Section 06 · compactness</div>
+  <h2>The property that tames infinity</h2>
+  <p>In an infinite-dimensional space the orthonormal basis vectors themselves form a sequence with <em>no</em> convergent subsequence: every pair is the same fixed distance apart,
+  $$d(\alpha_j,\alpha_k)=\sqrt{2}\quad(j\neq k).$$
+  They are forever the tips of perpendicular unit vectors. A <strong>compact operator</strong> repairs this: it sends any bounded sequence to one that <em>does</em> have a convergent subsequence — it cannot keep an infinity of directions all equally alive.</p>
+  <p>Below, the left shows the basis sequence — all mutual distances locked at $\sqrt2$. Apply a compact (diagonal, decaying) operator with $\mathsf{A}\alpha_j$ shrinking like $1/j$. On the right the images collapse toward the origin, so they pile up near a single point: a convergent subsequence appears.</p>
+
+  <div class="viz" id="w-compact">
+    <div class="cap"><span>the "extreme example" · §6.5.2</span><span class="pill" data-r="state">basis sequence</span></div>
+    <canvas height="300"></canvas>
+    <div class="ctrls">
+      <button class="primary" data-act="apply">Apply compact A</button>
+      <button data-act="reset">Reset</button>
+      <div class="ctrl"><label>decay rate p (σⱼ = 1/jᵖ) <span class="val" data-out="p">1.0</span></label>
+        <input type="range" min="3" max="25" value="10" data-in="p"></div>
+    </div>
+    <div class="readout" data-r="msg"></div>
+  </div>
+</section>
+
+<hr>
+
+<section id="hs" class="reveal">
+  <div class="sub">Section 07 · Hilbert–Schmidt</div>
+  <h2>One number, three faces</h2>
+  <p>The compact operators that fill physics are <strong>Hilbert–Schmidt</strong>. They carry a finite "sum-rule limit"
+  $$S=\sum_j\|\mathsf{A}\alpha_j\|^2,$$
+  and Miller proves it equals the sum of squared matrix elements <em>and</em> the trace of $\mathsf{A}^\dagger\mathsf{A}$. The Hilbert–Schmidt norm is $\|\mathsf{A}\|_{HS}=\sqrt{S}$. Three routes, one answer — and that answer doesn't care which basis you used.</p>
+  <p>Edit the matrix and watch all three computations land on the same value, live.</p>
+
+  <div class="viz" id="w-hs">
+    <div class="cap"><span>three equivalent sums</span><span class="pill ok" data-r="agree">all agree</span></div>
+    <div style="display:flex;gap:30px;flex-wrap:wrap;align-items:center">
+      <span class="matgrid" style="grid-template-columns:repeat(3,auto)">
+        <input data-m="0" value="1"><input data-m="1" value="2"><input data-m="2" value="0">
+        <input data-m="3" value="0"><input data-m="4" value="1"><input data-m="5" value="3">
+        <input data-m="6" value="2"><input data-m="7" value="0"><input data-m="8" value="1">
+      </span>
+      <div class="readout" style="margin:0" data-r="msg"></div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section id="spectral" class="reveal">
+  <div class="sub">Section 08 · spectral theorem</div>
+  <h2>Eigenvectors are the best directions</h2>
+  <p>For a compact <strong>Hermitian</strong> operator ($\mathsf{A}=\mathsf{A}^\dagger$) everything aligns: the eigenvalues are real, eigenvectors of different eigenvalues are orthogonal, and the eigenvectors form a complete set. The spectral theorem writes the operator as
+  $$\mathsf{A}=\sum_j r_j\,|\beta_j\rangle\langle\beta_j|.$$</p>
+  <p>There is a physical way to <em>find</em> those eigenvectors: maximize the Rayleigh quotient $(\alpha,\mathsf{A}\alpha)$ over unit vectors. Drag the white unit vector around the circle below; the gauge tracks $(\alpha,\mathsf{A}\alpha)$. Its peaks sit exactly on the eigenvectors (the dashed axes), with values equal to the eigenvalues. The largest eigenvalue is the most $\mathsf{A}$ can do — the "best" direction.</p>
+
+  <div class="viz" id="w-spectral">
+    <div class="cap"><span>Rayleigh quotient · drag the vector</span><span class="pill" data-r="rq">(α,Aα) —</span></div>
+    <canvas height="360"></canvas>
+    <div class="ctrls">
+      <span class="matgrid" style="grid-template-columns:repeat(2,auto)">
+        <input data-m="0" value="3"><input data-m="1" value="1.2">
+        <input data-m="2" value="1.2"><input data-m="3" value="1.5">
+      </span>
+      <span class="readout" style="margin:0" data-r="msg"></span>
+    </div>
+  </div>
+  <p class="foot-note">Entered as a symmetric (real-Hermitian) matrix; the off-diagonal pair is kept equal so $\mathsf{A}=\mathsf{A}^\dagger$. Eigenvalues/vectors are computed live by Jacobi rotation, and the reconstruction $\sum_j r_j\beta_j\beta_j^{\!\top}$ is checked against the input.</p>
+</section>
+
+<hr>
+
+<section id="svd" class="reveal">
+  <div class="sub">Section 09 · singular values</div>
+  <h2>The best channels between two worlds</h2>
+  <p>The grand finale. A compact operator — even a non-Hermitian one mapping <em>source space</em> to <em>receiving space</em> — decomposes as
+  $$\mathsf{A}=\sum_j s_j\,|\phi_j\rangle\langle\psi_j|.$$
+  The $\psi_j$ are an orthonormal set of inputs, the $\phi_j$ an orthonormal set of outputs, and $\mathsf{A}$ simply connects $\psi_j\!\to\!\phi_j$ with strength $s_j$. Solve the eigenproblem of $\mathsf{A}^\dagger\mathsf{A}$ for the $\psi_j$ and $s_j^2$; set $\phi_j=\tfrac1{s_j}\mathsf{A}\psi_j$. That is exactly Miller's construction.</p>
+  <p>Physically — in wave problems — these are the <em>best-coupled, mutually orthogonal communication channels</em> between two volumes, ranked by strength. Edit the matrix: left is the source plane with its input directions $\psi_1,\psi_2$; right is the receiving plane showing the unit circle mapped to its ellipse, with outputs $\phi_j$ scaled by the singular values $s_j$.</p>
+
+  <div class="viz" id="w-svd">
+    <div class="cap"><span>A = Σ sⱼ |φⱼ⟩⟨ψⱼ|</span><span class="pill" data-r="sv">s —</span></div>
+    <canvas height="300"></canvas>
+    <div class="ctrls">
+      <span class="matgrid" style="grid-template-columns:repeat(2,auto)">
+        <input data-m="0" value="2"><input data-m="1" value="1">
+        <input data-m="2" value="0"><input data-m="3" value="3">
+      </span>
+      <span class="readout" style="margin:0" data-r="msg"></span>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section id="exercises" class="reveal">
+  <div class="sub">Section 10 · exercises</div>
+  <h2>Try these in the widgets above</h2>
+  <div class="ex"><div class="num">1</div><div class="body">In <a href="#converge" style="color:var(--teal)">§01</a>, set the sequence to <span class="mono">(−1)ⁿ</span> and shrink ε. Convince yourself no band ever captures the tail — then name the two accumulation points its subsequences converge to.</div></div>
+  <div class="ex"><div class="num">2</div><div class="body">In <a href="#hilbert" style="color:var(--teal)">§04</a>, pick the <em>step</em> target and crank N to 50. Where does the overshoot sit, and does its <em>height</em> shrink as N grows? (It doesn't — that's Gibbs.)</div></div>
+  <div class="ex"><div class="num">3</div><div class="body">In <a href="#opnorm" style="color:var(--teal)">§05</a>, build a matrix whose ellipse is a circle. What does that say about its two singular values — and about $\mathsf{A}^\dagger\mathsf{A}$?</div></div>
+  <div class="ex"><div class="num">4</div><div class="body">In <a href="#spectral" style="color:var(--teal)">§08</a>, make the off-diagonal entry zero. Where do the eigenvectors point, and why is the Rayleigh gauge then maximized along the axes?</div></div>
+  <div class="ex"><div class="num">5</div><div class="body">In <a href="#svd" style="color:var(--teal)">§09</a>, find a matrix with one singular value far larger than the other. That lopsidedness is a single dominant channel — the diffraction-limited "one usable mode" of a wave system.</div></div>
+
+  <div class="caveat">
+    <h4>On honesty &amp; what is real here</h4>
+    <ul>
+      <li><strong>Real computation, not animation theater.</strong> Every widget runs genuine arithmetic: the sine coefficients come from numerical integration; eigenvalues from a live Jacobi rotation solver; the SVD from the eigenproblem of $\mathsf{A}^\dagger\mathsf{A}$ exactly as the paper constructs it; the operator norm by literally sweeping the unit circle. All were cross-checked numerically before publishing.</li>
+      <li><strong>Finite proxies for infinite objects.</strong> Hilbert spaces are infinite-dimensional. Here, operators are shown as $2\times2$ or $3\times3$ matrices and functions as finite sample grids. These are faithful <em>finite-dimensional shadows</em> — the geometry transfers, but compactness, completeness, and basis existence are precisely the subtleties that only bite in infinite dimensions.</li>
+      <li><strong>Numerical, not symbolic.</strong> Integrals use the trapezoid rule on a fixed grid; tiny residuals (≲10⁻³) are rounding, not mathematics. Convergence is shown in the metric (energy), which can differ from pointwise convergence at discontinuities.</li>
+      <li><strong>Real vs. complex.</strong> Inner-product geometry is drawn over the reals for visibility; the captions flag the sesquilinear complex generalization where it differs.</li>
+      <li>Source: D. A. B. Miller, <em>An introduction to functional analysis for science and engineering</em>, arXiv:1904.02539. The narrative selection and all interactive constructions here are original to this essay.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+"use strict";
+/* ============================ shared helpers ============================ */
+const PAL={amber:'#d4a574',teal:'#5ab4ac',lav:'#9b8ec4',red:'#e06c75',green:'#98c379',
+  ink:'#dad8e3',muted:'#8a8699',faint:'#3a3848',grid:'#1d1c26',bg:'#0c0c12'};
+function setupCanvas(cv,h){
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const w=cv.clientWidth||cv.parentElement.clientWidth;
+  cv.width=w*dpr; cv.height=h*dpr;
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+function fmt(x,d=3){ if(!isFinite(x))return '—'; const s=x.toFixed(d); return (Object.is(parseFloat(s),-0)?'0.'+'0'.repeat(d):s); }
+function seg(root,name,cb){
+  root.querySelectorAll('[data-seg="'+name+'"] button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); cb(parseInt(b.dataset.v));
+    });
+  });
+}
+
+/* tiny linear algebra (verified offline) */
+function eig2sym(a,b,d){
+  const tr=a+d, disc=Math.sqrt(Math.max(0,(tr*tr)/4-(a*d-b*b)));
+  const l1=tr/2+disc, l2=tr/2-disc;
+  const vf=l=>{let vx,vy; if(Math.abs(b)>1e-12){vx=l-d;vy=b;}
+    else{ if(Math.abs(a-l)<1e-9){vx=1;vy=0;}else{vx=0;vy=1;} }
+    const n=Math.hypot(vx,vy)||1; return [vx/n,vy/n];};
+  return {l1,l2,v1:vf(l1),v2:vf(l2)};
+}
+function svd2(M){ // M=[[a,b],[c,d]] rows
+  const a=M[0][0],b=M[0][1],c=M[1][0],d=M[1][1];
+  const e=eig2sym(a*a+c*c, a*b+c*d, b*b+d*d);
+  const s1=Math.sqrt(Math.max(0,e.l1)), s2=Math.sqrt(Math.max(0,e.l2));
+  const av=v=>[a*v[0]+b*v[1], c*v[0]+d*v[1]];
+  let u1=av(e.v1),n1=Math.hypot(u1[0],u1[1])||1; u1=[u1[0]/n1,u1[1]/n1];
+  let u2=av(e.v2),n2=Math.hypot(u2[0],u2[1])||1; u2=[u2[0]/n2,u2[1]/n2];
+  return {s1,s2,v1:e.v1,v2:e.v2,u1,u2};
+}
+function jacobiEig(Ain){
+  const n=Ain.length; let A=Ain.map(r=>r.slice());
+  let V=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0));
+  for(let s=0;s<100;s++){
+    let off=0; for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)off+=A[i][j]*A[i][j];
+    if(off<1e-22)break;
+    for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){
+      if(Math.abs(A[p][q])<1e-20)continue;
+      const th=(A[q][q]-A[p][p])/(2*A[p][q]);
+      const t=(th>=0?1:-1)/(Math.abs(th)+Math.sqrt(th*th+1));
+      const c=1/Math.sqrt(t*t+1), si=t*c;
+      for(let k=0;k<n;k++){const akp=A[k][p],akq=A[k][q];A[k][p]=c*akp-si*akq;A[k][q]=si*akp+c*akq;}
+      for(let k=0;k<n;k++){const apk=A[p][k],aqk=A[q][k];A[p][k]=c*apk-si*aqk;A[q][k]=si*apk+c*aqk;}
+      for(let k=0;k<n;k++){const vkp=V[k][p],vkq=V[k][q];V[k][p]=c*vkp-si*vkq;V[k][q]=si*vkp+c*vkq;}
+    }
+  }
+  const out=[]; for(let i=0;i<n;i++)out.push({val:A[i][i],vec:V.map(r=>r[i])});
+  return out;
+}
+
+/* ============================ 00 · bridge ============================ */
+(function(){
+  const root=document.getElementById('w-bridge'); const cv=root.querySelector('canvas');
+  let N=8, fn=0;
+  const fns=[ x=>Math.exp(-Math.pow((x-0.5)/0.16,2)),
+              x=>0.5+0.42*Math.sin(2*Math.PI*x*1.5+0.4),
+              x=> x<0.5? 0.2+1.4*x : 1.6-1.4*x ];
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,300);
+    const pl=44,pr=16,pt=20,pb=30, W=w-pl-pr, H=h-pt-pb;
+    const X=t=>pl+t*W, Y=v=>pt+H-v*H;
+    ctx.strokeStyle=PAL.grid; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){const y=pt+H*i/4;ctx.beginPath();ctx.moveTo(pl,y);ctx.lineTo(pl+W,y);ctx.stroke();}
+    // continuous target
+    ctx.strokeStyle=PAL.amber; ctx.lineWidth=2; ctx.beginPath();
+    for(let i=0;i<=300;i++){const t=i/300; const v=fns[fn](t); i?ctx.lineTo(X(t),Y(v)):ctx.moveTo(X(t),Y(v));}
+    ctx.stroke();
+    // discrete samples (stems)
+    for(let k=0;k<N;k++){
+      const t=(k+0.5)/N, v=fns[fn](t);
+      ctx.strokeStyle='rgba(155,142,196,0.5)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(X(t),Y(0)); ctx.lineTo(X(t),Y(v)); ctx.stroke();
+      ctx.fillStyle=PAL.lav; ctx.beginPath(); ctx.arc(X(t),Y(v), N>80?1.6:3, 0,7); ctx.fill();
+    }
+    ctx.fillStyle=PAL.muted; ctx.font="11px 'JetBrains Mono'";
+    ctx.fillText('x = 0',pl-2,pt+H+18); ctx.fillText('x = 1',pl+W-26,pt+H+18);
+    ctx.save();ctx.translate(13,pt+H/2);ctx.rotate(-Math.PI/2);ctx.fillText('value',-16,0);ctx.restore();
+  }
+  root.querySelector('[data-in="N"]').addEventListener('input',e=>{
+    N=+e.target.value; root.querySelector('[data-out="N"]').textContent=N;
+    root.querySelector('[data-r="N"]').textContent=N; draw();
+  });
+  seg(root,'fn',v=>{fn=v;draw();});
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 01 · convergence ============================ */
+(function(){
+  const root=document.getElementById('w-converge'); const cv=root.querySelector('canvas');
+  const NMAX=42; let eps=0.30, which=0;
+  const seqs=[
+    {f:n=>1-1/n, L:1, name:'1 − 1/n', conv:true},
+    {f:n=>Math.pow(-1,n)/n, L:0, name:'(−1)ⁿ/n', conv:true},
+    {f:n=>Math.pow(-1,n), L:null, name:'(−1)ⁿ', conv:false}
+  ];
+  function findN(s){ if(!s.conv)return null;
+    for(let N=1;N<=NMAX;N++){ let ok=true; for(let n=N;n<=NMAX;n++) if(Math.abs(s.f(n)-s.L)>=eps){ok=false;break;} if(ok)return N; }
+    return null;
+  }
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,320); const s=seqs[which];
+    const pl=44,pr=16,pt=18,pb=28, W=w-pl-pr, H=h-pt-pb;
+    let lo=-1.15,hi=1.15;
+    const X=n=>pl+ (n-1)/(NMAX-1)*W, Y=v=>pt+H-(v-lo)/(hi-lo)*H;
+    ctx.strokeStyle=PAL.grid;ctx.beginPath();ctx.moveTo(pl,Y(0));ctx.lineTo(pl+W,Y(0));ctx.stroke();
+    // band
+    const Nthr=findN(s);
+    if(s.conv){
+      ctx.fillStyle='rgba(90,180,172,0.10)';
+      ctx.fillRect(pl,Y(s.L+eps),W,Y(s.L-eps)-Y(s.L+eps));
+      ctx.strokeStyle='rgba(90,180,172,0.5)';ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(pl,Y(s.L));ctx.lineTo(pl+W,Y(s.L));ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=PAL.teal;ctx.font="11px 'JetBrains Mono'";ctx.fillText('L = '+s.L,pl+W-46,Y(s.L)-6);
+      if(Nthr){ ctx.strokeStyle=PAL.amber;ctx.lineWidth=1.5;ctx.setLineDash([2,3]);
+        ctx.beginPath();ctx.moveTo(X(Nthr),pt);ctx.lineTo(X(Nthr),pt+H);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle=PAL.amber;ctx.fillText('N='+Nthr,X(Nthr)+4,pt+12); }
+    }
+    // points
+    for(let n=1;n<=NMAX;n++){ const v=s.f(n); const inside=s.conv&&Math.abs(v-s.L)<eps && (Nthr&&n>=Nthr);
+      ctx.fillStyle= inside?PAL.green : (s.conv?PAL.lav:PAL.red);
+      ctx.beginPath();ctx.arc(X(n),Y(v),3,0,7);ctx.fill(); }
+    ctx.fillStyle=PAL.muted;ctx.font="11px 'JetBrains Mono'";ctx.fillText('n →',pl+W-22,pt+H+20);ctx.fillText('1',pl-4,pt+H+20);
+    // messages
+    const stat=root.querySelector('[data-r="status"]'), msg=root.querySelector('[data-r="msg"]');
+    if(s.conv){ stat.textContent='convergent'; stat.style.color=PAL.green;
+      msg.innerHTML = Nthr ? `Past <span class="amber">N = ${Nthr}</span> every term lies inside the ε-band ⇒ <span class="green">Cauchy</span>. Tighten ε and N grows, but always exists. Limit <b>L = ${s.L}</b>.`
+        : `No N works at this ε within the window — shrink the window or it would appear past n=${NMAX}.`;
+    } else { stat.textContent='no limit'; stat.style.color=PAL.red;
+      msg.innerHTML = `<span class="red">Divergent:</span> no single L is ever trapped — the terms keep jumping by 2. Yet the even terms → <b>+1</b> and the odd terms → <b>−1</b>: two convergent <span class="amber">subsequences</span>. (Onward to Bolzano–Weierstrass.)`;
+    }
+  }
+  root.querySelector('[data-in="eps"]').addEventListener('input',e=>{
+    eps=+e.target.value/100; root.querySelector('[data-out="eps"]').textContent=fmt(eps,2); draw();
+  });
+  seg(root,'seq',v=>{which=v;draw();});
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 02 · Bolzano–Weierstrass ============================ */
+(function(){
+  const root=document.getElementById('w-bw'); const cv=root.querySelector('canvas');
+  const PREFIX=4000;
+  // two accumulation points 0.3 and 0.75, persisting into the deep tail
+  function x(n){ const base = (n%2===0)?0.30:0.75; return base + Math.sin(n*1.7)*0.13*Math.exp(-n/900); }
+  let lo=0,hi=1,depth=1,timer=null;
+  // does [a,b] contain terms at deep indices?
+  function tailCount(a,b){ let c=0; for(let n=PREFIX-400;n<=PREFIX;n++){const v=x(n); if(v>=a&&v<=b)c++;} return c; }
+  function bisect(){
+    const mid=(lo+hi)/2;
+    const cl=tailCount(lo,mid), cr=tailCount(mid,hi);
+    if(cl>=cr) hi=mid; else lo=mid;
+    depth++;
+    if(hi-lo<2e-4){ if(timer){clearInterval(timer);timer=null;} }
+    draw();
+  }
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,280);
+    const pl=24,pr=24,pt=30,pb=40, W=w-pl-pr, yLine=pt+90;
+    const X=t=>pl+t*W;
+    // sample points
+    for(let n=1;n<=400;n++){ const t=x(n); const inside=t>=lo&&t<=hi;
+      ctx.fillStyle= inside? PAL.teal : 'rgba(138,134,153,0.35)';
+      const jit=((n*53)%17-8)*1.4;
+      ctx.beginPath();ctx.arc(X(t),yLine+jit,2.2,0,7);ctx.fill(); }
+    // interval bracket
+    ctx.strokeStyle=PAL.amber;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(X(lo),pt);ctx.lineTo(X(lo),yLine+34);ctx.moveTo(X(hi),pt);ctx.lineTo(X(hi),yLine+34);
+    ctx.moveTo(X(lo),pt);ctx.lineTo(X(hi),pt);ctx.stroke();
+    ctx.fillStyle=PAL.amber;ctx.font="11px 'JetBrains Mono'";
+    ctx.fillText('I'+depth+'  ('+fmt(lo,3)+', '+fmt(hi,3)+')', X(lo)+6, pt-8);
+    // midpoint
+    const mid=(lo+hi)/2; ctx.strokeStyle='rgba(155,142,196,0.6)';ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(X(mid),pt);ctx.lineTo(X(mid),yLine+34);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=PAL.muted;ctx.fillText('0',pl-2,yLine+58);ctx.fillText('1',pl+W-6,yLine+58);
+    root.querySelector('[data-r="depth"]').textContent='interval I'+depth;
+    const conv = (hi-lo<2e-4);
+    root.querySelector('[data-r="msg"]').innerHTML = conv
+      ? `Interval width ≈ <b>${fmt(hi-lo,5)}</b>. It has collapsed onto an <span class="amber">accumulation point ≈ ${fmt((lo+hi)/2,3)}</span>. The trapped terms, in order, are the convergent subsequence. ∎`
+      : `Width <b>${fmt(hi-lo,4)}</b>. Each half is tested for <span class="lav">deep-tail</span> terms; we keep the richer half. Keep going.`;
+  }
+  root.querySelector('[data-act="step"]').addEventListener('click',()=>{ if(hi-lo>=2e-4) bisect(); });
+  root.querySelector('[data-act="auto"]').addEventListener('click',()=>{
+    if(timer){clearInterval(timer);timer=null;return;}
+    timer=setInterval(()=>{ if(hi-lo<2e-4){clearInterval(timer);timer=null;} else bisect(); },420);
+  });
+  root.querySelector('[data-act="reset"]').addEventListener('click',()=>{
+    if(timer){clearInterval(timer);timer=null;} lo=0;hi=1;depth=1;draw();
+  });
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 03 · inner products ============================ */
+(function(){
+  const root=document.getElementById('w-inner'); const cv=root.querySelector('canvas');
+  let A={x:2.2,y:1.4}, B={x:-1.0,y:2.0}, drag=null;
+  function geom(cv){ const w=cv.clientWidth; const h=360; return {w,h,cx:w/2,cy:h/2,sc:48}; }
+  function toScreen(v,g){ return {x:g.cx+v.x*g.sc, y:g.cy-v.y*g.sc}; }
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,360); const g=geom(cv);
+    // axes grid
+    ctx.strokeStyle=PAL.grid;ctx.lineWidth=1;
+    for(let i=-6;i<=6;i++){ ctx.beginPath();ctx.moveTo(g.cx+i*g.sc,0);ctx.lineTo(g.cx+i*g.sc,h);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,g.cy+i*g.sc);ctx.lineTo(w,g.cy+i*g.sc);ctx.stroke(); }
+    ctx.strokeStyle=PAL.faint;ctx.beginPath();ctx.moveTo(0,g.cy);ctx.lineTo(w,g.cy);ctx.moveTo(g.cx,0);ctx.lineTo(g.cx,h);ctx.stroke();
+    const ip=A.x*B.x+A.y*B.y; const nA=Math.hypot(A.x,A.y),nB=Math.hypot(B.x,B.y);
+    const orth=Math.abs(ip)<0.06;
+    // arrows
+    function arrow(v,col,lab){ const s=toScreen(v,g); ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(g.cx,g.cy);ctx.lineTo(s.x,s.y);ctx.stroke();
+      const ang=Math.atan2(s.y-g.cy,s.x-g.cx);
+      ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x-10*Math.cos(ang-0.4),s.y-10*Math.sin(ang-0.4));
+      ctx.lineTo(s.x-10*Math.cos(ang+0.4),s.y-10*Math.sin(ang+0.4));ctx.closePath();ctx.fill();
+      ctx.font="14px 'JetBrains Mono'";ctx.fillText(lab,s.x+8,s.y-6); }
+    // distance segment (metric)
+    const sa=toScreen(A,g), sb=toScreen(B,g);
+    ctx.strokeStyle='rgba(212,165,116,0.45)';ctx.setLineDash([4,4]);ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(sa.x,sa.y);ctx.lineTo(sb.x,sb.y);ctx.stroke();ctx.setLineDash([]);
+    arrow(A,PAL.teal,'α'); arrow(B,PAL.lav,'β');
+    if(orth){ // right-angle mark
+      ctx.fillStyle=PAL.green;ctx.font="13px 'JetBrains Mono'";ctx.fillText('⟂',g.cx+10,g.cy-10);
+    }
+    const pillO=root.querySelector('[data-r="orth"]');
+    pillO.textContent= orth?'orthogonal · (α,β)=0':'not orthogonal';
+    pillO.className='pill '+(orth?'ok':'');
+    root.querySelector('[data-r="msg"]').innerHTML=
+      `(α,β) = <b class="${orth?'green':''}">${fmt(ip,2)}</b> &nbsp;·&nbsp; ‖α‖ = <b>${fmt(nA,2)}</b> &nbsp; ‖β‖ = <b>${fmt(nB,2)}</b> `+
+      `&nbsp;·&nbsp; d(α,β) = ‖α−β‖ = <span class="amber">${fmt(Math.hypot(A.x-B.x,A.y-B.y),2)}</span> `+
+      `&nbsp;·&nbsp; angle = <span class="lav">${fmt(Math.acos(Math.max(-1,Math.min(1,ip/(nA*nB||1))))*180/Math.PI,1)}°</span>`;
+  }
+  function pick(mx,my){ const g=geom(cv); const sa=toScreen(A,g),sb=toScreen(B,g);
+    if(Math.hypot(mx-sa.x,my-sa.y)<18)return 'A'; if(Math.hypot(mx-sb.x,my-sb.y)<18)return 'B'; return null; }
+  function pos(e){ const r=cv.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left,y:t.clientY-r.top}; }
+  function down(e){ const p=pos(e); drag=pick(p.x,p.y); if(drag)e.preventDefault(); }
+  function move(e){ if(!drag)return; e.preventDefault(); const g=geom(cv); const p=pos(e);
+    const v={x:(p.x-g.cx)/g.sc, y:-(p.y-g.cy)/g.sc}; if(drag==='A')A=v; else B=v; draw(); }
+  function up(){ drag=null; }
+  cv.addEventListener('mousedown',down);window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',up);
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 04 · Hilbert basis expansion ============================ */
+(function(){
+  const root=document.getElementById('w-hilbert');
+  const cv=root.querySelector('canvas'); const cc=root.querySelector('[data-role="coeffs"]');
+  let N=6, fn=0; const GRID=600;
+  const targets=[
+    x=> x<0.5? 2*x : 2*(1-x),                 // triangle
+    x=> x<0.5? 0.25 : 0.75,                   // step
+    x=> 4*x*(1-x)                              // parabola
+  ];
+  function coeff(k){ let s=0,hh=1/GRID; for(let i=0;i<=GRID;i++){const x=i*hh;const wt=(i===0||i===GRID)?0.5:1;
+    s+=wt*(Math.SQRT2*Math.sin(k*Math.PI*x)*targets[fn](x));} return s*hh; }
+  let coeffs=[];
+  function recompute(){ coeffs=[]; for(let k=1;k<=50;k++)coeffs.push(coeff(k)); }
+  function recon(x){ let s=0; for(let k=1;k<=N;k++)s+=coeffs[k-1]*Math.SQRT2*Math.sin(k*Math.PI*x); return s; }
+  function l2err(){ let s=0,hh=1/400; for(let i=0;i<=400;i++){const x=i*hh;const wt=(i===0||i===400)?0.5:1;
+    const d=targets[fn](x)-recon(x);s+=wt*d*d;} return Math.sqrt(s*hh); }
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,300);
+    const pl=40,pr=16,pt=14,pb=24,W=w-pl-pr,H=h-pt-pb;
+    let lo=-0.2,hi=1.15; const X=t=>pl+t*W,Y=v=>pt+H-(v-lo)/(hi-lo)*H;
+    ctx.strokeStyle=PAL.grid; ctx.beginPath();ctx.moveTo(pl,Y(0));ctx.lineTo(pl+W,Y(0));ctx.stroke();
+    // target
+    ctx.strokeStyle=PAL.amber;ctx.lineWidth=2.4;ctx.beginPath();
+    for(let i=0;i<=400;i++){const t=i/400;const v=targets[fn](t);i?ctx.lineTo(X(t),Y(v)):ctx.moveTo(X(t),Y(v));}ctx.stroke();
+    // reconstruction
+    ctx.strokeStyle=PAL.teal;ctx.lineWidth=2;ctx.beginPath();
+    for(let i=0;i<=400;i++){const t=i/400;const v=recon(t);i?ctx.lineTo(X(t),Y(v)):ctx.moveTo(X(t),Y(v));}ctx.stroke();
+    ctx.font="11px 'JetBrains Mono'";ctx.fillStyle=PAL.amber;ctx.fillText('target γ',pl+6,pt+12);
+    ctx.fillStyle=PAL.teal;ctx.fillText('Σ aₖαₖ  (N='+N+')',pl+6,pt+28);
+    // coeff bars
+    const c2=setupCanvas(cc,120); const cx=c2.ctx,cw=c2.w,chh=c2.h;
+    const mx=Math.max(...coeffs.map(Math.abs))||1; const bw=cw/50;
+    cx.strokeStyle=PAL.grid;cx.beginPath();cx.moveTo(0,chh/2);cx.lineTo(cw,chh/2);cx.stroke();
+    for(let k=0;k<50;k++){ const v=coeffs[k]; const bh=(v/mx)*(chh/2-6);
+      cx.fillStyle= (k<N)? PAL.lav : 'rgba(155,142,196,0.22)';
+      cx.fillRect(k*bw+1, chh/2 - Math.max(0,bh), bw-2, Math.abs(bh)); }
+    cx.fillStyle=PAL.faint;cx.font="9px 'JetBrains Mono'";cx.fillText('aₖ  (k = 1 … 50)',6,chh-4);
+    const e=l2err();
+    const pill=root.querySelector('[data-r="err"]'); pill.textContent='L² error '+fmt(e,4);
+    pill.style.color = e<0.02?PAL.green:(e<0.06?PAL.amber:PAL.red);
+  }
+  root.querySelector('[data-in="N"]').addEventListener('input',e=>{N=+e.target.value;root.querySelector('[data-out="N"]').textContent=N;draw();});
+  seg(root,'fn',v=>{fn=v;recompute();draw();});
+  recompute(); window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 05 · operator norm ============================ */
+(function(){
+  const root=document.getElementById('w-opnorm'); const cv=root.querySelector('canvas');
+  function M(){ const v=[...root.querySelectorAll('[data-m]')].map(i=>parseFloat(i.value)||0);
+    return [[v[0],v[1]],[v[2],v[3]]]; }
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,340); const m=M();
+    const cx=w/2,cy=h/2,sc=46;
+    ctx.strokeStyle=PAL.grid;for(let i=-7;i<=7;i++){ctx.beginPath();ctx.moveTo(cx+i*sc,0);ctx.lineTo(cx+i*sc,h);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,cy+i*sc);ctx.lineTo(w,cy+i*sc);ctx.stroke();}
+    ctx.strokeStyle=PAL.faint;ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(w,cy);ctx.moveTo(cx,0);ctx.lineTo(cx,h);ctx.stroke();
+    // unit circle
+    ctx.strokeStyle='rgba(138,134,153,0.5)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(cx,cy,sc,0,7);ctx.stroke();ctx.setLineDash([]);
+    // ellipse = image of unit circle
+    ctx.strokeStyle=PAL.teal;ctx.lineWidth=2;ctx.beginPath();
+    let maxN=0,maxA=0;
+    for(let i=0;i<=240;i++){const t=i/240*2*Math.PI;const vx=Math.cos(t),vy=Math.sin(t);
+      const ax=m[0][0]*vx+m[0][1]*vy, ay=m[1][0]*vx+m[1][1]*vy;
+      const nn=Math.hypot(ax,ay); if(nn>maxN){maxN=nn;maxA=t;}
+      const sx=cx+ax*sc, sy=cy-ay*sc; i?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy);}ctx.stroke();
+    const sv=svd2(m);
+    // max-stretch input vector (right singular vec v1) and its image
+    const v1=sv.v1; const iv={x:cx+v1[0]*sc,y:cy-v1[1]*sc};
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(iv.x,iv.y);ctx.stroke();
+    const av=[m[0][0]*v1[0]+m[0][1]*v1[1], m[1][0]*v1[0]+m[1][1]*v1[1]];
+    ctx.strokeStyle=PAL.amber;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+av[0]*sc,cy-av[1]*sc);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font="12px 'JetBrains Mono'";ctx.fillText('input (‖·‖=1)',iv.x+6,iv.y);
+    ctx.fillStyle=PAL.amber;ctx.fillText('Aα  (longest)',cx+av[0]*sc+6,cy-av[1]*sc);
+    root.querySelector('[data-r="norm"]').textContent='‖A‖ = '+fmt(sv.s1,2);
+    root.querySelector('[data-r="msg"]').innerHTML=
+      `singular values <span class="amber">s₁ = ${fmt(sv.s1,3)}</span>, s₂ = ${fmt(sv.s2,3)} &nbsp;·&nbsp; `+
+      `operator norm ‖A‖<sub>sup</sub> = <b>${fmt(sv.s1,3)}</b> = swept max ${fmt(maxN,3)}`;
+  }
+  root.querySelectorAll('[data-m]').forEach(i=>i.addEventListener('input',draw));
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 06 · compact operators ============================ */
+(function(){
+  const root=document.getElementById('w-compact'); const cv=root.querySelector('canvas');
+  let applied=false, p=1.0, t=0, anim=null;
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,300);
+    const N=7, leftCx=w*0.26, rightCx=w*0.74, cy=h*0.52, sc=64;
+    // labels
+    ctx.fillStyle=PAL.muted;ctx.font="11px 'JetBrains Mono'";
+    ctx.fillText('basis sequence (αⱼ)',leftCx-70,26);
+    ctx.fillText('images (Aαⱼ)',rightCx-46,26);
+    // we depict each unit basis vector as a spoke at its own angle (a 2D stand-in for orthogonality)
+    function panel(centerX, lengths, col){
+      ctx.strokeStyle='rgba(138,134,153,0.4)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(centerX,cy,sc,0,7);ctx.stroke();ctx.setLineDash([]);
+      for(let j=0;j<N;j++){ const ang=-Math.PI/2 + j*(2*Math.PI/N)*0.5 - 0.7;
+        const L=lengths[j]*sc; const ex=centerX+Math.cos(ang)*L, ey=cy+Math.sin(ang)*L;
+        ctx.strokeStyle=col;ctx.globalAlpha=0.45+0.55*(1-j/N);ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(centerX,cy);ctx.lineTo(ex,ey);ctx.stroke();
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(ex,ey,3,0,7);ctx.fill();ctx.globalAlpha=1; }
+    }
+    const ones=Array(N).fill(1);
+    const sig=[]; for(let j=1;j<=N;j++)sig.push(1/Math.pow(j,p));
+    const cur = ones.map((o,j)=> o + (sig[j]-o)*t );
+    panel(leftCx, ones, PAL.lav);
+    panel(rightCx, applied?cur:ones, applied?PAL.amber:PAL.lav);
+    // distance readouts
+    function dist(L){ // distance between two unit spokes at angle gap; here pairwise for basis is sqrt2
+      return L; }
+    const d12basis=Math.SQRT2;
+    const curImgNorm=cur.slice();
+    root.querySelector('[data-r="state"]').textContent = applied?'after compact A':'basis sequence';
+    root.querySelector('[data-r="msg"]').innerHTML = applied
+      ? `Images shrink like <span class="amber">σⱼ = 1/jᵖ</span> (p=${fmt(p,2)}): ‖Aαⱼ‖ = ${cur.map(x=>fmt(x,2)).join(', ')} → <b>0</b>. They cluster near the origin, so a <span class="green">convergent subsequence</span> exists. That is compactness.`
+      : `Every pair of basis vectors is exactly <span class="lav">d(αⱼ,αₖ) = √2 ≈ ${fmt(d12basis,3)}</span> apart, forever. No subsequence can converge — the curse of infinite dimensions. Now apply A.`;
+  }
+  root.querySelector('[data-act="apply"]').addEventListener('click',()=>{
+    applied=true; t=0; if(anim)cancelAnimationFrame(anim);
+    (function run(){ t+=0.04; if(t>1)t=1; draw(); if(t<1)anim=requestAnimationFrame(run); })();
+  });
+  root.querySelector('[data-act="reset"]').addEventListener('click',()=>{applied=false;t=0;if(anim)cancelAnimationFrame(anim);draw();});
+  root.querySelector('[data-in="p"]').addEventListener('input',e=>{p=+e.target.value/10;root.querySelector('[data-out="p"]').textContent=fmt(p,2);draw();});
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 07 · Hilbert–Schmidt ============================ */
+(function(){
+  const root=document.getElementById('w-hs');
+  function draw(){
+    const v=[...root.querySelectorAll('[data-m]')].map(i=>parseFloat(i.value)||0);
+    const A=[[v[0],v[1],v[2]],[v[3],v[4],v[5]],[v[6],v[7],v[8]]];
+    // S1 sum |a|^2
+    let S1=0; for(let i=0;i<3;i++)for(let j=0;j<3;j++)S1+=A[i][j]*A[i][j];
+    // S2 Tr(A^T A) = sum of column-norm^2
+    let S2=0; for(let j=0;j<3;j++){let c=0;for(let i=0;i<3;i++)c+=A[i][j]*A[i][j];S2+=c;}
+    // S3 sum_j ||A e_j||^2 = same columns (A e_j = j-th column)
+    let S3=0; for(let j=0;j<3;j++){let s=0;for(let i=0;i<3;i++)s+=A[i][j]*A[i][j];S3+=s;}
+    const agree = Math.abs(S1-S2)<1e-9 && Math.abs(S1-S3)<1e-9;
+    root.querySelector('[data-r="msg"]').innerHTML=
+      `<span class="lav">Σ |aⱼₖ|²</span> = <b>${fmt(S1,3)}</b><br>`+
+      `<span class="teal">Σ ‖Aαⱼ‖²</span> = <b>${fmt(S3,3)}</b><br>`+
+      `<span class="amber">Tr(AᵀA)</span> = <b>${fmt(S2,3)}</b><br>`+
+      `⇒ sum-rule limit S = <b class="green">${fmt(S1,3)}</b>, &nbsp; ‖A‖<sub>HS</sub> = √S = <b>${fmt(Math.sqrt(S1),3)}</b>`;
+    const pill=root.querySelector('[data-r="agree"]'); pill.textContent=agree?'all three agree':'mismatch';
+    pill.className='pill '+(agree?'ok':'no');
+  }
+  root.querySelectorAll('[data-m]').forEach(i=>i.addEventListener('input',draw)); draw();
+})();
+
+/* ============================ 08 · spectral / Rayleigh ============================ */
+(function(){
+  const root=document.getElementById('w-spectral'); const cv=root.querySelector('canvas');
+  let theta=0.6, drag=false;
+  function symM(){ const v=[...root.querySelectorAll('[data-m]')].map(i=>parseFloat(i.value)||0);
+    const b=v[1]; // force symmetric: use b for both off-diagonals
+    root.querySelectorAll('[data-m]')[2].value=v[1];
+    return [[v[0],b],[b,v[3]]]; }
+  function geom(){ const w=cv.clientWidth; return {w,h:360,cx:w/2,cy:180,sc:60}; }
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,360); const A=symM(); const g=geom();
+    const e=eig2sym(A[0][0],A[0][1],A[1][1]);
+    ctx.strokeStyle=PAL.grid;for(let i=-6;i<=6;i++){ctx.beginPath();ctx.moveTo(g.cx+i*g.sc,0);ctx.lineTo(g.cx+i*g.sc,h);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,g.cy+i*g.sc);ctx.lineTo(w,g.cy+i*g.sc);ctx.stroke();}
+    ctx.strokeStyle=PAL.faint;ctx.beginPath();ctx.moveTo(0,g.cy);ctx.lineTo(w,g.cy);ctx.moveTo(g.cx,0);ctx.lineTo(g.cx,h);ctx.stroke();
+    ctx.strokeStyle='rgba(138,134,153,0.45)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(g.cx,g.cy,g.sc,0,7);ctx.stroke();ctx.setLineDash([]);
+    // Rayleigh quotient polar curve r = (v,Av) for unit v (can be negative -> draw |.| with color)
+    let maxR=-1e9; for(let t=0;t<6.2832;t+=0.01){const vx=Math.cos(t),vy=Math.sin(t);
+      const R=vx*(A[0][0]*vx+A[0][1]*vy)+vy*(A[1][0]*vx+A[1][1]*vy); if(R>maxR)maxR=R;}
+    ctx.lineWidth=2;ctx.strokeStyle='rgba(90,180,172,0.7)';ctx.beginPath();
+    for(let t=0;t<=6.2832+0.01;t+=0.01){const vx=Math.cos(t),vy=Math.sin(t);
+      const R=vx*(A[0][0]*vx+A[0][1]*vy)+vy*(A[1][0]*vx+A[1][1]*vy);
+      const rr=(Math.abs(R)/Math.max(Math.abs(e.l1),Math.abs(e.l2)))*g.sc;
+      const sx=g.cx+Math.cos(t)*rr, sy=g.cy-Math.sin(t)*rr; (t===0)?ctx.moveTo(sx,sy):ctx.lineTo(sx,sy);}ctx.stroke();
+    // eigen-axes (dashed)
+    [[e.v1,PAL.amber],[e.v2,PAL.lav]].forEach(([vv,col])=>{ ctx.strokeStyle=col;ctx.setLineDash([5,4]);ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(g.cx-vv[0]*g.sc*1.25,g.cy+vv[1]*g.sc*1.25);ctx.lineTo(g.cx+vv[0]*g.sc*1.25,g.cy-vv[1]*g.sc*1.25);ctx.stroke();ctx.setLineDash([]);});
+    // draggable unit vector
+    const ux=Math.cos(theta),uy=Math.sin(theta);
+    const R=ux*(A[0][0]*ux+A[0][1]*uy)+uy*(A[1][0]*ux+A[1][1]*uy);
+    ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(g.cx,g.cy);ctx.lineTo(g.cx+ux*g.sc,g.cy-uy*g.sc);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(g.cx+ux*g.sc,g.cy-uy*g.sc,5,0,7);ctx.fill();
+    ctx.fillStyle=PAL.amber;ctx.font="11px 'JetBrains Mono'";ctx.fillText('β₁ (r₁)',g.cx+e.v1[0]*g.sc*1.25+4,g.cy-e.v1[1]*g.sc*1.25);
+    ctx.fillStyle=PAL.lav;ctx.fillText('β₂ (r₂)',g.cx+e.v2[0]*g.sc*1.25+4,g.cy-e.v2[1]*g.sc*1.25);
+    root.querySelector('[data-r="rq"]').textContent='(α,Aα) = '+fmt(R,2);
+    const atMax=Math.abs(R-e.l1)<0.04;
+    root.querySelector('[data-r="msg"]').innerHTML=
+      `eigenvalues <span class="amber">r₁ = ${fmt(e.l1,3)}</span>, <span class="lav">r₂ = ${fmt(e.l2,3)}</span> (real, orthogonal eigenvectors). `+
+      `current (α,Aα) = <b class="${atMax?'green':''}">${fmt(R,3)}</b> ${atMax?'= r₁ ✓ aligned with β₁':''}`;
+  }
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return {x:t.clientX-r.left,y:t.clientY-r.top};}
+  function set(e){const g=geom();const p=pos(e);theta=Math.atan2(g.cy-p.y,p.x-g.cx);draw();}
+  cv.addEventListener('mousedown',e=>{drag=true;set(e);});
+  window.addEventListener('mousemove',e=>{if(drag)set(e);});
+  window.addEventListener('mouseup',()=>drag=false);
+  cv.addEventListener('touchstart',e=>{drag=true;e.preventDefault();set(e);},{passive:false});
+  cv.addEventListener('touchmove',e=>{if(drag){e.preventDefault();set(e);}},{passive:false});
+  cv.addEventListener('touchend',()=>drag=false);
+  root.querySelectorAll('[data-m]').forEach(i=>i.addEventListener('input',draw));
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ 09 · SVD ============================ */
+(function(){
+  const root=document.getElementById('w-svd'); const cv=root.querySelector('canvas');
+  function M(){const v=[...root.querySelectorAll('[data-m]')].map(i=>parseFloat(i.value)||0);return [[v[0],v[1]],[v[2],v[3]]];}
+  function draw(){
+    const {ctx,w,h}=setupCanvas(cv,300); const m=M(); const sv=svd2(m);
+    const sc=46, leftCx=w*0.27, rightCx=w*0.73, cy=h*0.55;
+    ctx.fillStyle=PAL.muted;ctx.font="11px 'JetBrains Mono'";
+    ctx.fillText('source space  (ψⱼ in)',leftCx-66,24);
+    ctx.fillText('receiving space (φⱼ out)',rightCx-78,24);
+    function axes(cx){ctx.strokeStyle=PAL.faint;ctx.beginPath();ctx.moveTo(cx-sc*1.6,cy);ctx.lineTo(cx+sc*1.6,cy);ctx.moveTo(cx,cy-sc*1.6);ctx.lineTo(cx,cy+sc*1.6);ctx.stroke();}
+    axes(leftCx);axes(rightCx);
+    // left: unit circle + right singular vectors psi
+    ctx.strokeStyle='rgba(138,134,153,0.5)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(leftCx,cy,sc,0,7);ctx.stroke();ctx.setLineDash([]);
+    [[sv.v1,PAL.amber,'ψ₁'],[sv.v2,PAL.teal,'ψ₂']].forEach(([vv,col,lab])=>{
+      ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(leftCx,cy);ctx.lineTo(leftCx+vv[0]*sc,cy-vv[1]*sc);ctx.stroke();
+      ctx.fillStyle=col;ctx.fillText(lab,leftCx+vv[0]*sc+4,cy-vv[1]*sc);});
+    // right: ellipse (image of unit circle under M) + phi scaled by s
+    ctx.strokeStyle=PAL.lav;ctx.lineWidth=2;ctx.beginPath();
+    for(let i=0;i<=200;i++){const t=i/200*2*Math.PI;const vx=Math.cos(t),vy=Math.sin(t);
+      const ax=m[0][0]*vx+m[0][1]*vy, ay=m[1][0]*vx+m[1][1]*vy;
+      const sx=rightCx+ax*sc, syy=cy-ay*sc; i?ctx.lineTo(sx,syy):ctx.moveTo(sx,syy);}ctx.stroke();
+    [[sv.u1,sv.s1,PAL.amber,'φ₁·s₁'],[sv.u2,sv.s2,PAL.teal,'φ₂·s₂']].forEach(([uu,s,col,lab])=>{
+      ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(rightCx,cy);ctx.lineTo(rightCx+uu[0]*s*sc,cy-uu[1]*s*sc);ctx.stroke();
+      ctx.fillStyle=col;ctx.fillText(lab,rightCx+uu[0]*s*sc+4,cy-uu[1]*s*sc);});
+    // arrow between panels
+    ctx.strokeStyle=PAL.muted;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(leftCx+sc*1.7,cy);ctx.lineTo(rightCx-sc*1.7,cy);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=PAL.muted;ctx.fillText('A',(leftCx+rightCx)/2-3,cy-8);
+    root.querySelector('[data-r="sv"]').textContent='s = ('+fmt(sv.s1,2)+', '+fmt(sv.s2,2)+')';
+    root.querySelector('[data-r="msg"]').innerHTML=
+      `singular values <span class="amber">s₁ = ${fmt(sv.s1,3)}</span> &gt; <span class="teal">s₂ = ${fmt(sv.s2,3)}</span>. `+
+      `Channel 1 (ψ₁→φ₁) is the strongest coupling; their <b>ratio s₁/s₂ = ${fmt(sv.s1/(sv.s2||1e-9),2)}</b> measures how dominant the best channel is.`;
+  }
+  root.querySelectorAll('[data-m]').forEach(i=>i.addEventListener('input',draw));
+  window.addEventListener('resize',draw); draw();
+})();
+
+/* ============================ nav + reveal + progress + katex ============================ */
+(function(){
+  const links=[...document.querySelectorAll('nav a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  const obs=new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting)e.target.classList.add('in'); }); },{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(s=>obs.observe(s));
+  function onScroll(){
+    const sc=window.scrollY||document.documentElement.scrollTop;
+    const dh=document.documentElement.scrollHeight-window.innerHeight;
+    document.getElementById('progress').style.width=(dh>0?(sc/dh*100):0)+'%';
+    let act=0; secs.forEach((s,i)=>{ if(s&&s.getBoundingClientRect().top<160)act=i; });
+    links.forEach((l,i)=>l.classList.toggle('active',i===act));
+  }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  function renderMath(){ if(window.renderMathInElement) renderMathInElement(document.body,{
+    delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false }); }
+  if(document.readyState==='complete') renderMath(); else window.addEventListener('load',renderMath);
+})();
+</script>
+</body>
+</html>
