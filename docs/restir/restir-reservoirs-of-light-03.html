@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservoirs of Light · III — A Single Slot of Memory</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+  --ink:#e7e4dd; --ink-dim:#a7a39a; --ink-faint:#6d6a64;
+  --amber:#d4a574;   /* emitted light / candidate samples            */
+  --teal:#5ab4ac;    /* the selected sample                          */
+  --lav:#9b8ec4;     /* PDFs (p, p̂)                                  */
+  --red:#e06c75;     /* discarded / occluded / bias                  */
+  --green:#98c379;   /* converged / unbiased                         */
+  --rule:rgba(231,228,221,0.10);
+  --rule-strong:rgba(231,228,221,0.18);
+  --sans:'Source Sans 3',system-ui,sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:
+    radial-gradient(1200px 800px at 78% -8%, rgba(212,165,116,0.05), transparent 60%),
+    radial-gradient(1000px 700px at -5% 110%, rgba(90,180,172,0.045), transparent 60%),
+    linear-gradient(180deg,var(--bg0),var(--bg1) 55%, var(--bg0));
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--sans); font-weight:300;
+  line-height:1.68; font-size:18px; -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(212,165,116,0.28); color:#fff}
+
+/* progress + layout ----------------------------------------------------- */
+#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--teal));box-shadow:0 0 12px rgba(212,165,116,0.5)}
+.shell{display:grid;grid-template-columns:266px minmax(0,1fr);gap:0;max-width:1280px;margin:0 auto}
+
+nav.side{position:sticky;top:0;height:100vh;padding:38px 26px 38px 34px;
+  border-right:1px solid var(--rule);align-self:start;overflow-y:auto}
+nav.side .series{font-family:var(--mono);font-size:11px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--amber);opacity:.85}
+nav.side .partno{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-faint);margin-top:18px}
+nav.side h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.08;margin:.18em 0 1.5em;letter-spacing:.01em}
+nav.side ol{list-style:none;margin:0;padding:0;counter-reset:s}
+nav.side li{counter-increment:s;margin:0 0 2px}
+nav.side a{display:flex;gap:11px;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+  font-size:13.5px;line-height:1.32;padding:7px 9px;border-radius:7px;border-left:2px solid transparent;
+  transition:color .25s,background .25s,border-color .25s}
+nav.side a::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:10.5px;
+  color:var(--ink-faint);opacity:.6;flex:none;padding-top:1px}
+nav.side a:hover{color:var(--ink-dim);background:rgba(231,228,221,0.03)}
+nav.side a.active{color:var(--ink);background:rgba(212,165,116,0.07);border-left-color:var(--amber)}
+nav.side a.active::before{color:var(--amber);opacity:1}
+nav.side .foot{margin-top:30px;padding-top:18px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);line-height:1.7}
+
+main{padding:0 clamp(20px,4vw,72px) 140px;min-width:0}
+section{padding:62px 0;border-bottom:1px solid var(--rule);scroll-margin-top:18px}
+section:last-of-type{border-bottom:none}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(31px,4.4vw,46px);line-height:1.05;margin:.05em 0 .55em;letter-spacing:.01em}
+h3{font-family:var(--serif);font-weight:600;font-size:25px;margin:2em 0 .5em;color:var(--ink)}
+p{margin:1.05em 0;max-width:67ch;color:var(--ink-dim)}
+p strong,li strong{color:var(--ink);font-weight:600}
+em{color:var(--ink)}
+a.ref{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(90,180,172,.3)}
+a.ref:hover{border-color:var(--teal)}
+.lead{font-size:21px;color:var(--ink);font-weight:300;max-width:64ch}
+.lead .drop{float:left;font-family:var(--serif);font-weight:600;font-size:74px;line-height:.74;
+  padding:8px 14px 0 0;color:var(--amber)}
+
+code{font-family:var(--mono);font-size:.86em;background:rgba(231,228,221,0.06);
+  padding:.1em .42em;border-radius:4px;color:var(--amber)}
+.katex{font-size:1.06em}
+.eqwrap{margin:1.6em 0;padding:6px 4px;overflow-x:auto}
+
+/* hero ------------------------------------------------------------------ */
+.hero{padding-top:54px}
+.hero .title{font-family:var(--serif);font-weight:500;font-size:clamp(46px,7.5vw,86px);
+  line-height:.98;letter-spacing:.005em;margin:.06em 0 .12em}
+.hero .title .imp{font-style:italic;color:var(--amber)}
+.hero .sub{font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.8vw,27px);color:var(--ink-dim);margin-bottom:1.5em}
+
+/* figure / widget chrome ------------------------------------------------ */
+.fig{margin:2.1em 0;background:linear-gradient(180deg,rgba(26,26,40,.62),rgba(18,18,26,.62));
+  border:1px solid var(--rule-strong);border-radius:14px;overflow:hidden;
+  box-shadow:0 14px 44px rgba(0,0,0,.36)}
+.fig .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:13px 18px;border-bottom:1px solid var(--rule);background:rgba(10,10,15,.4)}
+.fig .bar .lab{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+.fig .body{padding:18px}
+.fig .cap{padding:0 18px 16px;font-size:13.5px;color:var(--ink-faint);max-width:none;font-style:italic;font-family:var(--serif)}
+.fig .cap b{font-style:normal;font-family:var(--sans);color:var(--ink-dim);font-weight:500}
+
+canvas{display:block;width:100%;border-radius:9px;background:#070709;touch-action:none}
+
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:14px}
+.seg{display:inline-flex;background:rgba(10,10,15,.55);border:1px solid var(--rule-strong);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink-dim);
+  background:transparent;border:0;padding:8px 13px;border-radius:6px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:rgba(212,165,116,.16);color:var(--amber)}
+.seg.teal button.on{background:rgba(90,180,172,.16);color:var(--teal)}
+
+.btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);cursor:pointer;
+  background:rgba(90,180,172,.12);border:1px solid rgba(90,180,172,.32);padding:9px 16px;border-radius:8px;transition:all .18s}
+.btn:hover{background:rgba(90,180,172,.2)}
+.btn.amber{background:rgba(212,165,116,.12);border-color:rgba(212,165,116,.32)}
+.btn.amber:hover{background:rgba(212,165,116,.2)}
+
+.chk{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);cursor:pointer;user-select:none;
+  padding:7px 12px;border:1px solid var(--rule-strong);border-radius:8px;background:rgba(10,10,15,.4);transition:all .18s}
+.chk:hover{color:var(--ink)}
+.chk input{accent-color:var(--teal);width:14px;height:14px}
+.chk[data-tone="rho"]{--c:var(--lav)} .chk[data-tone="le"]{--c:var(--amber)}
+.chk[data-tone="g"]{--c:var(--teal)} .chk[data-tone="v"]{--c:var(--red)}
+.chk .dot{width:9px;height:9px;border-radius:2px;background:var(--c,var(--ink-dim))}
+
+label.slide{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);min-width:190px}
+label.slide .v{color:var(--amber);font-size:13px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--amber),var(--teal));outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+
+/* readout panel --------------------------------------------------------- */
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-top:14px}
+.readout .cell{background:var(--bg1);padding:13px 15px}
+.readout .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.readout .val{font-family:var(--mono);font-size:23px;color:var(--ink);margin-top:5px;line-height:1}
+.readout .val.amber{color:var(--amber)} .readout .val.teal{color:var(--teal)}
+.readout .val.green{color:var(--green)} .readout .val.red{color:var(--red)} .readout .val.lav{color:var(--lav)}
+.readout .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+.tile-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+@media(max-width:680px){.tile-row{grid-template-columns:1fr 1fr}}
+.tile-c{text-align:center}
+.tile-c canvas{aspect-ratio:1/1;image-rendering:pixelated}
+.tile-c .nm{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:8px;line-height:1.3}
+.tile-c .nm b{display:block;font-size:18px;margin-top:3px}
+.tile-c.win .nm b{color:var(--green)}
+
+.callout{margin:1.8em 0;padding:18px 22px;border-left:3px solid var(--amber);
+  background:rgba(212,165,116,.05);border-radius:0 10px 10px 0}
+.callout .h{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.callout p{margin:.4em 0;color:var(--ink-dim)}
+.callout.teal{border-color:var(--teal);background:rgba(90,180,172,.05)}
+.callout.teal .h{color:var(--teal)}
+
+details.aside{margin:1.6em 0;border:1px solid var(--rule-strong);border-radius:10px;background:rgba(155,142,196,.045)}
+details.aside summary{cursor:pointer;padding:14px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  color:var(--lav);list-style:none;display:flex;align-items:center;gap:10px}
+details.aside summary::-webkit-details-marker{display:none}
+details.aside summary::before{content:'›';font-size:18px;transition:transform .2s;color:var(--lav)}
+details.aside[open] summary::before{transform:rotate(90deg)}
+details.aside .inner{padding:0 18px 18px;font-size:15.5px;color:var(--ink-dim)}
+details.aside .inner p{font-size:15.5px;max-width:none}
+
+ul.clean{max-width:67ch;color:var(--ink-dim)}
+ul.clean li{margin:.5em 0}
+ul.clean li::marker{color:var(--amber)}
+
+.exercise{display:flex;gap:16px;padding:17px 0;border-bottom:1px solid var(--rule)}
+.exercise:last-child{border-bottom:none}
+.exercise .n{font-family:var(--serif);font-style:italic;font-size:34px;color:var(--amber);line-height:1;flex:none;width:46px}
+.exercise .t{font-size:16px;color:var(--ink-dim)}
+.exercise .t b{color:var(--ink);font-weight:600}
+
+.reveal{opacity:0;transform:translateY(22px)}
+
+footer.colophon{padding:48px clamp(20px,4vw,72px) 90px;border-top:1px solid var(--rule-strong);color:var(--ink-faint);font-size:13.5px}
+footer.colophon h4{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 14px}
+footer.colophon code{font-size:12px}
+footer.colophon .v{color:var(--green)}
+.nextlink{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:30px;padding:22px 26px;
+  border:1px solid var(--rule-strong);border-radius:12px;background:rgba(90,180,172,.05);flex-wrap:wrap}
+.nextlink .l{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+.nextlink .t{font-family:var(--serif);font-size:24px;color:var(--ink);margin-top:4px}
+
+@media(max-width:980px){
+  .shell{grid-template-columns:1fr}
+  nav.side{position:fixed;inset:0 auto 0 0;width:262px;transform:translateX(-100%);transition:transform .3s;z-index:55;background:var(--bg1)}
+  nav.side.open{transform:translateX(0)}
+  #navtog{position:fixed;top:14px;left:14px;z-index:56;background:var(--bg2);border:1px solid var(--rule-strong);
+    color:var(--ink);border-radius:9px;padding:10px 13px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  main{padding-top:58px}
+}
+@media(min-width:981px){#navtog{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="navtog">≡ sections</button>
+
+<div class="shell">
+<nav class="side" id="side">
+  <div class="series">Reservoirs of Light</div>
+  <div class="partno">Part III of V — an interactive derivation of ReSTIR</div>
+  <h1>A Single Slot of Memory</h1>
+  <ol>
+    <li><a href="#stream" class="active">The tyranny of M</a></li>
+    <li><a href="#update">The update rule</a></li>
+    <li><a href="#invariant">The invariant</a></li>
+    <li><a href="#state">What the reservoir stores</a></li>
+    <li><a href="#merge">The merge</a></li>
+    <li><a href="#ahead">Why this is the whole game</a></li>
+    <li><a href="#exercises">Exercises &amp; the road ahead</a></li>
+  </ol>
+  <div class="foot">
+    after Bitterli et&nbsp;al. 2020<br>§4 · Streaming RIS via<br>reservoir resampling<br><br>
+    built with Claude&nbsp;Opus&nbsp;4.8<br>numbers verified, not asserted
+  </div>
+</nav>
+
+<main>
+
+<!-- ============================================================ HERO -->
+<section id="stream" class="hero">
+  <div class="eyebrow">Reservoirs of Light · III</div>
+  <div class="title">A Single Slot<br>of <span class="imp">Memory</span></div>
+  <div class="sub">Part II resampled a pool — but it had to <em>hold</em> the pool.<br>A reservoir keeps one sample, sees the candidates once, and never looks back.</div>
+
+  <p class="lead"><span class="drop">R</span>esampling a pool of <em>M</em> candidates means storing <em>M</em> candidates. For one integral that is fine; for a few million pixels, sixty times a second, it is impossible. Weighted reservoir sampling dissolves the problem. It watches the candidates stream past <em>one at a time</em>, holds exactly one survivor and a running weight-sum, and — with a single coin flip per arrival — keeps a survivor distributed <em>identically</em> to the full resampling of Part II. Watch the stream pour through the slot. The histogram it builds is the same p̂ as before; the memory it uses never grows.</p>
+
+  <div class="fig" id="fig-hero">
+    <div class="bar">
+      <span class="lab">The reservoir · one slot, a streaming coin flip</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint)">memory held:</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--teal)">{ y, wsum, M, W }</span>
+      </div>
+    </div>
+    <div class="body">
+      <canvas id="cv-hero" height="380"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="hero-play">▶ run stream</button>
+        <button class="btn" id="hero-fast">+2000 passes (fast)</button>
+        <button class="btn" id="hero-reset">reset</button>
+        <label class="slide" style="min-width:170px">stream length &nbsp;<span class="v" id="hero-M-v">M = 12</span>
+          <input type="range" id="hero-M" min="2" max="48" value="12"></label>
+        <label class="slide" style="min-width:150px">speed &nbsp;<span class="v" id="hero-spd-v">medium</span>
+          <input type="range" id="hero-spd" min="1" max="20" value="9"></label>
+      </div>
+      <div class="readout" id="hero-read">
+        <div class="cell"><div class="k">candidates seen M</div><div class="val amber" id="h-M">0</div><div class="sub">this pass</div></div>
+        <div class="cell"><div class="k">weight sum</div><div class="val lav" id="h-wsum">0.00</div><div class="sub">Σ wᵢ so far</div></div>
+        <div class="cell"><div class="k">survivors kept</div><div class="val teal" id="h-N">0</div><div class="sub">completed passes</div></div>
+        <div class="cell"><div class="k">distance to p̂</div><div class="val" id="h-l1">—</div></div>
+      </div>
+    </div>
+    <div class="cap"><b>Top:</b> the stream. Each <b style="color:var(--amber)">amber</b> arrival is a candidate at position x with weight <span class="katex-inline" data-tex="w=\hat p(x)"></span> (its stem to the curve). The <b style="color:var(--teal)">teal</b> dot is the one currently held; when an arrival wins the coin flip it takes the slot. <b>Bottom:</b> survivors from completed passes, climbing onto p̂ — the Part II result, now from O(1) memory.</div>
+  </div>
+
+  <p>Two reservoirs, each summarizing its own stream, can also be <em>merged</em> in constant time into one reservoir that behaves as if it had seen both streams. That single fact — proved exactly below — is what lets a pixel borrow its neighbors' work, and is the structural heart of ReSTIR.</p>
+</section>
+
+<!-- ============================================================ UPDATE -->
+<section id="update">
+  <div class="eyebrow">§1 · One arrival at a time</div>
+  <h2>The update rule</h2>
+
+  <p>The reservoir holds a survivor <em>y</em> and the running sum of weights it has seen. When candidate <span class="katex-inline" data-tex="x_i"></span> with weight <span class="katex-inline" data-tex="w_i"></span> arrives, two things happen — add the weight, then flip a coin whose bias is the new arrival's share of the total so far:</p>
+
+  <div class="eqwrap" id="eq-update"></div>
+
+  <p>A heavy early arrival sits in the slot for a long time; a heavy late arrival is very likely to seize it. Either way the bookkeeping is two lines and four numbers. Step through a stream and watch the coin: the <b style="color:var(--teal)">teal</b> share of the bar is the probability the newcomer takes the slot.</p>
+
+  <div class="fig" id="fig-step">
+    <div class="bar"><span class="lab">wsum += wᵢ ; replace y with probability wᵢ / wsum</span></div>
+    <div class="body">
+      <canvas id="cv-step" height="250"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="st-next">▶ next arrival</button>
+        <button class="btn" id="st-new">new stream</button>
+        <span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)" id="st-status">stream of weighted candidates — step through them</span>
+      </div>
+    </div>
+    <div class="cap">Each arrival adds its weight to <span class="katex-inline" data-tex="\text{wsum}"></span>, then wins the slot with probability <span class="katex-inline" data-tex="w_i/\text{wsum}"></span>. The held survivor is <b style="color:var(--teal)">teal</b>; rejected arrivals fade. No candidate is ever stored — only the survivor and the sum remain.</div>
+  </div>
+</section>
+
+<!-- ============================================================ INVARIANT -->
+<section id="invariant">
+  <div class="eyebrow">§2 · What the coin flips add up to</div>
+  <h2>The invariant</h2>
+
+  <p>The two-line update is not an approximation of proportional selection — it <em>is</em> proportional selection. After the whole stream has passed, the probability that any particular candidate ended up in the slot is exactly its share of the total weight:</p>
+
+  <div class="eqwrap" id="eq-inv"></div>
+
+  <p>And because each term only ever divides by the weight-sum <em>so far</em>, the result does not depend on the order the candidates arrived. Run thousands of reservoirs over the same weighted set and the empirical keep-rates land on the theoretical shares — reorder the stream and nothing moves.</p>
+
+  <div class="fig" id="fig-inv">
+    <div class="bar">
+      <span class="lab">Empirical P(y = xᵢ) vs. theory wᵢ/Σwⱼ · 4000 reservoirs</span>
+      <div class="seg teal" id="inv-order">
+        <button data-o="forward" class="on">forward</button>
+        <button data-o="reverse">reversed</button>
+        <button data-o="shuffle">shuffled</button>
+      </div>
+    </div>
+    <div class="body">
+      <canvas id="cv-inv" height="260"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="inv-run">↻ run 4000 reservoirs</button>
+        <span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)">max deviation from theory: <span id="inv-dev" style="color:var(--green)">—</span></span>
+      </div>
+    </div>
+    <div class="cap">Solid <b style="color:var(--teal)">teal</b> bars are the measured keep-rate of each candidate; the <b style="color:var(--lav)">lavender</b> notches are the exact theoretical share wᵢ/Σwⱼ. They coincide — and stay coincident under any ordering.</div>
+  </div>
+</section>
+
+<!-- ============================================================ STATE -->
+<section id="state">
+  <div class="eyebrow">§3 · Four numbers</div>
+  <h2>What the reservoir stores</h2>
+
+  <p>The entire state is a quadruple. Three are bookkeeping; the fourth is the prize from Part II, now maintained on the fly:</p>
+
+  <div class="fig">
+    <div class="bar"><span class="lab">The reservoir state — constant size, regardless of stream length</span></div>
+    <div class="body" style="padding:24px 18px"><div id="svg-state"></div></div>
+    <div class="cap">After the stream, the contribution weight <span class="katex-inline" data-tex="W=\frac{1}{\hat p(y)}\cdot\frac{\text{wsum}}{M}"></span> is the same unbiased weight derived in Part II — the estimate is still <span class="katex-inline" data-tex="\langle I\rangle=f(y)\,W"></span>. We just never had to store the candidates to compute it.</div>
+  </div>
+
+  <p>That constant-size state is the whole point. Resampling a pool of <em>M</em> needs memory that grows with <em>M</em>; a reservoir does not. Slide the candidate count to absurd sizes and watch the two memory costs diverge.</p>
+
+  <div class="fig" id="fig-mem">
+    <div class="bar"><span class="lab">Memory: store-the-pool vs. one reservoir</span></div>
+    <div class="body">
+      <canvas id="cv-mem" height="170"></canvas>
+      <div class="controls">
+        <label class="slide" style="flex:1;min-width:260px">candidates considered &nbsp;<span class="v" id="mem-M-v">M = 1,000</span>
+          <input type="range" id="mem-M" min="1" max="100" value="50"></label>
+      </div>
+    </div>
+    <div class="cap">Storing the pool costs <span class="katex-inline" data-tex="O(M)"></span>; the reservoir costs <span class="katex-inline" data-tex="O(1)"></span> — four numbers — no matter how many candidates stream through. This is what makes per-pixel resampling affordable.</div>
+  </div>
+</section>
+
+<!-- ============================================================ MERGE -->
+<section id="merge">
+  <div class="eyebrow">§4 · Combining summaries</div>
+  <h2>The merge</h2>
+
+  <p>Here is the property everything has been building toward. Suppose two reservoirs each digested their own stream. We can combine them <em>without revisiting a single original candidate</em>: feed each reservoir's survivor into a fresh reservoir as one weighted candidate, using the weight</p>
+
+  <div class="eqwrap" id="eq-merge"></div>
+
+  <p>which — and this is an exact algebraic identity, not an approximation — equals that reservoir's own weight-sum. So merging reproduces precisely the weight-sum the concatenated stream would have had. The result is <strong>distributionally identical</strong> to having streamed both candidate sets through a single reservoir. Build two reservoirs, merge them, and compare the survivor to a single reservoir fed the same total — they are the same distribution.</p>
+
+  <div class="fig" id="fig-merge">
+    <div class="bar">
+      <span class="lab">merge(A, B) ≡ one reservoir over A ⧺ B</span>
+      <label class="slide" style="min-width:200px">candidates per side &nbsp;<span class="v" id="mg-M-v">M = 16</span>
+        <input type="range" id="mg-M" min="2" max="64" value="16"></label>
+    </div>
+    <div class="body">
+      <canvas id="cv-merge" height="340"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="mg-once">↻ one merge (show identity)</button>
+        <button class="btn" id="mg-run">▶ accumulate 4000</button>
+        <button class="btn" id="mg-reset">reset</button>
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">p̂(y_A)·W_A·M_A</div><div class="val lav" id="mg-recon">—</div><div class="sub">reconstructed weight</div></div>
+        <div class="cell"><div class="k">reservoir A wsum</div><div class="val" id="mg-wsum">—</div><div class="sub">should match exactly →</div></div>
+        <div class="cell"><div class="k">identity error</div><div class="val green" id="mg-err">—</div></div>
+        <div class="cell"><div class="k">merge vs single · L¹</div><div class="val teal" id="mg-l1">—</div><div class="sub">distributions agree</div></div>
+      </div>
+    </div>
+    <div class="cap"><b>Top:</b> reservoir A and reservoir B, each a survivor (teal) with its reconstructed weight. <b>Bottom:</b> the <b style="color:var(--teal)">merged survivor</b> histogram overlaid with a <b style="color:var(--amber)">single reservoir over the combined stream</b> — and the p̂ target. All three coincide. Merging summaries loses nothing.</div>
+  </div>
+
+  <div class="callout">
+    <div class="h">The fine print that becomes Part V</div>
+    <p>This exactness assumes both reservoirs targeted the <em>same</em> <span class="katex-inline" data-tex="\hat p"></span>. The instant we merge a neighbor's reservoir — whose <span class="katex-inline" data-tex="\hat p"></span> differs, because its surface point and shadows differ — the weight-sum we reconstruct is for the <em>wrong</em> target, and bias creeps in. Holding that thread is the entire job of Part V.</p>
+  </div>
+</section>
+
+<!-- ============================================================ AHEAD -->
+<section id="ahead">
+  <div class="eyebrow">§5 · The payoff</div>
+  <h2>Why this is the whole game</h2>
+
+  <p>Assemble the three facts. A reservoir summarizes a stream of any length in <em>constant</em> memory. Its survivor is exactly proportional to the target, independent of order. And two reservoirs merge in <em>constant time</em> into one that behaves as their concatenation. Stack those together and something remarkable becomes affordable: a pixel can merge its own reservoir with those of its spatial neighbors and with its own reservoir from previous frames — each merge folding in another stream's worth of candidates — so the <em>effective</em> number of candidates behind every pixel grows explosively while the per-pixel cost stays flat.</p>
+
+  <div class="fig">
+    <div class="bar"><span class="lab">One pixel, merging across space and time</span></div>
+    <div class="body" style="padding:22px 18px"><div id="svg-reuse"></div></div>
+    <div class="cap">Each neighbor and each past frame is a reservoir; merging them costs O(1) apiece, yet the candidate pool behind the center pixel compounds. Part IV turns this into the spatiotemporal reuse that gives ReSTIR its name.</div>
+  </div>
+
+  <details class="aside">
+    <summary>For the implementer — why M is clamped in practice</summary>
+    <div class="inner">
+      <p>Temporal reuse merges this frame's reservoir with last frame's, which already merged the frame before, and so on — a geometric accumulation of <em>M</em>. Left unchecked, the history term's <em>M</em> dominates every merge and the estimator stops responding to new information (and stale, now-occluded samples linger). ReSTIR caps the temporal reservoir's <em>M</em> — the paper uses roughly <span class="katex-inline" data-tex="20\times"></span> the current frame's count — before merging, trading a controlled bias for responsiveness. It is the one place the method deliberately forgets, and it is why a moving light still produces crisp shadows rather than smears.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ EXERCISES -->
+<section id="exercises">
+  <div class="eyebrow">§6 · Make it yours</div>
+  <h2>Exercises &amp; the road ahead</h2>
+
+  <p>The reservoir is four numbers and a coin. Convince yourself it does what the algebra claims.</p>
+
+  <div style="max-width:72ch">
+    <div class="exercise"><div class="n">i</div><div class="t"><b>Order cannot matter.</b> In the invariant widget, switch between forward, reversed, and shuffled. Predict the keep-rates before each run. Why does dividing by the weight-sum <em>so far</em> make ordering irrelevant?</div></div>
+    <div class="exercise"><div class="n">ii</div><div class="t"><b>Heavy and late beats heavy and early.</b> In the step widget, build a stream whose largest weight arrives last. Watch its acceptance probability. Then make it arrive first. The survivor distribution is unchanged — but explain why the <em>per-step</em> coin looks so different.</div></div>
+    <div class="exercise"><div class="n">iii</div><div class="t"><b>The identity is exact.</b> In the merge widget, hit "one merge" repeatedly and read the identity error. It stays at machine zero. Derive <span class="katex-inline" data-tex="\hat p(y)\,W\,M=\text{wsum}"></span> from the definition of <em>W</em> in three steps.</div></div>
+    <div class="exercise"><div class="n">iv</div><div class="t"><b>Merging is free candidates.</b> Set the merge widget to M = 8 per side and confirm the merged survivor matches a single 16-candidate stream. What does this imply about merging eight neighbors at once?</div></div>
+  </div>
+
+  <div class="nextlink">
+    <div>
+      <div class="l">Part IV →</div>
+      <div class="t">Borrowing from Neighbors and the Past</div>
+    </div>
+    <p style="margin:0;max-width:46ch;font-size:15px">With O(1) merge in hand, a pixel reuses its neighbors' reservoirs and its own history — turning a handful of fresh candidates into an effective pool of thousands. We will watch a pixel grid converge, and meet the visibility check that keeps reuse honest.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="colophon">
+  <h4>Colophon &amp; honesty footer</h4>
+  <p style="max-width:80ch;color:var(--ink-faint)">
+    Every widget runs the exact reservoir: <code>update(x,w){ wsum+=w; M+=1; if(rand()·wsum &lt; w) y=x; }</code> and contribution weight <code>W = (1/p̂(y))·(wsum/M)</code>. Continuing Part II, the target is <code style="color:var(--lav)">p̂(x)=2−2x</code> on [0,1] with uniform candidates, so weights are <code>w=p̂(x)</code>. The merge feeds each survivor with weight <code>p̂(y)·W·M</code>.
+  </p>
+  <p style="max-width:80ch;color:var(--ink-faint)">
+    <span class="v">Verified against an offline reference (300k trials):</span>
+    invariant P(y=xᵢ) matches wᵢ/Σwⱼ to three digits and is identical under forward / reversed / shuffled order;
+    survivor→p̂ in L¹ — M=1 <code>0.50</code>, M=4 <code>0.11</code>, M=16 <code>0.027</code>, M=64 <code>0.009</code> (same as Part II);
+    the merge identity <code class="v">p̂(y)·W·M = wsum</code> holds to <code>2.5×10⁻¹⁶</code> (machine epsilon);
+    on a fixed candidate set, merge and single-stream give identical conditional keep-rates;
+    the estimator through a merge stays unbiased → <code class="v">I = 0.8375</code>.
+    What is exact: the WRS distribution and the merge identity. What is illustrative: the toy target and the stream animation's pacing.
+  </p>
+  <p style="color:var(--ink-faint)">Reservoirs of Light · Part III — A Single Slot of Memory · after Bitterli, Wyman, Pharr, Shirley, Lefohn &amp; Jarosz, <a class="ref" href="https://doi.org/10.1145/3386569.3392481" target="_blank" rel="noopener">SIGGRAPH 2020</a>.</p>
+</footer>
+
+<script>
+/* ============================================================ WRS ENGINE
+   Verified in verify_part3.js. Continues Part II: p̂0(x)=2-2x, uniform candidates.
+   ====================================================================== */
+function pHat0(x){ return 2 - 2*x; }
+function makeRes(){ return {y:null, wsum:0, M:0, W:0}; }
+function resUpdate(r,x,w){ r.wsum+=w; r.M+=1; if(r.wsum>0 && Math.random()*r.wsum < w){ r.y=x; return true;} return false; }
+function resFinalize(r,c){ c=c||1; r.W=(r.y==null)?0:(1/(c*pHat0(r.y)))*(r.wsum/r.M); return r; }
+function resMerge(r1,r2,c){ c=c||1; const s=makeRes();
+  resUpdate(s,r1.y,c*pHat0(r1.y)*r1.W*r1.M);
+  resUpdate(s,r2.y,c*pHat0(r2.y)*r2.W*r2.M);
+  s.M=r1.M+r2.M; resFinalize(s,c); return s; }
+/* integrand for unbiasedness checks: f = p̂0·V, shadow [SA,SB] */
+const SA=0.55, SB=0.80; const I_EXACT=1-((2*SB-SB*SB)-(2*SA-SA*SA));
+
+const COL={amber:'#d4a574',teal:'#5ab4ac',lav:'#9b8ec4',red:'#e06c75',green:'#98c379',
+  ink:'#e7e4dd',dim:'#a7a39a',faint:'#6d6a64'};
+function setup(cv,h){ const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth||cv.parentElement.clientWidth; cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); cv.style.height=h+'px';
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,w,h}; }
+function tex(id,s,d){ try{katex.render(s,document.getElementById(id),{displayMode:d,throwOnError:false});}catch(e){} }
+function renderInline(){ document.querySelectorAll('[data-tex]').forEach(el=>{try{katex.render(el.getAttribute('data-tex'),el,{throwOnError:false});}catch(e){}}); }
+function newHist(B){ return {B,c:new Float64Array(B),total:0}; }
+function histAdd(H,x){ H.c[Math.min(H.B-1,Math.max(0,Math.floor(x*H.B)))]++; H.total++; }
+function histL1(H){ if(H.total===0)return 1; let d=0; for(let b=0;b<H.B;b++){const dn=H.c[b]/H.total*H.B;d+=Math.abs(dn-pHat0((b+0.5)/H.B))/H.B;} return d; }
+function pmap(x0,x1,y0,y1,ymax){ return {X:x=>x0+x*(x1-x0),Y:v=>y1-(v/ymax)*(y1-y0),x0,x1,y0,y1,ymax}; }
+function targetCurve(ctx,m,col){ ctx.beginPath(); for(let i=0;i<=100;i++){const x=i/100;const px=m.X(x),py=m.Y(pHat0(x));i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke(); }
+function histBars(ctx,m,H,col){ for(let b=0;b<H.B;b++){if(H.total===0)continue;const dn=H.c[b]/H.total*H.B;const x=m.X(b/H.B),w=m.X((b+1)/H.B)-x,y=m.Y(dn);ctx.fillStyle=col;ctx.fillRect(x+0.5,y,w-1,m.y1-y);} }
+function axisTicks(ctx,m){ ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='center';[0,0.5,1].forEach(t=>ctx.fillText(t,m.X(t),m.y1+15)); }
+
+/* ============================================================ HERO STREAM */
+let heroM=12, heroRes=makeRes(), heroHist=newHist(36), heroTick=0, heroN=0,
+    heroPlaying=false, heroSpd=9, heroCur=null, heroBeat=0, heroRAF=null;
+function heroResetAll(){ heroRes=makeRes();heroHist=newHist(36);heroTick=0;heroN=0;heroCur=null;drawHero(); }
+function heroStep(){
+  if(heroTick<heroM){ const x=Math.random(), w=pHat0(x); const acc=resUpdate(heroRes,x,w);
+    heroCur={x,w,acc}; heroTick++; }
+  else { histAdd(heroHist,heroRes.y); heroN++; heroRes=makeRes(); heroTick=0; heroCur=null; }
+}
+function drawHero(){
+  const cv=document.getElementById('cv-hero'); const {ctx,w,h}=setup(cv,380); ctx.clearRect(0,0,w,h);
+  const padL=64,padR=18; const topY0=26,topY1=h*0.46,botY0=h*0.56,botY1=h-28;
+  const mTop=pmap(padL,w-padR,topY0,topY1,2.2), mBot=pmap(padL,w-padR,botY0,botY1,2.2);
+  ctx.font='11px JetBrains Mono';ctx.fillStyle=COL.faint;ctx.textAlign='left';
+  ctx.fillText('the stream  ·  arrival weight w = p̂(x)',padL,16);
+  ctx.fillText('survivors from completed passes  vs  p̂',padL,botY0-8);
+  ctx.strokeStyle='rgba(231,228,221,0.12)';ctx.lineWidth=1;
+  [mTop,mBot].forEach(m=>{ctx.beginPath();ctx.moveTo(m.x0,m.y1);ctx.lineTo(m.x1,m.y1);ctx.stroke();});
+  targetCurve(ctx,mTop,'rgba(155,142,196,0.7)');
+  // wsum meter (vertical, left)
+  const meterX=30, mh=topY1-topY0; const frac=Math.min(1,heroRes.wsum/(heroM*1.0));
+  ctx.fillStyle='rgba(231,228,221,0.06)';ctx.fillRect(meterX-7,topY0,12,mh);
+  ctx.fillStyle='rgba(155,142,196,0.7)';ctx.fillRect(meterX-7,topY1-frac*mh,12,frac*mh);
+  ctx.save();ctx.translate(14,topY0+mh/2);ctx.rotate(-Math.PI/2);ctx.fillStyle=COL.faint;ctx.font='9px JetBrains Mono';ctx.textAlign='center';ctx.fillText('wsum',0,0);ctx.restore();
+  // held survivor
+  if(heroRes.y!=null){ const sx=mTop.X(heroRes.y);
+    ctx.strokeStyle='rgba(90,180,172,0.3)';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(sx,mTop.y1);ctx.lineTo(sx,topY0);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=COL.teal;ctx.beginPath();ctx.arc(sx,mTop.Y(pHat0(heroRes.y)),5,0,7);ctx.fill();
+    ctx.fillStyle=COL.teal;ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('y (held)',sx,mTop.y1-4);
+  }
+  // current arrival
+  if(heroCur){ const cx=mTop.X(heroCur.x); const col=heroCur.acc?COL.teal:'rgba(212,165,116,0.85)';
+    ctx.strokeStyle=heroCur.acc?COL.teal:'rgba(212,165,116,0.6)';ctx.lineWidth=heroCur.acc?2.4:1.5;
+    ctx.beginPath();ctx.moveTo(cx,mTop.y1);ctx.lineTo(cx,mTop.Y(heroCur.w));ctx.stroke();
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,mTop.Y(heroCur.w),heroCur.acc?5:3.4,0,7);ctx.fill();
+    ctx.fillStyle=heroCur.acc?COL.teal:COL.amber;ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText(heroCur.acc?'accepted ✓':'arrival',cx,mTop.Y(heroCur.w)-8);
+  }
+  // histogram
+  histBars(ctx,mBot,heroHist,'rgba(90,180,172,0.5)'); targetCurve(ctx,mBot,'rgba(155,142,196,0.9)'); axisTicks(ctx,mBot);
+  // readouts
+  document.getElementById('h-M').textContent=heroTick;
+  document.getElementById('h-wsum').textContent=heroRes.wsum.toFixed(2);
+  document.getElementById('h-N').textContent=heroN;
+  const l1=histL1(heroHist); const le=document.getElementById('h-l1');
+  le.textContent=heroN>30?l1.toFixed(3):'—'; le.className='val '+(heroN<=30?'':(l1<0.05?'green':l1<0.15?'amber':'red'));
+  document.getElementById('hero-M-v').textContent='M = '+heroM;
+}
+function heroLoop(ts){
+  if(!heroPlaying)return;
+  heroBeat+=1;
+  const period=Math.max(1,Math.round(22-heroSpd)); // frames per step
+  if(heroBeat>=period){ heroBeat=0; heroStep(); drawHero(); }
+  heroRAF=requestAnimationFrame(heroLoop);
+}
+
+/* ============================================================ STEP WIDGET */
+let stStream=[], stIdx=0, stRes=makeRes(), stLast=null;
+function stNewStream(){ stStream=[]; const M=9; for(let i=0;i<M;i++){const x=Math.random();stStream.push({x,w:pHat0(x)});}
+  stIdx=0; stRes=makeRes(); stLast=null; drawStep(); document.getElementById('st-status').textContent='stream of '+M+' weighted candidates — step through them'; }
+function stNext(){ if(stIdx>=stStream.length){ document.getElementById('st-status').textContent='stream exhausted — survivor is final. "new stream" to restart.'; return; }
+  const it=stStream[stIdx]; const before=stRes.wsum; const acc=resUpdate(stRes,it.x,it.w);
+  stLast={...it,before,after:stRes.wsum,p:it.w/stRes.wsum,acc,idx:stIdx}; stIdx++; drawStep();
+  document.getElementById('st-status').textContent='arrival '+stIdx+' of '+stStream.length+(acc?' — accepted (took the slot)':' — rejected (survivor unchanged)'); }
+function drawStep(){
+  const cv=document.getElementById('cv-step'); const {ctx,w,h}=setup(cv,250); ctx.clearRect(0,0,w,h);
+  const padL=20,padR=20; const ax0=padL,ax1=w-padR;
+  // top: the stream as upcoming weight bars
+  ctx.font='10px JetBrains Mono';ctx.fillStyle=COL.faint;ctx.textAlign='left';ctx.fillText('stream (weights) →',ax0,14);
+  const sw=(ax1-ax0)/Math.max(stStream.length,1);
+  stStream.forEach((it,i)=>{ const bx=ax0+i*sw; const bh=it.w/2.2*46;
+    const done=i<stIdx, cur=i===stIdx;
+    ctx.fillStyle= cur?'rgba(212,165,116,0.95)':done?'rgba(109,106,100,0.4)':'rgba(212,165,116,0.5)';
+    ctx.fillRect(bx+2,58-bh,sw-4,bh);
+    if(cur){ctx.strokeStyle=COL.amber;ctx.lineWidth=1.5;ctx.strokeRect(bx+2,58-bh,sw-4,bh);}
+  });
+  // coin bar (probability of acceptance) for last step
+  const cy=110, cbH=34;
+  ctx.fillStyle=COL.faint;ctx.font='11px JetBrains Mono';ctx.textAlign='left';
+  ctx.fillText('coin:  P(accept) = wᵢ / wsum',ax0,cy-8);
+  if(stLast){ const p=stLast.p;
+    ctx.fillStyle='rgba(90,180,172,0.8)';ctx.fillRect(ax0,cy,(ax1-ax0)*p,cbH);
+    ctx.fillStyle='rgba(109,106,100,0.3)';ctx.fillRect(ax0+(ax1-ax0)*p,cy,(ax1-ax0)*(1-p),cbH);
+    ctx.fillStyle='#0a0a0f';ctx.font='12px JetBrains Mono';ctx.textAlign='center';
+    if(p>0.12)ctx.fillText('accept '+(p*100).toFixed(0)+'%',ax0+(ax1-ax0)*p/2,cy+cbH/2+4);
+    ctx.fillStyle=COL.dim;ctx.textAlign='left';
+    ctx.fillText('wᵢ='+stLast.w.toFixed(3)+'   wsum: '+stLast.before.toFixed(3)+' → '+stLast.after.toFixed(3),ax0,cy+cbH+18);
+  } else { ctx.fillStyle='rgba(231,228,221,0.05)';ctx.fillRect(ax0,cy,ax1-ax0,cbH);
+    ctx.fillStyle=COL.faint;ctx.textAlign='center';ctx.font='11px JetBrains Mono';ctx.fillText('press “next arrival”',w/2,cy+cbH/2+4); }
+  // current state
+  ctx.textAlign='left';ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.fillText('reservoir state:',ax0,cy+cbH+44);
+  ctx.font='13px JetBrains Mono';ctx.fillStyle=COL.teal;
+  ctx.fillText('y = '+(stRes.y!=null?stRes.y.toFixed(3):'—')+'    ',ax0,cy+cbH+64);
+  ctx.fillStyle=COL.lav;ctx.fillText('wsum = '+stRes.wsum.toFixed(3)+'    M = '+stRes.M,ax0+110,cy+cbH+64);
+}
+
+/* ============================================================ INVARIANT */
+const INV_ITEMS=[{x:0.10,w:5},{x:0.30,w:1},{x:0.58,w:3},{x:0.80,w:2},{x:0.93,w:0.6}];
+let invOrder='forward', invEmp=null;
+function invRun(){
+  const T=4000, n=INV_ITEMS.length; const cnt=new Array(n).fill(0);
+  for(let t=0;t<T;t++){ const r=makeRes(); let seq=INV_ITEMS.map((d,i)=>i);
+    if(invOrder==='reverse')seq.reverse();
+    else if(invOrder==='shuffle'){for(let i=seq.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[seq[i],seq[j]]=[seq[j],seq[i]];}}
+    for(const i of seq) resUpdate(r,INV_ITEMS[i].x,INV_ITEMS[i].w);
+    cnt[INV_ITEMS.findIndex(d=>d.x===r.y)]++; }
+  invEmp=cnt.map(c=>c/T); drawInv();
+}
+function drawInv(){
+  const cv=document.getElementById('cv-inv'); const {ctx,w,h}=setup(cv,260); ctx.clearRect(0,0,w,h);
+  const W=INV_ITEMS.reduce((a,b)=>a+b.w,0); const theory=INV_ITEMS.map(d=>d.w/W);
+  const padL=46,padR=18,y0=24,y1=h-46; const n=INV_ITEMS.length; const gap=(w-padL-padR)/n;
+  const ymax=Math.max(...theory)*1.35; const Y=v=>y1-(v/ymax)*(y1-y0);
+  ctx.strokeStyle='rgba(231,228,221,0.12)';ctx.beginPath();ctx.moveTo(padL,y1);ctx.lineTo(w-padR,y1);ctx.stroke();
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='right';
+  ctx.fillText('P',padL-8,y0+4);
+  INV_ITEMS.forEach((d,i)=>{ const cx=padL+gap*i+gap/2; const bw=gap*0.42;
+    if(invEmp){ const eh=y1-Y(invEmp[i]); ctx.fillStyle='rgba(90,180,172,0.6)';ctx.fillRect(cx-bw/2,Y(invEmp[i]),bw,eh); }
+    // theory notch
+    const ty=Y(theory[i]); ctx.strokeStyle=COL.lav;ctx.lineWidth=2.4;
+    ctx.beginPath();ctx.moveTo(cx-bw/2-4,ty);ctx.lineTo(cx+bw/2+4,ty);ctx.stroke();
+    ctx.fillStyle=COL.dim;ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('w='+d.w,cx,y1+16); ctx.fillStyle=COL.faint;ctx.fillText('x='+d.x.toFixed(2),cx,y1+30);
+    if(invEmp){ctx.fillStyle=COL.teal;ctx.fillText((invEmp[i]*100).toFixed(1)+'%',cx,Y(invEmp[i])-6);}
+  });
+  // legend
+  ctx.textAlign='left';ctx.font='10px JetBrains Mono';
+  ctx.fillStyle=COL.teal;ctx.fillText('■ measured keep-rate',w-padR-180,y0);
+  ctx.fillStyle=COL.lav;ctx.fillText('— theory wᵢ/Σw',w-padR-60,y0);
+  if(invEmp){ let dev=0; INV_ITEMS.forEach((d,i)=>dev=Math.max(dev,Math.abs(invEmp[i]-theory[i])));
+    document.getElementById('inv-dev').textContent=dev.toFixed(4); }
+}
+
+/* ============================================================ MEMORY */
+function drawMem(){
+  const cv=document.getElementById('cv-mem'); const {ctx,w,h}=setup(cv,170); ctx.clearRect(0,0,w,h);
+  const sliderV=+document.getElementById('mem-M').value; const M=Math.round(Math.pow(10,1+sliderV/100*4)); // 10..100000
+  document.getElementById('mem-M-v').textContent='M = '+M.toLocaleString();
+  const padL=130,padR=80; const x0=padL,x1=w-padR; const logMax=Math.log10(100000);
+  const barFor=(units,y,col,lab,valtxt)=>{ const frac=Math.log10(Math.max(units,1)+1)/Math.log10(100001);
+    ctx.fillStyle='rgba(231,228,221,0.05)';ctx.fillRect(x0,y,x1-x0,26);
+    const grd=ctx.createLinearGradient(x0,0,x1,0);grd.addColorStop(0,col+'55');grd.addColorStop(1,col);
+    ctx.fillStyle=grd;ctx.fillRect(x0,y,Math.max(3,(x1-x0)*frac),26);
+    ctx.fillStyle=COL.dim;ctx.font='12px JetBrains Mono';ctx.textAlign='right';ctx.fillText(lab,x0-12,y+17);
+    ctx.fillStyle=col;ctx.textAlign='left';ctx.fillText(valtxt,x0+(x1-x0)*frac+8,y+17); };
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='left';ctx.fillText('memory (log scale) →',x0,28);
+  barFor(M,52,COL.red,'store the pool',M.toLocaleString()+' samples');
+  barFor(4,98,COL.green,'one reservoir','4 numbers (constant)');
+}
+
+/* ============================================================ MERGE */
+let mgM=16, mgHistMerge=newHist(36), mgHistSingle=newHist(36), mgRunning=false, mgRAF=null, mgLast=null;
+function mgBuildSide(){ const r=makeRes(); for(let i=0;i<mgM;i++){const x=Math.random();resUpdate(r,x,pHat0(x));} resFinalize(r,1); return r; }
+function mgOnce(){ const rA=mgBuildSide(), rB=mgBuildSide(); const rm=resMerge(rA,rB,1);
+  const single=makeRes(); for(let i=0;i<2*mgM;i++){const x=Math.random();resUpdate(single,x,pHat0(x));}
+  histAdd(mgHistMerge,rm.y); histAdd(mgHistSingle,single.y);
+  const recon=pHat0(rA.y)*rA.W*rA.M;
+  mgLast={rA,rB,rm,recon,wsumA:rA.wsum};
+  document.getElementById('mg-recon').textContent=recon.toFixed(4);
+  document.getElementById('mg-wsum').textContent=rA.wsum.toFixed(4);
+  document.getElementById('mg-err').textContent=Math.abs(recon-rA.wsum).toExponential(1);
+  drawMerge();
+}
+function mgReset(){ mgHistMerge=newHist(36);mgHistSingle=newHist(36);mgLast=null;
+  document.getElementById('mg-recon').textContent='—';document.getElementById('mg-wsum').textContent='—';
+  document.getElementById('mg-err').textContent='—';document.getElementById('mg-l1').textContent='—';drawMerge(); }
+function drawMerge(){
+  const cv=document.getElementById('cv-merge'); const {ctx,w,h}=setup(cv,340); ctx.clearRect(0,0,w,h);
+  const padL=50,padR=18; const topY0=24,topY1=120, botY0=150,botY1=h-28;
+  // top: two reservoir boxes
+  ctx.font='10px JetBrains Mono';ctx.fillStyle=COL.faint;ctx.textAlign='left';ctx.fillText('two reservoirs, each a survivor + reconstructed weight',padL,14);
+  function box(x,lab,r,col){ const bw=170,bh=66,by=topY0+10;
+    ctx.fillStyle='rgba(90,180,172,0.06)';ctx.strokeStyle=col;ctx.lineWidth=1.2;
+    ctx.fillRect(x,by,bw,bh);ctx.strokeRect(x,by,bw,bh);
+    ctx.fillStyle=col;ctx.font='10px JetBrains Mono';ctx.textAlign='left';ctx.fillText(lab,x+10,by+18);
+    if(r){ ctx.fillStyle=COL.teal;ctx.font='12px JetBrains Mono';ctx.fillText('y = '+r.y.toFixed(3),x+10,by+38);
+      ctx.fillStyle=COL.lav;ctx.font='11px JetBrains Mono';ctx.fillText('wsum='+r.wsum.toFixed(2)+'  M='+r.M,x+10,by+56); }
+    else{ctx.fillStyle=COL.faint;ctx.font='11px JetBrains Mono';ctx.fillText('press “one merge”',x+10,by+40);}
+    return {x,by,bw,bh}; }
+  const bA=box(padL,'reservoir A',mgLast&&mgLast.rA,COL.teal);
+  const bB=box(padL+200,'reservoir B',mgLast&&mgLast.rB,COL.teal);
+  // arrow to merged
+  const mx=padL+430;
+  ctx.strokeStyle=COL.green;ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(bB.x+bB.bw,bB.by+bB.bh/2);ctx.lineTo(mx-8,topY0+43);ctx.stroke();
+  if(w>mx+120){ ctx.fillStyle='rgba(152,195,121,0.08)';ctx.strokeStyle=COL.green;
+    ctx.fillRect(mx,topY0+12,150,62);ctx.strokeRect(mx,topY0+12,150,62);
+    ctx.fillStyle=COL.green;ctx.font='10px JetBrains Mono';ctx.textAlign='left';ctx.fillText('merged',mx+10,topY0+30);
+    if(mgLast){ctx.fillStyle=COL.teal;ctx.font='12px JetBrains Mono';ctx.fillText('y = '+mgLast.rm.y.toFixed(3),mx+10,topY0+50);
+      ctx.fillStyle=COL.lav;ctx.font='11px JetBrains Mono';ctx.fillText('M = '+mgLast.rm.M,mx+10,topY0+68);} }
+  // bottom: histograms
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='left';ctx.fillText('survivor distribution: merged vs single 2M stream vs p̂',padL,botY0-8);
+  const m=pmap(padL,w-padR,botY0,botY1,2.2);
+  ctx.strokeStyle='rgba(231,228,221,0.12)';ctx.beginPath();ctx.moveTo(m.x0,m.y1);ctx.lineTo(m.x1,m.y1);ctx.stroke();
+  histBars(ctx,m,mgHistMerge,'rgba(90,180,172,0.45)');
+  // single as outline
+  if(mgHistSingle.total>0){ ctx.strokeStyle='rgba(212,165,116,0.9)';ctx.lineWidth=1.4;ctx.beginPath();
+    for(let b=0;b<mgHistSingle.B;b++){const dn=mgHistSingle.c[b]/mgHistSingle.total*mgHistSingle.B;const x=m.X((b+0.5)/mgHistSingle.B),y=m.Y(dn);b?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke(); }
+  targetCurve(ctx,m,'rgba(155,142,196,0.9)'); axisTicks(ctx,m);
+  ctx.textAlign='left';ctx.font='10px JetBrains Mono';
+  ctx.fillStyle=COL.teal;ctx.fillText('■ merged',m.X(0.04),m.Y(2.05));
+  ctx.fillStyle=COL.amber;ctx.fillText('— single 2M',m.X(0.20),m.Y(2.05));
+  ctx.fillStyle=COL.lav;ctx.fillText('— p̂',m.X(0.42),m.Y(2.05));
+  // L1 between merged and single
+  if(mgHistMerge.total>50){ let l1=0; for(let b=0;b<36;b++){const a=mgHistMerge.c[b]/mgHistMerge.total*36,bb=mgHistSingle.c[b]/Math.max(mgHistSingle.total,1)*36;l1+=Math.abs(a-bb)/36;}
+    document.getElementById('mg-l1').textContent=l1.toFixed(3); }
+  document.getElementById('mg-M-v').textContent='M = '+mgM;
+}
+function mgLoop(){ if(!mgRunning)return; for(let k=0;k<25;k++)mgOnce();
+  if(mgHistMerge.total>4000){mgRunning=false;document.getElementById('mg-run').textContent='▶ accumulate 4000';return;}
+  mgRAF=requestAnimationFrame(mgLoop); }
+
+/* ============================================================ SVGs */
+function drawStateSvg(){ document.getElementById('svg-state').innerHTML=`
+  <svg viewBox="0 0 760 130" width="100%" style="max-width:760px;display:block;margin:0 auto" font-family="JetBrains Mono,monospace">
+    <rect x="20" y="20" width="720" height="90" rx="10" fill="rgba(90,180,172,0.05)" stroke="#5ab4ac" stroke-width="1.2"/>
+    ${[['y','the survivor','#5ab4ac','one sample, ∝ p̂'],['wsum','Σ wᵢ','#9b8ec4','running weight sum'],['M','count','#9b8ec4','candidates seen'],['W','contribution wt','#98c379','(1/p̂(y))·(wsum/M)']]
+      .map((f,i)=>`<g transform="translate(${40+i*178},0)">
+        <text x="78" y="48" fill="${f[2]}" font-size="22" text-anchor="middle">${f[0]}</text>
+        <text x="78" y="70" fill="#a7a39a" font-size="11" text-anchor="middle">${f[1]}</text>
+        <text x="78" y="88" fill="#6d6a64" font-size="10" text-anchor="middle">${f[3]}</text>
+        ${i<3?`<line x1="156" y1="35" x2="156" y2="95" stroke="rgba(231,228,221,0.12)"/>`:''}
+      </g>`).join('')}
+    <text x="380" y="14" fill="#6d6a64" font-size="10" text-anchor="middle">RESERVOIR — constant size</text>
+  </svg>`; }
+function drawReuseSvg(){ document.getElementById('svg-reuse').innerHTML=`
+  <svg viewBox="0 0 760 200" width="100%" style="max-width:760px;display:block;margin:0 auto" font-family="JetBrains Mono,monospace">
+    <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5ab4ac"/></marker></defs>
+    ${[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]].map(d=>{
+      const cx=380+d[0]*70, cy=100+d[1]*55; return `<rect x="${cx-22}" y="${cy-16}" width="44" height="32" rx="6" fill="rgba(212,165,116,0.10)" stroke="#d4a574" stroke-width="1"/><text x="${cx}" y="${cy+4}" fill="#d4a574" font-size="10" text-anchor="middle">nbr</text><line x1="${cx-(d[0]*18)}" y1="${cy-(d[1]*10)}" x2="${380-(d[0]*30)}" y2="${100-(d[1]*22)}" stroke="#5ab4ac" stroke-width="1" opacity="0.5" marker-end="url(#a3)"/>`;}).join('')}
+    <rect x="350" y="82" width="60" height="36" rx="7" fill="rgba(90,180,172,0.14)" stroke="#5ab4ac" stroke-width="1.5"/>
+    <text x="380" y="104" fill="#5ab4ac" font-size="11" text-anchor="middle">pixel</text>
+    <rect x="610" y="60" width="120" height="80" rx="8" fill="rgba(152,195,121,0.06)" stroke="#98c379" stroke-width="1"/>
+    <text x="670" y="52" fill="#98c379" font-size="10" text-anchor="middle">+ past frames</text>
+    ${[0,1,2].map(i=>`<rect x="${620+i*8}" y="${72+i*6}" width="96" height="40" rx="6" fill="rgba(152,195,121,0.08)" stroke="#98c379" stroke-width="0.8" opacity="${0.5+i*0.2}"/>`).join('')}
+    <text x="670" y="120" fill="#98c379" font-size="10" text-anchor="middle">temporal</text>
+    <line x1="610" y1="100" x2="412" y2="100" stroke="#98c379" stroke-width="1" opacity="0.6" marker-end="url(#a3)"/>
+    <text x="380" y="180" fill="#6d6a64" font-size="11" text-anchor="middle">each merge O(1) · effective candidate pool compounds</text>
+  </svg>`; }
+
+/* ============================================================ INIT */
+function initAll(){
+  tex('eq-update','\\text{wsum}\\mathrel{+}= w_i;\\qquad y \\leftarrow x_i \\ \\text{ with probability } \\ \\frac{w_i}{\\text{wsum}}',true);
+  tex('eq-inv','\\Pr\\big(y=x_i\\big)=\\frac{w_i}{\\sum_{j=1}^{M} w_j}\\qquad\\text{(for every }i\\text{, in any order)}',true);
+  tex('eq-merge','w_{\\text{feed}}=\\hat p(y)\\,\\cdot\\,W\\,\\cdot\\,M\\;\\equiv\\;\\text{wsum}',true);
+  renderInline(); drawStateSvg(); drawReuseSvg();
+
+  // hero
+  document.getElementById('hero-M').oninput=e=>{heroM=+e.target.value;heroResetAll();};
+  document.getElementById('hero-spd').oninput=e=>{heroSpd=+e.target.value;
+    document.getElementById('hero-spd-v').textContent=heroSpd<7?'slow':heroSpd<14?'medium':'fast';};
+  document.getElementById('hero-play').onclick=function(){heroPlaying=!heroPlaying;this.textContent=heroPlaying?'⏸ pause':'▶ run stream';if(heroPlaying)heroLoop();};
+  document.getElementById('hero-fast').onclick=()=>{ for(let p=0;p<2000;p++){const r=makeRes();for(let i=0;i<heroM;i++){const x=Math.random();resUpdate(r,x,pHat0(x));}histAdd(heroHist,r.y);heroN++;} drawHero(); };
+  document.getElementById('hero-reset').onclick=()=>{heroPlaying=false;document.getElementById('hero-play').textContent='▶ run stream';heroResetAll();};
+  heroResetAll();
+
+  // step
+  document.getElementById('st-next').onclick=stNext;
+  document.getElementById('st-new').onclick=stNewStream;
+  stNewStream();
+
+  // invariant
+  document.querySelectorAll('#inv-order button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#inv-order button').forEach(x=>x.classList.remove('on'));b.classList.add('on');invOrder=b.dataset.o;invRun();});
+  document.getElementById('inv-run').onclick=invRun; invRun();
+
+  // memory
+  document.getElementById('mem-M').oninput=drawMem; drawMem();
+
+  // merge
+  document.getElementById('mg-M').oninput=e=>{mgM=+e.target.value;mgReset();};
+  document.getElementById('mg-once').onclick=mgOnce;
+  document.getElementById('mg-run').onclick=function(){mgRunning=!mgRunning;this.textContent=mgRunning?'⏸ pause':'▶ accumulate 4000';if(mgRunning)mgLoop();};
+  document.getElementById('mg-reset').onclick=mgReset;
+  mgReset();
+
+  setupScroll();
+}
+function setupScroll(){
+  const prog=document.getElementById('progress');
+  const links=[...document.querySelectorAll('nav.side a')];
+  const secs=[...document.querySelectorAll('section[id]')];
+  function onScroll(){ const st=window.scrollY, dh=document.documentElement.scrollHeight-window.innerHeight;
+    prog.style.width=(100*st/Math.max(dh,1))+'%';
+    let cur=secs[0].id; for(const s of secs){if(s.getBoundingClientRect().top<window.innerHeight*0.35)cur=s.id;}
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur)); }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  document.querySelectorAll('section > *').forEach(el=>{if(!el.classList.contains('hero'))el.classList.add('reveal');});
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+    if(window.anime)anime({targets:e.target,opacity:[0,1],translateY:[22,0],easing:'easeOutCubic',duration:600});
+    else{e.target.style.opacity=1;e.target.style.transform='none';} io.unobserve(e.target);}});},{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.getElementById('navtog').onclick=()=>document.getElementById('side').classList.toggle('open');
+  document.querySelectorAll('nav.side a').forEach(a=>a.onclick=()=>document.getElementById('side').classList.remove('open'));
+}
+let _rt; window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{
+  drawHero();drawStep();drawInv();drawMem();drawMerge();drawStateSvg();drawReuseSvg();},180);});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(window.katex)initAll();else window.addEventListener('load',initAll);});
+else{ if(window.katex)initAll(); else window.addEventListener('load',initAll); }
+</script>
+</body>
+</html>

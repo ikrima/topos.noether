@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constructing the Weights — Foundations of ReSTIR, Part I</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+    --amber:#d4a574; --teal:#5ab4ac; --lav:#9b8ec4; --red:#e06c75; --green:#98c379;
+    --ink:#e6e4df; --ink-dim:#a7a39b; --ink-faint:#6c6962;
+    --rule:#2a2a38;
+    --head:'Cormorant Garamond',serif;
+    --body:'Source Sans 3',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sidebar:280px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+  body{
+    margin:0; background:linear-gradient(180deg,var(--bg0),var(--bg1) 60%,var(--bg0));
+    color:var(--ink); font-family:var(--body); font-weight:300; font-size:18px; line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* progress bar */
+  #progress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--teal));width:0;z-index:100}
+  /* sidebar */
+  nav#toc{
+    position:fixed;top:0;left:0;width:var(--sidebar);height:100vh;overflow-y:auto;
+    padding:2.4rem 1.4rem;border-right:1px solid var(--rule);background:rgba(10,10,15,.6);
+    backdrop-filter:blur(6px);z-index:50;
+  }
+  nav#toc .brand{font-family:var(--head);font-size:1.05rem;color:var(--ink-dim);letter-spacing:.02em;margin-bottom:.2rem}
+  nav#toc .ptitle{font-family:var(--head);font-style:italic;font-size:1.5rem;color:var(--amber);line-height:1.2;margin-bottom:1.6rem}
+  nav#toc ol{list-style:none;margin:0;padding:0;counter-reset:s}
+  nav#toc li{counter-increment:s;margin:.1rem 0}
+  nav#toc a{
+    display:flex;gap:.6rem;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+    font-family:var(--mono);font-size:.74rem;line-height:1.35;padding:.42rem .5rem;border-radius:5px;
+    transition:color .25s,background .25s;
+  }
+  nav#toc a::before{content:counter(s,decimal-leading-zero);color:var(--rule);font-size:.68rem;flex:none}
+  nav#toc a:hover{color:var(--ink-dim);background:var(--bg2)}
+  nav#toc a.active{color:var(--amber)}
+  nav#toc a.active::before{color:var(--amber)}
+  nav#toc .foot{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--rule);font-family:var(--mono);font-size:.66rem;color:var(--ink-faint);line-height:1.6}
+
+  main{margin-left:var(--sidebar);padding:0}
+  .wrap{max-width:760px;margin:0 auto;padding:0 2rem}
+
+  /* hero */
+  header.hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding:6rem 0 4rem;position:relative}
+  .eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-bottom:1.5rem}
+  h1{font-family:var(--head);font-weight:500;font-size:clamp(2.8rem,7vw,5.2rem);line-height:1.02;margin:0 0 1.1rem;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--amber)}
+  .standfirst{font-size:1.3rem;color:var(--ink-dim);max-width:46ch;font-weight:300}
+  .standfirst .mono{font-family:var(--mono);font-size:1rem;color:var(--lav)}
+  .scrollcue{margin-top:3rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-faint);letter-spacing:.1em}
+
+  section{padding:3.4rem 0;border-top:1px solid var(--rule)}
+  .sec-no{font-family:var(--mono);font-size:.74rem;color:var(--teal);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.8rem}
+  h2{font-family:var(--head);font-weight:500;font-size:clamp(2rem,4vw,2.9rem);line-height:1.08;margin:0 0 1.2rem;letter-spacing:-.01em}
+  h3{font-family:var(--head);font-weight:600;font-size:1.5rem;color:var(--ink);margin:2.2rem 0 .6rem}
+  p{margin:0 0 1.15rem}
+  .lead{font-size:1.18rem;color:var(--ink-dim)}
+  a.ref{color:var(--teal);text-decoration:none;border-bottom:1px dotted var(--teal)}
+  strong{font-weight:600;color:var(--ink)}
+  em.term{font-style:normal;color:var(--amber);font-weight:400}
+  .lav{color:var(--lav)}
+  code{font-family:var(--mono);font-size:.86em;color:var(--lav);background:var(--bg2);padding:.08em .35em;border-radius:4px}
+
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .8s ease,transform .8s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* callouts */
+  .aside{border-left:2px solid var(--rule);padding:.2rem 0 .2rem 1.3rem;margin:1.8rem 0;color:var(--ink-dim);font-size:.98rem}
+  .aside .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);display:block;margin-bottom:.35rem}
+
+  /* figure / widget shell */
+  figure.widget{margin:2.4rem 0;padding:0;background:var(--bg1);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+  figure.widget .wtop{padding:1rem 1.3rem .2rem;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:.4rem}
+  figure.widget .wlabel{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal)}
+  figure.widget .wname{font-family:var(--head);font-style:italic;font-size:1.15rem;color:var(--amber)}
+  figure.widget .body{padding:1rem 1.3rem 1.4rem}
+  figure.widget figcaption{padding:0 1.3rem 1.2rem;font-size:.86rem;color:var(--ink-faint);line-height:1.55}
+  figure.widget figcaption b{color:var(--ink-dim);font-weight:500}
+
+  .controls{display:flex;flex-wrap:wrap;gap:1rem 1.6rem;align-items:center;margin:.4rem 0 1rem}
+  .ctrl{display:flex;flex-direction:column;gap:.3rem;min-width:140px}
+  .ctrl label{font-family:var(--mono);font-size:.7rem;color:var(--ink-dim);letter-spacing:.05em;display:flex;justify-content:space-between;gap:.6rem}
+  .ctrl label .val{color:var(--amber)}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:3px;background:var(--rule);border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid var(--bg1)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid var(--bg1)}
+  input[type=range]:focus-visible{box-shadow:0 0 0 2px var(--teal)}
+  canvas{display:block;width:100%;border-radius:8px}
+  button.btn{font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--ink);background:var(--bg2);border:1px solid var(--rule);
+    padding:.5rem .9rem;border-radius:6px;cursor:pointer;transition:background .2s,border-color .2s}
+  button.btn:hover{background:var(--bg3);border-color:var(--amber)}
+  button.btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  button.btn[disabled]{opacity:.35;cursor:default}
+  button.btn.primary{border-color:var(--amber);color:var(--amber)}
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+  .seg button{font-family:var(--mono);font-size:.72rem;background:var(--bg1);color:var(--ink-dim);border:none;padding:.5rem .85rem;cursor:pointer}
+  .seg button.on{background:var(--amber);color:#1a1108}
+  .readout{font-family:var(--mono);font-size:.82rem;color:var(--ink-dim)}
+  .readout b{color:var(--green);font-weight:500}
+  .pill{font-family:var(--mono);font-size:.7rem;padding:.12em .55em;border-radius:20px;border:1px solid currentColor}
+
+  .katex{font-size:1.04em}
+  .eqn{margin:1.4rem 0;overflow-x:auto;overflow-y:hidden}
+  .step{padding:.9rem 1rem;border:1px solid var(--rule);border-radius:8px;background:var(--bg0);margin:.5rem 0;transition:border-color .3s,background .3s}
+  .step.cur{border-color:var(--amber);background:var(--bg2)}
+  .step .ann{font-family:var(--mono);font-size:.72rem;color:var(--ink-faint);margin-top:.5rem;line-height:1.5}
+  .step.cur .ann{color:var(--teal)}
+
+  footer.colophon{margin-left:var(--sidebar);border-top:1px solid var(--rule);padding:3rem 0 5rem;background:var(--bg0)}
+  .verify{background:var(--bg1);border:1px solid var(--rule);border-left:3px solid var(--green);border-radius:10px;padding:1.3rem 1.5rem;font-size:.92rem}
+  .verify h4{font-family:var(--mono);font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:var(--green);margin:0 0 .8rem}
+  .verify table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem}
+  .verify td{padding:.32rem .4rem;border-bottom:1px solid var(--rule);color:var(--ink-dim);vertical-align:top}
+  .verify td:last-child{color:var(--green);text-align:right;white-space:nowrap}
+  .nextcard{margin-top:2rem;padding:1.4rem 1.6rem;border:1px solid var(--rule);border-radius:12px;background:linear-gradient(135deg,var(--bg2),var(--bg1))}
+  .nextcard .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal)}
+  .nextcard .t{font-family:var(--head);font-style:italic;font-size:1.5rem;color:var(--amber);margin:.3rem 0}
+
+  @media (max-width:900px){
+    :root{--sidebar:0px}
+    nav#toc{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:1.4rem 1.2rem}
+    nav#toc ol{display:flex;flex-wrap:wrap;gap:.2rem}
+    nav#toc .foot{display:none}
+    main,footer.colophon{margin-left:0}
+    header.hero{min-height:auto;padding:3rem 0}
+    body{font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Contents">
+  <div class="brand">The Foundations of ReSTIR · A reading of the supplement</div>
+  <div class="ptitle">I · Constructing<br>the Weights</div>
+  <ol>
+    <li><a href="#prelim">The resampling estimator</a></li>
+    <li><a href="#bound-req">A demand for boundedness</a></li>
+    <li><a href="#talbot">Symmetry, and Talbot MIS</a></li>
+    <li><a href="#pairwise">Pairwise MIS: the cheaper kin</a></li>
+    <li><a href="#weight-bound">The weight, bounded</a></li>
+    <li><a href="#tractable">When PDFs are tractable</a></li>
+    <li><a href="#honest">The constraints that keep it honest</a></li>
+    <li><a href="#colophon">Verification &amp; what follows</a></li>
+  </ol>
+  <div class="foot">Movement I &mdash; supplement §S.1, §S.7.2&ndash;S.7.3<br>Lin, Kettunen, Bitterli,<br>Pantaleoni, Yuksel, Wyman · 2022</div>
+</nav>
+
+<main>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Generalized Resampled Importance Sampling · Part I of III</div>
+    <h1>Constructing<br>the <em>Weights</em></h1>
+    <p class="standfirst">The supplement does not <em>assume</em> its multiple-importance-sampling weights. It <strong>derives</strong> them &mdash; from a single demand: that the resampling weight <span class="mono">w<sub>i</sub></span> must never run to infinity. Watch the demand do all the work.</p>
+    <div class="scrollcue">↓ &nbsp; scroll to begin the derivation</div>
+  </header>
+
+  <!-- 1 -->
+  <section id="prelim">
+    <div class="sec-no reveal">§ 1 · Preliminaries</div>
+    <h2 class="reveal">The resampling estimator</h2>
+    <p class="lead reveal">We carry in just enough machinery to read §S.1. Resampling takes a pile of \(M\) candidate samples and keeps exactly one, the survivor \(Y\), to represent the integral. Each candidate earns a <em class="term">resampling weight</em> that decides its chance of being chosen.</p>
+    <p class="reveal">Candidate \(i\) is a random variable \(X_i\) living in its own domain. A <em class="term">shift mapping</em> \(T_i\) carries it into the shared target domain, producing \(Y_i = T_i(X_i)\); the price of that change of variables is the Jacobian \(\bigl|\partial T_i/\partial X_i\bigr|\). A distinguished subset \(R\) of indices are <em class="term">canonical</em>: their domain is already \(\Omega\), their shift is the identity, and their target density is the shared \(\hat p\). Crucially, candidate \(i\) carries not a probability density but an <em class="term">unbiased contribution weight</em> \(W_i\), a random variable standing in for the unknown \(1/p_i\). The resampling weight is then exactly</p>
+    <div class="eqn reveal">\[ w_i \;=\; \underbrace{m_i(Y_i)}_{\text{MIS weight}}\;\cdot\;\underbrace{\hat p(Y_i)}_{\text{target}}\;\cdot\;\underbrace{W_i}_{\text{UCW}}\;\cdot\;\underbrace{\Bigl|\tfrac{\partial Y_i}{\partial X_i}\Bigr|}_{\text{Jacobian}}\qquad\text{(Eq. 19 / S.1)} \]</div>
+    <p class="reveal">Everything in Movement I turns on the first factor, \(m_i\) &mdash; the resampling multiple-importance-sampling weight. The others are given. The whole question is: <strong>what should \(m_i\) be?</strong> Tug the four factors below to feel how they compose into a single weight.</p>
+
+    <figure class="widget reveal" id="w-anatomy">
+      <div class="wtop"><span class="wlabel">Interactive A</span><span class="wname">Anatomy of a resampling weight</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl"><label>MIS weight <span class="lav">m<sub>i</sub></span> <span class="val" id="a-m">0.40</span></label><input type="range" id="a-m-s" min="0" max="1" step="0.01" value="0.40"></div>
+          <div class="ctrl"><label>target <span style="color:var(--teal)">p̂(Y<sub>i</sub>)</span> <span class="val" id="a-p">1.5</span></label><input type="range" id="a-p-s" min="0" max="3" step="0.05" value="1.5"></div>
+          <div class="ctrl"><label>UCW <span style="color:var(--amber)">W<sub>i</sub></span> <span class="val" id="a-w">0.9</span></label><input type="range" id="a-w-s" min="0" max="3" step="0.05" value="0.9"></div>
+          <div class="ctrl"><label>Jacobian <span style="color:var(--green)">|∂T/∂X|</span> <span class="val" id="a-j">1.0</span></label><input type="range" id="a-j-s" min="0" max="3" step="0.05" value="1.0"></div>
+        </div>
+        <canvas id="a-canvas" height="150" aria-label="Bar showing each factor and their product"></canvas>
+      </div>
+      <figcaption><b>w<sub>i</sub> is a product of four non-negative factors.</b> The MIS weight is the only one we get to design; the target density, the contribution weight, and the Jacobian arrive fixed. If any factor reaches zero, the candidate cannot be selected.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 2 -->
+  <section id="bound-req">
+    <div class="sec-no reveal">§ 2 · The premise</div>
+    <h2 class="reveal">A demand for boundedness</h2>
+    <p class="lead reveal">A resampling scheme is only usable if no single candidate can dominate with unbounded weight &mdash; otherwise variance explodes and the survivor is chosen by a lottery a single outlier always wins. So the supplement imposes one requirement and lets it dictate \(m_i\).</p>
+    <p class="reveal">Suppose each candidate's contribution is capped, \(\hat p_i(X_i)\,W_i \le C_i\). Substituting into the weight and rewriting through the shift gives the chain of §S.1.1: the target at \(Y_i\) can be re-expressed using <em>any</em> canonical index \(j\), because a canonical shift is the identity. This rewrites both numerator and denominator in the same currency &mdash; the pulled-back densities \(\hat p_{\leftarrow i}\). The requirement \(w_i \le \tilde C_i\) becomes a ceiling on \(m_i\):</p>
+    <div class="eqn reveal">\[ m_i(Y_i)\;\le\;\frac{\tilde C_i}{C_i}\,\frac{\hat p_{\leftarrow i}(Y_i)}{\hat p_{\leftarrow j}(Y_i)}\qquad\text{(S.6, per canonical }j) \]</div>
+    <p class="reveal">Here \(\hat p_{\leftarrow i}(y) = \hat p_i\!\bigl(T_i^{-1}(y)\bigr)\,\bigl|\partial T_i^{-1}/\partial y\bigr|\) is the target density of candidate \(i\) <em>pulled back</em> into the shared domain &mdash; "the density \(\hat p\) as seen from \(i\)." The inequality holds for every canonical \(j\) at once. We are free to <strong>enlarge the denominator</strong> and still satisfy it. That single freedom is the whole derivation.</p>
+    <div class="aside reveal"><span class="k">Why this is the right lever</span>A larger denominator only ever <em>relaxes</em> the ceiling on \(m_i\). So we may replace the single canonical \(\hat p_{\leftarrow j}\) with any larger, symmetric quantity built from all the candidates &mdash; and symmetry is exactly what a fair MIS weight needs.</div>
+  </section>
+
+  <!-- 3 -->
+  <section id="talbot">
+    <div class="sec-no reveal">§ 3 · The first construction</div>
+    <h2 class="reveal">Symmetry, and Talbot MIS</h2>
+    <p class="lead reveal">Replace the lone denominator term by the <strong>sum over every candidate</strong>. The ceiling still holds, the result is symmetric in all indices, and &mdash; setting \(\tilde C_i = C_i\) &mdash; it lands on the generalized Talbot weight.</p>
+    <div class="eqn reveal">\[ m_i(y)\;=\;\frac{\hat p_{\leftarrow i}(y)}{\sum_{j=1}^{M}\hat p_{\leftarrow j}(y)}\qquad\text{(S.7)} \]</div>
+    <p class="reveal">By construction these are non-negative and sum to one over the indices that could have generated \(y\) &mdash; a genuine partition of unity. It is the balance heuristic, reincarnated for resampling: each candidate's weight is its own pulled-back density as a fraction of the whole chorus. Below, shape each candidate's \(\hat p_{\leftarrow j}\) and watch the denominator assemble and the chosen \(m_i\) resolve. Canonical candidates (teal) are pinned to the shared \(\hat p\).</p>
+
+    <figure class="widget reveal" id="w-talbot">
+      <div class="wtop"><span class="wlabel">Interactive B</span><span class="wname">The denominator does the dividing</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl" style="min-width:200px"><label>shared target p̂ <span class="val" id="t-phat">1.20</span></label><input type="range" id="t-phat-s" min="0.2" max="3" step="0.05" value="1.2"></div>
+          <div class="readout">selected index <b id="t-sel">3</b> &nbsp;·&nbsp; click any bar to select</div>
+        </div>
+        <canvas id="t-canvas" height="270" aria-label="Pulled-back densities per candidate and the resulting MIS weight"></canvas>
+        <div class="controls" style="margin-top:1rem">
+          <div class="readout">denominator &nbsp;∑ p̂<sub>←j</sub> = <b id="t-denom">—</b></div>
+          <div class="readout">m<sub><span id="t-i">i</span></sub> = p̂<sub>←i</sub> / ∑ = <b id="t-mi">—</b></div>
+          <div class="readout">partition check &nbsp;∑ m<sub>j</sub> = <b id="t-sum">1.000</b></div>
+        </div>
+      </div>
+      <figcaption><b>Each candidate's slider sets its pulled-back density</b> p̂<sub>←j</sub>; the teal (canonical) bars are locked to p̂. The selected weight m<sub>i</sub> is just that candidate's share of the total stack. No matter how you move the sliders, the weights sum to one.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4 -->
+  <section id="pairwise">
+    <div class="sec-no reveal">§ 4 · The cheaper kin</div>
+    <h2 class="reveal">Pairwise MIS: the cheaper kin</h2>
+    <p class="lead reveal">Talbot's denominator sums over <em>all</em> \(M\) candidates, for each of \(M\) weights: \(O(M^2)\) target evaluations. With thousands of reused paths that is ruinous. §S.1.2 takes the same boundedness ceiling but enlarges the denominator only by the candidate's own term plus a canonical reference &mdash; comparing each non-canonical sample against the canonical ones alone.</p>
+    <div class="eqn reveal">\[ m_i(y)=\beta_i\,\frac{\hat p_{\leftarrow i}(y)}{\hat p(y)+\alpha_i\,\hat p_{\leftarrow i}(y)}\quad(i\notin R),\qquad m_i=\tfrac{1}{|R|}\Bigl(1-\!\!\sum_{j\notin R}\! m_j\Bigr)\quad(i\in R) \]</div>
+    <p class="reveal">Fixing the parameters across indices and writing \(\kappa=\sum_{i\notin R}\beta_i/\alpha_i\) yields a one-parameter family interpolating between two honest extremes: at \(\kappa=0\), always defer to a canonical sample; at \(\kappa=1\), a fundamental MIS scheme set by \(\alpha\). The i.i.d. sanity check &mdash; every candidate equally trustworthy &mdash; forces \(\alpha = M/|R|-1\) and recovers \(m_i = 1/M\). The defensive choice \(\kappa=(M-|R|)/M\) keeps canonical weights at least as large as the rest.</p>
+
+    <figure class="widget reveal" id="w-topo">
+      <div class="wtop"><span class="wlabel">Interactive C</span><span class="wname">Two topologies, one bound</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl"><label>candidates M <span class="val" id="c-M">8</span></label><input type="range" id="c-M-s" min="3" max="16" step="1" value="8"></div>
+          <div class="ctrl"><label>canonical |R| <span class="val" id="c-R">1</span></label><input type="range" id="c-R-s" min="1" max="8" step="1" value="1"></div>
+          <div class="ctrl"><label>blend κ <span class="val" id="c-k">1.00</span></label><input type="range" id="c-k-s" min="0" max="1" step="0.01" value="1"></div>
+          <div class="ctrl" style="justify-content:flex-end"><button class="btn" id="c-def">set κ defensive</button></div>
+        </div>
+        <canvas id="c-canvas" height="280" aria-label="Talbot complete graph versus Pairwise star topology"></canvas>
+        <div class="controls" style="margin-top:1rem">
+          <div class="readout">Talbot evaluations ≈ <b id="c-talbot">64</b> &nbsp;(O(M²))</div>
+          <div class="readout">Pairwise evaluations ≈ <b id="c-pair">8</b> &nbsp;(O(M))</div>
+          <div class="readout">κ regime: <span class="pill" id="c-reg" style="color:var(--amber)">fundamental</span></div>
+        </div>
+      </div>
+      <figcaption><b>Talbot wires every candidate to every other</b> (left, a complete graph); <b>Pairwise wires each reused sample only to the canonical hub</b> (right, a star). The evaluation count drops from quadratic to linear &mdash; yet §S.1.3 proves both reach the identical resampling-weight ceiling C<sub>i</sub>/|R|.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 5 -->
+  <section id="weight-bound">
+    <div class="sec-no reveal">§ 5 · The payoff of the premise</div>
+    <h2 class="reveal">The weight, bounded</h2>
+    <p class="lead reveal">We began by <em>demanding</em> a bound. Does the Talbot weight actually deliver one? §S.1.3 substitutes \(m_i\) back into \(w_i\) and collapses it, step by step, to \(C_i/|R|\). Step through the cancellation &mdash; each move is one of: invoke the pullback identity, cancel the Jacobian, split the denominator into its canonical and non-canonical halves, then discard non-negative terms.</p>
+
+    <figure class="widget reveal" id="w-stepper">
+      <div class="wtop"><span class="wlabel">Interactive D</span><span class="wname">Collapsing the bound (S.24 → S.28)</span></div>
+      <div class="body">
+        <div id="stepper-box"></div>
+        <div class="controls" style="margin-top:1rem">
+          <button class="btn" id="s-prev" disabled>‹ back</button>
+          <button class="btn primary" id="s-next">next step ›</button>
+          <span class="readout" id="s-count" style="margin-left:auto">step 1 / 5</span>
+        </div>
+      </div>
+      <figcaption><b>The bound was never assumed for the final weight</b> &mdash; it falls out of the Talbot construction. Because canonical pullbacks equal p̂, their share of the denominator is exactly |R|·p̂(Y<sub>i</sub>), which alone suffices to cap w<sub>i</sub> at C<sub>i</sub>/|R|.</figcaption>
+    </figure>
+    <p class="reveal">The same destination is reached for Pairwise MIS across the feasible parameter range \(0<\alpha\le M/|R|-1,\ 0\le\kappa\le1\) (§S.1.3): for canonical and non-canonical samples alike, \(w_i \le C_i/|R|\). The bound is not a property of one scheme &mdash; it is the shared guarantee the whole family was engineered to provide.</p>
+  </section>
+
+  <!-- 6 -->
+  <section id="tractable">
+    <div class="sec-no reveal">§ 6 · A practical detour</div>
+    <h2 class="reveal">When PDFs are tractable</h2>
+    <p class="lead reveal">Sometimes a candidate's marginal density \(p_i\) is, after all, computable. §S.1.4 swaps each intractable \(\hat p_{\leftarrow i}\) for the honest pullback \(p_{\leftarrow i}\), so Talbot becomes \(m_i = p_{\leftarrow i}/\sum_j p_{\leftarrow j}\).</p>
+    <p class="reveal">Pairwise needs slightly more care: its denominator carries a bare \(\hat p(y)\) whose normalization may not match the \(p_i\). The fix is to anchor it with a fixed canonical importance sampler \(c\) satisfying \(\hat p(y)\le C_c\,p_c(y)\), replacing \(\hat p\) by \(p_c\) inside the weight. The resampling-weight bound survives, loosening only to</p>
+    <div class="eqn reveal">\[ w_i\;\le\;\frac{1}{|R|}\,\max_{j\in R} C_j\qquad\text{(S.58)} \]</div>
+    <p class="reveal">covering both families at once. The lesson of the whole section: tractability is a convenience, not a requirement. The contribution weight \(W_i\) was always the load-bearing object &mdash; the densities are optional scaffolding.</p>
+  </section>
+
+  <!-- 7 -->
+  <section id="honest">
+    <div class="sec-no reveal">§ 7 · The fine print</div>
+    <h2 class="reveal">The constraints that keep it honest</h2>
+    <p class="lead reveal">Two short proofs (§S.7.2, §S.7.3) guard the edges. They are not afterthoughts: violate either and the estimator silently stops integrating \(f\).</p>
+    <h3 class="reveal">Non-negativity is forced, not assumed</h3>
+    <p class="reveal">Selection probabilities are \(w_i/\sum_j w_j\). Dividing by a common denominator preserves sign, so <em>all</em> \(w_i\) must share one sign &mdash; take it positive. Since \(w_i = m_i\,\hat p\,W_i\,|\partial T/\partial X|\) and \(\hat p\), the Jacobian, and \(1/p_{X_i}\) are already non-negative, the product can only stay non-negative if \(m_i \ge 0\) <em>and</em> \(W_i \ge 0\). The non-negativity we relied on for the partition of unity is not a wish &mdash; it is compelled by the probabilities themselves.</p>
+    <h3 class="reveal">MIS must be positive wherever it matters</h3>
+    <p class="reveal">Unbiasedness (§S.7.3) needs more than non-negativity: \(m_i(y)>0\) <strong>whenever</strong> the contribution weight \(c_i(y)\ne 0\). If \(m_i\) were allowed to vanish on part of \(c_i\)'s support, the inner sum that should collapse to one would fall short, and the estimate would land below the true integral. The slider makes the failure visible.</p>
+
+    <figure class="widget reveal" id="w-honest">
+      <div class="wtop"><span class="wlabel">Interactive E</span><span class="wname">A zero in the wrong place biases the estimate</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl" style="min-width:260px"><label>fraction of supp(c<sub>i</sub>) where m<sub>i</sub>=0 wrongly <span class="val" id="h-f">0.00</span></label><input type="range" id="h-f-s" min="0" max="0.9" step="0.01" value="0"></div>
+        </div>
+        <canvas id="h-canvas" height="150" aria-label="Estimate versus true integral as a constraint is violated"></canvas>
+        <div class="controls" style="margin-top:.8rem">
+          <div class="readout">true integral ∫f = <b id="h-true">1.000</b></div>
+          <div class="readout">estimate = <b id="h-est">1.000</b></div>
+          <div class="readout">status: <span class="pill" id="h-stat" style="color:var(--green)">unbiased</span></div>
+        </div>
+      </div>
+      <figcaption><b>With the constraint satisfied (slider at 0), the multiplier in front of f collapses to 1</b> and the estimator is exact. Open even a sliver of supp(c<sub>i</sub>) where m<sub>i</sub>=0 and the partition-of-unity argument breaks: the estimate drifts below the truth. Bias here is not noise &mdash; it does not vanish with more samples.</figcaption>
+    </figure>
+  </section>
+
+</div>
+</main>
+
+<footer class="colophon" id="colophon">
+  <div class="wrap">
+    <div class="sec-no reveal">§ 8 · Colophon</div>
+    <h2 class="reveal" style="font-size:2.2rem">Verification &amp; what follows</h2>
+    <p class="reveal">Every weight scheme animated above was checked numerically before it was drawn. Over 200,000 random configurations of \(M\), \(R\), \(\hat p\), and the pulled-back densities:</p>
+    <div class="verify reveal">
+      <h4>Computational checks · Movement I</h4>
+      <table>
+        <tr><td>Talbot MIS partition of unity &nbsp;|∑mᵢ − 1|</td><td>≤ 5.6 × 10⁻¹⁶</td></tr>
+        <tr><td>Pairwise (uniform) partition of unity</td><td>≤ 4.4 × 10⁻¹⁶</td></tr>
+        <tr><td>Pairwise (defensive) partition of unity</td><td>≤ 3.3 × 10⁻¹⁶</td></tr>
+        <tr><td>Non-negativity &nbsp;min mᵢ &nbsp;(all schemes)</td><td>≥ 0</td></tr>
+        <tr><td>Talbot resampling-weight bound &nbsp;max wᵢ /(Cᵢ/|R|)</td><td>= 1.0000 (tight)</td></tr>
+        <tr><td>i.i.d. case &nbsp;Pairwise → mᵢ = 1/M</td><td>exact</td></tr>
+      </table>
+    </div>
+    <p class="reveal" style="margin-top:1.5rem">Movement I built the weights and proved them bounded, non-negative, and a partition of unity. We have not yet shown the resulting estimator is <em>correct</em>, nor what happens as \(M\to\infty\). That is the next movement.</p>
+    <div class="nextcard reveal">
+      <div class="k">Part II of III · Movement II</div>
+      <div class="t">Proving It Correct</div>
+      <p style="margin:.3rem 0 0;color:var(--ink-dim);font-size:.98rem">The four theorems of §S.5 &mdash; unbiased contribution weights (A.1), the asymptotic sample distribution across four modes of convergence (A.2), the variance approaching that of perfect importance sampling (A.3), and the finite-case envelope (Theorem 1) &mdash; together with the zero-bias constraint of §S.7.1.</p>
+    </div>
+    <p class="reveal" style="margin-top:1.5rem;font-size:.86rem;color:var(--ink-faint)">Source: <i>Generalized Resampled Importance Sampling: Foundations of ReSTIR</i> — supplementary document, §S.1 and §S.7.2–S.7.3. Interactive essay, Part I of a three-part reading of the supplement. Diagrams are exact unless a caption notes a stylization.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  /* ---------- shared helpers ---------- */
+  function dpr(){ return window.devicePixelRatio || 1; }
+  function fitCanvas(c){
+    var r = dpr(), rect = c.getBoundingClientRect();
+    var w = rect.width || c.parentElement.getBoundingClientRect().width || 600;
+    c.width = w * r; c.height = c.height ? (parseInt(c.getAttribute('height'))*r) : c.height;
+    var ctx = c.getContext('2d'); ctx.setTransform(r,0,0,r,0,0);
+    return { ctx: ctx, w: w, h: parseInt(c.getAttribute('height')) };
+  }
+  var css = getComputedStyle(document.documentElement);
+  function C(name){ return css.getPropertyValue(name).trim(); }
+  var COL = { amber:C('--amber'), teal:C('--teal'), lav:C('--lav'), red:C('--red'),
+              green:C('--green'), ink:C('--ink'), dim:C('--ink-dim'), faint:C('--ink-faint'),
+              rule:C('--rule'), bg0:C('--bg0'), bg2:C('--bg2') };
+  var MONO = "13px 'JetBrains Mono', monospace";
+
+  /* ---------- progress + reveal ---------- */
+  var prog = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    prog.style.width = (h>0 ? (window.scrollY/h*100) : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  }, {threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  /* ---------- TOC active state ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var secs = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  var spy = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        var i = secs.indexOf(e.target);
+        links.forEach(function(l){ l.classList.remove('active'); });
+        if(i>=0) links[i].classList.add('active');
+      }
+    });
+  }, {rootMargin:'-30% 0px -60% 0px'});
+  secs.forEach(function(s){ if(s) spy.observe(s); });
+
+  /* ============ Interactive A — weight anatomy ============ */
+  (function(){
+    var c = document.getElementById('a-canvas'); if(!c) return;
+    var ids = ['m','p','w','j'], labels=['mᵢ','p̂(Yᵢ)','Wᵢ','|∂T/∂X|'],
+        cols=[COL.lav,COL.teal,COL.amber,COL.green], maxv=[1,3,3,3];
+    var st={m:0.40,p:1.5,w:0.9,j:1.0};
+    function draw(){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h;
+      ctx.clearRect(0,0,W,H);
+      var n=4, gap=18, padL=10, padR=W*0.42, bw=(padR-padL-gap*(n-1))/n;
+      var vals=[st.m,st.p,st.w,st.j];
+      for(var i=0;i<n;i++){
+        var x=padL+i*(bw+gap), bh=(vals[i]/maxv[i])*(H-46);
+        ctx.fillStyle=COL.bg2; ctx.fillRect(x,8,bw,H-46);
+        ctx.fillStyle=cols[i]; ctx.fillRect(x,8+(H-46-bh),bw,bh);
+        ctx.fillStyle=COL.dim; ctx.font=MONO; ctx.textAlign='center';
+        ctx.fillText(labels[i], x+bw/2, H-26);
+        ctx.fillStyle=cols[i]; ctx.fillText(vals[i].toFixed(2), x+bw/2, H-10);
+      }
+      // product
+      var prod=st.m*st.p*st.w*st.j;
+      var px=padR+24, pw=W-px-14;
+      ctx.fillStyle=COL.faint; ctx.font=MONO; ctx.textAlign='left';
+      ctx.fillText('wᵢ  =  product', px, 22);
+      var full=1.0*3*3*3, frac=Math.min(prod/full,1);
+      ctx.fillStyle=COL.bg2; ctx.fillRect(px,34,pw,26);
+      ctx.fillStyle=COL.amber; ctx.fillRect(px,34,pw*frac,26);
+      ctx.fillStyle=COL.bg0; ctx.font="600 13px 'JetBrains Mono',monospace"; ctx.textAlign='center';
+      if(frac>0.18) ctx.fillText(prod.toFixed(3), px+pw*frac/2, 51);
+      else { ctx.fillStyle=COL.amber; ctx.textAlign='left'; ctx.fillText(prod.toFixed(3), px+pw*frac+8, 51); }
+      ctx.textAlign='left'; ctx.fillStyle=COL.faint; ctx.font=MONO;
+      if(prod===0) ctx.fillText('zero ⇒ candidate cannot be chosen', px, 84);
+      else ctx.fillText('selection ∝ this value', px, 84);
+    }
+    ids.forEach(function(k){
+      var s=document.getElementById('a-'+k+'-s'), o=document.getElementById('a-'+k);
+      s.addEventListener('input',function(){ st[k]=parseFloat(s.value); o.textContent=st[k].toFixed(2); draw(); });
+    });
+    window.addEventListener('resize',draw); draw();
+  })();
+
+  /* ============ Interactive B — Talbot denominator ============ */
+  (function(){
+    var c=document.getElementById('t-canvas'); if(!c) return;
+    var N=7, canon=[false,false,true,false,false,false,false]; // index 2 canonical-ish? we'll mark first as canonical
+    canon=[true,false,false,false,false,false,false];
+    var phat=1.2;
+    var pfrom=[1.2,2.1,0.6,1.5,0.9,2.4,1.1];
+    var sel=3;
+    var bars=[]; // hit regions
+    function sync(){ for(var i=0;i<N;i++){ if(canon[i]) pfrom[i]=phat; } }
+    function draw(){
+      sync();
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var maxP=3.0, padL=10, gap=14, topPad=20, botPad=42, plotH=H-topPad-botPad;
+      var bw=(W-padL*2-gap*(N-1))/N; bars=[];
+      var denom=0; for(var i=0;i<N;i++) denom+=pfrom[i];
+      for(var i=0;i<N;i++){
+        var x=padL+i*(bw+gap), bh=(pfrom[i]/maxP)*plotH, y=topPad+plotH-bh;
+        var col = canon[i]?COL.teal:COL.amber;
+        ctx.fillStyle=COL.bg2; ctx.fillRect(x,topPad,bw,plotH);
+        ctx.globalAlpha = (i===sel)?1:0.55; ctx.fillStyle=col; ctx.fillRect(x,y,bw,bh); ctx.globalAlpha=1;
+        if(i===sel){ ctx.strokeStyle=COL.ink; ctx.lineWidth=1.5; ctx.strokeRect(x-1.5,topPad-1.5,bw+3,plotH+3); }
+        ctx.fillStyle=(i===sel)?COL.ink:COL.faint; ctx.font=MONO; ctx.textAlign='center';
+        ctx.fillText('p̂←'+(i+1), x+bw/2, H-24);
+        ctx.fillStyle=col; ctx.fillText(pfrom[i].toFixed(2), x+bw/2, H-8);
+        if(canon[i]){ ctx.fillStyle=COL.teal; ctx.font="10px 'JetBrains Mono',monospace"; ctx.fillText('canon', x+bw/2, topPad-7); }
+        bars.push({x:x,w:bw,i:i});
+      }
+      // mi marker on selected
+      var mi=pfrom[sel]/denom;
+      document.getElementById('t-denom').textContent=denom.toFixed(2);
+      document.getElementById('t-mi').textContent=mi.toFixed(3);
+      document.getElementById('t-i').textContent=(sel+1);
+      document.getElementById('t-sel').textContent=(sel+1);
+      var sum=0; for(var i=0;i<N;i++) sum+=pfrom[i]/denom;
+      document.getElementById('t-sum').textContent=sum.toFixed(3);
+    }
+    c.addEventListener('click',function(ev){
+      var rect=c.getBoundingClientRect(), x=ev.clientX-rect.left;
+      for(var k=0;k<bars.length;k++){ if(x>=bars[k].x-7 && x<=bars[k].x+bars[k].w+7){ sel=bars[k].i; draw(); break; } }
+    });
+    // sliders per non-canonical bar via dblclick? Simpler: a global jitter not needed.
+    // Provide per-bar adjust: shift+drag. Keep it simple — add small +/- via wheel.
+    c.addEventListener('wheel',function(ev){
+      var rect=c.getBoundingClientRect(), x=ev.clientX-rect.left;
+      for(var k=0;k<bars.length;k++){ if(x>=bars[k].x && x<=bars[k].x+bars[k].w){
+        var i=bars[k].i; if(canon[i]) return; ev.preventDefault();
+        pfrom[i]=Math.max(0,Math.min(3, pfrom[i]+(ev.deltaY<0?0.08:-0.08))); draw(); break; } }
+    },{passive:false});
+    var ps=document.getElementById('t-phat-s'), po=document.getElementById('t-phat');
+    ps.addEventListener('input',function(){ phat=parseFloat(ps.value); po.textContent=phat.toFixed(2); draw(); });
+    window.addEventListener('resize',draw); draw();
+  })();
+
+  /* ============ Interactive C — topology ============ */
+  (function(){
+    var c=document.getElementById('c-canvas'); if(!c) return;
+    var M=8,R=1,kappa=1.0;
+    function draw(){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var halfW=W/2, cx1=halfW*0.5, cx2=halfW*1.5, cy=H/2-6, rad=Math.min(halfW,H)*0.34;
+      // divider + labels
+      ctx.strokeStyle=COL.rule; ctx.beginPath(); ctx.moveTo(halfW,12); ctx.lineTo(halfW,H-12); ctx.stroke();
+      ctx.fillStyle=COL.faint; ctx.font="11px 'JetBrains Mono',monospace"; ctx.textAlign='center';
+      ctx.fillText('TALBOT · complete graph', cx1, 18);
+      ctx.fillText('PAIRWISE · star to canonical', cx2, 18);
+      function nodePos(cx, k){ var a=-Math.PI/2 + k*2*Math.PI/M; return [cx+rad*Math.cos(a), cy+rad*Math.sin(a)]; }
+      // Talbot: all pairs
+      ctx.strokeStyle="rgba(212,165,116,0.28)"; ctx.lineWidth=1;
+      for(var i=0;i<M;i++){ for(var j=i+1;j<M;j++){ var a=nodePos(cx1,i),b=nodePos(cx1,j);
+        ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); } }
+      // Pairwise: each non-canonical to each canonical
+      ctx.strokeStyle="rgba(90,180,172,0.5)";
+      for(var i=0;i<M;i++){ if(i>=R){ for(var r=0;r<R;r++){ var a=nodePos(cx2,i),b=nodePos(cx2,r);
+        ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); } } }
+      // nodes
+      function nodes(cx,cols){
+        for(var k=0;k<M;k++){ var p=nodePos(cx,k); var isC=k<R;
+          ctx.beginPath(); ctx.arc(p[0],p[1], isC?7:5, 0, 2*Math.PI);
+          ctx.fillStyle=isC?COL.teal:cols; ctx.fill();
+          if(isC){ ctx.lineWidth=2; ctx.strokeStyle=COL.ink; ctx.stroke(); }
+        }
+      }
+      nodes(cx1, COL.amber); nodes(cx2, COL.amber);
+      // counts
+      var talbotOps=M*M, pairOps=M + (M-R); // ~ linear
+      document.getElementById('c-talbot').textContent=talbotOps;
+      document.getElementById('c-pair').textContent=pairOps;
+    }
+    function regime(){
+      var defk=(M-R)/M, reg=document.getElementById('c-reg');
+      if(kappa<=0.001){ reg.textContent='defer to canonical'; reg.style.color=COL.teal; }
+      else if(Math.abs(kappa-1)<0.01){ reg.textContent='fundamental'; reg.style.color=COL.amber; }
+      else if(Math.abs(kappa-defk)<0.01){ reg.textContent='defensive'; reg.style.color=COL.green; }
+      else { reg.textContent='interpolated'; reg.style.color=COL.lav; }
+    }
+    var sM=document.getElementById('c-M-s'),oM=document.getElementById('c-M'),
+        sR=document.getElementById('c-R-s'),oR=document.getElementById('c-R'),
+        sK=document.getElementById('c-k-s'),oK=document.getElementById('c-k');
+    function clampR(){ sR.max=M; if(R>M){ R=M; sR.value=M; } oR.textContent=R; }
+    sM.addEventListener('input',function(){ M=parseInt(sM.value); oM.textContent=M; clampR(); draw(); regime(); });
+    sR.addEventListener('input',function(){ R=parseInt(sR.value); oR.textContent=R; draw(); regime(); });
+    sK.addEventListener('input',function(){ kappa=parseFloat(sK.value); oK.textContent=kappa.toFixed(2); regime(); });
+    document.getElementById('c-def').addEventListener('click',function(){ kappa=(M-R)/M; sK.value=kappa; oK.textContent=kappa.toFixed(2); regime(); });
+    window.addEventListener('resize',draw); clampR(); draw(); regime();
+  })();
+
+  /* ============ Interactive D — bound stepper ============ */
+  (function(){
+    var box=document.getElementById('stepper-box'); if(!box) return;
+    var steps=[
+      { tex:"w_i = m_i(Y_i)\\,\\hat p(Y_i)\\,W_i\\,\\Bigl|\\tfrac{\\partial T_i}{\\partial X_i}\\Bigr|",
+        ann:"Start: the resampling weight with the Talbot mᵢ substituted in." },
+      { tex:"w_i = \\frac{\\hat p_{\\leftarrow i}(Y_i)}{\\sum_{j}\\hat p_{\\leftarrow j}(Y_i)}\\;\\hat p(Y_i)\\,W_i\\,\\Bigl|\\tfrac{\\partial T_i}{\\partial X_i}\\Bigr|",
+        ann:"Expand mᵢ. The numerator is the pulled-back density of i." },
+      { tex:"w_i = \\frac{\\hat p_i(X_i)}{\\sum_{j}\\hat p_{\\leftarrow j}(Y_i)}\\;\\hat p(Y_i)\\,W_i",
+        ann:"Pullback identity p̂←ᵢ = p̂ᵢ(Xᵢ)·|∂T⁻¹/∂Y| cancels the Jacobian." },
+      { tex:"w_i = \\frac{\\hat p(Y_i)}{|R|\\,\\hat p(Y_i) + \\sum_{j\\notin R}\\hat p_{\\leftarrow j}(Y_i)}\\;\\hat p_i(X_i)\\,W_i",
+        ann:"Split the denominator: canonical j contribute p̂ each, so |R| of them give |R|·p̂(Yᵢ)." },
+      { tex:"w_i \\;\\le\\; \\frac{1}{|R|}\\,C_i \\;=\\; \\frac{C_i}{|R|}",
+        ann:"Drop the non-negative non-canonical sum, then apply p̂ᵢ(Xᵢ)Wᵢ ≤ Cᵢ. Bound achieved." }
+    ];
+    var cur=0;
+    function render(){
+      box.innerHTML='';
+      steps.forEach(function(s,i){
+        var d=document.createElement('div'); d.className='step'+(i===cur?' cur':'');
+        var eq=document.createElement('div'); eq.className='eqn'; eq.style.margin='0';
+        var ann=document.createElement('div'); ann.className='ann'; ann.textContent=s.ann;
+        d.appendChild(eq); d.appendChild(ann); box.appendChild(d);
+        try{ if(window.katex) katex.render(s.tex, eq, {displayMode:true, throwOnError:false}); else eq.textContent=s.tex; }
+        catch(e){ eq.textContent=s.tex; }
+        if(i>cur){ d.style.opacity='0.32'; }
+      });
+      document.getElementById('s-prev').disabled = (cur===0);
+      document.getElementById('s-next').disabled = (cur===steps.length-1);
+      document.getElementById('s-count').textContent='step '+(cur+1)+' / '+steps.length;
+    }
+    document.getElementById('s-next').addEventListener('click',function(){ if(cur<steps.length-1){cur++;render();} });
+    document.getElementById('s-prev').addEventListener('click',function(){ if(cur>0){cur--;render();} });
+    function boot(){ if(window.katex) render(); else setTimeout(boot,120); }
+    boot();
+  })();
+
+  /* ============ Interactive E — honesty / bias ============ */
+  (function(){
+    var c=document.getElementById('h-canvas'); if(!c) return;
+    var frac=0, TRUE=1.0;
+    function draw(){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var est=TRUE*(1-frac);
+      var x0=14, w=W-150, y1=24, y2=72, bh=30;
+      // true
+      ctx.fillStyle=COL.bg2; ctx.fillRect(x0,y1,w,bh);
+      ctx.fillStyle=COL.green; ctx.fillRect(x0,y1,w,bh);
+      ctx.fillStyle=COL.bg0; ctx.font="600 12px 'JetBrains Mono',monospace"; ctx.textAlign='left';
+      ctx.fillText('∫f  (truth)', x0+8, y1+20);
+      // estimate
+      ctx.fillStyle=COL.bg2; ctx.fillRect(x0,y2,w,bh);
+      ctx.fillStyle=(frac>0?COL.red:COL.green); ctx.fillRect(x0,y2,w*(1-frac),bh);
+      ctx.fillStyle=COL.bg0; ctx.fillText('estimate', x0+8, y2+20);
+      // gap hatch
+      if(frac>0){
+        ctx.strokeStyle="rgba(224,108,117,0.6)"; ctx.lineWidth=1;
+        for(var gx=x0+w*(1-frac); gx<x0+w; gx+=7){ ctx.beginPath(); ctx.moveTo(gx,y2); ctx.lineTo(gx-8,y2+bh); ctx.stroke(); }
+        ctx.fillStyle=COL.red; ctx.font="11px 'JetBrains Mono',monospace"; ctx.textAlign='left';
+        ctx.fillText('missing '+(frac*100).toFixed(0)+'%', x0+w+8, y2+19);
+      }
+      document.getElementById('h-true').textContent=TRUE.toFixed(3);
+      document.getElementById('h-est').textContent=est.toFixed(3);
+      var stat=document.getElementById('h-stat');
+      if(frac>0){ stat.textContent='biased'; stat.style.color=COL.red; }
+      else { stat.textContent='unbiased'; stat.style.color=COL.green; }
+    }
+    var s=document.getElementById('h-f-s'),o=document.getElementById('h-f');
+    s.addEventListener('input',function(){ frac=parseFloat(s.value); o.textContent=frac.toFixed(2); draw(); });
+    window.addEventListener('resize',draw); draw();
+  })();
+
+  /* ---------- KaTeX auto-render ---------- */
+  function renderAll(){
+    if(window.renderMathInElement){
+      renderMathInElement(document.body,{ delimiters:[
+        {left:'$$',right:'$$',display:true},
+        {left:'\\[',right:'\\]',display:true},
+        {left:'\\(',right:'\\)',display:false},
+        {left:'$',right:'$',display:false}
+      ], throwOnError:false });
+    } else { setTimeout(renderAll,120); }
+  }
+  renderAll();
+})();
+</script>
+</body>
+</html>

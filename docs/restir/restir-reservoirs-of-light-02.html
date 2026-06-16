@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservoirs of Light · II — Choosing Without Drawing</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+  --ink:#e7e4dd; --ink-dim:#a7a39a; --ink-faint:#6d6a64;
+  --amber:#d4a574;   /* emitted light / candidate samples            */
+  --teal:#5ab4ac;    /* the selected sample                          */
+  --lav:#9b8ec4;     /* PDFs (p, p̂)                                  */
+  --red:#e06c75;     /* discarded / occluded / bias                  */
+  --green:#98c379;   /* converged / unbiased                         */
+  --rule:rgba(231,228,221,0.10);
+  --rule-strong:rgba(231,228,221,0.18);
+  --sans:'Source Sans 3',system-ui,sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:
+    radial-gradient(1200px 800px at 78% -8%, rgba(212,165,116,0.05), transparent 60%),
+    radial-gradient(1000px 700px at -5% 110%, rgba(90,180,172,0.045), transparent 60%),
+    linear-gradient(180deg,var(--bg0),var(--bg1) 55%, var(--bg0));
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--sans); font-weight:300;
+  line-height:1.68; font-size:18px; -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(212,165,116,0.28); color:#fff}
+
+/* progress + layout ----------------------------------------------------- */
+#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--teal));box-shadow:0 0 12px rgba(212,165,116,0.5)}
+.shell{display:grid;grid-template-columns:266px minmax(0,1fr);gap:0;max-width:1280px;margin:0 auto}
+
+nav.side{position:sticky;top:0;height:100vh;padding:38px 26px 38px 34px;
+  border-right:1px solid var(--rule);align-self:start;overflow-y:auto}
+nav.side .series{font-family:var(--mono);font-size:11px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--amber);opacity:.85}
+nav.side .partno{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-faint);margin-top:18px}
+nav.side h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.08;margin:.18em 0 1.5em;letter-spacing:.01em}
+nav.side ol{list-style:none;margin:0;padding:0;counter-reset:s}
+nav.side li{counter-increment:s;margin:0 0 2px}
+nav.side a{display:flex;gap:11px;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+  font-size:13.5px;line-height:1.32;padding:7px 9px;border-radius:7px;border-left:2px solid transparent;
+  transition:color .25s,background .25s,border-color .25s}
+nav.side a::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:10.5px;
+  color:var(--ink-faint);opacity:.6;flex:none;padding-top:1px}
+nav.side a:hover{color:var(--ink-dim);background:rgba(231,228,221,0.03)}
+nav.side a.active{color:var(--ink);background:rgba(212,165,116,0.07);border-left-color:var(--amber)}
+nav.side a.active::before{color:var(--amber);opacity:1}
+nav.side .foot{margin-top:30px;padding-top:18px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);line-height:1.7}
+
+main{padding:0 clamp(20px,4vw,72px) 140px;min-width:0}
+section{padding:62px 0;border-bottom:1px solid var(--rule);scroll-margin-top:18px}
+section:last-of-type{border-bottom:none}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(31px,4.4vw,46px);line-height:1.05;margin:.05em 0 .55em;letter-spacing:.01em}
+h3{font-family:var(--serif);font-weight:600;font-size:25px;margin:2em 0 .5em;color:var(--ink)}
+p{margin:1.05em 0;max-width:67ch;color:var(--ink-dim)}
+p strong,li strong{color:var(--ink);font-weight:600}
+em{color:var(--ink)}
+a.ref{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(90,180,172,.3)}
+a.ref:hover{border-color:var(--teal)}
+.lead{font-size:21px;color:var(--ink);font-weight:300;max-width:64ch}
+.lead .drop{float:left;font-family:var(--serif);font-weight:600;font-size:74px;line-height:.74;
+  padding:8px 14px 0 0;color:var(--amber)}
+
+code{font-family:var(--mono);font-size:.86em;background:rgba(231,228,221,0.06);
+  padding:.1em .42em;border-radius:4px;color:var(--amber)}
+.katex{font-size:1.06em}
+.eqwrap{margin:1.6em 0;padding:6px 4px;overflow-x:auto}
+
+/* hero ------------------------------------------------------------------ */
+.hero{padding-top:54px}
+.hero .title{font-family:var(--serif);font-weight:500;font-size:clamp(46px,7.5vw,86px);
+  line-height:.98;letter-spacing:.005em;margin:.06em 0 .12em}
+.hero .title .imp{font-style:italic;color:var(--amber)}
+.hero .sub{font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.8vw,27px);color:var(--ink-dim);margin-bottom:1.5em}
+
+/* figure / widget chrome ------------------------------------------------ */
+.fig{margin:2.1em 0;background:linear-gradient(180deg,rgba(26,26,40,.62),rgba(18,18,26,.62));
+  border:1px solid var(--rule-strong);border-radius:14px;overflow:hidden;
+  box-shadow:0 14px 44px rgba(0,0,0,.36)}
+.fig .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:13px 18px;border-bottom:1px solid var(--rule);background:rgba(10,10,15,.4)}
+.fig .bar .lab{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+.fig .body{padding:18px}
+.fig .cap{padding:0 18px 16px;font-size:13.5px;color:var(--ink-faint);max-width:none;font-style:italic;font-family:var(--serif)}
+.fig .cap b{font-style:normal;font-family:var(--sans);color:var(--ink-dim);font-weight:500}
+
+canvas{display:block;width:100%;border-radius:9px;background:#070709;touch-action:none}
+
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:14px}
+.seg{display:inline-flex;background:rgba(10,10,15,.55);border:1px solid var(--rule-strong);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink-dim);
+  background:transparent;border:0;padding:8px 13px;border-radius:6px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:rgba(212,165,116,.16);color:var(--amber)}
+.seg.teal button.on{background:rgba(90,180,172,.16);color:var(--teal)}
+
+.btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);cursor:pointer;
+  background:rgba(90,180,172,.12);border:1px solid rgba(90,180,172,.32);padding:9px 16px;border-radius:8px;transition:all .18s}
+.btn:hover{background:rgba(90,180,172,.2)}
+.btn.amber{background:rgba(212,165,116,.12);border-color:rgba(212,165,116,.32)}
+.btn.amber:hover{background:rgba(212,165,116,.2)}
+
+.chk{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);cursor:pointer;user-select:none;
+  padding:7px 12px;border:1px solid var(--rule-strong);border-radius:8px;background:rgba(10,10,15,.4);transition:all .18s}
+.chk:hover{color:var(--ink)}
+.chk input{accent-color:var(--teal);width:14px;height:14px}
+.chk[data-tone="rho"]{--c:var(--lav)} .chk[data-tone="le"]{--c:var(--amber)}
+.chk[data-tone="g"]{--c:var(--teal)} .chk[data-tone="v"]{--c:var(--red)}
+.chk .dot{width:9px;height:9px;border-radius:2px;background:var(--c,var(--ink-dim))}
+
+label.slide{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);min-width:190px}
+label.slide .v{color:var(--amber);font-size:13px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--amber),var(--teal));outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+
+/* readout panel --------------------------------------------------------- */
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-top:14px}
+.readout .cell{background:var(--bg1);padding:13px 15px}
+.readout .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.readout .val{font-family:var(--mono);font-size:23px;color:var(--ink);margin-top:5px;line-height:1}
+.readout .val.amber{color:var(--amber)} .readout .val.teal{color:var(--teal)}
+.readout .val.green{color:var(--green)} .readout .val.red{color:var(--red)} .readout .val.lav{color:var(--lav)}
+.readout .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+.tile-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+@media(max-width:680px){.tile-row{grid-template-columns:1fr 1fr}}
+.tile-c{text-align:center}
+.tile-c canvas{aspect-ratio:1/1;image-rendering:pixelated}
+.tile-c .nm{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:8px;line-height:1.3}
+.tile-c .nm b{display:block;font-size:18px;margin-top:3px}
+.tile-c.win .nm b{color:var(--green)}
+
+.callout{margin:1.8em 0;padding:18px 22px;border-left:3px solid var(--amber);
+  background:rgba(212,165,116,.05);border-radius:0 10px 10px 0}
+.callout .h{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.callout p{margin:.4em 0;color:var(--ink-dim)}
+.callout.teal{border-color:var(--teal);background:rgba(90,180,172,.05)}
+.callout.teal .h{color:var(--teal)}
+
+details.aside{margin:1.6em 0;border:1px solid var(--rule-strong);border-radius:10px;background:rgba(155,142,196,.045)}
+details.aside summary{cursor:pointer;padding:14px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  color:var(--lav);list-style:none;display:flex;align-items:center;gap:10px}
+details.aside summary::-webkit-details-marker{display:none}
+details.aside summary::before{content:'›';font-size:18px;transition:transform .2s;color:var(--lav)}
+details.aside[open] summary::before{transform:rotate(90deg)}
+details.aside .inner{padding:0 18px 18px;font-size:15.5px;color:var(--ink-dim)}
+details.aside .inner p{font-size:15.5px;max-width:none}
+
+ul.clean{max-width:67ch;color:var(--ink-dim)}
+ul.clean li{margin:.5em 0}
+ul.clean li::marker{color:var(--amber)}
+
+.exercise{display:flex;gap:16px;padding:17px 0;border-bottom:1px solid var(--rule)}
+.exercise:last-child{border-bottom:none}
+.exercise .n{font-family:var(--serif);font-style:italic;font-size:34px;color:var(--amber);line-height:1;flex:none;width:46px}
+.exercise .t{font-size:16px;color:var(--ink-dim)}
+.exercise .t b{color:var(--ink);font-weight:600}
+
+.reveal{opacity:0;transform:translateY(22px)}
+
+footer.colophon{padding:48px clamp(20px,4vw,72px) 90px;border-top:1px solid var(--rule-strong);color:var(--ink-faint);font-size:13.5px}
+footer.colophon h4{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 14px}
+footer.colophon code{font-size:12px}
+footer.colophon .v{color:var(--green)}
+.nextlink{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:30px;padding:22px 26px;
+  border:1px solid var(--rule-strong);border-radius:12px;background:rgba(90,180,172,.05);flex-wrap:wrap}
+.nextlink .l{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+.nextlink .t{font-family:var(--serif);font-size:24px;color:var(--ink);margin-top:4px}
+
+@media(max-width:980px){
+  .shell{grid-template-columns:1fr}
+  nav.side{position:fixed;inset:0 auto 0 0;width:262px;transform:translateX(-100%);transition:transform .3s;z-index:55;background:var(--bg1)}
+  nav.side.open{transform:translateX(0)}
+  #navtog{position:fixed;top:14px;left:14px;z-index:56;background:var(--bg2);border:1px solid var(--rule-strong);
+    color:var(--ink);border-radius:9px;padding:10px 13px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  main{padding-top:58px}
+}
+@media(min-width:981px){#navtog{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="navtog">≡ sections</button>
+
+<div class="shell">
+<nav class="side" id="side">
+  <div class="series">Reservoirs of Light</div>
+  <div class="partno">Part II of V — an interactive derivation of ReSTIR</div>
+  <h1>Choosing Without Drawing</h1>
+  <ol>
+    <li><a href="#asymmetry" class="active">The one asymmetry</a></li>
+    <li><a href="#rule">The resampling rule</a></li>
+    <li><a href="#converge">Why the survivor looks like p̂</a></li>
+    <li><a href="#factor">The missing normalization</a></li>
+    <li><a href="#coverage">When it breaks: coverage</a></li>
+    <li><a href="#weight">The contribution weight</a></li>
+    <li><a href="#exercises">Exercises &amp; the road ahead</a></li>
+  </ol>
+  <div class="foot">
+    after Bitterli et&nbsp;al. 2020<br>§3 · Resampled importance<br>sampling (RIS)<br><br>
+    built with Claude&nbsp;Opus&nbsp;4.8<br>numbers verified, not asserted
+  </div>
+</nav>
+
+<main>
+
+<!-- ============================================================ HERO -->
+<section id="asymmetry" class="hero">
+  <div class="eyebrow">Reservoirs of Light · II</div>
+  <div class="title">Choosing<br><span class="imp">Without</span> Drawing</div>
+  <div class="sub">We have a distribution we can <em>weigh</em> but cannot <em>sample</em>.<br>Resampling turns that one asymmetry into an algorithm.</div>
+
+  <p class="lead"><span class="drop">P</span>art&nbsp;I left us stranded on a precise ledge. The target we want to sample, <span class="katex-inline" data-tex="\hat p \propto \rho L_e G"></span>, can be <em>evaluated</em> at any point for the cost of a little arithmetic — but no one knows how to <em>draw samples</em> from it, because its normalization is itself an unsolved integral. Resampled importance sampling refuses to be stopped by that. Its entire idea: <em>generate a pool of cheap candidates from a distribution you can sample, then keep one of them with probability proportional to how much the target wanted it.</em> Drag the slider for the pool size <em>M</em>. Watch where the survivors land.</p>
+
+  <div class="fig" id="fig-hero">
+    <div class="bar">
+      <span class="lab">The RIS sandbox · candidates → resample → survivor</span>
+      <div class="seg teal" id="hero-src">
+        <button data-s="p1" class="on">candidates ∝ Uniform</button>
+        <button data-s="p2">∝ Uniform[0,½]</button>
+      </div>
+    </div>
+    <div class="body">
+      <canvas id="cv-hero" height="430"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="hero-one">+ one draw</button>
+        <button class="btn" id="hero-stream">▶ stream survivors</button>
+        <button class="btn" id="hero-reset">reset</button>
+        <label class="slide" style="flex:1;min-width:220px">candidate pool &nbsp;<span class="v" id="hero-M-v">M = 8</span>
+          <input type="range" id="hero-M" min="1" max="64" value="8"></label>
+      </div>
+      <div class="readout" id="hero-read">
+        <div class="cell"><div class="k">pool size M</div><div class="val amber" id="h-M">8</div><div class="sub">candidates per survivor</div></div>
+        <div class="cell"><div class="k">survivors kept</div><div class="val teal" id="h-N">0</div></div>
+        <div class="cell"><div class="k">distance to p̂</div><div class="val" id="h-l1">—</div><div class="sub">L¹(histogram, p̂)</div></div>
+        <div class="cell"><div class="k">⟨w⟩ this draw</div><div class="val lav" id="h-w">—</div><div class="sub">mean candidate weight</div></div>
+      </div>
+    </div>
+    <div class="cap"><b>Top:</b> the candidate axis. The <b style="color:var(--lav)">lavender curve</b> is the target p̂; each <b style="color:var(--amber)">amber stem</b> is one candidate, its height the resampling weight <span class="katex-inline" data-tex="w=\hat p/p"></span>. The <b style="color:var(--teal)">teal</b> stem is the one kept. <b>Bottom:</b> the histogram of survivors. With enough candidates it climbs onto the p̂ curve — though no candidate was ever drawn <em>from</em> p̂.</div>
+  </div>
+
+  <p>That is the whole trick, and the rest of this essay is just taking it seriously: <em>why</em> the survivor ends up p̂-distributed, what correction makes the estimator come out exactly right, and the single condition under which the whole thing quietly breaks.</p>
+</section>
+
+<!-- ============================================================ RULE -->
+<section id="rule">
+  <div class="eyebrow">§1 · The mechanism</div>
+  <h2>The resampling rule</h2>
+
+  <p>Draw <em>M</em> candidates <span class="katex-inline" data-tex="x_1,\dots,x_M"></span> independently from a source density <em>p</em> we can sample. To each, attach a <strong>resampling weight</strong> — the ratio of how much the target wants it to how often the source produces it:</p>
+
+  <div class="eqwrap" id="eq-w"></div>
+
+  <p>Then keep exactly one, choosing index <em>z</em> with probability proportional to its weight:</p>
+
+  <div class="eqwrap" id="eq-select"></div>
+
+  <p>A candidate the target loves but the source rarely makes gets a large weight and is likely kept; one the source over-produces is weighed down. Spin the selector — each segment's width is one candidate's weight, and the pointer lands proportionally.</p>
+
+  <div class="fig" id="fig-roulette">
+    <div class="bar"><span class="lab">Proportional selection · P(z) = w_z / Σ w_i</span></div>
+    <div class="body">
+      <canvas id="cv-roulette" height="210"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="rl-spin">↻ new candidates &amp; select</button>
+        <label class="slide" style="flex:1;min-width:200px">candidates &nbsp;<span class="v" id="rl-M-v">M = 6</span>
+          <input type="range" id="rl-M" min="2" max="16" value="6"></label>
+      </div>
+    </div>
+    <div class="cap">Each band is a candidate; its width is <span class="katex-inline" data-tex="w_i=\hat p(x_i)/p(x_i)"></span>. The <b style="color:var(--teal)">teal</b> band is selected. Because widths are weights, frequent winners are exactly the candidates the target favors.</div>
+  </div>
+</section>
+
+<!-- ============================================================ CONVERGE -->
+<section id="converge">
+  <div class="eyebrow">§2 · The distribution of the survivor</div>
+  <h2>Why the survivor looks like p̂</h2>
+
+  <p>With a single candidate (<em>M</em> = 1) there is nothing to choose between — the survivor is just a draw from the source <em>p</em>. As the pool grows, selection-by-weight increasingly favors the points the target prefers, and the distribution of the survivor slides off <em>p</em> and onto <span class="katex-inline" data-tex="\hat p"></span>. In the limit it is <em>exactly</em> proportional to the target:</p>
+
+  <div class="eqwrap" id="eq-limit"></div>
+
+  <p>Slide <em>M</em> and watch the survivor histogram detach from uniform and climb onto the p̂ curve. The inset tracks how fast: the L¹ distance to p̂ falls by roughly half every time you double the pool.</p>
+
+  <div class="fig" id="fig-conv">
+    <div class="bar"><span class="lab">Survivor density vs. pool size M (uniform candidates)</span></div>
+    <div class="body">
+      <canvas id="cv-conv" height="320"></canvas>
+      <div class="controls">
+        <label class="slide" style="flex:1;min-width:240px">candidate pool &nbsp;<span class="v" id="conv-M-v">M = 8</span>
+          <input type="range" id="conv-M" min="1" max="64" value="8"></label>
+        <span style="font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)">20,000 survivors re-sampled per setting</span>
+      </div>
+    </div>
+    <div class="cap">The <b style="color:var(--teal)">teal histogram</b> is where survivors land; the <b style="color:var(--lav)">lavender curve</b> is the target p̂(x)=2−2x. Inset: L¹ distance to p̂ against M — a clean halving, the signature of resampling converging on its target.</div>
+  </div>
+
+  <div class="callout teal">
+    <div class="h">The bridge from Part I</div>
+    <p>As <span class="katex-inline" data-tex="M\to\infty"></span>, RIS <em>becomes</em> exact sampling from p̂ — the very thing Part&nbsp;I called unbuildable. So its variance bottoms out at exactly the floor we measured there: the residual that p̂ cannot see, which is <em>visibility</em>. Resampling does not beat that floor; it lets us <em>reach</em> it without ever solving p̂'s normalization.</p>
+  </div>
+</section>
+
+<!-- ============================================================ FACTOR -->
+<section id="factor">
+  <div class="eyebrow">§3 · From a good sample to an unbiased estimate</div>
+  <h2>The missing normalization</h2>
+
+  <p>A p̂-distributed sample is not yet an estimate of the integral. If the survivor <em>y</em> were perfectly p̂-distributed we would weight it by <span class="katex-inline" data-tex="f(y)/\hat p(y)"></span> — but that quietly assumes we know p̂'s normalization, which is the very thing we never have. RIS supplies it from the candidates themselves. The full estimator is</p>
+
+  <div class="eqwrap" id="eq-est"></div>
+
+  <p>The trailing factor <span class="katex-inline" data-tex="\langle w\rangle_M=\tfrac1M\sum_i w_i"></span> is an unbiased Monte-Carlo estimate of the target's normalization <span class="katex-inline" data-tex="\int \hat p"></span>. It is what turns a consistent-but-biased ratio into an <strong>unbiased</strong> estimator — for every <em>M</em>, not just in the limit. Below, the integrand is the Part&nbsp;I motif: <span class="katex-inline" data-tex="f=\hat p\cdot V"></span>, a target dimmed by a patch of shadow. Stream estimates and watch the running mean settle onto the true value. Then sabotage it.</p>
+
+  <div class="fig" id="fig-est">
+    <div class="bar">
+      <span class="lab">Estimating I = ∫ f dx,&nbsp; f = p̂·V</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label class="chk"><span class="dot" style="background:var(--lav)"></span><input type="checkbox" id="est-factor" checked> apply ⟨w⟩ correction</label>
+        <div class="seg" id="est-scale">
+          <button data-c="1" class="on">p̂ as given</button>
+          <button data-c="3">p̂ × 3 (unnormalized)</button>
+        </div>
+      </div>
+    </div>
+    <div class="body">
+      <canvas id="cv-est" height="300"></canvas>
+      <div class="controls">
+        <button class="btn" id="est-run">▶ stream estimates</button>
+        <button class="btn amber" id="est-reset">reset</button>
+        <label class="slide" style="flex:1;min-width:200px">pool &nbsp;<span class="v" id="est-M-v">M = 16</span>
+          <input type="range" id="est-M" min="1" max="64" value="16"></label>
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">true I</div><div class="val teal" id="e-true">0.8375</div><div class="sub">∫ p̂·V dx</div></div>
+        <div class="cell"><div class="k">running mean</div><div class="val amber" id="e-mean">—</div></div>
+        <div class="cell"><div class="k">rel. error</div><div class="val" id="e-err">—</div></div>
+        <div class="cell"><div class="k">rel. variance</div><div class="val lav" id="e-var">—</div><div class="sub">per single estimate</div></div>
+      </div>
+    </div>
+    <div class="cap">With the correction on, the mean lands on <b style="color:var(--teal)">true I</b> for any M and any scaling of p̂ — selection never saw the scale, and ⟨w⟩ absorbs it. Turn the correction <em>off</em> and rescale p̂: the estimate misses by exactly the unknown normalization. That factor is not bookkeeping; it is the whole reason RIS is unbiased.</div>
+  </div>
+
+  <p>Two things to notice. First, at <em>M</em> = 1 the estimator reduces algebraically to plain importance sampling from <em>p</em> — RIS contains ordinary Monte Carlo as its smallest case. Second, as <em>M</em> grows the relative variance falls and then <em>plateaus</em>; that floor is the part of <em>f</em> the target <span class="katex-inline" data-tex="\hat p"></span> cannot represent — here, the shadow <em>V</em>. Exactly the Part&nbsp;I residual, met again from the other side.</p>
+</section>
+
+<!-- ============================================================ COVERAGE -->
+<section id="coverage">
+  <div class="eyebrow">§4 · The one condition that must hold</div>
+  <h2>When it breaks: coverage</h2>
+
+  <p>Resampling can only ever return a candidate it was given. So the source <em>p</em> must be able to produce a sample anywhere the target is nonzero — <span class="katex-inline" data-tex="p(x)>0"></span> wherever <span class="katex-inline" data-tex="\hat p(x)>0"></span>. Violate it and no amount of <em>M</em> saves you: the survivors simply never appear in the uncovered region, and the estimate converges — confidently — to the wrong number.</p>
+
+  <div class="fig" id="fig-cov">
+    <div class="bar">
+      <span class="lab">Coverage · source support vs. target support</span>
+      <div class="seg teal" id="cov-src">
+        <button data-s="p1" class="on">p = Uniform[0,1] (covers p̂)</button>
+        <button data-s="p2">p = Uniform[0,½] (does not)</button>
+      </div>
+    </div>
+    <div class="body">
+      <canvas id="cv-cov" height="300"></canvas>
+      <div class="controls">
+        <button class="btn" id="cov-run">▶ stream</button>
+        <button class="btn amber" id="cov-reset">reset</button>
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">true ∫p̂</div><div class="val teal">1.0000</div></div>
+        <div class="cell"><div class="k">RIS estimate</div><div class="val" id="cov-mean">—</div></div>
+        <div class="cell"><div class="k">survivors in (½,1]</div><div class="val" id="cov-upper">—</div><div class="sub">the uncovered region</div></div>
+      </div>
+    </div>
+    <div class="cap">Under the half-support source the <b style="color:var(--red)">red region</b> is never sampled; survivors pile into the left, the histogram cannot reach p̂, and the estimate of ∫p̂ converges to <code>0.75</code> instead of <code>1.0</code> — short by exactly the uncovered mass.</div>
+  </div>
+
+  <p>This looks like a footnote and is in fact the seed of Part&nbsp;V. The moment we begin reusing a neighbor's sample, we are feeding our resampler candidates drawn for a <em>different</em> target with a <em>different</em> support — and unless we account for it, this same silent bias creeps back in. Hold onto the red region.</p>
+</section>
+
+<!-- ============================================================ WEIGHT -->
+<section id="weight">
+  <div class="eyebrow">§5 · Packaging the result</div>
+  <h2>The contribution weight</h2>
+
+  <p>Group the estimator differently. Define a single number that travels with the survivor,</p>
+
+  <div class="eqwrap" id="eq-W"></div>
+
+  <p>so that the estimate is simply <span class="katex-inline" data-tex="\langle I\rangle = f(y)\,W(y)"></span>. The pair <span class="katex-inline" data-tex="(y,\,W)"></span> is everything downstream needs: a chosen sample and the weight that makes it unbiased. It is — and this is the hinge of the entire method — exactly what a <em>reservoir</em> will store.</p>
+
+  <div class="fig">
+    <div class="bar"><span class="lab">What survives the resampling: the pair (y, W)</span></div>
+    <div class="body" style="padding:26px 18px"><div id="svg-W"></div></div>
+    <div class="cap">M candidates collapse to one survivor and one weight. Part&nbsp;III asks the obvious next question: can we compute <span class="katex-inline" data-tex="(y,W)"></span> while looking at the candidates <em>one at a time</em>, keeping only constant memory? The answer — weighted reservoir sampling — is what finally makes this run per-pixel in real time.</p></div>
+  </div>
+
+  <details class="aside">
+    <summary>For the probabilist — RIS is the unbiasing of a ratio estimator</summary>
+    <div class="inner">
+      <p>Strip the resampling away and what remains is a classical <em>ratio estimator</em>. We want <span class="katex-inline" data-tex="I=\int f"></span>; we can sample <em>p</em> and evaluate both <em>f</em> and an unnormalized target <span class="katex-inline" data-tex="\hat p"></span>. The naïve weighted-importance estimate <span class="katex-inline" data-tex="\big(\sum f/\hat p \cdot w\big)\big/\big(\sum w\big)"></span> is consistent but biased at finite sample count — the textbook ratio-estimator bias. RIS rearranges the same ingredients into <span class="katex-inline" data-tex="\frac{f(y)}{\hat p(y)}\cdot\frac1M\sum_j w_j"></span>, where <em>y</em> is the resampled survivor. The resampling correlates numerator and denominator in precisely the way that cancels the bias term, yielding an estimator that is unbiased at every <em>M</em>. If you have met Bekaert's weighted importance sampling or Heitz's ratio estimators in rendering — or the Hansen–Hurwitz / Horvitz–Thompson family in survey sampling — this is the same animal, domesticated for a target you can only evaluate.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ============================================================ EXERCISES -->
+<section id="exercises">
+  <div class="eyebrow">§6 · Make it yours</div>
+  <h2>Exercises &amp; the road ahead</h2>
+
+  <p>The sandbox is exact. Use it to feel the theorems rather than take them on faith.</p>
+
+  <div style="max-width:72ch">
+    <div class="exercise"><div class="n">i</div><div class="t"><b>Watch RIS become exact sampling.</b> In the hero sandbox, step M through 1, 4, 16, 64 and read off the distance to p̂. Each doubling roughly halves it. At what M is the survivor histogram visually indistinguishable from the target?</div></div>
+    <div class="exercise"><div class="n">ii</div><div class="t"><b>Prove the factor matters.</b> In the estimator widget, turn off the ⟨w⟩ correction and switch p̂ to ×3. The mean lands near <code>0.28</code>. Now turn the correction back on. Explain, in one sentence, what the factor <em>knew</em> that <span class="katex-inline" data-tex="f/\hat p"></span> alone did not.</div></div>
+    <div class="exercise"><div class="n">iii</div><div class="t"><b>M = 1 is plain Monte Carlo.</b> Set the pool to 1 in the estimator widget and confirm the relative variance matches single-sample importance sampling. Why does the ⟨w⟩ factor become trivial here?</div></div>
+    <div class="exercise"><div class="n">iv</div><div class="t"><b>Break it on purpose.</b> Switch the coverage widget to the half-support source and stream. The estimate converges — to <code>0.75</code>. Predict where the missing <code>0.25</code> went before you read the caption.</div></div>
+  </div>
+
+  <div class="nextlink">
+    <div>
+      <div class="l">Part III →</div>
+      <div class="t">A Single Slot of Memory</div>
+    </div>
+    <p style="margin:0;max-width:46ch;font-size:15px">We can resample a pool — but storing all M candidates defeats the purpose. Weighted reservoir sampling computes the same survivor and weight from a <em>stream</em>, in O(1) memory, and merges two reservoirs as if they were one. That is what makes ReSTIR fit in a pixel.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="colophon">
+  <h4>Colophon &amp; honesty footer</h4>
+  <p style="max-width:80ch;color:var(--ink-faint)">
+    Every widget here runs the exact RIS procedure live: draw M candidates from a source <em>p</em>, weight each by <code>w = c·p̂(x)/p(x)</code>, select one survivor with probability <code>w_z/Σw_i</code>, and estimate with <code>(f(y)/p̂(y))·(1/M)Σw_i</code>. The target is <code style="color:var(--lav)">p̂(x) = 2−2x</code> on [0,1] (a shape that happens to integrate to 1); the scale toggle multiplies it by <em>c</em> to expose the role of the normalization factor. The integrand is <code>f = p̂·V</code> with a shadow <code>V=0</code> on [0.55, 0.80].
+  </p>
+  <p style="max-width:80ch;color:var(--ink-faint)">
+    <span class="v">Verified against an offline reference (200k trials):</span>
+    survivor→p̂ in L¹ — M=1 <code>0.50</code>, M=4 <code>0.11</code>, M=16 <code>0.028</code>, M=64 <code>0.014</code>;
+    ⟨w⟩ recovers normalization — <code>c=1→1.00</code>, <code>c=3→3.00</code>;
+    estimator unbiased at all M, all c → <code class="v">I = 0.8375</code>, relVar <code>0.75</code> (M=1) → <code>0.21</code> (M=32, the visibility floor);
+    drop the factor at c=3 → biased to <code>0.28</code>; half-support source → biased to <code>0.75</code> with zero survivors above ½.
+    Explicit selection and the streaming reservoir update give identical survivor densities — the equivalence Part&nbsp;III exploits.
+  </p>
+  <p style="color:var(--ink-faint)">Reservoirs of Light · Part II — Choosing Without Drawing · after Bitterli, Wyman, Pharr, Shirley, Lefohn &amp; Jarosz, <a class="ref" href="https://doi.org/10.1145/3386569.3392481" target="_blank" rel="noopener">SIGGRAPH 2020</a>.</p>
+</footer>
+
+<script>
+/* ============================================================ RIS ENGINE
+   The load-bearing module. Verified in verify_part2.js; reused in Part V.
+   target shape p̂0(x)=2-2x on [0,1] (∫=1). Scale c exposes the normalization role.
+   ====================================================================== */
+function pHat0(x){ return 2 - 2*x; }
+const SRC={
+  p1:{sample:()=>Math.random(),       pdf:x=>1,            cover:[0,1],   label:'Uniform[0,1]'},
+  p2:{sample:()=>Math.random()*0.5,   pdf:x=>x<0.5?2:0,    cover:[0,0.5], label:'Uniform[0,½]'},
+};
+/* one RIS draw, explicit select z ∝ w_z (paper Eq 6). returns full state for drawing. */
+function risDraw(M, src, c){
+  const xs=new Array(M), ws=new Array(M); let wsum=0;
+  for(let i=0;i<M;i++){ const x=src.sample(); xs[i]=x; const w=(c*pHat0(x))/src.pdf(x); ws[i]=w; wsum+=w; }
+  let u=Math.random()*wsum, acc=0, z=0;
+  for(let i=0;i<M;i++){ acc+=ws[i]; if(u<=acc){z=i;break;} z=i; }
+  return {xs,ws,z,y:xs[z],wsum,avgW:wsum/M};
+}
+/* integrand f = p̂0 · V , shadow V=0 on [SA,SB] */
+const SA=0.55, SB=0.80;
+function Vfun(x){ return (x>=SA && x<=SB)?0:1; }
+function ffun(x){ return pHat0(x)*Vfun(x); }
+const I_EXACT = 1 - ((2*SB-SB*SB)-(2*SA-SA*SA));  // = 0.8375
+
+/* ============================================================ CANVAS UTIL */
+const COL={amber:'#d4a574',teal:'#5ab4ac',lav:'#9b8ec4',red:'#e06c75',green:'#98c379',
+  ink:'#e7e4dd',dim:'#a7a39a',faint:'#6d6a64'};
+function setup(cv,h){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth||cv.parentElement.clientWidth;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); cv.style.height=h+'px';
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+function tex(id,s,d){ try{katex.render(s,document.getElementById(id),{displayMode:d,throwOnError:false});}catch(e){} }
+function renderInline(){ document.querySelectorAll('[data-tex]').forEach(el=>{try{katex.render(el.getAttribute('data-tex'),el,{throwOnError:false});}catch(e){}}); }
+
+/* histogram helper over [0,1] */
+function newHist(B){ return {B,counts:new Float64Array(B),total:0}; }
+function histAdd(H,x){ const b=Math.min(H.B-1,Math.max(0,Math.floor(x*H.B))); H.counts[b]++; H.total++; }
+function histL1(H){ if(H.total===0)return 1; let l1=0; for(let b=0;b<H.B;b++){const dens=H.counts[b]/H.total*H.B;const xm=(b+0.5)/H.B;l1+=Math.abs(dens-pHat0(xm))/H.B;} return l1; }
+
+/* draw an axis+target panel: returns mapping */
+function panelMap(x0,x1,y0,y1,ymax){
+  return {X:x=>x0+x*(x1-x0), Y:v=>y1-(v/ymax)*(y1-y0), x0,x1,y0,y1,ymax};
+}
+function drawTargetCurve(ctx,m,col,fill){
+  ctx.beginPath();
+  for(let i=0;i<=100;i++){const x=i/100; const px=m.X(x), py=m.Y(pHat0(x)); if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);}
+  if(fill){ctx.lineTo(m.X(1),m.y1);ctx.lineTo(m.X(0),m.y1);ctx.closePath();ctx.fillStyle=fill;ctx.fill();}
+  else{ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();}
+}
+function drawHistBars(ctx,m,H,col){
+  for(let b=0;b<H.B;b++){ if(H.total===0)continue; const dens=H.counts[b]/H.total*H.B;
+    const x=m.X(b/H.B), w=m.X((b+1)/H.B)-x, y=m.Y(dens);
+    ctx.fillStyle=col; ctx.fillRect(x+0.5,y,w-1,m.y1-y); }
+}
+
+/* ============================================================ HERO SANDBOX */
+let heroM=8, heroSrc='p1', heroHist=newHist(36), heroLast=null, heroRAF=null, heroStreaming=false;
+function heroDrawOnce(){ heroLast=risDraw(heroM,SRC[heroSrc],1); histAdd(heroHist,heroLast.y); }
+function drawHero(){
+  const cv=document.getElementById('cv-hero'); const {ctx,w,h}=setup(cv,430);
+  ctx.clearRect(0,0,w,h);
+  const padL=46,padR=18; const ax0=padL,ax1=w-padR;
+  const topY0=24, topY1=h*0.46, botY0=h*0.54, botY1=h-30;
+  const ymax=2.2;
+  const mTop=panelMap(ax0,ax1,topY0,topY1,ymax), mBot=panelMap(ax0,ax1,botY0,botY1,ymax);
+  // labels
+  ctx.font='11px JetBrains Mono'; ctx.fillStyle=COL.faint; ctx.textAlign='left';
+  ctx.fillText('candidates  ·  weight w = p̂/p',ax0,14);
+  ctx.fillText('survivors  ·  histogram vs p̂',ax0,botY0-8);
+  // baselines
+  ctx.strokeStyle='rgba(231,228,221,0.12)';ctx.lineWidth=1;
+  [mTop,mBot].forEach(m=>{ctx.beginPath();ctx.moveTo(m.x0,m.y1);ctx.lineTo(m.x1,m.y1);ctx.stroke();});
+  // uncovered region shading for p2
+  if(heroSrc==='p2'){ const rx0=mTop.X(0.5);
+    [mTop,mBot].forEach(m=>{ctx.fillStyle='rgba(224,108,117,0.09)';ctx.fillRect(m.X(0.5),m.y0,m.X(1)-m.X(0.5),m.y1-m.y0);});
+    ctx.fillStyle='rgba(224,108,117,0.7)';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('uncovered',(mTop.X(0.5)+mTop.X(1))/2,topY0+12);
+  }
+  // target curve top (the weight landscape for uniform source)
+  drawTargetCurve(ctx,mTop,'rgba(155,142,196,0.85)');
+  // candidate stems
+  if(heroLast){
+    const src=SRC[heroSrc];
+    for(let i=0;i<heroLast.xs.length;i++){
+      const x=heroLast.xs[i]; const wv=heroLast.ws[i]; const sel=(i===heroLast.z);
+      const px=mTop.X(x); const top=mTop.Y(Math.min(wv,ymax));
+      ctx.strokeStyle= sel?COL.teal:'rgba(212,165,116,0.5)'; ctx.lineWidth=sel?2.6:1.3;
+      ctx.beginPath();ctx.moveTo(px,mTop.y1);ctx.lineTo(px,top);ctx.stroke();
+      ctx.fillStyle= sel?COL.teal:'rgba(212,165,116,0.8)';
+      ctx.beginPath();ctx.arc(px,top,sel?4.5:2.6,0,7);ctx.fill();
+    }
+    // survivor marker dropping to histogram
+    const sx=mTop.X(heroLast.y);
+    ctx.strokeStyle='rgba(90,180,172,0.35)';ctx.setLineDash([3,4]);ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.moveTo(sx,mTop.y1);ctx.lineTo(sx,mBot.y0);ctx.stroke();ctx.setLineDash([]);
+  }
+  // histogram + target overlay
+  drawHistBars(ctx,mBot,heroHist,'rgba(90,180,172,0.55)');
+  drawTargetCurve(ctx,mBot,'rgba(155,142,196,0.9)');
+  // axis ticks
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  [0,0.5,1].forEach(t=>ctx.fillText(t,mBot.X(t),mBot.y1+16));
+  // readouts
+  document.getElementById('h-N').textContent=heroHist.total;
+  document.getElementById('h-l1').textContent=heroHist.total>20?histL1(heroHist).toFixed(3):'—';
+  const l1el=document.getElementById('h-l1'); const l1=histL1(heroHist);
+  l1el.className='val '+(heroHist.total<=20?'':(l1<0.05?'green':l1<0.15?'amber':'red'));
+  document.getElementById('h-w').textContent=heroLast?heroLast.avgW.toFixed(3):'—';
+  document.getElementById('h-M').textContent=heroM;
+}
+function heroStreamLoop(){
+  if(!heroStreaming)return;
+  for(let k=0;k<40;k++) heroDrawOnce();
+  drawHero();
+  if(heroHist.total>30000){heroStreaming=false;document.getElementById('hero-stream').textContent='▶ stream survivors';return;}
+  heroRAF=requestAnimationFrame(heroStreamLoop);
+}
+
+/* ============================================================ ROULETTE */
+let rlM=6, rlState=null;
+function rlSpin(){ rlState=risDraw(rlM,SRC.p1,1); drawRoulette(); }
+function drawRoulette(){
+  const cv=document.getElementById('cv-roulette'); const {ctx,w,h}=setup(cv,210);
+  ctx.clearRect(0,0,w,h);
+  if(!rlState)return;
+  const padL=20,padR=20,barY=70,barH=46, x0=padL,x1=w-padR;
+  const wsum=rlState.wsum;
+  let acc=0;
+  for(let i=0;i<rlState.ws.length;i++){
+    const frac=rlState.ws[i]/wsum; const bx=x0+(acc/wsum)*(x1-x0); const bw=frac*(x1-x0);
+    const sel=(i===rlState.z);
+    ctx.fillStyle= sel?'rgba(90,180,172,0.85)':(i%2?'rgba(212,165,116,0.55)':'rgba(212,165,116,0.38)');
+    ctx.fillRect(bx,barY,Math.max(bw-1,0.5),barH);
+    if(bw>22){ctx.fillStyle= sel?'#0a0a0f':'rgba(10,10,15,0.8)';ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+      ctx.fillText('x'+(i+1),bx+bw/2,barY+barH/2+3);}
+    acc+=rlState.ws[i];
+  }
+  // pointer at selected (proportional landing)
+  let pacc=0; for(let i=0;i<rlState.z;i++)pacc+=rlState.ws[i];
+  const px=x0+((pacc+rlState.ws[rlState.z]/2)/wsum)*(x1-x0);
+  ctx.fillStyle=COL.teal;ctx.beginPath();ctx.moveTo(px,barY-6);ctx.lineTo(px-7,barY-18);ctx.lineTo(px+7,barY-18);ctx.closePath();ctx.fill();
+  ctx.fillStyle=COL.ink;ctx.font='12px JetBrains Mono';ctx.textAlign='center';
+  ctx.fillText('selected: x'+(rlState.z+1)+'  ·  P = w_'+(rlState.z+1)+'/Σw = '+(rlState.ws[rlState.z]/wsum*100).toFixed(0)+'%',w/2,barY+barH+30);
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';
+  ctx.fillText('band width = candidate weight w_i = p̂(x_i)/p(x_i)',w/2,barY-30);
+  document.getElementById('rl-M-v').textContent='M = '+rlM;
+}
+
+/* ============================================================ CONVERGENCE */
+let convM=8, convCurve=null;
+function buildConvCurve(){ convCurve=[]; for(let M=1;M<=64;M*=2){ const H=newHist(40);
+  for(let t=0;t<8000;t++) histAdd(H,risDraw(M,SRC.p1,1).y); convCurve.push([M,histL1(H)]); } }
+function drawConv(){
+  const cv=document.getElementById('cv-conv'); const {ctx,w,h}=setup(cv,320);
+  ctx.clearRect(0,0,w,h);
+  // main histogram for current M
+  const H=newHist(40); const T=20000;
+  for(let t=0;t<T;t++) histAdd(H,risDraw(convM,SRC.p1,1).y);
+  const padL=46,padR=18,y0=20,y1=h-34; const m=panelMap(padL,w-padR,y0,y1,2.2);
+  ctx.strokeStyle='rgba(231,228,221,0.12)';ctx.beginPath();ctx.moveTo(m.x0,m.y1);ctx.lineTo(m.x1,m.y1);ctx.stroke();
+  drawHistBars(ctx,m,H,'rgba(90,180,172,0.5)');
+  drawTargetCurve(ctx,m,'rgba(155,142,196,0.95)');
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+  [0,0.5,1].forEach(t=>ctx.fillText(t,m.X(t),m.y1+16));
+  ctx.textAlign='left';ctx.fillStyle=COL.lav;ctx.fillText('p̂(x) = 2−2x',m.X(0.04),m.Y(2.0));
+  ctx.fillStyle=COL.teal;ctx.fillText('survivors, M='+convM,m.X(0.55),m.Y(1.9));
+  // inset L1 curve
+  const ix0=w-padR-150, ix1=w-padR-12, iy0=24, iy1=120;
+  ctx.fillStyle='rgba(10,10,15,0.55)';ctx.fillRect(ix0-8,iy0-14,ix1-ix0+18,iy1-iy0+30);
+  ctx.strokeStyle='rgba(231,228,221,0.15)';ctx.strokeRect(ix0-8,iy0-14,ix1-ix0+18,iy1-iy0+30);
+  ctx.fillStyle=COL.faint;ctx.font='9px JetBrains Mono';ctx.textAlign='left';
+  ctx.fillText('L¹ to p̂  vs  M (log)',ix0-4,iy0-3);
+  if(convCurve){
+    const lmM=Math.log2(64), lo=0.005, hi=0.6;
+    const X=M=>ix0+(Math.log2(M)/lmM)*(ix1-ix0);
+    const Y=v=>iy1-(Math.log10(v/lo)/Math.log10(hi/lo))*(iy1-iy0);
+    ctx.strokeStyle=COL.teal;ctx.lineWidth=1.6;ctx.beginPath();
+    convCurve.forEach((p,i)=>{const x=X(p[0]),y=Math.max(iy0,Math.min(iy1,Y(p[1])));if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+    ctx.stroke();
+    convCurve.forEach(p=>{ctx.fillStyle=COL.teal;ctx.beginPath();ctx.arc(X(p[0]),Math.max(iy0,Math.min(iy1,Y(p[1]))),2,0,7);ctx.fill();});
+    // current M marker
+    const curL1=histL1(H);
+    ctx.fillStyle=COL.amber;ctx.beginPath();ctx.arc(X(convM),Math.max(iy0,Math.min(iy1,Y(curL1))),3.5,0,7);ctx.fill();
+  }
+  document.getElementById('conv-M-v').textContent='M = '+convM;
+}
+
+/* ============================================================ ESTIMATOR */
+let estM=16, estFactor=true, estC=1, estRun=false, estN=0, estSum=0, estSum2=0, estHist=[], estRAF=null;
+function estReset(){ estN=0;estSum=0;estSum2=0;estHist=[]; drawEst(); document.getElementById('e-mean').textContent='—';
+  document.getElementById('e-err').textContent='—';document.getElementById('e-var').textContent='—'; }
+function estStep(k){
+  for(let i=0;i<k;i++){ const r=risDraw(estM,SRC.p1,estC);
+    let est=ffun(r.y)/(estC*pHat0(r.y)); if(estFactor) est*=r.avgW;
+    estSum+=est; estSum2+=est*est; estN++;
+    if(estN%3===0||estN<60) estHist.push(estSum/estN);
+  }
+}
+function drawEst(){
+  const cv=document.getElementById('cv-est'); const {ctx,w,h}=setup(cv,300);
+  ctx.clearRect(0,0,w,h);
+  const padL=54,padR=16,y0=18,y1=h-28;
+  const target = estFactor? I_EXACT : I_EXACT/estC; // where the (possibly-broken) estimator actually heads
+  const ymax=Math.max(I_EXACT*1.6, target*1.3, 0.3);
+  const Y=v=>y1-(v/ymax)*(y1-y0), X=t=>padL+t*(w-padR-padL);
+  // true I line
+  ctx.strokeStyle='rgba(90,180,172,0.8)';ctx.setLineDash([5,4]);ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(padL,Y(I_EXACT));ctx.lineTo(w-padR,Y(I_EXACT));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=COL.teal;ctx.font='11px JetBrains Mono';ctx.textAlign='left';ctx.fillText('true I = '+I_EXACT.toFixed(3),padL+6,Y(I_EXACT)-6);
+  // axis
+  ctx.fillStyle=COL.faint;ctx.textAlign='right';ctx.fillText('0',padL-6,y1);ctx.fillText(ymax.toFixed(1),padL-6,y0+8);
+  ctx.textAlign='center';ctx.fillText('estimates streamed →',(padL+w-padR)/2,h-6);
+  // running mean
+  if(estHist.length>1){ ctx.strokeStyle=COL.amber;ctx.lineWidth=1.7;ctx.beginPath();
+    const n=estHist.length;
+    estHist.forEach((mn,i)=>{const x=X(i/Math.max(n-1,1)),yy=Math.max(y0,Math.min(y1,Y(mn)));if(i===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);});
+    ctx.stroke();
+    const last=estHist[estHist.length-1];
+    ctx.fillStyle=COL.amber;ctx.beginPath();ctx.arc(w-padR,Math.max(y0,Math.min(y1,Y(last))),3.5,0,7);ctx.fill();
+  }
+  if(estN>0){ const mean=estSum/estN, varr=estSum2/estN-mean*mean;
+    document.getElementById('e-mean').textContent=mean.toFixed(4);
+    const err=Math.abs(mean-I_EXACT)/I_EXACT; const ee=document.getElementById('e-err');
+    ee.textContent=(err*100).toFixed(1)+'%'; ee.className='val '+(err<0.03?'green':err<0.15?'amber':'red');
+    document.getElementById('e-var').textContent=(varr/(mean*mean)).toFixed(3);
+  }
+  document.getElementById('est-M-v').textContent='M = '+estM;
+}
+function estLoop(){ if(!estRun)return; estStep(8); drawEst();
+  if(estN>4000){estRun=false;document.getElementById('est-run').textContent='▶ stream estimates';return;}
+  estRAF=requestAnimationFrame(estLoop); }
+
+/* ============================================================ COVERAGE */
+let covSrc='p1', covRun=false, covHist=newHist(36), covSum=0, covN=0, covUpper=0, covRAF=null;
+function covReset(){ covHist=newHist(36);covSum=0;covN=0;covUpper=0; drawCov();
+  document.getElementById('cov-mean').textContent='—';document.getElementById('cov-upper').textContent='—'; }
+function covStep(k){ const src=SRC[covSrc];
+  for(let i=0;i<k;i++){ const r=risDraw(32,src,1); histAdd(covHist,r.y);
+    covSum+=(pHat0(r.y)/pHat0(r.y))*r.avgW; covN++; if(r.y>0.5)covUpper++; } } // f=p̂ (no shadow) → f/p̂=1
+function drawCov(){
+  const cv=document.getElementById('cv-cov'); const {ctx,w,h}=setup(cv,300);
+  ctx.clearRect(0,0,w,h);
+  const padL=46,padR=18,y0=20,y1=h-32; const m=panelMap(padL,w-padR,y0,y1,2.2);
+  // uncovered shading
+  if(covSrc==='p2'){ ctx.fillStyle='rgba(224,108,117,0.12)';ctx.fillRect(m.X(0.5),m.y0,m.X(1)-m.X(0.5),m.y1-m.y0);
+    ctx.fillStyle='rgba(224,108,117,0.8)';ctx.font='11px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText('uncovered: p(x)=0 here',(m.X(0.5)+m.X(1))/2,m.y0+16);
+    ctx.fillText('survivors can never appear',(m.X(0.5)+m.X(1))/2,m.y0+32);
+  }
+  ctx.strokeStyle='rgba(231,228,221,0.12)';ctx.beginPath();ctx.moveTo(m.x0,m.y1);ctx.lineTo(m.x1,m.y1);ctx.stroke();
+  drawHistBars(ctx,m,covHist,'rgba(90,180,172,0.5)');
+  drawTargetCurve(ctx,m,'rgba(155,142,196,0.95)');
+  // source support bar
+  const cov=SRC[covSrc].cover; ctx.strokeStyle=COL.amber;ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(m.X(cov[0]),m.y1+22);ctx.lineTo(m.X(cov[1]),m.y1+22);ctx.stroke();ctx.lineCap='butt';
+  ctx.fillStyle=COL.amber;ctx.font='10px JetBrains Mono';ctx.textAlign='left';
+  ctx.fillText('source support: '+SRC[covSrc].label,m.X(cov[0]),m.y1+12);
+  ctx.fillStyle=COL.faint;ctx.textAlign='center';[0,0.5,1].forEach(t=>ctx.fillText(t,m.X(t),m.y1+16));
+  if(covN>0){ const mean=covSum/covN; const me=document.getElementById('cov-mean');
+    me.textContent=mean.toFixed(4); me.className='val '+(Math.abs(mean-1)<0.03?'green':'red');
+    const ue=document.getElementById('cov-upper'); ue.textContent=(covUpper/covN*100).toFixed(1)+'%';
+    ue.className='val '+(covUpper===0&&covSrc==='p2'?'red':'');
+  }
+}
+function covLoop(){ if(!covRun)return; covStep(60); drawCov();
+  if(covN>40000){covRun=false;document.getElementById('cov-run').textContent='▶ stream';return;}
+  covRAF=requestAnimationFrame(covLoop); }
+
+/* ============================================================ W SVG */
+function drawWsvg(){
+  const el=document.getElementById('svg-W');
+  el.innerHTML=`<svg viewBox="0 0 760 150" width="100%" style="max-width:760px;display:block;margin:0 auto" font-family="JetBrains Mono,monospace">
+    <g>
+      ${[0,1,2,3,4].map((i)=>`<circle cx="${40+i*22}" cy="40" r="${4+i*1.5}" fill="#d4a574" opacity="0.7"/>`).join('')}
+      <text x="80" y="20" fill="#6d6a64" font-size="11" text-anchor="middle">M candidates ~ p</text>
+      <text x="80" y="78" fill="#9b8ec4" font-size="11" text-anchor="middle">weights w=p̂/p</text>
+    </g>
+    <path d="M165 40 L235 40" stroke="#5ab4ac" stroke-width="1.5" marker-end="url(#ar)"/>
+    <text x="200" y="30" fill="#a7a39a" font-size="11" text-anchor="middle">resample</text>
+    <rect x="245" y="14" width="190" height="58" rx="9" fill="rgba(90,180,172,0.08)" stroke="#5ab4ac" stroke-width="1.2"/>
+    <text x="340" y="6" fill="#5ab4ac" font-size="10" text-anchor="middle">RESERVOIR (Part III)</text>
+    <text x="340" y="38" fill="#e7e4dd" font-size="14" text-anchor="middle">survivor  y</text>
+    <text x="340" y="60" fill="#9b8ec4" font-size="13" text-anchor="middle">W = (1/p̂(y))·⟨w⟩</text>
+    <path d="M445 43 L520 43" stroke="#5ab4ac" stroke-width="1.5" marker-end="url(#ar)"/>
+    <text x="640" y="30" fill="#a7a39a" font-size="11" text-anchor="middle">unbiased estimate</text>
+    <rect x="525" y="22" width="210" height="42" rx="9" fill="rgba(152,195,121,0.08)" stroke="#98c379" stroke-width="1.2"/>
+    <text x="630" y="48" fill="#98c379" font-size="15" text-anchor="middle">⟨I⟩ = f(y)·W(y)</text>
+    <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5ab4ac"/></marker></defs>
+  </svg>`;
+}
+
+/* ============================================================ INIT */
+function initAll(){
+  tex('eq-w','w(x_i)=\\dfrac{\\hat p(x_i)}{p(x_i)}\\qquad\\text{(target wants it / source makes it)}',true);
+  tex('eq-select','y=x_z,\\qquad \\Pr(z\\mid x_1,\\dots,x_M)=\\dfrac{w(x_z)}{\\sum_{i=1}^{M} w(x_i)}',true);
+  tex('eq-limit','\\lim_{M\\to\\infty}\\; p_{\\text{survivor}}(x)\\;=\\;\\frac{\\hat p(x)}{\\int \\hat p}\\,',true);
+  tex('eq-est','\\langle I\\rangle^{M}_{\\mathrm{ris}}=\\underbrace{\\frac{f(y)}{\\hat p(y)}}_{\\substack{\\text{as if }y\\sim\\hat p}}\\;\\cdot\\;\\underbrace{\\frac{1}{M}\\sum_{i=1}^{M} w(x_i)}_{\\text{estimate of }\\int\\hat p}',true);
+  tex('eq-W','W(y)=\\frac{1}{\\hat p(y)}\\Big(\\frac1M\\sum_{i=1}^{M} w(x_i)\\Big)',true);
+  renderInline(); drawWsvg();
+
+  // hero
+  document.getElementById('hero-M').oninput=e=>{heroM=+e.target.value;document.getElementById('hero-M-v').textContent='M = '+heroM;
+    heroHist=newHist(36);heroLast=null;heroDrawOnce();drawHero();};
+  document.getElementById('hero-one').onclick=()=>{heroDrawOnce();drawHero();};
+  document.getElementById('hero-stream').onclick=function(){heroStreaming=!heroStreaming;
+    this.textContent=heroStreaming?'⏸ pause':'▶ stream survivors'; if(heroStreaming)heroStreamLoop();};
+  document.getElementById('hero-reset').onclick=()=>{heroStreaming=false;document.getElementById('hero-stream').textContent='▶ stream survivors';
+    heroHist=newHist(36);heroLast=null;drawHero();};
+  document.querySelectorAll('#hero-src button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#hero-src button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    heroSrc=b.dataset.s;heroHist=newHist(36);heroLast=null;heroDrawOnce();drawHero();});
+  heroDrawOnce();drawHero();
+
+  // roulette
+  document.getElementById('rl-M').oninput=e=>{rlM=+e.target.value;rlSpin();};
+  document.getElementById('rl-spin').onclick=rlSpin; rlSpin();
+
+  // convergence
+  buildConvCurve();
+  document.getElementById('conv-M').oninput=e=>{convM=+e.target.value;drawConv();};
+  drawConv();
+
+  // estimator
+  document.getElementById('est-M').oninput=e=>{estM=+e.target.value;document.getElementById('est-M-v').textContent='M = '+estM;estReset();};
+  document.getElementById('est-factor').onchange=e=>{estFactor=e.target.checked;estReset();};
+  document.querySelectorAll('#est-scale button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#est-scale button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    estC=+b.dataset.c;estReset();});
+  document.getElementById('est-run').onclick=function(){estRun=!estRun;this.textContent=estRun?'⏸ pause':'▶ stream estimates';
+    if(estRun){if(estN===0)estReset();estLoop();}};
+  document.getElementById('est-reset').onclick=()=>{estRun=false;document.getElementById('est-run').textContent='▶ stream estimates';estReset();};
+  estReset();
+
+  // coverage
+  document.querySelectorAll('#cov-src button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#cov-src button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    covSrc=b.dataset.s;covRun=false;document.getElementById('cov-run').textContent='▶ stream';covReset();});
+  document.getElementById('cov-run').onclick=function(){covRun=!covRun;this.textContent=covRun?'⏸ pause':'▶ stream';
+    if(covRun)covLoop();};
+  document.getElementById('cov-reset').onclick=()=>{covRun=false;document.getElementById('cov-run').textContent='▶ stream';covReset();};
+  covReset();
+
+  setupScroll();
+}
+function setupScroll(){
+  const prog=document.getElementById('progress');
+  const links=[...document.querySelectorAll('nav.side a')];
+  const secs=[...document.querySelectorAll('section[id]')];
+  function onScroll(){ const st=window.scrollY, dh=document.documentElement.scrollHeight-window.innerHeight;
+    prog.style.width=(100*st/Math.max(dh,1))+'%';
+    let cur=secs[0].id; for(const s of secs){if(s.getBoundingClientRect().top<window.innerHeight*0.35)cur=s.id;}
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur)); }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  document.querySelectorAll('section > *').forEach(el=>{if(!el.classList.contains('hero'))el.classList.add('reveal');});
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+    if(window.anime)anime({targets:e.target,opacity:[0,1],translateY:[22,0],easing:'easeOutCubic',duration:600});
+    else{e.target.style.opacity=1;e.target.style.transform='none';} io.unobserve(e.target);}});},{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.getElementById('navtog').onclick=()=>document.getElementById('side').classList.toggle('open');
+  document.querySelectorAll('nav.side a').forEach(a=>a.onclick=()=>document.getElementById('side').classList.remove('open'));
+}
+let _rt; window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{
+  drawHero();drawRoulette();drawConv();drawEst();drawCov();drawWsvg();},180);});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(window.katex)initAll();else window.addEventListener('load',initAll);});
+else{ if(window.katex)initAll(); else window.addEventListener('load',initAll); }
+</script>
+</body>
+</html>

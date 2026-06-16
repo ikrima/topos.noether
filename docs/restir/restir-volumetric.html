@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resampling the Volume — Spatiotemporal Reservoirs for Real-Time Media</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+  --ink:#e8e6e3; --ink-dim:#a7a39c; --ink-faint:#6f6b66;
+  --amber:#d4a574;   /* candidate samples / paths */
+  --teal:#5ab4ac;    /* transmittance T */
+  --lav:#9b8ec4;     /* target PDF p-hat */
+  --red:#e06c75;     /* bias / fireflies / emission */
+  --green:#98c379;   /* the selected & reused sample */
+  --gold:#f0c674;    /* lights / emitters */
+  --rule:#2a2a38;
+  --maxw:720px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:
+    radial-gradient(1200px 800px at 70% -5%, #15151f 0%, rgba(21,21,31,0) 55%),
+    linear-gradient(180deg,var(--bg0),var(--bg1));
+  background-attachment:fixed;
+  color:var(--ink); font-family:'Source Sans 3',system-ui,sans-serif;
+  font-weight:300; font-size:18px; line-height:1.72; letter-spacing:.002em;
+  -webkit-font-smoothing:antialiased;
+}
+#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--teal));box-shadow:0 0 8px rgba(212,165,116,.5)}
+/* layout */
+#shell{display:grid;grid-template-columns:248px minmax(0,1fr);max-width:1180px;margin:0 auto}
+#nav{position:sticky;top:0;align-self:start;height:100vh;padding:42px 22px 42px 30px;
+  border-right:1px solid var(--rule);overflow-y:auto}
+#nav .brand{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;
+  color:var(--ink);line-height:1.15;margin-bottom:4px;letter-spacing:.01em}
+#nav .brand em{color:var(--amber);font-style:italic}
+#nav .sub{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);
+  text-transform:uppercase;letter-spacing:.16em;margin-bottom:30px}
+#nav ol{list-style:none;margin:0;padding:0;counter-reset:s}
+#nav li{counter-increment:s;margin:1px 0}
+#nav a{display:flex;gap:10px;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+  font-size:13.5px;line-height:1.32;padding:6px 10px;border-radius:6px;transition:.18s;border-left:2px solid transparent}
+#nav a::before{content:counter(s,decimal-leading-zero);font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:var(--ink-faint);opacity:.6;min-width:18px}
+#nav a:hover{color:var(--ink-dim);background:rgba(255,255,255,.02)}
+#nav a.active{color:var(--amber);background:rgba(212,165,116,.07);border-left-color:var(--amber)}
+#nav a.active::before{color:var(--amber);opacity:1}
+main{padding:0 38px;min-width:0}
+.wrap{max-width:var(--maxw);margin:0 auto}
+/* hero */
+header.hero{max-width:var(--maxw);margin:0 auto;padding:92px 0 26px}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.26em;
+  text-transform:uppercase;color:var(--teal);margin-bottom:20px}
+h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(40px,6.4vw,68px);
+  line-height:1.02;letter-spacing:-.01em;margin:.1em 0 .28em;color:#f4f2ef}
+h1 em{font-style:italic;color:var(--amber)}
+.dek{font-size:21px;line-height:1.6;color:var(--ink-dim);font-weight:300;max-width:64ch}
+.byline{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-faint);
+  margin-top:30px;line-height:1.7;border-top:1px solid var(--rule);padding-top:18px}
+.byline b{color:var(--ink-dim);font-weight:500}
+/* sections */
+section{padding:30px 0 8px}
+h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(28px,3.8vw,38px);
+  line-height:1.08;margin:46px 0 6px;color:#f1efec;max-width:var(--maxw);margin-left:auto;margin-right:auto;letter-spacing:-.005em}
+h2 .num{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber);
+  letter-spacing:.1em;display:block;margin-bottom:8px;font-weight:500}
+h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:var(--ink);
+  margin:34px auto 2px;max-width:var(--maxw)}
+p{max-width:var(--maxw);margin:14px auto}
+p.lead{font-size:20px;color:var(--ink);line-height:1.66}
+.note{max-width:var(--maxw);margin:14px auto;font-size:15px;color:var(--ink-dim);
+  border-left:2px solid var(--rule);padding:2px 0 2px 16px}
+.note b{color:var(--ink)}
+a.ext{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(90,180,172,.3)}
+a.ext:hover{border-bottom-color:var(--teal)}
+em{color:var(--ink)}
+/* color vocab spans */
+.c-cand{color:var(--amber);font-weight:500}
+.c-T{color:var(--teal);font-weight:500}
+.c-phat{color:var(--lav);font-weight:500}
+.c-sel{color:var(--green);font-weight:500}
+.c-bias{color:var(--red);font-weight:500}
+.c-light{color:var(--gold);font-weight:500}
+/* figures */
+figure{margin:34px auto;max-width:940px}
+figure.wide{max-width:1040px}
+.panel{background:linear-gradient(180deg,var(--bg2),var(--bg1));border:1px solid var(--rule);
+  border-radius:14px;padding:18px;box-shadow:0 18px 50px -28px rgba(0,0,0,.8)}
+figcaption{font-size:14px;color:var(--ink-dim);line-height:1.6;margin:14px 6px 0;max-width:var(--maxw)}
+figcaption .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--amber);margin-right:8px}
+canvas{display:block;width:100%;border-radius:8px;touch-action:none}
+/* controls */
+.ctrls{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin-top:14px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-dim)}
+.ctrl{display:flex;align-items:center;gap:9px}
+.ctrl label{color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;font-size:10.5px}
+.ctrl output{color:var(--amber);min-width:34px;display:inline-block}
+input[type=range]{-webkit-appearance:none;appearance:none;height:3px;width:130px;border-radius:3px;
+  background:var(--bg3);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--amber);cursor:pointer;box-shadow:0 0 0 4px rgba(212,165,116,.16);transition:.12s}
+input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 6px rgba(212,165,116,.22)}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;background:var(--amber);cursor:pointer}
+button.tog{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;
+  background:var(--bg3);color:var(--ink-dim);border:1px solid var(--rule);border-radius:7px;
+  padding:6px 12px;cursor:pointer;transition:.15s;text-transform:uppercase}
+button.tog:hover{border-color:var(--ink-faint);color:var(--ink)}
+button.tog.on{background:rgba(152,195,121,.14);border-color:var(--green);color:var(--green)}
+button.tog.warn.on{background:rgba(224,108,117,.14);border-color:var(--red);color:var(--red)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
+.seg button{font-family:'JetBrains Mono',monospace;font-size:11px;background:transparent;color:var(--ink-faint);
+  border:none;padding:6px 11px;cursor:pointer;border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:rgba(212,165,116,.16);color:var(--amber)}
+.readout{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-dim);
+  display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+.readout b{color:var(--ink);font-weight:500}
+.readout .hi{color:var(--green)} .readout .lo{color:var(--red)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--ink-dim);margin:0 6px 12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.hint{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);
+  text-align:center;letter-spacing:.05em;margin-top:9px}
+.math-block{max-width:var(--maxw);margin:22px auto;padding:4px 0;overflow-x:auto}
+/* math callout card */
+.card{max-width:var(--maxw);margin:22px auto;background:var(--bg2);border:1px solid var(--rule);
+  border-radius:12px;padding:18px 22px}
+.card .t{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+/* verified badge */
+.verified{display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);
+  border:1px solid rgba(152,195,121,.3);background:rgba(152,195,121,.06);border-radius:20px;padding:4px 12px}
+.verified::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+footer{max-width:var(--maxw);margin:60px auto 0;padding:30px 0 90px;border-top:1px solid var(--rule);
+  font-size:14px;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;line-height:1.8}
+footer a{color:var(--teal);text-decoration:none}
+.pausebar{position:fixed;bottom:16px;right:16px;z-index:55}
+.pausebar button{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(26,26,40,.92);
+  color:var(--ink-dim);border:1px solid var(--rule);border-radius:20px;padding:8px 15px;cursor:pointer;
+  backdrop-filter:blur(8px)}
+.pausebar button:hover{color:var(--ink)}
+@media(max-width:900px){
+  #shell{grid-template-columns:1fr}
+  #nav{display:none}
+  main{padding:0 20px}
+  body{font-size:17px}
+}
+.katex{font-size:1.04em}
+.pix{image-rendering:pixelated;image-rendering:crisp-edges}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="shell">
+<nav id="nav">
+  <div class="brand">Resampling the <em>Volume</em></div>
+  <div class="sub">Volumetric ReSTIR · explorable</div>
+  <ol>
+    <li><a href="#s1">A single path per pixel</a></li>
+    <li><a href="#s2">The volume as a path integral</a></li>
+    <li><a href="#s3">Choosing without knowing</a></li>
+    <li><a href="#s4">One slot of memory</a></li>
+    <li><a href="#s5">The transmittance trick</a></li>
+    <li><a href="#s6">Bias-free shortcuts</a></li>
+    <li><a href="#s7">Borrowing from the neighbours</a></li>
+    <li><a href="#s8">Reusing a path two ways</a></li>
+    <li><a href="#s9">Reuse across time</a></li>
+    <li><a href="#s10">The whole machine</a></li>
+  </ol>
+</nav>
+<main>
+
+<header class="hero">
+  <div class="kicker">Lin · Wyman · Yuksel — SIGGRAPH Asia 2021</div>
+  <h1>Resampling<br>the <em>Volume</em></h1>
+  <p class="dek">A real-time volume renderer that shades exactly <em>one</em> light path per pixel — and still converges. The trick isn't a better path; it's a better way to <em>choose</em> a path, by quietly borrowing good choices from your neighbours and from the past.</p>
+  <div class="byline">
+    An interactive reading of <b>“Fast Volume Rendering with Spatiotemporal Reservoir Resampling.”</b><br>
+    Every estimator below runs live in your browser. The mathematics was verified numerically before being drawn.
+  </div>
+</header>
+
+<!-- ============================ S1 ============================ -->
+<section id="s1">
+<h2 class="wrap"><span class="num">01 — The wall we keep hitting</span>A single path per pixel</h2>
+
+<p class="lead">Here is the whole problem, and the whole solution, side by side. A slab of heterogeneous smoke lit by a scatter of coloured emitters. On the left, an honest path tracer that draws one fresh light sample per pixel each frame. On the right, the same one-sample budget — but the samples are <em>resampled</em>. The far panel is the converged truth.</p>
+
+<figure class="wide reveal">
+  <div class="panel">
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>emitter (drag me)</span>
+      <span><i style="background:var(--teal)"></i>transmittance / shadow</span>
+      <span><i style="background:var(--green)"></i>resampled estimate</span>
+    </div>
+    <div id="hero"></div>
+  </div>
+  <figcaption><span class="lbl">Live · 1 spp</span>Both renderers spend the same budget: a single shaded path per pixel per frame, accumulated over time. Drag any <span class="c-light">emitter</span>; both reset and race to the reference. Toggle spatial and temporal reuse to watch the right panel's error collapse. The <b>MSE</b> figures are measured against the precomputed reference, exactly as the paper reports them.</figcaption>
+</figure>
+
+<p>If you have spent twenty-five years pushing rays through media, the left panel needs no introduction: it is variance, the oldest enemy. Next-event estimation toward one emitter, a stochastic transmittance estimate for the volumetric shadow, and the integral over <em>all</em> the other lights left to the mercy of the random number generator. A denoiser will eventually rescue it — but only if we hand it enough temporal stability to work with, and at one sample per pixel we rarely do.</p>
+
+<p>The right panel spends the same single sample. The difference is that before committing to a path, it has already looked at many candidate paths and kept the most promising one — and it found those candidates not by tracing more rays, but by <em>reusing</em> the work its neighbours and its own previous frames already did. That is the entire idea of <em>ReSTIR</em>, and this essay is about what it takes to drag it from flat surfaces into a participating medium.</p>
+
+<p>Before we continue, it is worth fixing a colour vocabulary, because we will lean on it constantly. <span class="c-cand">Amber</span> marks <span class="c-cand">candidate samples</span> — the things we generate cheaply and mostly throw away. <span class="c-T">Teal</span> is <span class="c-T">transmittance</span> <span class="katex-inline" data-tex="T">T</span>, the costly visibility-through-fog term. <span class="c-phat">Lavender</span> is the <span class="c-phat">target distribution</span> <span class="katex-inline" data-tex="\hat p">p̂</span>, our cheap stand-in for the true integrand. <span class="c-sel">Green</span> is the one <span class="c-sel">survivor</span> we actually shade. And <span class="c-bias">red</span> is danger — <span class="c-bias">bias and fireflies</span>.</p>
+</section>
+
+<!-- ============================ S2 ============================ -->
+<section id="s2">
+<h2 class="wrap"><span class="num">02 — What we are actually integrating</span>The volume as a path integral</h2>
+
+<p>The volume rendering equation is an integral along the primary ray, but every point on that ray launches its own integral over directions, and every scattered direction launches another. Rather than nest these, we collapse the whole recursive object into a single integral over the space <span class="katex-inline" data-tex="\Lambda">Λ</span> of all light <em>paths</em>:</p>
+
+<div class="math-block" data-tex="\displaystyle L(\mathbf x_0,\boldsymbol\omega_o)=\int_{\Lambda} F(\boldsymbol\lambda)\,d\boldsymbol\lambda"></div>
+
+<p>A path <span class="katex-inline" data-tex="\boldsymbol\lambda">λ</span> with <span class="katex-inline" data-tex="k">k</span> scattering events is a chain of vertices <span class="katex-inline" data-tex="\mathbf x_0,\dots,\mathbf x_{k+1}">x₀…x_{k+1}</span> from the camera to a light. Its contribution factors into a throughput along the chain and a final connection to the source. Drag the slider below to grow a random walk through the medium, and watch how a single walk does not produce one path — it produces a whole family of them.</p>
+
+<figure class="reveal">
+  <div class="panel"><div id="walk"></div></div>
+  <figcaption><span class="lbl">Interactive · random walk</span>Each scattering vertex spawns <em>two</em> <span class="c-cand">candidate paths</span> for free: a <span class="c-light">scattering path</span> that connects to a light by next-event estimation (gold), and an <span class="c-bias">emission path</span> that simply terminates in the glowing medium (red). A walk of length <span class="katex-inline" data-tex="K">K</span> hands us up to <span class="katex-inline" data-tex="2K">2K</span> candidates of differing lengths — already a small stratified population to resample from. Drag to set <span class="katex-inline" data-tex="K">K</span>; click <em>resample walk</em> to redraw.</figcaption>
+</figure>
+
+<p>Writing <span class="katex-inline" data-tex="z_i=|\mathbf x_{i+1}-\mathbf x_i|">zᵢ</span> and <span class="katex-inline" data-tex="\boldsymbol\omega_i">ωᵢ</span> for the step lengths and directions, the path contribution is a throughput <span class="katex-inline" data-tex="\Gamma_s">Γ_s</span> times a final connection:</p>
+
+<div class="math-block" data-tex="F(\boldsymbol\lambda)=\Gamma_s(\boldsymbol\lambda,k)\,{\color{#5ab4ac}T(\mathbf x_k\!\leftrightarrow\!\mathbf x_{k+1})}\,G(\mathbf x_k\!\leftrightarrow\!\mathbf x_{k+1})\,L(\mathbf x_{k+1}\!\to\!\mathbf x_k)"></div>
+<div class="math-block" data-tex="\Gamma_s(\boldsymbol\lambda,k)=\prod_{i=1}^{k}{\color{#5ab4ac}T(\mathbf x_{i-1}\!\leftrightarrow\!\mathbf x_i)}\,\sigma_s(\mathbf x_i)\,G_i\,\rho_i"></div>
+
+<p>Notice how many <span class="c-T">transmittance</span> factors that product hides: one per segment, each an integral in its own right. Every <span class="c-T">teal</span> term is a ray-march, or a stochastic tracking process, or — if we are lucky — a closed form. Keep your eye on them. The central manoeuvre of the whole paper is to arrange for almost all of them to <em>cancel before we ever pay for them</em>.</p>
+</section>
+
+<!-- ============================ S3 ============================ -->
+<section id="s3">
+<h2 class="wrap"><span class="num">03 — Resampled importance sampling</span>Choosing without knowing</h2>
+
+<p>Suppose we want to importance-sample by a distribution <span class="katex-inline" data-tex="\hat p">p̂</span> that hugs the integrand beautifully but that we have <em>no idea how to sample from</em>. Classical importance sampling is stuck. Resampling is the way out: draw a handful of <span class="c-cand">candidates</span> from any convenient <span class="katex-inline" data-tex="p">p</span> we <em>can</em> sample, then pick one of them with probability proportional to how badly <span class="katex-inline" data-tex="p">p</span> under-served <span class="katex-inline" data-tex="\hat p">p̂</span> there.</p>
+
+<p>The weight of a candidate is the mismatch ratio <span class="katex-inline" data-tex="w(x)=\hat p(x)/p(x)">w=p̂/p</span>. Select <span class="c-sel">survivor</span> <span class="katex-inline" data-tex="x_r">x_r</span> from the <span class="katex-inline" data-tex="M">M</span> candidates with probability <span class="katex-inline" data-tex="w(x_r)/\sum_j w(x_j)">w_r/Σw</span>, and the one-sample estimator</p>
+
+<div class="math-block" data-tex="\langle I\rangle^{1,M}_{\mathrm{ris}}=\underbrace{\frac{f(x_r)}{\hat p(x_r)}}_{E_{\hat p}}\cdot\Big(\tfrac1M\textstyle\sum_{j=1}^{M}w(x_j)\Big)"></div>
+
+<p>is unbiased, with the selected <span class="katex-inline" data-tex="x_r">x_r</span> distributed ever closer to <span class="katex-inline" data-tex="\hat p">p̂</span> as <span class="katex-inline" data-tex="M\!\to\!\infty">M→∞</span>. Don't take my word for it — watch it happen. Below, the integrand is the smooth curve; <span class="c-cand">candidates rain down</span> from a poor source <span class="katex-inline" data-tex="p">p</span>; resampling keeps one <span class="c-sel">green survivor</span> per batch. The histogram is the distribution of survivors.</p>
+
+<figure class="reveal">
+  <div class="panel"><div id="ris1d"></div></div>
+  <figcaption><span class="lbl">Interactive · RIS convergence</span>As you raise <span class="katex-inline" data-tex="M">M</span>, the <span class="c-sel">survivors</span>' histogram migrates away from the source <span class="katex-inline" data-tex="p">p</span> and onto the <span class="c-phat">target</span> <span class="katex-inline" data-tex="\hat p">p̂</span>, even though we never sampled <span class="katex-inline" data-tex="\hat p">p̂</span> directly. The running estimate tracks the true integral <span id="ris-truth" class="c-sel"></span> regardless of <span class="katex-inline" data-tex="M">M</span> — more candidates buy lower variance, not correctness. <span class="verified">numerically verified</span></figcaption>
+</figure>
+
+<p>This is the lever. We are free to make <span class="katex-inline" data-tex="\hat p">p̂</span> as close to the true integrand as we can afford, because we never have to invert it or integrate it — we only have to <em>evaluate</em> it at a few candidate points. In volume rendering, the integrand is drowning in <span class="c-T">transmittance</span>, so a well-chosen <span class="katex-inline" data-tex="\hat p">p̂</span> is worth a great deal.</p>
+</section>
+
+<!-- ============================ S4 ============================ -->
+<section id="s4">
+<h2 class="wrap"><span class="num">04 — Weighted reservoir sampling</span>One slot of memory</h2>
+
+<p>There is a catch hiding in the last estimator: to resample <span class="katex-inline" data-tex="M">M</span> candidates you must first store <span class="katex-inline" data-tex="M">M</span> candidates. At a thousand candidates per pixel across two million pixels, that is a non-starter. Thankfully, we can solve this with a streaming trick that needs exactly <em>one</em> slot of memory, no matter how many candidates flow past.</p>
+
+<p>A <em>reservoir</em> holds the current <span class="c-sel">survivor</span> and the running sum of weights. Each new <span class="c-cand">candidate</span> displaces the survivor with probability equal to its weight over the new running total. That single rule reproduces the full resampling distribution exactly. Feed it as many candidates as you like; the storage never grows.</p>
+
+<figure class="reveal">
+  <div class="panel"><div id="reservoir"></div></div>
+  <figcaption><span class="lbl">Interactive · streaming selection</span>Press <em>stream</em> to pour <span class="c-cand">candidates</span> through a single reservoir slot. The held <span class="c-sel">survivor</span> swaps in with probability <span class="katex-inline" data-tex="w_i/w_{\text{sum}}">wᵢ/w_sum</span>. Run it thousands of times and the bars converge to the analytic selection probability <span class="katex-inline" data-tex="w_i/\sum_j w_j">wᵢ/Σw</span> — one slot of memory, exact distribution. <span class="verified">numerically verified</span></figcaption>
+</figure>
+
+<p>This is the move that turns resampling from a memory hog into a real-time algorithm. And it sets up the deeper idea: if a reservoir is a compact summary of “the best path I have seen so far,” then two pixels can <em>merge</em> their reservoirs and pool their search — without either having kept the candidates around.</p>
+</section>
+
+<!-- ============================ S5 ============================ -->
+<section id="s5">
+<h2 class="wrap"><span class="num">05 — Cancelling what you can't afford</span>The transmittance trick</h2>
+
+<p>Now we cash in the lever from Section 3. The natural way to generate a path is free-flight distance sampling — delta tracking — whose density is itself built from <span class="c-T">transmittance</span>:</p>
+
+<div class="math-block" data-tex="p(z_i\mid\mathbf x_{i-1},\boldsymbol\omega_{i-1})={\color{#5ab4ac}T(\mathbf x_{i-1}\!\leftrightarrow\!\mathbf x_i)}\,\sigma_t(\mathbf x_i)"></div>
+
+<p>That <span class="c-T">teal</span> factor is exactly the term we cannot afford to evaluate repeatedly during resampling. So we choose the <span class="c-phat">target</span> to carry the <em>same</em> transmittance terms as the source — differing only in the cheap, approximate transmittance <span class="katex-inline" data-tex="\tilde T">T̃</span> on the final next-event segment. Watch what happens to the weight when you do this.</p>
+
+<figure class="reveal">
+  <div class="panel"><div id="cancel"></div></div>
+  <figcaption><span class="lbl">Interactive · term cancellation</span>Press <em>form the weight</em> to divide <span class="katex-inline" data-tex="\hat p(\boldsymbol\lambda)/p(\boldsymbol\lambda)">p̂/p</span>. Every <span class="c-T">transmittance</span> factor — the expensive ones — annihilates, leaving a weight built only from albedos and a single <em>cheap</em> <span class="katex-inline" data-tex="\tilde T">T̃</span>. The lone <em>exact</em> <span class="c-T">transmittance</span> survives only in the final-shading correction <span class="katex-inline" data-tex="E_{\hat p}=T/\tilde T">E=T/T̃</span>, evaluated for the one <span class="c-sel">survivor</span> alone.</figcaption>
+</figure>
+
+<p>The bookkeeping lands on two compact facts. The resampling weight collapses to</p>
+<div class="math-block" data-tex="w(\boldsymbol\lambda)=W_k(\boldsymbol\lambda)\prod_{i=1}^{k}\frac{\sigma_s(\mathbf x_i)}{\sigma_t(\mathbf x_i)}\,,"></div>
+<p>with no expensive <span class="c-T">transmittance</span> anywhere, and the final correction reduces to</p>
+<div class="math-block" data-tex="E_{\hat p}(\boldsymbol\lambda_r)=\begin{cases}{\color{#5ab4ac}T(\mathbf x_k\!\leftrightarrow\!\mathbf x_{k+1})}\,/\,{\color{#5ab4ac}\tilde T(\mathbf x_k\!\leftrightarrow\!\mathbf x_{k+1})}&\text{scattering path}\\[2pt]1&\text{emission path.}\end{cases}"></div>
+
+<p>Read that correction carefully, because it is the hinge of everything that follows. The <em>only</em> place an exact <span class="c-T">transmittance</span> appears is in shading the single chosen path. It is in no PDF. So we can afford to make it analytic and unbiased — and we can afford to make every <em>other</em> transmittance, the ones buried inside the target, as crude as we like.</p>
+</section>
+
+<!-- ============================ S6 ============================ -->
+<section id="s6">
+<h2 class="wrap"><span class="num">06 — The key observation</span>Bias-free shortcuts</h2>
+
+<p class="lead">Here is the claim that makes the whole method fast, and the one most likely to make a careful engineer suspicious: <em>using a biased, approximate transmittance inside the target <span class="katex-inline" data-tex="\hat p">p̂</span> does not bias the rendered image.</em> It only changes the variance.</p>
+
+<p>The reasoning is exactly the resampling lever: <span class="katex-inline" data-tex="\hat p">p̂</span> is a free parameter. Push every approximation, every coarsened mip, every cheap ray-march into it, and the estimator stays unbiased so long as the source <span class="katex-inline" data-tex="p">p</span> is exact wherever the integrand is nonzero and the final throughput <span class="katex-inline" data-tex="F">F</span> uses the real <span class="katex-inline" data-tex="T">T</span>. A worse <span class="katex-inline" data-tex="\hat p">p̂</span> simply picks <span class="c-sel">survivors</span> less wisely — more noise, never a wrong answer.</p>
+
+<p>Suspicion is healthy, so let's run the experiment. The slider coarsens the transmittance used <em>only inside</em> <span class="katex-inline" data-tex="\hat p">p̂</span>, from analytic down to a blocky mip. Two meters track the consequences live: the <span class="c-bias">bias</span> against the converged reference, and the variance.</p>
+
+<figure class="reveal">
+  <div class="panel"><div id="bias"></div></div>
+  <figcaption><span class="lbl">Interactive · bias vs. variance</span>As you coarsen the <span class="c-T">transmittance</span> in the <span class="c-phat">target</span>, the <span class="c-bias">bias</span> needle stays pinned at zero while the variance needle climbs. This is the paper's Figures 10–12 in miniature: cheaper importance sampling costs you noise, not correctness. Push it to the blockiest mip and the converged mean still lands on the reference. <span class="verified">numerically verified</span></figcaption>
+</figure>
+
+<p>This single observation is what licenses a ladder of transmittance fidelity through the pipeline: a blocky piecewise-constant estimate to <em>generate</em> candidates with a closed-form PDF, a filtered ray-march to <em>resample</em> them at lower frequency, and a full analytic evaluation only for <em>final shading</em>. Cheap where it must be repeated, exact where it is paid once. Every rung of that ladder is bias-free.</p>
+</section>
+
+<!-- ============================ S7 ============================ -->
+<section id="s7">
+<h2 class="wrap"><span class="num">07 — Spatial reuse</span>Borrowing from the neighbours</h2>
+
+<p>So far a pixel only resamples its own candidates. The leap is to merge reservoirs across space: a neighbour has spent its budget searching too, and its <span class="c-sel">survivor</span> is probably useful here. But two pixels target different distributions — their <span class="katex-inline" data-tex="\hat p_q">p̂_q</span> disagree — so we cannot simply pool them. We import a neighbour's sample with a correction factor that re-weights it into our own target:</p>
+
+<div class="math-block" data-tex="w_{q'\to q}=\frac{\hat p_q(\boldsymbol\lambda_{q'})}{\hat p_{q'}(\boldsymbol\lambda_{q'})}\,w^{\text{sum}}_{q'}"></div>
+
+<p>Toggle the reuse paths on the live renderer below — the same engine from the opening, now with its lid off. Each rung you enable multiplies the effective candidate count for free, and the right-hand error figure falls.</p>
+
+<figure class="wide reveal">
+  <div class="panel">
+    <div class="legend">
+      <span><i style="background:var(--amber)"></i>initial candidates</span>
+      <span><i style="background:var(--green)"></i>spatial reuse</span>
+      <span><i style="background:var(--lav)"></i>temporal reuse</span>
+    </div>
+    <div id="reuse"></div>
+  </div>
+  <figcaption><span class="lbl">Live · reuse ablation</span>Spatial reuse alone, temporal alone, and both together — the same comparison as the paper's Figure 4. The <b>effective sample count</b> grows multiplicatively with each rung, and the measured MSE drops accordingly, all at a near-flat per-pixel cost.</figcaption>
+</figure>
+
+<p>One subtlety the paper is careful about: a valid path for our pixel may be one a neighbour could never have generated, so naively merging darkens the image. The fix is multiple importance sampling across the reservoirs. On surfaces, the cheap stochastic MIS of the original ReSTIR suffices; <em>in volumes it is too noisy</em>, because the features you would use to reject bad neighbours — normals, depth — are themselves stochastic. So here we pay for the more expensive, deterministic Talbot MIS, and accept its quadratic cost over a deliberately small neighbour set.</p>
+</section>
+
+<!-- ============================ S8 ============================ -->
+<section id="s8">
+<h2 class="wrap"><span class="num">08 — Vertex versus direction</span>Reusing a path two ways</h2>
+
+<p>To reuse a neighbour's path we must re-root it at our own pixel. Both paths share the camera, and we can reuse the first free-flight distance <span class="katex-inline" data-tex="z_1">z₁</span> along our own primary ray. After that, two honest options diverge — and they behave very differently.</p>
+
+<p><em>Vertex reuse</em> keeps the neighbour's later vertices and connects to them directly. It is cheaper — no transmittance to recompute — but it drags in an unbounded geometry term <span class="katex-inline" data-tex="G=1/|\mathbf x_2-\mathbf x_1|^2">G=1/r²</span> that detonates into <span class="c-bias">fireflies</span> when the reprojected vertex lands close to a reused one. <em>Direction reuse</em> keeps the neighbour's angles and step lengths instead, so each segment has a bounded length and the geometry term stays tame. Drag the primary ray and watch the <span class="c-bias">geometry gauge</span>.</p>
+
+<figure class="reveal">
+  <div class="panel"><div id="reuse2"></div></div>
+  <figcaption><span class="lbl">Interactive · reuse geometry</span>Drag the current pixel's <span class="c-cand">primary ray</span>. Under <em>vertex reuse</em>, sweeping the re-rooted <span class="katex-inline" data-tex="\mathbf x_1">x₁</span> toward the neighbour's <span class="katex-inline" data-tex="\mathbf x_2'">x₂′</span> sends the <span class="c-bias">geometry term</span> to infinity — a firefly waiting to happen. <em>Direction reuse</em> holds the segment length fixed, so the gauge stays bounded. The peak ratio between them, swept here, is roughly <span class="c-bias">two orders of magnitude</span>. <span class="verified">numerically verified</span></figcaption>
+</figure>
+
+<p>So the paper reuses directions by default — a small, predictable cost in exchange for far fewer <span class="c-bias">fireflies</span>. Long paths may be generated, but RIS rarely selects them: they carry little energy, so they rarely win the reservoir, which quietly bounds the average cost of direction reuse.</p>
+</section>
+
+<!-- ============================ S9 ============================ -->
+<section id="s9">
+<h2 class="wrap"><span class="num">09 — Temporal reuse</span>Reuse across time</h2>
+
+<p>Reaching into the previous frame is where the most candidates come from — and where surfaces and volumes part ways most sharply. On a surface, a motion vector tells you precisely which prior pixel to consult. In a medium, <em>there is no single correct motion vector</em>: the smoke in one pixel may be drifting in a dozen directions at once.</p>
+
+<p>The resolution is to stop pretending there is one answer and choose probabilistically. We take the motion of <span class="katex-inline" data-tex="\mathbf x_1">x₁</span>, the first scattering vertex of the pixel's selected path, and treat it as a particle carried by the volume's velocity field. Because <span class="katex-inline" data-tex="\mathbf x_1">x₁</span> was itself chosen with probability tied to the target <span class="katex-inline" data-tex="\hat p(z_1)">p̂(z₁)</span>, denser, brighter media — the media that actually matters to the pixel — is more likely to donate the motion vector.</p>
+
+<div class="card">
+  <div class="t">Honest scope</div>
+  <p style="margin:0">This reprojection is <em>unbiased only for static volumes and camera</em>. Under motion it conditions the target PDFs on <span class="katex-inline" data-tex="z_1">z₁</span>, introducing a slight, generally imperceptible <span class="c-bias">bias</span> that grows with the speed of camera or deformation and vanishes a few frames after motion stops. Lowering the temporal cap <span class="katex-inline" data-tex="Q">Q</span> trades accumulated samples for less of this bias. Dynamic <em>lighting</em>, by contrast, adds no bias — it only raises variance near sudden changes, by lowering the value of stale temporal candidates.</p>
+</div>
+
+<p>A last wrinkle lives at the silhouettes. Near a volume's edge the selected path may have its <span class="katex-inline" data-tex="\mathbf x_1">x₁</span> on the background rather than in the smoke, so it inherits the background's motion and smears a halo along the rim. <em>Velocity resampling</em> fixes this: when <span class="katex-inline" data-tex="\mathbf x_1">x₁</span> is not in the medium, draw a fresh in-volume distance proportional to the free-flight density and take <em>that</em> particle's motion instead, so the reprojection follows the smoke and not the wall behind it.</p>
+</section>
+
+<!-- ============================ S10 ============================ -->
+<section id="s10">
+<h2 class="wrap"><span class="num">10 — Putting it together</span>The whole machine</h2>
+
+<p>Four passes, each one a round of resampling that refines both the chosen path and the fidelity of the transmittance attached to it. Initial candidates from a blocky volume with a closed-form PDF; a temporal merge; a spatial merge; and one final, exact shade.</p>
+
+<figure class="wide reveal">
+  <div class="panel"><div id="pipeline"></div></div>
+  <figcaption><span class="lbl">Diagram · four passes</span>Transmittance fidelity climbs left to right: piecewise-constant <span class="katex-inline" data-tex="T^*">T*</span> to generate candidates, filtered ray-march <span class="katex-inline" data-tex="\tilde T">T̃</span> to resample them, analytic <span class="katex-inline" data-tex="T">T</span> to shade the single survivor. Cheap where it repeats; exact where it is paid once.</figcaption>
+</figure>
+
+<h3>If you wanted to build a toy of this in Houdini</h3>
+<p>The skeleton is smaller than it looks, and every piece appeared above. Per pixel, per frame:</p>
+<div class="card">
+<div class="t">build-your-own · the four rungs</div>
+<p style="margin:8px 0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.85;color:var(--ink-dim)">
+<b style="color:var(--amber)">1 · generate</b> — a few random walks on a downsampled, piecewise-constant density grid (regular tracking gives the closed-form PDF you need). Each vertex spawns a <span class="c-light">scattering</span> and an <span class="c-bias">emission</span> candidate. Stream them through one reservoir.<br>
+<b style="color:var(--lav)">2 · temporal</b> — reproject via the motion of <span class="katex-inline" data-tex="\mathbf x_1">x₁</span>, merge last frame's reservoir, cap the history at <span class="katex-inline" data-tex="Q">Q</span>.<br>
+<b style="color:var(--green)">3 · spatial</b> — merge a handful of neighbours within a small radius using direction reuse and Talbot MIS; raise the target's transmittance to a filtered ray-march here.<br>
+<b style="color:var(--teal)">4 · shade</b> — evaluate the one survivor with analytic, unbiased <span class="katex-inline" data-tex="T">T</span>. Apply the correction <span class="katex-inline" data-tex="E_{\hat p}=T/\tilde T">E=T/T̃</span>. Hand the result to your denoiser.
+</p>
+</div>
+
+<p>Store each reservoir as the path's <span class="katex-inline" data-tex="(z_i,\boldsymbol\omega_i)">(zᵢ,ωᵢ)</span> tuples, bounded by your bounce limit; the memory is fixed. Pick <span class="katex-inline" data-tex="M=4">M=4</span> walks, <span class="katex-inline" data-tex="Q=4">Q=4</span>, three neighbours in a ten-pixel radius — the paper's defaults — and tune from there.</p>
+
+<p>What is worth carrying away is not any single trick but the shape of the idea. Resampling turns a distribution we cannot sample into one we can <em>choose</em> from; the reservoir makes that choice cost one slot of memory; spatial and temporal reuse make the candidate pool effectively enormous at near-zero marginal cost; and the freedom to put any approximation inside the target — proven bias-free above — is what lets all of it run at frame rate. A volume that once needed thousands of samples to look quiet now needs one, because the one it keeps is the one its neighbours and its own past already vouched for. Drag a light in the opening figure again, now that you know what the right-hand panel is really doing. It is not tracing better paths. It is remembering better choices.</p>
+
+<footer>
+  Source — Daqi Lin, Chris Wyman, Cem Yuksel, <em>Fast Volume Rendering with Spatiotemporal Reservoir Resampling</em>, ACM TOG 40(6), Article 279, 2021. <a href="https://doi.org/10.1145/3478513.3480499">doi:10.1145/3478513.3480499</a><br>
+  Background — Bitterli et&nbsp;al. 2020 (ReSTIR); Talbot et&nbsp;al. 2005 (RIS); Chao 1982 (weighted reservoir sampling).<br>
+  All estimators in this essay run live; the RIS, reservoir, bias-free, and reuse-geometry claims were verified numerically before being drawn.
+</footer>
+</section>
+
+</main>
+</div>
+<div class="pausebar"><button id="pausebtn">⏸ pause motion</button></div>
+<script id="main-engine">
+/* ============================================================
+   Resampling the Volume — interactive engine
+   All estimators are real; math verified before drawing.
+   ============================================================ */
+(function(){
+'use strict';
+const C = { amber:'#d4a574', teal:'#5ab4ac', lav:'#9b8ec4', red:'#e06c75',
+            green:'#98c379', gold:'#f0c674', ink:'#e8e6e3', dim:'#a7a39c',
+            faint:'#6f6b66', bg1:'#12121a', bg2:'#1a1a28', bg3:'#22222f', rule:'#2a2a38' };
+
+// ---- math typesetting (custom, since we use data-tex attributes) ----
+function renderMath(){
+  if(!window.katex){ return setTimeout(renderMath,60); }
+  document.querySelectorAll('[data-tex]').forEach(el=>{
+    if(el.dataset.done) return;
+    const disp = el.classList.contains('math-block');
+    try{ katex.render(el.getAttribute('data-tex'), el, {displayMode:disp, throwOnError:false}); el.dataset.done=1; }
+    catch(e){ el.textContent = el.getAttribute('data-tex'); }
+  });
+}
+// helper to typeset a short tex string into a string of HTML (for canvas-adjacent labels we just use text)
+
+// ---- utilities ----
+const lerp=(a,b,t)=>a+(b-a)*t, clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const TAU=Math.PI*2;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function lum(r,g,b){return 0.2126*r+0.7152*g+0.0722*b;}
+function hexToRgb(h){return [parseInt(h.slice(1,3),16)/255,parseInt(h.slice(3,5),16)/255,parseInt(h.slice(5,7),16)/255];}
+
+// device-pixel-ratio aware canvas
+function mkCanvas(parent,w,h,opts){
+  opts=opts||{};
+  const cv=document.createElement('canvas');
+  if(opts.pixel) cv.classList.add('pix');
+  const dpr=Math.min(window.devicePixelRatio||1, opts.maxDpr||2);
+  cv.style.width='100%';
+  const cssW = parent.clientWidth||w;
+  const ratio=h/w;
+  cv.style.aspectRatio = w+'/'+h;
+  cv.width = Math.round(cssW*dpr*(opts.scaleW||1));
+  cv.height= Math.round(cssW*ratio*dpr*(opts.scaleW||1));
+  cv._dpr=dpr;
+  parent.appendChild(cv);
+  return cv;
+}
+
+// shared procedural 2D density field (a blobby cloud), normalized 0..~1
+function buildDensity(GW,GH,seed){
+  const rnd=mulberry32(seed);
+  const blobs=[];
+  const nb=5+Math.floor(rnd()*3);
+  for(let i=0;i<nb;i++){
+    blobs.push({x:(0.25+0.5*rnd())*GW, y:(0.28+0.5*rnd())*GH,
+                rx:(0.10+0.16*rnd())*GW, ry:(0.10+0.18*rnd())*GH, a:0.5+0.7*rnd()});
+  }
+  // a little value noise
+  const NG=8, noise=[];
+  for(let i=0;i<(NG+1)*(NG+1);i++) noise.push(rnd());
+  function vnoise(u,v){
+    u*=NG;v*=NG; const x0=Math.floor(u),y0=Math.floor(v),fx=u-x0,fy=v-y0;
+    const sx=fx*fx*(3-2*fx), sy=fy*fy*(3-2*fy);
+    const g=(a,b)=>noise[(clamp(b,0,NG))*(NG+1)+clamp(a,0,NG)];
+    return lerp(lerp(g(x0,y0),g(x0+1,y0),sx), lerp(g(x0,y0+1),g(x0+1,y0+1),sx), sy);
+  }
+  const d=new Float32Array(GW*GH);
+  let mx=0;
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+    let v=0;
+    for(const b of blobs){
+      const dx=(x-b.x)/b.rx, dy=(y-b.y)/b.ry;
+      v+=b.a*Math.exp(-(dx*dx+dy*dy));
+    }
+    v*= (0.55+0.9*vnoise(x/GW,y/GH));
+    d[y*GW+x]=v; if(v>mx)mx=v;
+  }
+  for(let i=0;i<d.length;i++) d[i]=Math.pow(clamp(d[i]/mx,0,1),0.9);
+  return d;
+}
+
+// downsample a density grid by factor f (box average) -> {d,GW,GH}
+function downsample(d,GW,GH,f){
+  const nw=Math.max(1,Math.ceil(GW/f)), nh=Math.max(1,Math.ceil(GH/f));
+  const out=new Float32Array(nw*nh);
+  for(let y=0;y<nh;y++)for(let x=0;x<nw;x++){
+    let s=0,c=0;
+    for(let yy=y*f;yy<Math.min(GH,(y+1)*f);yy++)for(let xx=x*f;xx<Math.min(GW,(x+1)*f);xx++){s+=d[yy*GW+xx];c++;}
+    out[y*nw+x]=c?s/c:0;
+  }
+  return {d:out,GW:nw,GH:nh,f};
+}
+
+// optical depth from cell (cx,cy) to point (lx,ly) marching grid `d` (GW,GH), sigma scale
+function opticalDepth(d,GW,GH,cx,cy,lx,ly,sigma){
+  let dx=lx-cx, dy=ly-cy; const dist=Math.hypot(dx,dy);
+  if(dist<1e-4) return 0;
+  const steps=Math.max(2,Math.ceil(dist)); const sx=dx/steps, sy=dy/steps, dl=dist/steps;
+  let od=0, x=cx+0.5, y=cy+0.5;
+  for(let i=0;i<steps;i++){
+    const ix=clamp(Math.floor(x),0,GW-1), iy=clamp(Math.floor(y),0,GH-1);
+    od+=d[iy*GW+ix]*sigma*dl; x+=sx; y+=sy;
+  }
+  return od;
+}
+
+// expose to other modules
+const VR={C,lerp,clamp,TAU,mulberry32,lum,hexToRgb,mkCanvas,buildDensity,downsample,opticalDepth,renderMath};
+window.__VR=VR;
+
+// ---- progress bar + nav active state ----
+function initChrome(){
+  const prog=document.getElementById('progress');
+  const links=[...document.querySelectorAll('#nav a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  function onScroll(){
+    const h=document.documentElement;
+    const p=h.scrollTop/(h.scrollHeight-h.clientHeight);
+    prog.style.width=(p*100)+'%';
+    let idx=0;
+    for(let i=0;i<secs.length;i++){ if(secs[i] && secs[i].getBoundingClientRect().top<160) idx=i; }
+    links.forEach((a,i)=>a.classList.toggle('active',i===idx));
+  }
+  document.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  // reveal
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+}
+
+// ---- global pause ----
+const Motion={paused:false,cbs:new Set()};
+window.__motion=Motion;
+function initPause(){
+  const btn=document.getElementById('pausebtn');
+  btn.addEventListener('click',()=>{
+    Motion.paused=!Motion.paused;
+    btn.textContent=Motion.paused?'▶ resume motion':'⏸ pause motion';
+  });
+}
+
+// visibility gate: only run a widget's loop when on screen
+function onVisible(el,enter,leave){
+  const io=new IntersectionObserver((es)=>es.forEach(e=>{ e.isIntersecting?enter():leave&&leave(); }),{threshold:0.05});
+  io.observe(el);
+}
+VR.onVisible=onVisible;
+
+// boot
+function boot(){ renderMath(); initChrome(); initPause();
+  if(window.__buildWidgets) window.__buildWidgets(VR);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+window.addEventListener('load',renderMath);
+})();
+
+/* ============================================================
+   The volumetric renderer: naive 1-spp vs RIS+reservoir+reuse
+   vs precomputed reference. Real estimators, measured MSE.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,lum}=VR;
+
+function makeVolWidget(mount, opts){
+  opts=opts||{};
+  const GW=opts.GW||96, GH=opts.GH||70, N=GW*GH;
+  const SIGMA=0.34, ALB=0.86, EXPOSURE=1.35, GAIN=opts.gain||52;
+  const NEI=3;                 // spatial neighbours
+  const seed=opts.seed||7;
+  const density=VR.buildDensity(GW,GH,seed);
+  const dmip1=VR.downsample(density,GW,GH,2);
+
+  // lights (grid coords). a few coloured emitters, some over the cloud.
+  const rnd=VR.mulberry32(seed*13+5);
+  const palette=[[1.0,.55,.30],[.45,.75,1.0],[1.0,.85,.45],[.7,1.0,.6],[1.0,.45,.7],[.55,.6,1.0]];
+  const L=opts.lights||6;
+  const lights=[];
+  for(let i=0;i<L;i++){
+    lights.push({ x:(0.1+0.8*rnd())*GW, y:(0.06+0.86*rnd())*GH,
+                  col:palette[i%palette.length].slice(), I:(0.7+0.9*rnd()) });
+  }
+  // transmittance fields per light: exact (mip0) and approx (mip1)
+  const Tex=[], Tap=[];
+  for(let i=0;i<L;i++){ Tex.push(new Float32Array(N)); Tap.push(new Float32Array(N)); }
+  function rebuildLight(li){
+    const lt=lights[li], te=Tex[li], ta=Tap[li];
+    for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+      const idx=y*GW+x;
+      const od =VR.opticalDepth(density,GW,GH,x+.5,y+.5,lt.x,lt.y,SIGMA);
+      te[idx]=Math.exp(-od);
+      const odm=VR.opticalDepth(dmip1.d,dmip1.GW,dmip1.GH,(x+.5)/2,(y+.5)/2,lt.x/2,lt.y/2,SIGMA*2);
+      ta[idx]=Math.exp(-odm);
+    }
+  }
+  for(let i=0;i<L;i++) rebuildLight(i);
+
+  const lumCol=lights.map(l=>lum(l.col[0],l.col[1],l.col[2])*l.I);
+  function geo(r){ return 1/(r+3.0); }
+  const sigS=new Float32Array(N);
+  for(let i=0;i<N;i++) sigS[i]=ALB*density[i];
+
+  // reference (sum all lights, exact T)
+  const ref=new Float32Array(N*3);
+  function buildRef(){
+    for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+      const idx=y*GW+x; let r=0,g=0,b=0; const ss=sigS[idx];
+      if(ss>1e-4){
+        for(let l=0;l<L;l++){
+          const rr=Math.hypot(x+.5-lights[l].x, y+.5-lights[l].y);
+          const c=ss*lights[l].I*geo(rr)*Tex[l][idx]*GAIN;
+          r+=c*lights[l].col[0]; g+=c*lights[l].col[1]; b+=c*lights[l].col[2];
+        }
+      }
+      ref[idx*3]=r; ref[idx*3+1]=g; ref[idx*3+2]=b;
+    }
+  }
+  buildRef();
+
+  // phat (scalar target, approx T) at pixel p for light l
+  function phatAt(p, l){
+    const x=p%GW, y=(p/GW)|0;
+    const rr=Math.hypot(x+.5-lights[l].x, y+.5-lights[l].y);
+    return sigS[p]*lumCol[l]*geo(rr)*Tap[l][p]*GAIN;
+  }
+
+  // accumulators
+  const accN=new Float32Array(N*3); let frameN=0;
+  const accO=new Float32Array(N*3); let frameO=0;
+  // reservoirs: prev/cur/out  (Y light idx, W sum, M, P phat-stored)
+  function newRes(){return {Y:new Int16Array(N),W:new Float32Array(N),M:new Float32Array(N),P:new Float32Array(N)};}
+  let prev=newRes(), cur=newRes(), out=newRes();
+  const QMAX=4*L;
+
+  const state={spatial:opts.spatial!==false, temporal:opts.temporal!==false, running:false};
+
+  function reset(){
+    accN.fill(0); accO.fill(0); frameN=0; frameO=0;
+    prev.W.fill(0); prev.M.fill(0); prev.Y.fill(0); prev.P.fill(0);
+  }
+
+  // ---- one frame of NAIVE ----
+  function frameNaive(){
+    for(let p=0;p<N;p++){
+      if(sigS[p]<=1e-4) continue;
+      const x=p%GW, y=(p/GW)|0;
+      const l=(Math.random()*L)|0;
+      const rr=Math.hypot(x+.5-lights[l].x,y+.5-lights[l].y);
+      const c=sigS[p]*lights[l].I*geo(rr)*Tex[l][p]*GAIN*L; // /(1/L)
+      accN[p*3]+=c*lights[l].col[0]; accN[p*3+1]+=c*lights[l].col[1]; accN[p*3+2]+=c*lights[l].col[2];
+    }
+    frameN++;
+  }
+
+  // ---- one frame of OURS ----
+  function frameOurs(){
+    // pass A: initial RIS over L lights + optional temporal merge -> cur
+    for(let p=0;p<N;p++){
+      if(sigS[p]<=1e-4){ cur.W[p]=0; cur.M[p]=0; cur.P[p]=0; cur.Y[p]=0; continue; }
+      // initial reservoir
+      let wsum=0, Y=0, Phat=0, picked=false;
+      for(let l=0;l<L;l++){
+        const ph=phatAt(p,l); const w=ph*L; // /(1/L)
+        wsum+=w;
+        if(Math.random()*wsum < w){ Y=l; Phat=ph; picked=true; }
+      }
+      let M=L;
+      if(!picked){ cur.W[p]=0; cur.M[p]=L; cur.P[p]=0; cur.Y[p]=0; }
+      // temporal merge (same pixel; static reprojection)
+      if(state.temporal && prev.M[p]>0 && prev.W[p]>0){
+        // Talbot/balance MIS by M counts (identical targets at same pixel)
+        const pInit=Phat, pPrev=phatAt(p,prev.Y[p]);
+        // current initial as reservoir 0
+        let s_w=wsum, s_M=M, s_Y=Y, s_P=Phat;
+        // combine prev
+        const mPrev = (pPrev*prev.M[p])/(pPrev*prev.M[p] + pInit*M + 1e-20);
+        const wPrev = (pPrev/(prev.P[p]+1e-20))*prev.W[p]*mPrev;
+        // re-weight current initial by its MIS too (balance): m0
+        const m0 = (pInit*M)/(pPrev*prev.M[p] + pInit*M + 1e-20);
+        s_w = wsum*m0;
+        // restream as a 2-reservoir combine
+        let cw=s_w, cY=s_Y, cP=s_P;
+        cw+=wPrev;
+        if(Math.random()*cw < wPrev){ cY=prev.Y[p]; cP=pPrev; }
+        let cM=M+prev.M[p];
+        if(cM>QMAX){ cw*=QMAX/cM; cM=QMAX; }
+        cur.W[p]=cw; cur.M[p]=cM; cur.Y[p]=cY; cur.P[p]=cP;
+      } else {
+        cur.W[p]=wsum; cur.M[p]=M; cur.Y[p]=Y; cur.P[p]=Phat;
+      }
+    }
+    // pass B: spatial merge -> out
+    if(state.spatial){
+      for(let p=0;p<N;p++){
+        if(sigS[p]<=1e-4){ out.W[p]=0;out.M[p]=0;out.P[p]=0;out.Y[p]=0; continue; }
+        const x=p%GW, y=(p/GW)|0;
+        // gather self + NEI neighbours
+        const set=[p];
+        for(let k=0;k<NEI;k++){
+          const ang=Math.random()*VR.TAU, rad=2+Math.random()*8;
+          const nx=clamp((x+Math.cos(ang)*rad)|0,0,GW-1), ny=clamp((y+Math.sin(ang)*rad)|0,0,GH-1);
+          const np=ny*GW+nx; if(sigS[np]>1e-4 && cur.M[np]>0) set.push(np);
+        }
+        let sw=0, sY=cur.Y[p], sP=phatAt(p,cur.Y[p]), sM=0;
+        // Talbot MIS combine
+        for(let si=0;si<set.length;si++){
+          const ri=set[si]; if(cur.M[ri]<=0||cur.W[ri]<=0) continue;
+          const Yi=cur.Y[ri];
+          let pSum=0, kk=0;
+          for(let sj=0;sj<set.length;sj++){ pSum+=phatAt(set[sj],Yi)*cur.M[set[sj]]; kk+=cur.M[set[sj]]; }
+          const mvi = (phatAt(ri,Yi)*cur.M[ri])/(pSum+1e-20);   // MIS weight (Talbot)
+          const phatHere=phatAt(p,Yi);
+          const wi=(phatHere/(cur.P[ri]+1e-20))*cur.W[ri]*mvi;
+          sw+=wi; sM+=cur.M[ri];
+          if(Math.random()*sw < wi){ sY=Yi; sP=phatHere; }
+        }
+        out.W[p]=sw; out.M[p]=sM; out.Y[p]=sY; out.P[p]=sP;
+      }
+    } else {
+      out.W.set(cur.W); out.M.set(cur.M); out.Y.set(cur.Y); out.P.set(cur.P);
+    }
+    // shade survivor with EXACT T, accumulate
+    for(let p=0;p<N;p++){
+      if(sigS[p]<=1e-4){ continue; }
+      const M=out.M[p];
+      if(M<=0||out.W[p]<=0||out.P[p]<=0){ continue; }
+      const l=out.Y[p], x=p%GW, y=(p/GW)|0;
+      const rr=Math.hypot(x+.5-lights[l].x,y+.5-lights[l].y);
+      // F_rgb uses exact T ; E_phat = F/phat ; * Wsum/M
+      const Wn=out.W[p]/M;
+      const base=sigS[p]*lights[l].I*geo(rr)*Tex[l][p]*GAIN;
+      const Ephat_div = out.P[p]; // scalar target stored (approx T, lum)
+      const k = Wn/Ephat_div;
+      accO[p*3]  +=base*lights[l].col[0]*k;
+      accO[p*3+1]+=base*lights[l].col[1]*k;
+      accO[p*3+2]+=base*lights[l].col[2]*k;
+    }
+    frameO++;
+    // prev <- out
+    const t=prev; prev=out; out=t;
+  }
+
+  // ---- MSE ----
+  function mse(acc,frames){
+    if(frames===0) return 1;
+    let s=0,c=0; const inv=1/frames;
+    for(let p=0;p<N;p++){
+      if(sigS[p]<=1e-4) continue;
+      const lr=acc[p*3]*inv, lg=acc[p*3+1]*inv, lb=acc[p*3+2]*inv;
+      const e=lum(lr-ref[p*3],lg-ref[p*3+1],lb-ref[p*3+2]);
+      // use channel-wise mse
+      const dr=lr-ref[p*3],dg=lg-ref[p*3+1],db=lb-ref[p*3+2];
+      s+=(dr*dr+dg*dg+db*db)/3; c++;
+    }
+    return c? s/c : 1;
+  }
+
+  // ---- rendering to canvas ----
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const titles=['Naive · 1 spp','Ours · ReSTIR','Reference'];
+  const cv=VR.mkCanvas(wrap, 3*GW+24, GH+22, {pixel:false,maxDpr:2});
+  const ctx=cv.getContext('2d');
+  // offscreen tiny buffers
+  const off=document.createElement('canvas'); off.width=GW; off.height=GH; const octx=off.getContext('2d');
+  const imgN=octx.createImageData(GW,GH), imgO=octx.createImageData(GW,GH), imgR=octx.createImageData(GW,GH);
+  const bgTop=[0.04,0.05,0.075], bgBot=[0.02,0.022,0.03];
+  function tm(v){ v=1-Math.exp(-v*EXPOSURE); return Math.pow(clamp(v,0,1),1/2.2); }
+  function fill(img,acc,frames){
+    const inv=frames?1/frames:0;
+    for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+      const p=y*GW+x, o=p*4; let r,g,b;
+      if(sigS[p]<=1e-4){
+        const t=y/GH; r=lerp(bgTop[0],bgBot[0],t); g=lerp(bgTop[1],bgBot[1],t); b=lerp(bgTop[2],bgBot[2],t);
+      } else if(acc===null){ r=ref[p*3]; g=ref[p*3+1]; b=ref[p*3+2]; }
+      else { r=acc[p*3]*inv; g=acc[p*3+1]*inv; b=acc[p*3+2]*inv; }
+      img.data[o]=tm(r)*255; img.data[o+1]=tm(g)*255; img.data[o+2]=tm(b)*255; img.data[o+3]=255;
+    }
+  }
+  // panel geometry in canvas (device px)
+  function panelRects(){
+    const W=cv.width, H=cv.height, dpr=cv._dpr;
+    const gap=8*dpr, top=20*dpr;
+    const pw=(W-2*gap)/3, ph=H-top;
+    return {top,gap,pw,ph,dpr,W,H};
+  }
+  function draw(){
+    fill(imgN,accN,frameN); fill(imgO,accO,frameO); fill(imgR,null,0);
+    const R=panelRects();
+    ctx.clearRect(0,0,R.W,R.H);
+    const imgs=[imgN,imgO,imgR];
+    for(let i=0;i<3;i++){
+      octx.putImageData(imgs[i],0,0);
+      const x0=i*(R.pw+R.gap);
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(off, x0, R.top, R.pw, R.ph);
+      // title
+      ctx.font=`${11*R.dpr}px 'JetBrains Mono',monospace`;
+      ctx.fillStyle=i===1?VR.C.green:VR.C.dim; ctx.textBaseline='alphabetic';
+      ctx.fillText(titles[i], x0+2*R.dpr, 13*R.dpr);
+      // light glyphs
+      for(let l=0;l<L;l++){
+        const gx=x0+(lights[l].x/GW)*R.pw, gy=R.top+(lights[l].y/GH)*R.ph;
+        ctx.beginPath(); ctx.arc(gx,gy,3.4*R.dpr,0,VR.TAU);
+        ctx.fillStyle=VR.C.gold; ctx.globalAlpha=.9; ctx.fill(); ctx.globalAlpha=1;
+        ctx.lineWidth=1*R.dpr; ctx.strokeStyle='rgba(0,0,0,.6)'; ctx.stroke();
+      }
+      // border
+      ctx.strokeStyle=i===1?'rgba(152,195,121,.35)':VR.rule||'#2a2a38';
+      ctx.strokeStyle=i===1?'rgba(152,195,121,.35)':'rgba(42,42,56,.9)';
+      ctx.lineWidth=1*R.dpr; ctx.strokeRect(x0,R.top,R.pw,R.ph);
+    }
+  }
+
+  // ---- controls ----
+  const ctrls=document.createElement('div'); ctrls.className='ctrls'; wrap.appendChild(ctrls);
+  function tbtn(label,key){
+    const b=document.createElement('button'); b.className='tog'+(state[key]?' on':''); b.textContent=label;
+    b.onclick=()=>{ state[key]=!state[key]; b.classList.toggle('on',state[key]); reset(); };
+    ctrls.appendChild(b); return b;
+  }
+  tbtn('spatial reuse','spatial'); tbtn('temporal reuse','temporal');
+  const rb=document.createElement('button'); rb.className='tog'; rb.textContent='reset'; rb.onclick=reset; ctrls.appendChild(rb);
+
+  const readout=document.createElement('div'); readout.className='readout'; wrap.appendChild(readout);
+  function fmt(x){ return x.toExponential(2); }
+
+  const hint=document.createElement('div'); hint.className='hint'; hint.textContent='drag any gold emitter — both renderers reset and race the reference'; wrap.appendChild(hint);
+
+  // ---- dragging lights ----
+  let drag=-1;
+  function pickLight(mx,my){
+    const R=panelRects(); const rscale=cv.width/cv.getBoundingClientRect().width;
+    mx*=rscale; my*=rscale;
+    for(let i=0;i<3;i++){ const x0=i*(R.pw+R.gap);
+      for(let l=0;l<L;l++){ const gx=x0+(lights[l].x/GW)*R.pw, gy=R.top+(lights[l].y/GH)*R.ph;
+        if(Math.hypot(mx-gx,my-gy)<10*R.dpr) return {l,panel:i}; } }
+    return null;
+  }
+  function evtPos(e){ const r=cv.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left,y:t.clientY-r.top}; }
+  cv.addEventListener('pointerdown',e=>{ const p=evtPos(e); const h=pickLight(p.x,p.y); if(h){drag=h.l; cv.setPointerCapture(e.pointerId);} });
+  cv.addEventListener('pointermove',e=>{
+    if(drag<0) return; const p=evtPos(e); const R=panelRects();
+    const rscale=cv.width/cv.getBoundingClientRect().width; const mx=p.x*rscale, my=p.y*rscale;
+    const panel=clamp(Math.floor(mx/(R.pw+R.gap)),0,2); const x0=panel*(R.pw+R.gap);
+    lights[drag].x=clamp(((mx-x0)/R.pw)*GW,0,GW-1); lights[drag].y=clamp(((my-R.top)/R.ph)*GH,0,GH-1);
+    rebuildLight(drag); buildRef(); reset();
+  });
+  cv.addEventListener('pointerup',()=>{drag=-1;});
+  cv.addEventListener('pointercancel',()=>{drag=-1;});
+
+  // ---- loop ----
+  let visible=false;
+  function loop(){
+    if(visible && !Motion.paused){
+      frameNaive();
+      frameOurs();
+      draw();
+      const mN=mse(accN,frameN), mO=mse(accO,frameO);
+      let html=`<span>frame <b>${frameO}</b></span>`+
+        `<span>MSE naive <b class="lo">${fmt(mN)}</b></span>`+
+        `<span>MSE ours <b class="hi">${fmt(mO)}</b></span>`+
+        `<span>speedup <b>${(mN/Math.max(mO,1e-12)).toFixed(1)}×</b></span>`;
+      if(opts.showEff){
+        let em=0,c=0; for(let p=0;p<N;p++){if(sigS[p]>1e-4){em+=prev.M[p];c++;}}
+        html+=`<span>eff. candidates <b>${c?(em/c).toFixed(0):0}</b></span>`;
+      }
+      readout.innerHTML=html;
+    } else if(!frameO){ draw(); }
+    requestAnimationFrame(loop);
+  }
+  VR.onVisible(mount,()=>{visible=true;},()=>{visible=false;});
+  draw(); loop();
+  return {reset};
+}
+window.__makeVolWidget=makeVolWidget;
+})();
+
+/* ============================================================
+   Part 2 — Random walk in path space (Figure 3).
+   Delta-tracking free flight + isotropic phase + NEE.
+   Each vertex spawns a scattering path (gold) and an
+   emission path (red). All sampling is real.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,TAU,mulberry32,C}=VR;
+
+function makeWalkWidget(mount){
+  const GW=120, GH=78, SIGMA=0.5;
+  const density=VR.buildDensity(GW,GH,21);
+  let maj=0; for(let i=0;i<density.length;i++) maj=Math.max(maj,density[i]*SIGMA);
+  maj=Math.max(maj,1e-3);
+  // a few emitters (gold) sitting above / beside the cloud
+  const lights=[{x:GW*0.5,y:GH*0.07},{x:GW*0.93,y:GH*0.34},{x:GW*0.08,y:GH*0.30}];
+  function dens(x,y){ const ix=clamp(x|0,0,GW-1), iy=clamp(y|0,0,GH-1); return density[iy*GW+ix]; }
+
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const cv=VR.mkCanvas(wrap, GW, GH, {maxDpr:2});
+  const ctx=cv.getContext('2d');
+
+  // precompute smoke backdrop into an offscreen
+  const off=document.createElement('canvas'); off.width=GW; off.height=GH;
+  const octx=off.getContext('2d'); const img=octx.createImageData(GW,GH);
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+    const d=density[y*GW+x], o=(y*GW+x)*4;
+    const t=y/GH, bg=lerp(0.05,0.02,t);
+    const v=bg+d*0.42; const g=Math.pow(clamp(v,0,1),1/2.0)*255;
+    img.data[o]=g*0.98; img.data[o+1]=g*1.0; img.data[o+2]=g*1.06; img.data[o+3]=255;
+  }
+  octx.putImageData(img,0,0);
+
+  let state={K:4, seed:3};
+  let walk=null;       // {verts:[{x,y}], nee:[{x,y,light}], emit:[bool]}
+  let reveal=0;        // animation progress (vertices revealed)
+
+  function buildWalk(){
+    const rnd=mulberry32(state.seed*2654435761>>>0);
+    // start at camera (left edge, mid height), shoot right with slight downward jitter
+    let x=2, y=GH*(0.42+0.16*rnd());
+    let ang=(-0.18+0.36*rnd());          // ~ +x direction
+    let dx=Math.cos(ang), dy=Math.sin(ang);
+    const verts=[{x,y}], nee=[], emit=[];
+    for(let k=0;k<state.K;k++){
+      // delta tracking free-flight to next real collision
+      let t=0, hit=false, px=x, py=y;
+      for(let it=0;it<400;it++){
+        t += -Math.log(1-rnd())/maj;
+        px=x+dx*t; py=y+dy*t;
+        if(px<0||px>=GW||py<0||py>=GH){ hit=false; break; }
+        if(dens(px,py)*SIGMA/maj > rnd()){ hit=true; break; }
+      }
+      if(!hit) break;
+      verts.push({x:px,y:py});
+      // NEE: pick a light, store segment (scattering path candidate)
+      const li=(rnd()*lights.length)|0;
+      nee.push({x:lights[li].x,y:lights[li].y,light:li});
+      // emission path candidate ends right here (red), exists if local density notable
+      emit.push(dens(px,py)>0.18);
+      // scatter: isotropic-ish new direction
+      const na=rnd()*TAU; dx=Math.cos(na); dy=Math.sin(na);
+      x=px; y=py;
+    }
+    walk={verts,nee,emit}; reveal=0;
+  }
+  buildWalk();
+
+  function dot(x,y,r,col,a){ ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fillStyle=col; ctx.globalAlpha=a==null?1:a; ctx.fill(); ctx.globalAlpha=1; }
+  function seg(ax,ay,bx,by,col,w,dash){ ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke(); ctx.setLineDash([]); }
+
+  function draw(){
+    const dpr=cv._dpr, W=cv.width, H=cv.height;
+    const sx=W/GW, sy=H/GH;
+    ctx.clearRect(0,0,W,H);
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(off,0,0,W,H);
+    ctx.save(); ctx.scale(sx,sy);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    const lw=1.4/sx;
+    // lights
+    for(const l of lights){ dot(l.x,l.y,3.0/sx,C.gold,1); ctx.lineWidth=0.5/sx; ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(l.x,l.y,3.0/sx,0,TAU); ctx.stroke(); }
+    // camera glyph
+    const c0=walk.verts[0];
+    dot(c0.x,c0.y,2.6/sx,C.ink,1);
+    // revealed portion
+    const nShown=Math.min(walk.verts.length, Math.floor(reveal)+1);
+    // primary + scattering segments (amber)
+    for(let i=1;i<nShown;i++){
+      seg(walk.verts[i-1].x,walk.verts[i-1].y, walk.verts[i].x,walk.verts[i].y, C.amber, lw);
+    }
+    for(let i=1;i<nShown;i++){
+      const v=walk.verts[i];
+      // NEE scattering path (gold dashed) — a candidate
+      const ne=walk.nee[i-1];
+      seg(v.x,v.y, ne.x,ne.y, 'rgba(240,198,116,.62)', lw*0.7, [2.5/sx,2.0/sx]);
+      // emission path candidate (red) at this vertex
+      if(walk.emit[i-1]) dot(v.x,v.y,3.4/sx,C.red,0.32);
+      // vertex marker
+      dot(v.x,v.y,2.0/sx,C.amber,1);
+    }
+    ctx.restore();
+    // labels
+    ctx.font=`${10.5*dpr}px 'JetBrains Mono',monospace`; ctx.textBaseline='top';
+    ctx.fillStyle=C.dim;
+    ctx.fillText(`K = ${state.K}  ·  ${Math.max(0,nShown-1)} scatter events`, 6*dpr, 6*dpr);
+    ctx.fillStyle=C.gold; ctx.fillText('● light / NEE', 6*dpr, H-30*dpr);
+    ctx.fillStyle=C.amber; ctx.fillText('● scattering path', 86*dpr, H-30*dpr);
+    ctx.fillStyle=C.red;  ctx.fillText('● emission path', 6*dpr, H-16*dpr);
+  }
+
+  // controls
+  const ctrls=document.createElement('div'); ctrls.className='ctrls'; wrap.appendChild(ctrls);
+  const cg=document.createElement('div'); cg.className='ctrl';
+  cg.innerHTML=`<label>max bounces K</label>`;
+  const rng=document.createElement('input'); rng.type='range'; rng.min=1; rng.max=8; rng.step=1; rng.value=state.K;
+  const out=document.createElement('output'); out.textContent=state.K;
+  rng.oninput=()=>{ state.K=+rng.value; out.textContent=state.K; buildWalk(); };
+  cg.appendChild(rng); cg.appendChild(out); ctrls.appendChild(cg);
+  const nb=document.createElement('button'); nb.className='tog'; nb.textContent='new walk';
+  nb.onclick=()=>{ state.seed=(state.seed*16807+1)>>>0; buildWalk(); }; ctrls.appendChild(nb);
+  const hint=document.createElement('div'); hint.className='hint';
+  hint.textContent='one random walk of K vertices yields up to 2K candidate paths — K scattering, K emission'; wrap.appendChild(hint);
+
+  let last=0;
+  function loop(ts){
+    if(!Motion.paused){
+      const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+      if(reveal < walk.verts.length-1) reveal+=dt*3.2;
+      draw();
+    } else { last=ts; }
+    requestAnimationFrame(loop);
+  }
+  let on=false; VR.onVisible(mount,()=>{ if(!on){on=true;requestAnimationFrame(loop);} },null);
+  draw();
+}
+window.__makeWalkWidget=makeWalkWidget;
+})();
+
+/* ============================================================
+   Part 3 — RIS in 1D (Section 2.4 / Eq 4-6).
+   integrand f (amber), target p-hat (lavender), source p (faint).
+   Candidates rain from p; survivor chosen prop. to w=p-hat/p;
+   survivor histogram migrates onto p-hat; running estimate
+   tracks the true integral regardless of M.
+   Verified offline: unbiased, variance falls ~1/M.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,TAU,mulberry32,C}=VR;
+
+function makeRisWidget(mount){
+  // --- exact functions (match /tmp/verify_ris1d.js) ---
+  const f   = x => Math.exp(-2.2*x)*(0.55 + 0.85*Math.exp(-Math.pow((x-0.62)/0.12,2)));
+  const ph0 = x => Math.exp(-2.2*x)*(0.55 + 0.85*Math.exp(-Math.pow((x-0.58)/0.15,2)));
+  const NQ=4000; let Zph=0, Itrue=0, fmax=0, phmax=0;
+  for(let i=0;i<NQ;i++){ const x=(i+0.5)/NQ; Zph+=ph0(x)/NQ; Itrue+=f(x)/NQ; }
+  const phat=x=>ph0(x)/Zph;     // proper PDF on [0,1]
+  const p   =x=>1.0;            // uniform source (easy to sample)
+  for(let i=0;i<NQ;i++){ const x=(i+0.5)/NQ; fmax=Math.max(fmax,f(x)); phmax=Math.max(phmax,phat(x)); }
+
+  // publish the verified truth into the caption
+  const tv=document.getElementById('ris-truth'); if(tv) tv.textContent='≈ '+Itrue.toFixed(3);
+
+  let state={M:8};
+  let rng=mulberry32(91);
+  const NB=46; const hist=new Float32Array(NB); let histN=0;
+  let estSum=0, estN=0;            // running mean of the RIS estimator
+  let cands=[], survivor=null, anim=0;
+
+  function risRound(){
+    const M=state.M, xs=[], ws=[]; let wsum=0;
+    for(let j=0;j<M;j++){ const x=rng(); const w=phat(x)/p(x); xs.push(x); ws.push(w); wsum+=w; }
+    let xi=rng()*wsum, r=0; for(;r<M-1;r++){ if(xi<ws[r])break; xi-=ws[r]; }
+    const xr=xs[r];
+    const est=(f(xr)/phat(xr))*(wsum/M);
+    estSum+=est; estN++;
+    const b=clamp(Math.floor(xr*NB),0,NB-1); hist[b]++; histN++;
+    cands=xs.map((x,i)=>({x,w:ws[i],sel:i===r})); survivor={x:xr,b}; anim=0;
+  }
+  function reset(){ hist.fill(0); histN=0; estSum=0; estN=0; cands=[]; survivor=null; rng=mulberry32(91); risRound(); }
+
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const cv=VR.mkCanvas(wrap, 150, 96, {maxDpr:2});
+  const ctx=cv.getContext('2d');
+
+  function draw(){
+    const W=cv.width, H=cv.height, dpr=cv._dpr;
+    ctx.clearRect(0,0,W,H);
+    const padL=8*dpr, padR=8*dpr, padT=20*dpr, padB=4*dpr;
+    const plotH=(H-padT-padB)*0.56, histTop=padT+plotH+10*dpr, histH=(H-padT-padB)-plotH-10*dpr;
+    const x2px=x=>padL+x*(W-padL-padR);
+    const baseY=padT+plotH;
+    // axis baseline
+    ctx.strokeStyle='rgba(120,116,110,.4)'; ctx.lineWidth=1*dpr;
+    ctx.beginPath(); ctx.moveTo(padL,baseY); ctx.lineTo(W-padR,baseY); ctx.stroke();
+    // curve helper
+    function curve(fn,fmaxL,col,wpx,fillA){
+      ctx.beginPath();
+      for(let i=0;i<=160;i++){ const x=i/160, px=x2px(x), py=baseY-(fn(x)/fmaxL)*plotH*0.92;
+        i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+      if(fillA){ ctx.lineTo(x2px(1),baseY); ctx.lineTo(x2px(0),baseY); ctx.closePath();
+        ctx.fillStyle=fillA; ctx.fill(); }
+      else { ctx.strokeStyle=col; ctx.lineWidth=wpx; ctx.stroke(); }
+    }
+    // source p (faint, flat)
+    ctx.strokeStyle='rgba(111,107,102,.55)'; ctx.lineWidth=1.2*dpr; ctx.setLineDash([3*dpr,3*dpr]);
+    const pPy=baseY-(1.0/phmax)*plotH*0.92*0.62;
+    ctx.beginPath(); ctx.moveTo(x2px(0),pPy); ctx.lineTo(x2px(1),pPy); ctx.stroke(); ctx.setLineDash([]);
+    // f and p-hat
+    curve(phat,phmax,null,0,'rgba(155,142,196,.16)');
+    curve(f,fmax,C.amber,1.8*dpr);
+    curve(phat,phmax,C.lav,1.8*dpr);
+    // candidates raining (stem height ~ weight)
+    const a=clamp(anim,0,1);
+    for(const c of cands){
+      const px=x2px(c.x); const wY=baseY-(phat(c.x)/phmax)*plotH*0.92;
+      const fromY=lerp(padT-2*dpr, wY, a);
+      ctx.strokeStyle=c.sel?'rgba(152,195,121,.5)':'rgba(212,165,116,.28)'; ctx.lineWidth=1*dpr;
+      ctx.beginPath(); ctx.moveTo(px,padT-2*dpr); ctx.lineTo(px,fromY); ctx.stroke();
+      ctx.beginPath(); ctx.arc(px,fromY,(c.sel?2.8:1.8)*dpr,0,TAU);
+      ctx.fillStyle=c.sel?C.green:C.amber; ctx.globalAlpha=c.sel?1:0.7; ctx.fill(); ctx.globalAlpha=1;
+    }
+    // survivor histogram (green) + p-hat overlay scaled to hist
+    let hmax=1e-6; for(let i=0;i<NB;i++) hmax=Math.max(hmax,hist[i]);
+    const bw=(W-padL-padR)/NB;
+    for(let i=0;i<NB;i++){
+      const h=(hist[i]/hmax)*histH; const px=padL+i*bw;
+      ctx.fillStyle='rgba(152,195,121,.55)'; ctx.fillRect(px+0.5*dpr, histTop+histH-h, bw-1*dpr, h);
+    }
+    // expected p-hat density overlay (lavender outline) on histogram
+    ctx.strokeStyle=C.lav; ctx.lineWidth=1.5*dpr; ctx.beginPath();
+    let pkmax=0; for(let i=0;i<NB;i++){ pkmax=Math.max(pkmax,phat((i+0.5)/NB)); }
+    for(let i=0;i<NB;i++){ const x=(i+0.5)/NB, px=padL+i*bw+bw/2, py=histTop+histH-(phat(x)/pkmax)*histH;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.stroke();
+    // labels
+    ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`; ctx.textBaseline='top';
+    ctx.fillStyle=C.amber; ctx.fillText('f(x)', padL, 5*dpr);
+    ctx.fillStyle=C.lav;   ctx.fillText('p̂', padL+34*dpr, 5*dpr);
+    ctx.fillStyle=C.faint; ctx.fillText('p (source)', padL+58*dpr, 5*dpr);
+    ctx.fillStyle=C.green; ctx.fillText('survivors → p̂', W-padR-78*dpr, histTop-12*dpr);
+  }
+
+  // controls
+  const ctrls=document.createElement('div'); ctrls.className='ctrls'; wrap.appendChild(ctrls);
+  const cg=document.createElement('div'); cg.className='ctrl'; cg.innerHTML=`<label>candidates M</label>`;
+  const rngEl=document.createElement('input'); rngEl.type='range'; rngEl.min=1; rngEl.max=32; rngEl.step=1; rngEl.value=state.M;
+  const out=document.createElement('output'); out.textContent=state.M;
+  rngEl.oninput=()=>{ state.M=+rngEl.value; out.textContent=state.M; };
+  cg.appendChild(rngEl); cg.appendChild(out); ctrls.appendChild(cg);
+  const rb=document.createElement('button'); rb.className='tog'; rb.textContent='reset'; rb.onclick=reset; ctrls.appendChild(rb);
+  const readout=document.createElement('div'); readout.className='readout'; wrap.appendChild(readout);
+
+  function updateReadout(){
+    const est=estN?estSum/estN:0;
+    const err=Math.abs(est-Itrue);
+    readout.innerHTML=`<span>true <b>${Itrue.toFixed(4)}</b></span>`+
+      `<span>estimate <b class="hi">${est.toFixed(4)}</b></span>`+
+      `<span>|error| <b>${err.toExponential(1)}</b></span>`+
+      `<span>rounds <b>${estN}</b></span>`;
+  }
+
+  reset();
+  let acc=0, last=0;
+  function loop(ts){
+    if(!Motion.paused){
+      const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+      anim+=dt*2.4; acc+=dt;
+      if(acc>0.42){ acc=0; risRound(); updateReadout(); }
+      draw();
+    } else { last=ts; }
+    requestAnimationFrame(loop);
+  }
+  let on=false; VR.onVisible(mount,()=>{ if(!on){on=true; updateReadout(); requestAnimationFrame(loop);} },null);
+  draw(); updateReadout();
+}
+window.__makeRisWidget=makeRisWidget;
+})();
+
+/* ============================================================
+   Part 4 — Weighted Reservoir Sampling (Chao 1982, Eq 7).
+   Candidates stream through ONE slot. Each new candidate i
+   overwrites the held sample with prob w_i / wsum-so-far.
+   Final survivor distribution -> w_i / Sum(w). Verified offline
+   to 4 decimals; here it accumulates live.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,TAU,mulberry32,C}=VR;
+
+function makeReservoirWidget(mount){
+  const W=[0.9, 2.4, 1.3, 3.1, 0.6, 1.8];   // candidate weights
+  const n=W.length; let Wsum=0; for(const w of W) Wsum+=w;
+  const analytic=W.map(w=>w/Wsum);
+  let rng=mulberry32(7);
+  const wins=new Float32Array(n); let passes=0;
+  // animated pass state
+  let cur={i:-1, held:-1, wsum:0, swap:false, phase:1};  // phase: 1 done
+
+  function doPassFast(){
+    let held=-1, ws=0;
+    for(let i=0;i<n;i++){ ws+=W[i]; if(rng()<W[i]/ws) held=i; }
+    wins[held]++; passes++;
+  }
+  function reset(){ wins.fill(0); passes=0; rng=mulberry32(7); cur={i:-1,held:-1,wsum:0,swap:false,phase:1}; }
+
+  // animated single pass (for the "stream one" button)
+  let streaming=false, streamT=0;
+  function startStream(){ streaming=true; streamT=0; cur={i:0,held:-1,wsum:0,swap:false,phase:0}; }
+  function advanceStream(dt){
+    streamT+=dt;
+    if(streamT>0.55){
+      streamT=0;
+      const i=cur.i;
+      cur.wsum+=W[i];
+      const swap = rng()<W[i]/cur.wsum;
+      if(swap) cur.held=i;
+      cur.swap=swap;
+      if(i>=n-1){ wins[cur.held]++; passes++; streaming=false; cur.phase=1; }
+      else cur.i=i+1;
+    }
+  }
+
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const cv=VR.mkCanvas(wrap, 150, 84, {maxDpr:2});
+  const ctx=cv.getContext('2d');
+
+  function draw(){
+    const Wd=cv.width, H=cv.height, dpr=cv._dpr;
+    ctx.clearRect(0,0,Wd,H);
+    const padL=10*dpr, padR=10*dpr;
+    const colW=(Wd-padL-padR)/n;
+    // ---- top: streaming candidates + reservoir slot ----
+    const topY=14*dpr, barMax=26*dpr;
+    const wmax=Math.max.apply(null,W);
+    ctx.font=`${9.5*dpr}px 'JetBrains Mono',monospace`; ctx.textBaseline='alphabetic';
+    for(let i=0;i<n;i++){
+      const cx=padL+colW*(i+0.5);
+      const h=(W[i]/wmax)*barMax;
+      const active = streaming && i<=cur.i;
+      const isCurr = streaming && i===cur.i;
+      ctx.fillStyle = isCurr? C.gold : (active? 'rgba(212,165,116,.85)':'rgba(212,165,116,.30)');
+      ctx.fillRect(cx-colW*0.30, topY+barMax-h, colW*0.60, h);
+      ctx.fillStyle=isCurr?C.gold:C.faint;
+      ctx.textAlign='center'; ctx.fillText('w='+W[i].toFixed(1), cx, topY+barMax+11*dpr);
+    }
+    // reservoir slot indicator (which candidate is held)
+    const slotY=topY+barMax+18*dpr;
+    ctx.strokeStyle='rgba(152,195,121,.5)'; ctx.lineWidth=1.2*dpr;
+    if(cur.held>=0){
+      const cx=padL+colW*(cur.held+0.5);
+      ctx.fillStyle='rgba(152,195,121,.18)';
+      ctx.fillRect(cx-colW*0.34, slotY-2*dpr, colW*0.68, 12*dpr);
+      ctx.strokeRect(cx-colW*0.34, slotY-2*dpr, colW*0.68, 12*dpr);
+      ctx.fillStyle=C.green; ctx.textAlign='center'; ctx.fillText('reservoir', cx, slotY+7.5*dpr);
+    }
+    // ---- bottom: convergence chart ----
+    const chTop=slotY+22*dpr, chH=H-chTop-12*dpr;
+    const amax=Math.max.apply(null,analytic)*1.25;
+    for(let i=0;i<n;i++){
+      const cx=padL+colW*(i+0.5);
+      const emp = passes? wins[i]/passes : 0;
+      const eh=(emp/amax)*chH, ah=(analytic[i]/amax)*chH;
+      // empirical (green)
+      ctx.fillStyle='rgba(152,195,121,.6)';
+      ctx.fillRect(cx-colW*0.26, chTop+chH-eh, colW*0.52, eh);
+      // analytic target (lavender tick)
+      ctx.strokeStyle=C.lav; ctx.lineWidth=1.6*dpr;
+      ctx.beginPath(); ctx.moveTo(cx-colW*0.32, chTop+chH-ah); ctx.lineTo(cx+colW*0.32, chTop+chH-ah); ctx.stroke();
+    }
+    ctx.fillStyle=C.green; ctx.textAlign='left'; ctx.fillText('empirical P(survivor)', padL, chTop-4*dpr);
+    ctx.fillStyle=C.lav; ctx.textAlign='right'; ctx.fillText('— w_i / Σw', Wd-padR, chTop-4*dpr);
+  }
+
+  const ctrls=document.createElement('div'); ctrls.className='ctrls'; wrap.appendChild(ctrls);
+  const sb=document.createElement('button'); sb.className='tog'; sb.textContent='stream one pass';
+  sb.onclick=()=>{ if(!streaming) startStream(); }; ctrls.appendChild(sb);
+  const rb=document.createElement('button'); rb.className='tog'; rb.textContent='reset'; rb.onclick=reset; ctrls.appendChild(rb);
+  const readout=document.createElement('div'); readout.className='readout'; wrap.appendChild(readout);
+  function updateReadout(){
+    let maxErr=0; for(let i=0;i<n;i++){ if(passes) maxErr=Math.max(maxErr,Math.abs(wins[i]/passes-analytic[i])); }
+    readout.innerHTML=`<span>passes <b>${passes}</b></span>`+
+      `<span>max |empirical − analytic| <b class="hi">${passes?maxErr.toFixed(3):'—'}</b></span>`;
+  }
+  const hint=document.createElement('div'); hint.className='hint';
+  hint.textContent='one slot, one streaming pass per survivor — yet the survivor frequencies converge to the exact RIS probabilities'; wrap.appendChild(hint);
+
+  let last=0;
+  function loop(ts){
+    if(!Motion.paused){
+      const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+      if(streaming) advanceStream(dt);
+      else { for(let k=0;k<3;k++) doPassFast(); }   // accumulate convergence in background
+      draw(); updateReadout();
+    } else last=ts;
+    requestAnimationFrame(loop);
+  }
+  let on=false; VR.onVisible(mount,()=>{ if(!on){on=true;requestAnimationFrame(loop);} },null);
+  draw(); updateReadout();
+}
+window.__makeReservoirWidget=makeReservoirWidget;
+})();
+
+/* ============================================================
+   Part 5 — Why the transmittance cancels (Eqs 18, 22-26).
+   w = p-hat / p. Because p-hat carries the SAME per-segment T
+   as the delta-tracking p, the expensive T annihilates, leaving
+   w = (sigma_s/sigma_t) * W_k. The only surviving transmittance
+   is E_phat = F/p-hat = T / T-tilde, paid once, at shading.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,C}=VR;
+
+function makeCancelWidget(mount){
+  // chips: {label, col, cancel:'A'|'B'|null} ; cancel groups annihilate in pairs num/denom
+  const num=[ {t:'T(x₀↔x₁)',c:C.teal,g:'T'}, {t:'σ_s',c:C.amber}, {t:'G₁',c:C.faint,g:'G'},
+              {t:'ρ₁',c:C.amber}, {t:'T̃',c:'#7fb0aa'}, {t:'G₂',c:C.faint}, {t:'Lˢ',c:C.gold} ];
+  const den=[ {t:'T(x₀↔x₁)',c:C.teal,g:'T'}, {t:'σ_t',c:C.amber}, {t:'G₁',c:C.faint,g:'G'},
+              {t:'p_NEE',c:C.lav} ];
+  const reduced=[ {t:'σ_s',c:C.amber}, {t:'/',c:C.faint}, {t:'σ_t',c:C.amber}, {t:'·',c:C.faint},
+                  {t:'ρ₁ T̃ G₂ Lˢ',c:C.amber}, {t:'/',c:C.faint}, {t:'p_NEE',c:C.lav} ];
+
+  let stage=0;          // 0 raw fraction, 1 cancelled, 2 show correction
+  let prog=0;           // anim 0..1 within stage transition
+
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const cv=VR.mkCanvas(wrap, 150, 70, {maxDpr:2});
+  const ctx=cv.getContext('2d');
+
+  function chip(x,y,w,h,o,a){
+    ctx.globalAlpha=a; ctx.fillStyle='rgba(255,255,255,.04)';
+    roundRect(x,y,w,h,5*o); ctx.fill();
+    ctx.strokeStyle=o2rgba(o); ctx.lineWidth=1.1*o; roundRect(x,y,w,h,5*o); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function o2rgba(o){ return 'rgba(120,116,110,.5)'; }
+
+  function rowWidth(row, dpr){
+    ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`;
+    let w=0; for(const ch of row){ w+= ctx.measureText(ch.t).width + 12*dpr + 6*dpr; } return w;
+  }
+  function drawRow(row, cy, dpr, fade){
+    const totW=rowWidth(row,dpr); let x=(cv.width-totW)/2; const h=16*dpr;
+    for(const ch of row){
+      ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`;
+      const tw=ctx.measureText(ch.t).width, w=tw+12*dpr;
+      let a=1;
+      if(fade && ch.g && (ch.g==='T'||ch.g==='G')) a=lerp(1,0.06,prog);
+      chip(x,cy-h/2,w,h,dpr,a);
+      ctx.globalAlpha=a; ctx.fillStyle=ch.c; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(ch.t, x+w/2, cy+0.5*dpr); ctx.globalAlpha=1;
+      // strike-through on cancelling chips mid-anim
+      if(fade && ch.g && (ch.g==='T'||ch.g==='G') && prog>0.15){
+        ctx.strokeStyle=C.red; ctx.lineWidth=1.4*dpr; ctx.globalAlpha=clamp((prog-0.15)*2,0,1)*a*3;
+        ctx.beginPath(); ctx.moveTo(x+2*dpr,cy-h/2-1*dpr); ctx.lineTo(x+w-2*dpr,cy+h/2+1*dpr); ctx.stroke(); ctx.globalAlpha=1;
+      }
+      x+=w+6*dpr;
+    }
+  }
+
+  function draw(){
+    const Wd=cv.width, H=cv.height, dpr=cv._dpr;
+    ctx.clearRect(0,0,Wd,H);
+    ctx.font=`${10*dpr}px 'JetBrains Mono',monospace`; ctx.textAlign='left'; ctx.textBaseline='middle';
+    if(stage<2){
+      // w = p̂ / p
+      ctx.fillStyle=C.ink; ctx.fillText('w  =', 8*dpr, H*0.30);
+      drawRow(num, H*0.22, dpr, stage>=1);
+      // fraction bar
+      ctx.strokeStyle='rgba(120,116,110,.6)'; ctx.lineWidth=1*dpr;
+      ctx.beginPath(); ctx.moveTo(Wd*0.16,H*0.37); ctx.lineTo(Wd*0.84,H*0.37); ctx.stroke();
+      drawRow(den, H*0.52, dpr, stage>=1);
+      // result line
+      if(stage>=1){
+        ctx.globalAlpha=clamp(prog*1.4,0,1);
+        ctx.fillStyle=C.green; ctx.textAlign='left'; ctx.fillText('=', 8*dpr, H*0.82);
+        drawRow(reduced, H*0.82, dpr, false);
+        ctx.globalAlpha=1;
+      } else {
+        ctx.fillStyle=C.dim; ctx.textAlign='center';
+        ctx.font=`${9.5*dpr}px 'JetBrains Mono',monospace`;
+        ctx.fillText('press “form the weight” — the teal T and grey G appear in both rows', Wd/2, H*0.86);
+      }
+    } else {
+      // correction term  E_p̂ = F / p̂ = T / T̃
+      ctx.fillStyle=C.ink; ctx.textAlign='left'; ctx.fillText('E_p̂  =  F(λ) / p̂(λ)  =', 8*dpr, H*0.30);
+      const fnum=[ {t:'Γ_s',c:C.amber}, {t:'T',c:C.teal,g:'X'}, {t:'G',c:C.faint,g:'Y'}, {t:'Lˢ',c:C.gold,g:'Z'} ];
+      const fden=[ {t:'Γ_s',c:C.amber}, {t:'T̃',c:'#7fb0aa',g:'X'}, {t:'G',c:C.faint,g:'Y'}, {t:'Lˢ',c:C.gold,g:'Z'} ];
+      // draw with everything except T/T̃ fading
+      function drawRowSel(row,cy){ const totW=rowWidth(row,dpr); let x=(Wd-totW)/2; const h=16*dpr;
+        for(const ch of row){ const tw=ctx.measureText(ch.t).width, w=tw+12*dpr;
+          let a=(ch.g==='Y'||ch.g==='Z'||ch.t==='Γ_s')?lerp(1,0.06,prog):1;
+          chip(x,cy-h/2,w,h,dpr,a); ctx.globalAlpha=a; ctx.fillStyle=ch.c; ctx.textAlign='center';
+          ctx.fillText(ch.t,x+w/2,cy+0.5*dpr); ctx.globalAlpha=1; x+=w+6*dpr; } }
+      drawRowSel(fnum,H*0.50); 
+      ctx.strokeStyle='rgba(120,116,110,.6)'; ctx.lineWidth=1*dpr;
+      ctx.beginPath(); ctx.moveTo(Wd*0.30,H*0.63); ctx.lineTo(Wd*0.70,H*0.63); ctx.stroke();
+      drawRowSel(fden,H*0.76);
+      ctx.globalAlpha=clamp(prog*1.4,0,1); ctx.fillStyle=C.teal; ctx.textAlign='center';
+      ctx.font=`${13*dpr}px 'JetBrains Mono',monospace`;
+      ctx.fillText('=   T / T̃', Wd*0.85, H*0.63); ctx.globalAlpha=1;
+    }
+  }
+
+  const ctrls=document.createElement('div'); ctrls.className='ctrls'; wrap.appendChild(ctrls);
+  const b1=document.createElement('button'); b1.className='tog'; b1.textContent='form the weight';
+  b1.onclick=()=>{ if(stage===0){stage=1;prog=0;} else if(stage===1){stage=2;prog=0;} };
+  ctrls.appendChild(b1);
+  const rb=document.createElement('button'); rb.className='tog'; rb.textContent='reset';
+  rb.onclick=()=>{stage=0;prog=0;}; ctrls.appendChild(rb);
+  const hint=document.createElement('div'); hint.className='hint';
+  hint.textContent='the costly exact transmittance never has to be evaluated while resampling — it survives only as the single ratio T/T̃ at shading'; wrap.appendChild(hint);
+
+  let last=0;
+  function loop(ts){
+    if(!Motion.paused){ const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+      if(prog<1) prog=clamp(prog+dt*1.6,0,1); draw();
+    } else last=ts;
+    requestAnimationFrame(loop);
+  }
+  let on=false; VR.onVisible(mount,()=>{ if(!on){on=true;requestAnimationFrame(loop);} },null);
+  draw();
+}
+window.__makeCancelWidget=makeCancelWidget;
+})();
+
+/* ============================================================
+   Part 6 — The key observation (Sec 3.3 / 4.3).
+   A coarser approximate transmittance T~ inside the target p-hat
+   degrades the target's SHAPE (raising variance) but the exact T
+   at shading keeps the estimator UNBIASED. Coarsen with the
+   slider: the bias meter stays pinned at zero; variance climbs.
+   Verified offline (block-coarsened T~, M=8): bias flat ~1e-3 RNG
+   floor, variance 5.4e-4 -> 1.2e-3 across levels.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,mulberry32,C}=VR;
+
+function makeBiasWidget(mount){
+  const N=160, dx=1/N;
+  const sigT=new Float32Array(N), sigS=new Float32Array(N), Tcam=new Float32Array(N), TLexact=new Float32Array(N);
+  const ALB=0.85, L=1.0;
+  for(let i=0;i<N;i++){ const t=(i+0.5)/N;
+    const d=0.4+0.9*Math.exp(-Math.pow((t-0.45)/0.16,2))+0.5*Math.exp(-Math.pow((t-0.78)/0.10,2));
+    sigT[i]=0.9*d; sigS[i]=ALB*sigT[i]; }
+  { let od=0; for(let i=0;i<N;i++){ Tcam[i]=Math.exp(-od); od+=sigT[i]*dx; } }
+  for(let i=0;i<N;i++){ let s=0; for(let j=i;j<N;j++) s+=sigT[j]*dx; TLexact[i]=Math.exp(-s*1.3); }
+  const f_=new Float32Array(N); let Itrue=0;
+  for(let i=0;i<N;i++){ f_[i]=Tcam[i]*sigS[i]*TLexact[i]*L; Itrue+=f_[i]*dx; }
+  const pdf=new Float32Array(N), cdf=new Float32Array(N);
+  { let Zp=0; for(let i=0;i<N;i++) Zp+=Tcam[i]*sigT[i]*dx;
+    let a=0; for(let i=0;i<N;i++){ pdf[i]=Tcam[i]*sigT[i]/Zp; a+=pdf[i]*dx; cdf[i]=a; } }
+  function sampleP(u){ let lo=0,hi=N-1; while(lo<hi){const m=(lo+hi)>>1; if(cdf[m]<u)lo=m+1;else hi=m;} return lo; }
+  function TLblock(k){ const out=new Float32Array(N); if(k===0){ out.set(TLexact); return out; }
+    const f=Math.pow(2,k), nb=Math.ceil(N/f), c=new Float64Array(nb), cnt=new Int32Array(nb);
+    for(let i=0;i<N;i++){ const b=(i/f)|0; c[b]+=TLexact[i]; cnt[b]++; } for(let b=0;b<nb;b++) c[b]/=cnt[b];
+    for(let i=0;i<N;i++) out[i]=c[(i/f)|0]; return out; }
+
+  let level=0, TLm=TLblock(0); let rng=mulberry32(2024);
+  let sum=0, sum2=0, cnt=0;
+  function estimate(){ const M=8, idx=[], w=[]; let ws=0;
+    for(let j=0;j<M;j++){ const i=sampleP(rng()); const ph=Tcam[i]*sigS[i]*TLm[i]*L; const wj=ph/pdf[i]; idx.push(i); w.push(wj); ws+=wj; }
+    let xi=rng()*ws, r=0; for(;r<M-1;r++){ if(xi<w[r])break; xi-=w[r]; }
+    const ir=idx[r], ph_r=Tcam[ir]*sigS[ir]*TLm[ir]*L; return (f_[ir]/ph_r)*(ws/M); }
+  function reset(){ sum=0; sum2=0; cnt=0; rng=mulberry32(2024); }
+  function setLevel(k){ level=k; TLm=TLblock(k); reset(); }
+
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const cv=VR.mkCanvas(wrap, 150, 78, {maxDpr:2});
+  const ctx=cv.getContext('2d');
+
+  // baselines for meter scaling (from verification)
+  const VAR0=5.4e-4, VARMAX=1.4e-3;
+  function draw(){
+    const W=cv.width, H=cv.height, dpr=cv._dpr;
+    ctx.clearRect(0,0,W,H);
+    const padL=8*dpr, padR=8*dpr; const plotH=H*0.50, baseY=14*dpr+plotH;
+    const x2=x=>padL+x*(W-padL-padR);
+    // f (amber) and p-hat shape (lavender, blocky)
+    let fmax=0,pmax=0; for(let i=0;i<N;i++){ fmax=Math.max(fmax,f_[i]); const ph=Tcam[i]*sigS[i]*TLm[i]*L; pmax=Math.max(pmax,ph); }
+    ctx.strokeStyle='rgba(120,116,110,.4)'; ctx.lineWidth=1*dpr; ctx.beginPath(); ctx.moveTo(padL,baseY); ctx.lineTo(W-padR,baseY); ctx.stroke();
+    // p-hat fill
+    ctx.beginPath(); for(let i=0;i<N;i++){ const ph=Tcam[i]*sigS[i]*TLm[i]*L; const px=x2(i/N), py=baseY-(ph/pmax)*plotH*0.9; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.lineTo(x2(1),baseY); ctx.lineTo(x2(0),baseY); ctx.closePath(); ctx.fillStyle='rgba(155,142,196,.18)'; ctx.fill();
+    ctx.beginPath(); for(let i=0;i<N;i++){ const ph=Tcam[i]*sigS[i]*TLm[i]*L; const px=x2(i/N), py=baseY-(ph/pmax)*plotH*0.9; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.strokeStyle=C.lav; ctx.lineWidth=1.6*dpr; ctx.stroke();
+    // f
+    ctx.beginPath(); for(let i=0;i<N;i++){ const px=x2(i/N), py=baseY-(f_[i]/fmax)*plotH*0.9; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+    ctx.strokeStyle=C.amber; ctx.lineWidth=1.6*dpr; ctx.stroke();
+    ctx.font=`${9.5*dpr}px 'JetBrains Mono',monospace`; ctx.textBaseline='top'; ctx.textAlign='left';
+    ctx.fillStyle=C.amber; ctx.fillText('f = integrand (exact T)', padL, 3*dpr);
+    ctx.fillStyle=C.lav; ctx.fillText('p̂ (coarse T̃)', W-padR-70*dpr, 3*dpr);
+    // ---- meters ----
+    const mean=cnt?sum/cnt:0, varr=cnt?Math.max(0,sum2/cnt-mean*mean):0;
+    const bias=Math.abs(mean-Itrue);
+    const mY=baseY+16*dpr, mH=8*dpr, mW=(W-padL-padR);
+    // bias meter (relative to truth, scaled small) — stays near 0
+    ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(padL,mY,mW,mH);
+    const biasFrac=clamp(bias/(0.06*Itrue),0,1);
+    ctx.fillStyle=C.green; ctx.fillRect(padL,mY,mW*biasFrac,mH);
+    ctx.fillStyle=C.dim; ctx.textBaseline='middle'; ctx.fillText(`bias |⟨I⟩−I| = ${cnt?bias.toExponential(1):'—'}`, padL, mY-7*dpr);
+    // variance meter — climbs
+    const vY=mY+24*dpr;
+    ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(padL,vY,mW,mH);
+    const vFrac=clamp((varr-VAR0)/(VARMAX-VAR0),0,1);
+    ctx.fillStyle=C.red; ctx.fillRect(padL,vY,mW*Math.max(0.02,vFrac),mH);
+    ctx.fillStyle=C.dim; ctx.fillText(`variance = ${cnt?varr.toExponential(2):'—'}`, padL, vY-7*dpr);
+  }
+
+  const ctrls=document.createElement('div'); ctrls.className='ctrls'; wrap.appendChild(ctrls);
+  const cg=document.createElement('div'); cg.className='ctrl'; cg.innerHTML=`<label>coarsen T̃ (mip)</label>`;
+  const rng2=document.createElement('input'); rng2.type='range'; rng2.min=0; rng2.max=6; rng2.step=1; rng2.value=0;
+  const out=document.createElement('output'); out.textContent='0';
+  rng2.oninput=()=>{ out.textContent=rng2.value; setLevel(+rng2.value); };
+  cg.appendChild(rng2); cg.appendChild(out); ctrls.appendChild(cg);
+  const rb=document.createElement('button'); rb.className='tog'; rb.textContent='reset'; rb.onclick=reset; ctrls.appendChild(rb);
+  const hint=document.createElement('div'); hint.className='hint';
+  hint.textContent='coarsen T̃ all you like — the green bias bar refuses to move; only the red variance bar grows'; wrap.appendChild(hint);
+
+  let last=0;
+  function loop(ts){
+    if(!Motion.paused){ const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+      for(let k=0;k<40;k++){ const e=estimate(); sum+=e; sum2+=e*e; cnt++; }
+      draw();
+    } else last=ts;
+    requestAnimationFrame(loop);
+  }
+  let on=false; VR.onVisible(mount,()=>{ if(!on){on=true;requestAnimationFrame(loop);} },null);
+  draw();
+}
+window.__makeBiasWidget=makeBiasWidget;
+})();
+
+/* ============================================================
+   Part 7 — Vertex vs direction reuse (Figure 6).
+   Drag the current pixel's primary ray. Vertex reuse connects
+   the re-rooted x1 straight to the neighbour's x2', so the
+   geometry term G=1/r^2 detonates as x1 sweeps past x2'.
+   Direction reuse copies the neighbour's angles & lengths, so
+   the segment length is fixed and G stays bounded.
+   Verified geometry: G_dir ~ 53 (const), G_vertex peaks ~2500
+   (~2 orders of magnitude larger) as the ray sweeps.
+   ============================================================ */
+(function(){
+const VR=window.__VR, Motion=window.__motion;
+const {clamp,lerp,TAU,C}=VR;
+const D2R=Math.PI/180;
+
+function makeReuse2Widget(mount){
+  // world coords in [0,1.05] x [0,1]; mapped to canvas
+  const x0=[0.10,0.52], z1=0.42;
+  const xp1=[x0[0]+z1*Math.cos(-7*D2R), x0[1]+z1*Math.sin(-7*D2R)];
+  const xp2=[x0[0]+0.40*Math.cos(12*D2R), x0[1]+0.40*Math.sin(12*D2R)];
+  const z2p=Math.hypot(xp2[0]-xp1[0],xp2[1]-xp1[1]);
+  const ang_p1p2=Math.atan2(xp2[1]-xp1[1], xp2[0]-xp1[0]);   // neighbour 2nd-seg direction
+  const z3p=0.24, ang_p2p3=ang_p1p2-30*D2R;
+  const xp3=[xp2[0]+z3p*Math.cos(ang_p2p3), xp2[1]+z3p*Math.sin(ang_p2p3)];
+  const Gdir=1/(z2p*z2p);
+  const RCAP=0.013;
+
+  let theta=-20*D2R;   // current pixel primary-ray angle (draggable)
+
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const cv=VR.mkCanvas(wrap, 150, 96, {maxDpr:2});
+  const ctx=cv.getContext('2d');
+
+  function W(){ return cv.width; } function H(){ return cv.height; }
+  function tx(p){ return [16*cv._dpr + p[0]*(W()-32*cv._dpr), 8*cv._dpr + p[1]*(H()*0.66-16*cv._dpr)]; }
+
+  function curScene(){
+    const x1=[x0[0]+z1*Math.cos(theta), x0[1]+z1*Math.sin(theta)];
+    // vertex reuse: connect x1 -> xp2 -> xp3
+    const rv=Math.max(RCAP, Math.hypot(xp2[0]-x1[0],xp2[1]-x1[1]));
+    const Gv=1/(rv*rv);
+    // direction reuse: keep neighbour angles/lengths from x1
+    const x2d=[x1[0]+z2p*Math.cos(ang_p1p2), x1[1]+z2p*Math.sin(ang_p1p2)];
+    const x3d=[x2d[0]+z3p*Math.cos(ang_p2p3), x2d[1]+z3p*Math.sin(ang_p2p3)];
+    return {x1,rv,Gv,x2d,x3d};
+  }
+
+  function dot(p,r,col,a){ const q=tx(p); ctx.beginPath(); ctx.arc(q[0],q[1],r,0,TAU); ctx.fillStyle=col; ctx.globalAlpha=a==null?1:a; ctx.fill(); ctx.globalAlpha=1; }
+  function line(a,b,col,w,dash){ const p=tx(a),q=tx(b); ctx.beginPath(); ctx.setLineDash(dash||[]); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke(); ctx.setLineDash([]); }
+
+  function draw(){
+    const dpr=cv._dpr; ctx.clearRect(0,0,W(),H());
+    const s=curScene();
+    ctx.lineCap='round'; ctx.lineJoin='round'; const lw=1.6*dpr;
+    // neighbour path (blue)
+    line(x0,xp1,'#6aa0d8',lw); line(xp1,xp2,'#6aa0d8',lw); line(xp2,xp3,'#6aa0d8',lw);
+    dot(xp1,2.4*dpr,'#6aa0d8'); dot(xp2,3.2*dpr,'#6aa0d8'); dot(xp3,2.4*dpr,'#6aa0d8');
+    // direction reuse path (green)
+    line(x0,s.x1,C.green,lw); line(s.x1,s.x2d,C.green,lw,[3*dpr,2.5*dpr]); line(s.x2d,s.x3d,C.green,lw,[3*dpr,2.5*dpr]);
+    dot(s.x2d,2.4*dpr,C.green); dot(s.x3d,2.2*dpr,C.green);
+    // vertex reuse connector (red, x1 -> xp2)
+    line(s.x1,xp2,C.red,lw,[2*dpr,2*dpr]);
+    // x1 (amber) and camera
+    dot(s.x1,3.4*dpr,C.amber); dot(x0,3.0*dpr,C.ink);
+    // primary-ray drag handle
+    const hq=tx(s.x1); ctx.beginPath(); ctx.arc(hq[0],hq[1],6.5*dpr,0,TAU); ctx.strokeStyle=C.amber; ctx.lineWidth=1.2*dpr; ctx.globalAlpha=0.6; ctx.stroke(); ctx.globalAlpha=1;
+    // labels
+    ctx.font=`${9.5*dpr}px 'JetBrains Mono',monospace`; ctx.textBaseline='middle'; ctx.textAlign='left';
+    const lp=tx(xp2); ctx.fillStyle='#6aa0d8'; ctx.fillText("x₂′", lp[0]+5*dpr, lp[1]-6*dpr);
+    const xp=tx(s.x1); ctx.fillStyle=C.amber; ctx.fillText("x₁", xp[0]+7*dpr, xp[1]+8*dpr);
+    // ---- gauges (log scale) ----
+    const gy=H()*0.70, gh=9*dpr, gw=W()-32*dpr, gx=16*dpr;
+    const lo=Math.log10(10), hi=Math.log10(8000);
+    function bar(y,val,col,label){
+      ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(gx,y,gw,gh);
+      const fr=clamp((Math.log10(val)-lo)/(hi-lo),0,1);
+      ctx.fillStyle=col; ctx.fillRect(gx,y,gw*fr,gh);
+      ctx.fillStyle=C.dim; ctx.textBaseline='bottom'; ctx.textAlign='left';
+      ctx.fillText(label, gx, y-2*dpr);
+      ctx.textAlign='right'; ctx.fillStyle=col; ctx.fillText('G='+val.toFixed(val>100?0:1), gx+gw, y-2*dpr);
+    }
+    bar(gy, s.Gv, C.red, 'vertex reuse  1/r²');
+    bar(gy+26*dpr, Gdir, C.green, 'direction reuse  (bounded)');
+    ctx.fillStyle=C.faint; ctx.textAlign='right'; ctx.textBaseline='top';
+    ctx.fillText('ratio '+(s.Gv/Gdir).toFixed(0)+'×', gx+gw, gy+26*dpr+gh+2*dpr);
+  }
+
+  // drag the primary ray
+  function evt(e){ const r=cv.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:(t.clientX-r.left), y:(t.clientY-r.top)}; }
+  function setFromPt(px,py){
+    const sc=cv.width/cv.getBoundingClientRect().width;
+    const mx=px*sc, my=py*sc;
+    // invert tx for x0
+    const o=tx(x0);
+    theta=clamp(Math.atan2(my-o[1], mx-o[0]), -42*D2R, 42*D2R);
+    draw();
+  }
+  let drag=false;
+  cv.addEventListener('pointerdown',e=>{ drag=true; cv.setPointerCapture(e.pointerId); const p=evt(e); setFromPt(p.x,p.y); });
+  cv.addEventListener('pointermove',e=>{ if(drag){ const p=evt(e); setFromPt(p.x,p.y); } });
+  cv.addEventListener('pointerup',()=>drag=false);
+  cv.addEventListener('pointercancel',()=>drag=false);
+
+  const hint=document.createElement('div'); hint.className='hint';
+  hint.textContent='drag the amber x₁ — sweep it onto the neighbour\'s x₂′ and the red 1/r² gauge explodes; the green one never flinches'; wrap.appendChild(hint);
+  const ro=document.createElement('div'); ro.className='readout';
+  ro.innerHTML=`<span><b class="lo">red</b> = vertex reuse (unbounded)</span><span><b class="hi">green</b> = direction reuse (bounded)</span><span><b style="color:#6aa0d8">blue</b> = neighbour path</span>`;
+  wrap.appendChild(ro);
+
+  let on=false; VR.onVisible(mount,()=>{ on=true; draw(); },null);
+  draw();
+}
+window.__makeReuse2Widget=makeReuse2Widget;
+})();
+
+/* ============================================================
+   Part 8 — The four-pass pipeline (Fig 2 + Fig 5).
+   Initial sampling (T*) -> temporal reuse -> spatial reuse (T~)
+   -> final shading (T). Transmittance fidelity climbs along the
+   way: piecewise-constant T*, then ray-marched trilinear T~,
+   then analytic T paid once. Click a pass to light its rung.
+   ============================================================ */
+(function(){
+const VR=window.__VR;
+function makePipelineWidget(mount){
+  const passes=[
+    {k:'01', t:'Initial sampling', s:'regular tracking', tcol:'var(--teal)', tlbl:'T*', tdesc:'piecewise-constant — coarse voxels, closed-form, cheap', op:0.34},
+    {k:'02', t:'Temporal reuse', s:'reproject prior frame', tcol:'var(--teal)', tlbl:'T*', tdesc:'reuses the prior frame’s reservoir via stochastic reprojection', op:0.34},
+    {k:'03', t:'Spatial reuse', s:'ray-march neighbours', tcol:'var(--teal)', tlbl:'T̃', tdesc:'trilinear ray-marching on a coarse mip — better target shape', op:0.66},
+    {k:'04', t:'Final shading', s:'one path per pixel', tcol:'var(--green)', tlbl:'T', tdesc:'analytic, unbiased transmittance — evaluated exactly once', op:1.0},
+  ];
+  const wrap=document.createElement('div'); mount.appendChild(wrap);
+  const NS='http://www.w3.org/2000/svg';
+  const VW=760, VH=300;
+  const svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox',`0 0 ${VW} ${VH}`); svg.setAttribute('width','100%');
+  svg.style.display='block'; svg.style.fontFamily="'JetBrains Mono',monospace";
+  wrap.appendChild(svg);
+
+  function el(n,a,parent){ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); (parent||svg).appendChild(e); return e; }
+
+  const bw=158, bh=86, gap=(VW-4*bw)/5, top=42;
+  // defs: arrowhead
+  const defs=el('defs',{});
+  const mk=el('marker',{id:'ah',markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto',markerUnits:'strokeWidth'},defs);
+  el('path',{d:'M0,0 L6,3 L0,6 Z',fill:'#6f6b66'},mk);
+
+  // title
+  el('text',{x:VW/2,y:20,'text-anchor':'middle',fill:'var(--ink-dim)','font-size':12,'letter-spacing':2}).textContent='ONE PATH PER PIXEL · FOUR RESAMPLING PASSES';
+
+  const boxes=[];
+  passes.forEach((p,i)=>{
+    const x=gap+(bw+gap)*i;
+    const g=el('g',{cursor:'pointer'}); g.dataset.i=i;
+    el('rect',{x,y:top,width:bw,height:bh,rx:9,fill:'var(--bg2)',stroke:'var(--rule)','stroke-width':1.2,class:'pp-box'},g);
+    el('text',{x:x+12,y:top+20,fill:'var(--amber)','font-size':11}).textContent=p.k;
+    el('text',{x:x+12,y:top+40,fill:'var(--ink)','font-size':13,'font-family':"'Cormorant Garamond',serif"}).textContent=p.t;
+    el('text',{x:x+12,y:top+58,fill:'var(--ink-faint)','font-size':10}).textContent=p.s;
+    // reservoir glyph (4 cells)
+    for(let c=0;c<4;c++) el('rect',{x:x+12+c*10,y:top+66,width:7,height:7,rx:1.5,fill:'rgba(212,165,116,.5)'},g);
+    // transmittance chip
+    const chip=el('g',{},g);
+    el('rect',{x:x+bw-46,y:top+64,width:34,height:14,rx:7,fill:p.tcol,opacity:p.op},chip);
+    el('text',{x:x+bw-29,y:top+74,'text-anchor':'middle',fill:'#0a0a0f','font-size':10,'font-weight':700}).textContent=p.tlbl;
+    boxes.push(g); svg.appendChild(g);
+    // arrow to next
+    if(i<3){ const ax=x+bw, axe=x+bw+gap;
+      el('line',{x1:ax+4,y1:top+bh/2,x2:axe-4,y2:top+bh/2,stroke:'#6f6b66','stroke-width':1.6,'marker-end':'url(#ah)'}); }
+  });
+  // temporal feedback arrow (pass 2 loops from prev frame)
+  el('path',{d:`M ${gap+(bw+gap)*1+bw/2} ${top+bh+4} q 0 26 -${bw*0.5} 26 q -${gap+bw*0.5} 0 -${gap+bw*0.5} -26`,
+    fill:'none',stroke:'var(--teal)','stroke-width':1.3,'stroke-dasharray':'4 3','marker-end':'url(#ah)',opacity:0.7});
+  el('text',{x:gap+bw*0.5,y:top+bh+44,fill:'var(--teal)','font-size':9.5,'text-anchor':'middle',opacity:0.8}).textContent='prior frame';
+
+  // ---- transmittance fidelity ladder ----
+  const ly=210;
+  el('text',{x:gap,y:ly-8,fill:'var(--ink-dim)','font-size':11,'letter-spacing':1.5}).textContent='TRANSMITTANCE FIDELITY';
+  const rungs=[
+    {x:gap, lbl:'T*', sub:'piecewise constant', cells:3, op:0.34, col:'var(--teal)'},
+    {x:gap+(bw+gap)*1.5, lbl:'T̃', sub:'ray-marched trilinear', cells:6, op:0.66, col:'var(--teal)'},
+    {x:gap+(bw+gap)*3, lbl:'T', sub:'analytic / exact', cells:12, op:1.0, col:'var(--green)'},
+  ];
+  // ladder baseline arrow
+  el('line',{x1:gap-6,y1:ly+58,x2:VW-gap+6,y2:ly+58,stroke:'#6f6b66','stroke-width':1.4,'marker-end':'url(#ah)'});
+  el('text',{x:VW-gap+2,y:ly+50,fill:'var(--ink-faint)','font-size':9,'text-anchor':'end'}).textContent='cheaper → exact, less often';
+  rungs.forEach((r,ri)=>{
+    const g=el('g',{}); g.dataset.rung=ri;
+    el('rect',{x:r.x,y:ly+8,width:140,height:30,rx:5,fill:r.col,opacity:r.op*0.22,stroke:r.col,'stroke-opacity':r.op,'stroke-width':1.2,class:'pp-rung'},g);
+    // resolution texture
+    const cw=130/r.cells;
+    for(let c=0;c<r.cells;c++) el('rect',{x:r.x+5+c*cw,y:ly+13,width:cw-1.5,height:20,fill:r.col,opacity:r.op*0.5},g);
+    el('text',{x:r.x+5,y:ly+52,fill:r.col,'font-size':13,'font-weight':700}).textContent=r.lbl;
+    el('text',{x:r.x+24,y:ly+52,fill:'var(--ink-faint)','font-size':9.5}).textContent=r.sub;
+  });
+
+  // interaction: click pass -> note + highlight
+  const note=document.createElement('div'); note.className='hint';
+  note.style.minHeight='1.2em'; note.textContent='click any pass — transmittance is refined only as far as each stage needs'; wrap.appendChild(note);
+  boxes.forEach((g)=>{
+    g.addEventListener('click',()=>{
+      const i=+g.dataset.i; const p=passes[i];
+      boxes.forEach(b=>b.querySelector('.pp-box').setAttribute('stroke','var(--rule)'));
+      g.querySelector('.pp-box').setAttribute('stroke', p.tcol);
+      note.innerHTML=`<b style="color:${p.tcol==='var(--green)'?'var(--green)':'var(--teal)'}">${p.tlbl}</b> — ${p.tdesc}`;
+    });
+  });
+
+  VR.onVisible(mount,()=>{},null);
+}
+window.__makePipelineWidget=makePipelineWidget;
+})();
+
+/* ============================================================
+   Part 9 — mount everything. Called by boot() in Part 0.
+   Each widget is visibility-gated internally; the two heavy
+   renderers (#hero, #reuse) only run while on screen.
+   ============================================================ */
+(function(){
+window.__buildWidgets=function(VR){
+  function mount(id, fn, opts){
+    const el=document.getElementById(id);
+    if(!el || !fn) return;
+    try{ fn(el, opts); }
+    catch(e){ console.error('widget',id,'failed:',e);
+      el.innerHTML='<div style="font:12px JetBrains Mono,monospace;color:#6f6b66;padding:24px;text-align:center">['+id+' unavailable]</div>'; }
+  }
+  mount('hero',      window.__makeVolWidget, {seed:7, spatial:true, temporal:true});
+  mount('walk',      window.__makeWalkWidget);
+  mount('ris1d',     window.__makeRisWidget);
+  mount('reservoir', window.__makeReservoirWidget);
+  mount('cancel',    window.__makeCancelWidget);
+  mount('bias',      window.__makeBiasWidget);
+  mount('reuse',     window.__makeVolWidget, {seed:23, showEff:true, spatial:true, temporal:true, gain:52});
+  mount('reuse2',    window.__makeReuse2Widget);
+  mount('pipeline',  window.__makePipelineWidget);
+};
+})();
+
+</script>
+</body>
+</html>

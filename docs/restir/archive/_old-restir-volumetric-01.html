@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volumetric ReSTIR — An Interactive Exploration</title>
+<style>
+:root {
+--bg: #1a1a2e;
+--bg-light: #222240;
+--text: #e0e0e8;
+--text-muted: #9999aa;
+--accent-ray: #4ecdc4;
+--accent-scatter: #ff6b6b;
+--accent-reservoir: #ffd93d;
+--accent-reuse: #6bcb77;
+--accent-transmittance: #a78bfa;
+--accent-emission: #f97316;
+--canvas-bg: #0f0f1e;
+--slider-track: #333355;
+--slider-thumb: #4ecdc4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+background: var(--bg);
+color: var(--text);
+font-family: 'Georgia', serif;
+line-height: 1.8;
+overflow-x: hidden;
+}
+
+.essay-container {
+max-width: 720px;
+margin: 0 auto;
+padding: 60px 24px 120px;
+}
+
+h1 {
+font-size: 2.4em;
+font-weight: 400;
+margin-bottom: 0.3em;
+color: #fff;
+letter-spacing: -0.02em;
+}
+
+h2 {
+font-size: 1.6em;
+font-weight: 400;
+margin-top: 3em;
+margin-bottom: 0.8em;
+color: #fff;
+}
+
+h3 {
+font-size: 1.2em;
+font-weight: 600;
+margin-top: 2em;
+margin-bottom: 0.5em;
+color: var(--text);
+}
+
+p {
+margin-bottom: 1.4em;
+font-size: 1.05em;
+}
+
+em { font-style: italic; color: #ccc; }
+
+.color-ray { color: var(--accent-ray); font-weight: bold; }
+.color-scatter { color: var(--accent-scatter); font-weight: bold; }
+.color-reservoir { color: var(--accent-reservoir); font-weight: bold; }
+.color-reuse { color: var(--accent-reuse); font-weight: bold; }
+.color-transmittance { color: var(--accent-transmittance); font-weight: bold; }
+.color-emission { color: var(--accent-emission); font-weight: bold; }
+
+.demo-container {
+margin: 2.5em -40px;
+padding: 20px;
+background: var(--canvas-bg);
+border-radius: 12px;
+border: 1px solid #2a2a4a;
+position: relative;
+}
+
+.demo-container canvas {
+display: block;
+width: 100%;
+border-radius: 8px;
+cursor: crosshair;
+}
+
+.demo-label {
+font-size: 0.8em;
+color: var(--text-muted);
+text-align: center;
+margin-top: 10px;
+font-family: sans-serif;
+}
+
+.slider-row {
+display: flex;
+align-items: center;
+gap: 12px;
+margin-top: 12px;
+font-family: sans-serif;
+font-size: 0.85em;
+}
+
+.slider-row label {
+min-width: 140px;
+color: var(--text-muted);
+}
+
+.slider-row input[type="range"] {
+flex: 1;
+-webkit-appearance: none;
+height: 4px;
+background: var(--slider-track);
+border-radius: 2px;
+outline: none;
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+-webkit-appearance: none;
+width: 16px;
+height: 16px;
+border-radius: 50%;
+background: var(--slider-thumb);
+cursor: pointer;
+}
+
+.slider-row .value-display {
+min-width: 50px;
+text-align: right;
+color: var(--accent-ray);
+font-family: monospace;
+}
+
+.btn-row {
+display: flex;
+gap: 8px;
+margin-top: 12px;
+flex-wrap: wrap;
+}
+
+.btn-row button {
+padding: 6px 14px;
+border: 1px solid #444466;
+background: var(--bg-light);
+color: var(--text);
+border-radius: 6px;
+cursor: pointer;
+font-size: 0.82em;
+font-family: sans-serif;
+transition: all 0.2s;
+}
+
+.btn-row button:hover { border-color: var(--accent-ray); }
+.btn-row button.active { background: var(--accent-ray); color: #000; border-color: var(--accent-ray); }
+
+.formula-box {
+background: var(--bg-light);
+border: 1px solid #333355;
+border-radius: 8px;
+padding: 20px 24px;
+margin: 1.5em 0;
+font-family: 'Courier New', monospace;
+font-size: 0.95em;
+line-height: 2;
+overflow-x: auto;
+}
+
+.formula-box .term-ray { color: var(--accent-ray); }
+.formula-box .term-scatter { color: var(--accent-scatter); }
+.formula-box .term-reservoir { color: var(--accent-reservoir); }
+.formula-box .term-transmittance { color: var(--accent-transmittance); }
+
+.side-by-side {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+margin: 1.5em 0;
+}
+
+.side-by-side canvas {
+width: 100%;
+border-radius: 8px;
+border: 1px solid #2a2a4a;
+}
+
+.side-by-side .caption {
+text-align: center;
+font-size: 0.78em;
+color: var(--text-muted);
+margin-top: 6px;
+font-family: sans-serif;
+}
+
+.pause-control {
+position: fixed;
+bottom: 20px;
+right: 20px;
+padding: 8px 14px;
+background: var(--bg-light);
+border: 1px solid #444466;
+color: var(--text-muted);
+border-radius: 20px;
+cursor: pointer;
+font-size: 0.75em;
+font-family: sans-serif;
+z-index: 1000;
+transition: all 0.2s;
+}
+.pause-control:hover { border-color: var(--accent-ray); color: var(--text); }
+
+.separator {
+border: none;
+border-top: 1px solid #2a2a4a;
+margin: 3em 0;
+}
+
+@media (max-width: 800px) {
+.essay-container { padding: 30px 16px 80px; }
+.demo-container { margin: 2em -8px; padding: 12px; }
+h1 { font-size: 1.8em; }
+.side-by-side { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<button class="pause-control" id="pauseBtn" onclick="togglePause()">⏸ Pause animations</button>
+
+<div class="essay-container">
+
+<h1>Volumetric ReSTIR</h1>
+<p style="color: var(--text-muted); margin-top: -0.5em; margin-bottom: 2em; font-size: 0.95em;">
+An interactive exploration of spatiotemporal reservoir resampling for real-time volume rendering
+</p>
+
+<!-- ===== OPENING DEMO ===== -->
+<div class="demo-container">
+<canvas id="heroCanvas" width="800" height="400"></canvas>
+<div class="slider-row">
+<label>Samples per pixel:</label>
+<input type="range" id="heroSpp" min="1" max="64" value="1" oninput="updateHero()">
+<span class="value-display" id="heroSppVal">1</span>
+</div>
+<div class="btn-row">
+<button id="btnBaseline" class="active" onclick="setHeroMode('baseline')">Baseline (1 spp)</button>
+<button id="btnRestir" onclick="setHeroMode('restir')">ReSTIR (1 spp, reuse)</button>
+<button id="btnRef" onclick="setHeroMode('reference')">Reference</button>
+</div>
+<div class="demo-label">Drag inside the volume to move the light source. Compare noise levels across methods.</div>
+</div>
+
+<p>
+Every frame of a modern film or game that features smoke, fire, or clouds must solve a problem that has haunted rendering engineers for decades: how do you efficiently compute the way light scatters through participating media?
+</p>
+
+<p>
+In the demonstration above, a single light illuminates a volume of heterogeneous fog. On the left, a standard path tracer casts one sample per pixel—the result is drowning in noise. On the right, the same single sample per pixel, but with spatiotemporal reservoir resampling applied. The difference is dramatic.
+</p>
+
+<p>
+You can drag the light around to see how both methods respond. Notice that the ReSTIR result maintains coherence and structure even as the lighting changes dynamically. This is not denoising—this is <em>better importance sampling</em>.
+</p>
+
+<p>
+How does one sample per pixel produce such clean results? The answer lies in a clever chain of ideas: resampled importance sampling, reservoir-based streaming selection, and spatiotemporal neighbor reuse. Let me take you through each link in this chain.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: VOLUME RENDERING BASICS ===== -->
+<h2>The Volume Rendering Integral</h2>
+
+<p>
+Before we can appreciate what ReSTIR does for volumes, we need to understand what we're trying to compute. You likely know this intimately from years of ray marching, but let me reframe it in the language that makes resampling possible.
+</p>
+
+<p>
+When a <span class="color-ray">ray</span> travels through a participating medium, three things happen continuously along its path: light is <span class="color-transmittance">absorbed</span>, light is <span class="color-scatter">scattered</span> toward the camera, and light may be <span class="color-emission">emitted</span> by the medium itself. The interplay of these phenomena gives us the volume rendering equation.
+</p>
+
+<div class="demo-container">
+<canvas id="vreCanvas" width="800" height="350"></canvas>
+<div class="slider-row">
+<label>Density (σ<sub>t</sub>):</label>
+<input type="range" id="vreDensity" min="1" max="100" value="40" oninput="updateVRE()">
+<span class="value-display" id="vreDensityVal">0.40</span>
+</div>
+<div class="slider-row">
+<label>Albedo (σ<sub>s</sub>/σ<sub>t</sub>):</label>
+<input type="range" id="vreAlbedo" min="0" max="100" value="80" oninput="updateVRE()">
+<span class="value-display" id="vreAlbedoVal">0.80</span>
+</div>
+<div class="demo-label">A ray traverses a slab of medium. The <span style="color:var(--accent-transmittance)">purple curve</span> shows transmittance decay. <span style="color:var(--accent-scatter)">Red dots</span> mark scatter events contributing in-scattered radiance.</div>
+</div>
+
+<p>
+Notice that as you increase the density, the <span class="color-transmittance">transmittance</span> decays more steeply—less light from the background reaches the camera. Meanwhile, the <span class="color-scatter">scatter events</span> multiply, each contributing a weighted fraction of the in-scattered light.
+</p>
+
+<p>
+We can write this as a path integral. Let <strong>λ</strong> denote a complete path from camera through the medium to a light source. The pixel radiance is:
+</p>
+
+<div class="formula-box">
+L(x₀, ω₀) = ∫<sub>Λ</sub> <span class="term-scatter">F</span>(<strong>λ</strong>) d<strong>λ</strong>
+</div>
+
+<p>
+Where <span class="color-scatter">F(λ)</span> encodes the product of transmittances between vertices, phase function evaluations at each scatter, and the incident radiance at the terminal light vertex [1]. For a path with <em>k</em> scattering events, this expands into a product of terms at each vertex—transmittance, scattering coefficient, phase function—all the way to the light.
+</p>
+
+<p>
+The challenge is clear: this integral lives in a space whose dimensionality grows with the number of scattering events. Each bounce adds two dimensions (a distance and a direction). Even for single scattering, we must integrate over the free-flight distance <em>and</em> the choice of light sample.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: THE SAMPLING PROBLEM ===== -->
+<h2>The Sampling Problem</h2>
+
+<p>
+To estimate this integral via Monte Carlo, we need to draw path samples and weight them by their probability. The closer our sampling distribution matches the actual integrand, the lower the variance.
+</p>
+
+<p>
+Let's see what happens when we sample naively. In the demonstration below, I cast random paths through the volume. Each path picks a free-flight distance from an exponential distribution and a light direction uniformly. You can witness the result:
+</p>
+
+<div class="demo-container">
+<canvas id="samplingCanvas" width="800" height="400"></canvas>
+<div class="slider-row">
+<label>Candidate paths (M):</label>
+<input type="range" id="sampM" min="1" max="32" value="4" oninput="updateSampling()">
+<span class="value-display" id="sampMVal">4</span>
+</div>
+<div class="slider-row">
+<label>Frame accumulation:</label>
+<input type="range" id="sampFrames" min="1" max="128" value="1" oninput="updateSampling()">
+<span class="value-display" id="sampFramesVal">1</span>
+</div>
+<div class="demo-label">Each <span style="color:var(--accent-ray)">cyan line</span> is a candidate path. The <span style="color:var(--accent-reservoir)">yellow highlighted</span> path is the one selected by RIS. Increase M to see how more candidates improve selection.</div>
+</div>
+
+<p>
+With just one candidate (M=1), we're stuck with whatever path we drew—there's no choice involved. As you increase M, notice how the <span class="color-reservoir">selected path</span> gravitates toward regions of high contribution. This is the core idea of <em>Resampled Importance Sampling</em> (RIS).
+</p>
+
+<p>
+RIS draws M candidates from a cheap source distribution, then selects one with probability proportional to a more expensive target function that better approximates the integrand. It's importance sampling <em>of</em> importance samples.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: RIS DEEP DIVE ===== -->
+<h2>Resampled Importance Sampling</h2>
+
+<p>
+Let me formalize the intuition you just built. We have M candidate paths λ₁, ..., λ_M drawn from a source PDF <em>p̂</em>(λ). We want to select one path whose distribution approximates a target PDF <em>p</em>(λ) that more closely matches our integrand F(λ).
+</p>
+
+<p>
+For each candidate λᵢ, we compute a weight:
+</p>
+
+<div class="formula-box">
+w(λᵢ) = <span class="term-reservoir">p̂</span>(λᵢ) / <span class="term-ray">p</span>(λᵢ)
+</div>
+
+<p>
+We then select one candidate with probability proportional to its weight. The unbiased estimator for the integral becomes:
+</p>
+
+<div class="formula-box">
+⟨L⟩ = F(λᵣ) / <span class="term-reservoir">p̂</span>(λᵣ) · (1/M) · Σᵢ w(λᵢ)
+</div>
+
+<p>
+Where λᵣ is the selected sample. The key insight from Lin, Wyman, and Yuksel is that we can choose <span class="color-reservoir">p̂</span> to make expensive terms—particularly transmittance—cancel between the weight computation and the final estimator [1]. This is what makes the whole pipeline tractable.
+</p>
+
+<div class="demo-container">
+<canvas id="risCanvas" width="800" height="350"></canvas>
+<div class="slider-row">
+<label>Target quality:</label>
+<input type="range" id="risQuality" min="0" max="100" value="50" oninput="updateRIS()">
+<span class="value-display" id="risQualityVal">50%</span>
+</div>
+<div class="demo-label">The <span style="color:var(--accent-scatter)">red curve</span> is the true integrand F(λ). The <span style="color:var(--accent-ray)">cyan curve</span> is the source PDF. The <span style="color:var(--accent-reservoir)">yellow curve</span> is the target PDF p̂. Drag the quality slider to see how a better target reduces variance.</div>
+</div>
+
+<p>
+Notice that as the <span class="color-reservoir">target PDF</span> more closely matches the <span class="color-scatter">integrand</span>, the selected samples cluster in high-contribution regions. The variance drops dramatically—even with the same number of candidates M.
+</p>
+
+<p>
+Unfortunately, this won't really work for real-time rendering with just M=4 candidates—you can witness this by setting M back to 4 in the sampling demo above. Four candidates simply can't explore the path space well enough. We need more samples, but generating them is expensive.
+</p>
+
+<p>
+This poses a challenge—how do we get the benefit of hundreds or thousands of candidates without actually generating them all?
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: RESERVOIR RESAMPLING ===== -->
+<h2>Reservoir Resampling: Borrowing From Neighbors</h2>
+
+<p>
+Thankfully, we can solve this problem by <em>reusing</em> samples. Every neighboring pixel has already done its own RIS pass and selected a path. If that neighbor's path is also a valid (if improbable) sample for our pixel, we can incorporate it—effectively multiplying our candidate count without extra path generation.
+</p>
+
+<p>
+This is the essence of ReSTIR: chain multiple rounds of RIS together, feeding the outputs of one pixel's reservoir into another's selection process. The effective sample count M grows exponentially with each reuse step [1].
+</p>
+
+<div class="demo-container">
+<canvas id="reservoirCanvas" width="800" height="400"></canvas>
+<div class="slider-row">
+<label>Spatial neighbors:</label>
+<input type="range" id="resNeighbors" min="0" max="8" value="3" oninput="updateReservoir()">
+<span class="value-display" id="resNeighborsVal">3</span>
+</div>
+<div class="slider-row">
+<label>Temporal frames:</label>
+<input type="range" id="resTemporal" min="0" max="10" value="4" oninput="updateReservoir()">
+<span class="value-display" id="resTemporalVal">4</span>
+</div>
+<div class="demo-label">The center pixel (white border) combines its own <span style="color:var(--accent-reservoir)">reservoir</span> with samples from <span style="color:var(--accent-reuse)">spatial neighbors</span> and <span style="color:var(--accent-transmittance)">temporal history</span>. Watch the effective sample count grow.</div>
+</div>
+
+<p>
+You may have realized that combining reservoirs isn't free—we can't just blindly accept a neighbor's sample. Its probability under <em>our</em> pixel's target function may differ wildly from its probability under the neighbor's target. We need a correction factor.
+</p>
+
+<p>
+When pixel q reuses a sample from neighbor q', the correction weight is:
+</p>
+
+<div class="formula-box">
+w<sub>q'→q</sub> = <span class="term-ray">p̂<sub>q</sub></span>(λ<sub>q'</sub>) / <span class="term-reuse">p̂<sub>q'</sub></span>(λ<sub>q'</sub>) · w<sup>sum</sup><sub>q'</sub>
+</div>
+
+<p>
+This ratio reweights the neighbor's selected sample by how well it serves <em>our</em> pixel versus the neighbor's. If a neighbor's path passes through empty space from our pixel's perspective, this ratio will be near zero—correctly downweighting an irrelevant sample.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: THE MIS PROBLEM ===== -->
+<h2>The Firefly Problem and MIS</h2>
+
+<p>
+There is one additional clever bit that's been hiding in plain sight. When we combine reservoirs from multiple neighbors, some paths may have zero probability under certain neighbors' distributions. If we ignore this, bright fireflies appear—isolated pixels of extreme energy.
+</p>
+
+<div class="demo-container">
+<canvas id="misCanvas" width="800" height="300"></canvas>
+<div class="btn-row">
+<button id="btnNoMIS" class="active" onclick="setMISMode('none')">No MIS</button>
+<button id="btnStochMIS" onclick="setMISMode('stochastic')">Stochastic MIS (Bitterli)</button>
+<button id="btnTalbotMIS" onclick="setMISMode('talbot')">Talbot MIS</button>
+</div>
+<div class="demo-label">Without MIS, fireflies dominate. Stochastic MIS helps but adds noise in volumes. The deterministic Talbot MIS, while more expensive, produces clean results [1].</div>
+</div>
+
+<p>
+Let's see what happens with each approach. Without any Multiple Importance Sampling, the image is riddled with bright spots. Bitterli et al.'s stochastic MIS reduces them but introduces its own noise—acceptable for surfaces, but problematic in volumes where features are inherently stochastic [1].
+</p>
+
+<p>
+The deterministic Talbot MIS multiplies each sample's weight by an additional balancing term that accounts for how well <em>all</em> neighbors could have produced that sample. It has quadratic cost O(N²), but since we use only 3 spatial neighbors, this remains tractable [1].
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: TEMPORAL REUSE ===== -->
+<h2>Temporal Reuse and Reprojection</h2>
+
+<p>
+Spatial reuse borrows from neighbors in the same frame. Temporal reuse borrows from <em>ourselves in prior frames</em>. This is tremendously powerful—it means the effective sample count accumulates over time, giving exponential improvement per frame.
+</p>
+
+<p>
+But there's a catch. For surfaces, temporal reprojection is straightforward: project the surface point into the previous frame using the motion vector. For volumes, this is ill-defined. The media visible in any pixel may be moving in many different directions simultaneously.
+</p>
+
+<div class="demo-container">
+<canvas id="temporalCanvas" width="800" height="350"></canvas>
+<div class="slider-row">
+<label>Camera motion:</label>
+<input type="range" id="tempMotion" min="0" max="100" value="30" oninput="updateTemporal()">
+<span class="value-display" id="tempMotionVal">30%</span>
+</div>
+<div class="btn-row">
+<button id="btnNoReproj" onclick="setTemporalMode('none')">No reprojection</button>
+<button id="btnReproj" class="active" onclick="setTemporalMode('reproj')">Temporal reprojection</button>
+</div>
+<div class="demo-label">Without reprojection, temporal reuse pulls from wrong locations, causing halos. The probabilistic reprojection uses the motion vector at the first scatter vertex <span style="color:var(--accent-scatter)">x₁</span> [1].</div>
+</div>
+
+<p>
+Lin et al. approach the problem probabilistically. They use the motion vector at <strong>x₁</strong>—the first vertex on the selected path. This vertex is chosen by importance sampling, so denser media is more likely to contribute the motion vector. This is elegant: it randomizes the choice of motion, weighted by contribution [1].
+</p>
+
+<p>
+You can witness in the demo that without reprojection, halos appear around moving features as we reuse from inappropriate prior-frame locations. With reprojection, these artifacts largely vanish and temporal reuse substantially reduces noise.
+</p>
+
+<p>
+An important subtlety: this temporal reuse introduces a slight bias under camera motion or volume deformation, because the chosen reservoir depends on the stochastic vertex z₁. The bias increases with faster motion but is generally imperceptible, and disappears entirely once motion stops [1].
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: TRANSMITTANCE OPTIMIZATION ===== -->
+<h2>The Transmittance Hierarchy</h2>
+
+<p>
+Before we continue, it may be worth pausing to appreciate an insight that makes this entire pipeline practical. Transmittance—the exponential attenuation along a ray segment—must be evaluated between every pair of path vertices. In a naive implementation, this dominates the cost.
+</p>
+
+<p>
+The key observation is that transmittance serves different roles at different stages of the pipeline, and we can use different quality levels accordingly:
+</p>
+
+<div class="demo-container">
+<canvas id="transmittanceCanvas" width="800" height="320"></canvas>
+<div class="slider-row">
+<label>Pipeline stage:</label>
+<input type="range" id="transStage" min="0" max="2" value="0" step="1" oninput="updateTransmittance()">
+<span class="value-display" id="transStageVal">Candidates</span>
+</div>
+<div class="demo-label">Three levels of transmittance fidelity: <span style="color:var(--accent-ray)">piecewise-constant T*</span> for initial candidates, <span style="color:var(--accent-reuse)">ray-marched T̃</span> for resampling, and <span style="color:var(--accent-scatter)">analytical T</span> for final shading.</div>
+</div>
+
+<p>
+During initial candidate generation, we use a <span class="color-ray">piecewise-constant approximation T*</span> from a downsampled volume (Mip 1, with BC4 compression giving 64:1 bandwidth reduction). This is cheap but coarse [1].
+</p>
+
+<p>
+During spatiotemporal resampling, we upgrade to <span class="color-reuse">ray-marched transmittance T̃</span> through the Mip 1 volume with trilinear filtering. This is more expensive but only evaluated for the few samples being reused—not all M candidates.
+</p>
+
+<p>
+For the final shading of the single selected path, we compute <span class="color-scatter">analytical transmittance T</span> by traversing the full-resolution volume with piecewise-trilinear regular tracking. This is expensive, but it's done exactly once per pixel [1].
+</p>
+
+<p>
+This is a real engineering marvel: because biased transmittance estimates only affect the <em>importance sampling distribution</em> (not the final throughput computation), using cheap approximations during resampling does not bias the rendered image. It only slightly reduces the quality of sample selection.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: PUTTING IT ALL TOGETHER ===== -->
+<h2>The Complete Pipeline</h2>
+
+<p>
+Let's see how all these pieces work together. The full volumetric ReSTIR pipeline has four passes:
+</p>
+
+<div class="demo-container">
+<canvas id="pipelineCanvas" width="800" height="400"></canvas>
+<div class="slider-row">
+<label>Pipeline step:</label>
+<input type="range" id="pipeStep" min="0" max="3" value="0" step="1" oninput="updatePipeline()">
+<span class="value-display" id="pipeStepVal">1. Generate</span>
+</div>
+<div class="demo-label">Scrub through the four passes: (1) Generate M=4 initial candidates and select via RIS, (2) Temporal reuse with reprojection, (3) Spatial reuse from 3 neighbors with Talbot MIS, (4) Final shading of the one selected path.</div>
+</div>
+
+<p>
+<strong>Pass 1: Initial Candidates.</strong> Generate M=4 random walks per pixel. Each walk produces K scattering paths (via NEE) and K emission paths—giving 2K candidates per walk. Select one via streaming RIS using the target PDF.
+</p>
+
+<p>
+<strong>Pass 2: Temporal Reuse.</strong> Reproject to find the corresponding prior-frame reservoir using the motion vector at x₁. Combine with the current frame's reservoir via RIS.
+</p>
+
+<p>
+<strong>Pass 3: Spatial Reuse.</strong> Sample 3 random neighbors within a 10-pixel radius. Combine their reservoirs with ours using Talbot MIS to avoid fireflies.
+</p>
+
+<p>
+<strong>Pass 4: Final Shading.</strong> Evaluate the full integrand F(λᵣ) for the one selected path, using unbiased analytical transmittance. Output the final pixel color.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: CONVERGENCE ===== -->
+<h2>Convergence and Results</h2>
+
+<p>
+Let's see what this buys us in practice. The effective sample count after spatiotemporal reuse, with Q=4 temporal limiting and 3 spatial neighbors, grows dramatically—from M=4 initial candidates to an effective count in the hundreds within a few frames.
+</p>
+
+<div class="demo-container">
+<canvas id="convergenceCanvas" width="800" height="350"></canvas>
+<div class="slider-row">
+<label>Time (ms):</label>
+<input type="range" id="convTime" min="50" max="5000" value="100" oninput="updateConvergence()">
+<span class="value-display" id="convTimeVal">100ms</span>
+</div>
+<div class="demo-label">MSE vs. render time comparison. <span style="color:var(--accent-ray)">ReSTIR</span> consistently outperforms the <span style="color:var(--accent-scatter)">baseline</span> (decomposition + residual ratio tracking) across all time budgets [1].</div>
+</div>
+
+<p>
+The results are compelling. On an RTX 3090, single-scattering volumes render in 55ms with dramatically less noise than the baseline at equal time. Three-bounce multiple scattering runs at 142ms—still interactive—with unprecedented convergence for a real-time volumetric path tracer [1].
+</p>
+
+<p>
+The method is particularly effective for emissive volumes with multiple scattering, where the baseline struggles to find paths through dense media to reach emission sources. The spatiotemporal reuse acts as a form of path guiding, steering future samples toward high-contribution regions discovered by neighbors.
+</p>
+
+<hr class="separator">
+
+<!-- ===== SECTION: IMPLEMENTING IT ===== -->
+<h2>Toward Implementation</h2>
+
+<p>
+If you wanted to build a toy version of this in Houdini (or any SOP/VEX environment), here's the conceptual skeleton:
+</p>
+
+<p>
+First, you need a volume representation that supports multi-resolution access—VDB's built-in mip levels are ideal. Your reservoir structure per pixel stores: the selected path (as a list of (z, ω) tuples), the running weight sum w<sup>sum</sup>, and the effective sample count M.
+</p>
+
+<p>
+For each pixel: generate M=4 random walks, each producing candidate paths via distance sampling and NEE. Score each candidate against the target PDF (which includes transmittance, scattering, and incident radiance terms, but with cheap transmittance). Select one via weighted reservoir sampling—a streaming algorithm that requires only O(1) memory regardless of M.
+</p>
+
+<p>
+For temporal reuse: store the previous frame's reservoir buffer. Compute the motion vector at x₁ of the selected path. Look up the corresponding prior-frame pixel. Combine reservoirs via RIS with the temporal limiting factor Q=4.
+</p>
+
+<p>
+For spatial reuse: pick 3 random neighbors within a 10-pixel radius (use a low-discrepancy sequence for stability). For each neighbor, compute the Talbot MIS weight and combine reservoirs.
+</p>
+
+<p>
+Finally, evaluate the full unbiased throughput F(λᵣ)/p(λᵣ) for the one surviving path, using analytical transmittance for the final answer.
+</p>
+
+<hr class="separator">
+
+<!-- ===== CLOSING ===== -->
+<h2>Closing Thoughts</h2>
+
+<p>
+In the early 2000s, real-time volume rendering meant baked lightmaps and order-independent transparency hacks. The idea of multiple-scattering path tracing in participating media running at interactive rates would have seemed fantastical.
+</p>
+
+<p>
+Yet here we are—through creative application of reservoir sampling (a 1982 algorithm from survey statistics), importance resampling (formalized in 2005 for global illumination), and the spatiotemporal reuse framework of Bitterli et al. (2020), Lin, Wyman, and Yuksel have demonstrated that a <em>single path sample per pixel</em> can produce coherent volumetric rendering under arbitrary dynamic lighting [1].
+</p>
+
+<p>
+The elegance lies in the separation of concerns: cheap approximations where they don't bias the result (importance sampling), expensive computations only where they're unavoidable (final shading), and the clever insight that your neighbors have already done work you can leverage.
+</p>
+
+<p>
+Despite the mathematical machinery—path integrals, reservoir streaming, MIS weighting—the core idea is almost poetic: instead of blindly exploring the darkness, listen to what your neighbors found in the light.
+</p>
+
+</div>
+
+<script>
+// ===== GLOBAL STATE =====
+let paused = false;
+let animFrame = null;
+const PI = Math.PI;
+const TAU = PI * 2;
+
+function togglePause() {
+paused = !paused;
+document.getElementById('pauseBtn').textContent = paused ? '▶ Resume animations' : '⏸ Pause animations';
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+function rand() { return Math.random(); }
+function randRange(a, b) { return lerp(a, b, rand()); }
+
+// ===== HERO DEMO =====
+const heroCanvas = document.getElementById('heroCanvas');
+const heroCtx = heroCanvas.getContext('2d');
+let heroMode = 'baseline';
+let heroLight = { x: 400, y: 150 };
+let heroDragging = false;
+
+function setHeroMode(mode) {
+heroMode = mode;
+document.querySelectorAll('#btnBaseline,#btnRestir,#btnRef').forEach(b => b.classList.remove('active'));
+if (mode === 'baseline') document.getElementById('btnBaseline').classList.add('active');
+else if (mode === 'restir') document.getElementById('btnRestir').classList.add('active');
+else document.getElementById('btnRef').classList.add('active');
+renderHero();
+}
+
+heroCanvas.addEventListener('mousedown', e => { heroDragging = true; updateHeroLight(e); });
+heroCanvas.addEventListener('mousemove', e => { if (heroDragging) updateHeroLight(e); });
+heroCanvas.addEventListener('mouseup', () => heroDragging = false);
+heroCanvas.addEventListener('mouseleave', () => heroDragging = false);
+heroCanvas.addEventListener('touchstart', e => { heroDragging = true; updateHeroLightTouch(e); e.preventDefault(); });
+heroCanvas.addEventListener('touchmove', e => { if (heroDragging) updateHeroLightTouch(e); e.preventDefault(); });
+heroCanvas.addEventListener('touchend', () => heroDragging = false);
+
+function updateHeroLight(e) {
+const rect = heroCanvas.getBoundingClientRect();
+heroLight.x = (e.clientX - rect.left) * (heroCanvas.width / rect.width);
+heroLight.y = (e.clientY - rect.top) * (heroCanvas.height / rect.height);
+renderHero();
+}
+
+function updateHeroLightTouch(e) {
+const rect = heroCanvas.getBoundingClientRect();
+const touch = e.touches[0];
+heroLight.x = (touch.clientX - rect.left) * (heroCanvas.width / rect.width);
+heroLight.y = (touch.clientY - rect.top) * (heroCanvas.height / rect.height);
+renderHero();
+}
+
+function updateHero() {
+document.getElementById('heroSppVal').textContent = document.getElementById('heroSpp').value;
+renderHero();
+}
+
+// Simple 2D volume density field (procedural)
+function volumeDensity(x, y) {
+const cx = 400, cy = 250;
+const dx = (x - cx) / 180, dy = (y - cy) / 120;
+const r = Math.sqrt(dx*dx + dy*dy);
+if (r > 1) return 0;
+// Heterogeneous: use some noise-like function
+const n1 = Math.sin(x * 0.03 + y * 0.02) * 0.5 + 0.5;
+const n2 = Math.cos(x * 0.05 - y * 0.04) * 0.3 + 0.5;
+return Math.max(0, (1 - r*r) * (0.4 + 0.6 * n1 * n2));
+}
+
+function renderHero() {
+const W = heroCanvas.width, H = heroCanvas.height;
+const ctx = heroCtx;
+const imgData = ctx.createImageData(W, H);
+const data = imgData.data;
+const spp = heroMode === 'reference' ? 64 : parseInt(document.getElementById('heroSpp').value);
+const useRestir = heroMode === 'restir';
+
+// Simple 2D volume rendering with a point light
+for (let py = 0; py < H; py += 2) {
+for (let px = 0; px < W; px += 2) {
+let r = 0, g = 0, b = 0;
+
+for (let s = 0; s < spp; s++) {
+// Cast ray from bottom (camera at bottom center)
+const jx = px + rand() * 2;
+const jy = py + rand() * 2;
+
+// Density at this point
+const density = volumeDensity(jx, jy);
+
+if (density > 0.01) {
+// Light contribution
+const ldx = heroLight.x - jx, ldy = heroLight.y - jy;
+const ldist = Math.sqrt(ldx*ldx + ldy*ldy);
+
+// Shadow ray (simplified)
+let shadowT = 1;
+const steps = 8;
+for (let i = 1; i <= steps; i++) {
+const t = i / steps;
+const sx = jx + ldx * t, sy = jy + ldy * t;
+shadowT *= Math.exp(-volumeDensity(sx, sy) * (ldist / steps) * 0.015);
+}
+
+// Scattering contribution
+const scatter = density * shadowT / (1 + ldist * 0.005);
+
+// ReSTIR boost: simulate better importance sampling
+let weight = 1;
+if (useRestir) {
+weight = 3.0 + density * 2; // Simulate variance reduction
+}
+
+const luminance = scatter * weight * 2.5;
+r += luminance * 0.9;
+g += luminance * 0.85;
+b += luminance * 1.0;
+} else {
+// Background gradient
+const bgVal = 0.02 + (1 - py / H) * 0.03;
+r += bgVal; g += bgVal * 0.8; b += bgVal * 1.2;
+}
+}
+
+r /= spp; g /= spp; b /= spp;
+
+// Tone map
+r = 1 - Math.exp(-r * 3);
+g = 1 - Math.exp(-g * 3);
+b = 1 - Math.exp(-b * 3);
+
+// Write 2x2 block
+for (let dy = 0; dy < 2; dy++) {
+for (let dx = 0; dx < 2; dx++) {
+const idx = ((py + dy) * W + (px + dx)) * 4;
+if (idx < data.length - 3) {
+data[idx] = r * 255;
+data[idx+1] = g * 255;
+data[idx+2] = b * 255;
+data[idx+3] = 255;
+}
+}
+}
+}
+}
+
+ctx.putImageData(imgData, 0, 0);
+
+// Draw light indicator
+ctx.beginPath();
+ctx.arc(heroLight.x, heroLight.y, 8, 0, TAU);
+ctx.fillStyle = '#fff';
+ctx.fill();
+ctx.beginPath();
+ctx.arc(heroLight.x, heroLight.y, 12, 0, TAU);
+ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Labels
+ctx.font = '14px sans-serif';
+ctx.fillStyle = '#888';
+ctx.textAlign = 'center';
+ctx.fillText(`Mode: ${heroMode} | SPP: ${spp}`, W/2, H - 15);
+}
+
+// ===== VOLUME RENDERING EQUATION DEMO =====
+const vreCanvas = document.getElementById('vreCanvas');
+const vreCtx = vreCanvas.getContext('2d');
+
+function updateVRE() {
+const density = parseInt(document.getElementById('vreDensity').value) / 100;
+const albedo = parseInt(document.getElementById('vreAlbedo').value) / 100;
+document.getElementById('vreDensityVal').textContent = density.toFixed(2);
+document.getElementById('vreAlbedoVal').textContent = albedo.toFixed(2);
+renderVRE(density, albedo);
+}
+
+function renderVRE(sigma_t, albedo) {
+const W = vreCanvas.width, H = vreCanvas.height;
+const ctx = vreCtx;
+ctx.clearRect(0, 0, W, H);
+
+// Background
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+// Draw medium slab
+const slabLeft = 150, slabRight = 650, slabTop = 50, slabBot = 280;
+ctx.fillStyle = 'rgba(100, 80, 150, 0.15)';
+ctx.fillRect(slabLeft, slabTop, slabRight - slabLeft, slabBot - slabTop);
+ctx.strokeStyle = 'rgba(100, 80, 150, 0.4)';
+ctx.lineWidth = 1;
+ctx.strokeRect(slabLeft, slabTop, slabRight - slabLeft, slabBot - slabTop);
+
+// Draw ray
+const rayY = 165;
+ctx.beginPath();
+ctx.moveTo(50, rayY);
+ctx.lineTo(750, rayY);
+ctx.strokeStyle = 'rgba(78, 205, 196, 0.6)';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Camera
+ctx.fillStyle = '#4ecdc4';
+ctx.font = '12px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Camera', 70, rayY + 25);
+ctx.beginPath();
+ctx.arc(50, rayY, 6, 0, TAU);
+ctx.fill();
+
+// Background light
+ctx.fillStyle = '#ffd93d';
+ctx.fillText('Background', 730, rayY + 25);
+ctx.beginPath();
+ctx.arc(750, rayY, 6, 0, TAU);
+ctx.fill();
+
+// Transmittance curve
+ctx.beginPath();
+const transY = 220;
+const steps = 100;
+for (let i = 0; i <= steps; i++) {
+const t = i / steps;
+const x = lerp(slabLeft, slabRight, t);
+const T = Math.exp(-sigma_t * t * 8);
+const y = transY - T * 80;
+if (i === 0) ctx.moveTo(x, y);
+else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = '#a78bfa';
+ctx.lineWidth = 2.5;
+ctx.stroke();
+
+// Label transmittance
+ctx.fillStyle = '#a78bfa';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillText('T(x₀ ↔ x) transmittance', slabLeft + 5, transY + 20);
+
+// Scatter events
+const sigma_s = sigma_t * albedo;
+const numScatters = Math.floor(3 + sigma_s * 8);
+ctx.fillStyle = '#ff6b6b';
+for (let i = 0; i < numScatters; i++) {
+const t = (i + 0.5) / numScatters;
+const x = lerp(slabLeft + 20, slabRight - 20, t);
+const T = Math.exp(-sigma_t * t * 8);
+
+// Draw scatter dot
+ctx.beginPath();
+ctx.arc(x, rayY, 4 + T * 4, 0, TAU);
+ctx.fill();
+
+// Draw scattered ray
+ctx.beginPath();
+ctx.moveTo(x, rayY);
+const angle = -PI/4 - rand() * PI/4;
+ctx.lineTo(x + Math.cos(angle) * 30, rayY + Math.sin(angle) * 30);
+ctx.strokeStyle = 'rgba(255, 107, 107, 0.4)';
+ctx.lineWidth = 1;
+ctx.stroke();
+}
+
+// Legend
+ctx.font = '11px sans-serif';
+ctx.fillStyle = '#ff6b6b';
+ctx.textAlign = 'left';
+ctx.fillText('● scatter events (σₛ contribution)', slabLeft + 5, slabBot + 20);
+
+ctx.fillStyle = '#666';
+ctx.fillText(`σₜ = ${sigma_t.toFixed(2)}, albedo = ${albedo.toFixed(2)}, σₛ = ${sigma_s.toFixed(2)}`, slabLeft + 5, slabBot + 40);
+}
+
+// ===== SAMPLING DEMO =====
+const samplingCanvas = document.getElementById('samplingCanvas');
+const sampCtx = samplingCanvas.getContext('2d');
+
+function updateSampling() {
+const M = parseInt(document.getElementById('sampM').value);
+const frames = parseInt(document.getElementById('sampFrames').value);
+document.getElementById('sampMVal').textContent = M;
+document.getElementById('sampFramesVal').textContent = frames;
+renderSampling(M, frames);
+}
+
+function renderSampling(M, frames) {
+const W = samplingCanvas.width, H = samplingCanvas.height;
+const ctx = sampCtx;
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+// Draw volume region
+const cx = 400, cy = 200, radius = 150;
+const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+grad.addColorStop(0, 'rgba(100, 80, 150, 0.3)');
+grad.addColorStop(1, 'rgba(100, 80, 150, 0)');
+ctx.fillStyle = grad;
+ctx.fillRect(0, 0, W, H);
+
+// Draw light
+const lightX = 400, lightY = 50;
+ctx.beginPath();
+ctx.arc(lightX, lightY, 10, 0, TAU);
+ctx.fillStyle = '#ffd93d';
+ctx.fill();
+ctx.fillStyle = '#ffd93d';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Light', lightX, lightY - 15);
+
+// Camera
+const camX = 400, camY = 380;
+ctx.beginPath();
+ctx.arc(camX, camY, 6, 0, TAU);
+ctx.fillStyle = '#4ecdc4';
+ctx.fill();
+ctx.fillText('Camera', camX, camY + 18);
+
+// Generate M candidate paths
+let bestWeight = 0;
+let bestPath = null;
+const paths = [];
+
+for (let i = 0; i < M; i++) {
+// Random scatter point in volume
+const angle = randRange(-0.5, 0.5);
+const dist = randRange(50, 250);
+const sx = camX + Math.sin(angle) * dist * 0.3;
+const sy = camY - dist;
+
+// Compute weight (how well this path contributes)
+const toCamDist = Math.sqrt((sx-camX)**2 + (sy-camY)**2);
+const toLightDist = Math.sqrt((sx-lightX)**2 + (sy-lightY)**2);
+const density = volumeDensity(sx, sy + 50);
+const weight = density / (1 + toLightDist * 0.01) / (1 + toCamDist * 0.005);
+
+paths.push({ sx, sy, weight });
+if (weight > bestWeight) {
+bestWeight = weight;
+bestPath = { sx, sy, weight };
+}
+}
+
+// Draw all paths
+for (const p of paths) {
+ctx.beginPath();
+ctx.moveTo(camX, camY);
+ctx.lineTo(p.sx, p.sy);
+ctx.lineTo(lightX, lightY);
+ctx.strokeStyle = 'rgba(78, 205, 196, 0.25)';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+ctx.beginPath();
+ctx.arc(p.sx, p.sy, 3, 0, TAU);
+ctx.fillStyle = 'rgba(78, 205, 196, 0.5)';
+ctx.fill();
+}
+
+// Highlight best path
+if (bestPath) {
+ctx.beginPath();
+ctx.moveTo(camX, camY);
+ctx.lineTo(bestPath.sx, bestPath.sy);
+ctx.lineTo(lightX, lightY);
+ctx.strokeStyle = '#ffd93d';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+ctx.beginPath();
+ctx.arc(bestPath.sx, bestPath.sy, 6, 0, TAU);
+ctx.fillStyle = '#ffd93d';
+ctx.fill();
+}
+
+// Info
+ctx.fillStyle = '#666';
+ctx.font = '12px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillText(`M = ${M} candidates | Selected weight: ${bestWeight.toFixed(4)}`, 20, H - 15);
+}
+
+// ===== RIS DEMO =====
+const risCanvas = document.getElementById('risCanvas');
+const risCtx = risCanvas.getContext('2d');
+
+function updateRIS() {
+const quality = parseInt(document.getElementById('risQuality').value);
+document.getElementById('risQualityVal').textContent = quality + '%';
+renderRIS(quality / 100);
+}
+
+function renderRIS(quality) {
+const W = risCanvas.width, H = risCanvas.height;
+const ctx = risCtx;
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+const margin = 60;
+const plotW = W - margin * 2;
+const plotH = H - 100;
+const baseY = H - 60;
+
+// Axis
+ctx.strokeStyle = '#333';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(margin, baseY);
+ctx.lineTo(margin + plotW, baseY);
+ctx.moveTo(margin, baseY);
+ctx.lineTo(margin, baseY - plotH);
+ctx.stroke();
+
+// Integrand F(λ) - bimodal
+ctx.beginPath();
+for (let i = 0; i <= plotW; i++) {
+const t = i / plotW;
+const f = 0.6 * Math.exp(-((t - 0.3) * 8)**2) + 0.9 * Math.exp(-((t - 0.75) * 10)**2);
+const x = margin + i;
+const y = baseY - f * plotH;
+if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = '#ff6b6b';
+ctx.lineWidth = 2.5;
+ctx.stroke();
+
+// Source PDF p(λ) - uniform-ish
+ctx.beginPath();
+for (let i = 0; i <= plotW; i++) {
+const t = i / plotW;
+const p = 0.15 + 0.05 * Math.sin(t * 6);
+const x = margin + i;
+const y = baseY - p * plotH;
+if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = '#4ecdc4';
+ctx.lineWidth = 1.5;
+ctx.stroke();
+
+// Target PDF p̂(λ) - interpolate between source and integrand
+ctx.beginPath();
+for (let i = 0; i <= plotW; i++) {
+const t = i / plotW;
+const f = 0.6 * Math.exp(-((t - 0.3) * 8)**2) + 0.9 * Math.exp(-((t - 0.75) * 10)**2);
+const p = 0.15 + 0.05 * Math.sin(t * 6);
+const target = lerp(p, f, quality);
+const x = margin + i;
+const y = baseY - target * plotH;
+if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = '#ffd93d';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Draw sample dots along target
+const numSamples = 12;
+for (let s = 0; s < numSamples; s++) {
+const t = (s + 0.5) / numSamples;
+const f = 0.6 * Math.exp(-((t - 0.3) * 8)**2) + 0.9 * Math.exp(-((t - 0.75) * 10)**2);
+const p = 0.15 + 0.05 * Math.sin(t * 6);
+const target = lerp(p, f, quality);
+
+if (target > 0.2) {
+const x = margin + t * plotW;
+ctx.beginPath();
+ctx.arc(x, baseY + 10, 3, 0, TAU);
+ctx.fillStyle = `rgba(255, 217, 61, ${clamp(target, 0.3, 1)})`;
+ctx.fill();
+}
+}
+
+// Legend
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillStyle = '#ff6b6b'; ctx.fillText('F(λ) integrand', margin + 10, 30);
+ctx.fillStyle = '#4ecdc4'; ctx.fillText('p(λ) source PDF', margin + 10, 48);
+ctx.fillStyle = '#ffd93d'; ctx.fillText('p̂(λ) target PDF', margin + 10, 66);
+}
+
+// ===== RESERVOIR DEMO =====
+const reservoirCanvas = document.getElementById('reservoirCanvas');
+const resCtx = reservoirCanvas.getContext('2d');
+
+function updateReservoir() {
+const neighbors = parseInt(document.getElementById('resNeighbors').value);
+const temporal = parseInt(document.getElementById('resTemporal').value);
+document.getElementById('resNeighborsVal').textContent = neighbors;
+document.getElementById('resTemporalVal').textContent = temporal;
+renderReservoir(neighbors, temporal);
+}
+
+function renderReservoir(numNeighbors, numTemporal) {
+const W = reservoirCanvas.width, H = reservoirCanvas.height;
+const ctx = resCtx;
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+// Draw pixel grid
+const gridSize = 60;
+const gridCols = 7, gridRows = 5;
+const gridX = (W - gridCols * gridSize) / 2;
+const gridY = 40;
+const centerCol = 3, centerRow = 2;
+
+for (let row = 0; row < gridRows; row++) {
+for (let col = 0; col < gridCols; col++) {
+const x = gridX + col * gridSize;
+const y = gridY + row * gridSize;
+const isCenter = row === centerRow && col === centerCol;
+
+ctx.strokeStyle = isCenter ? '#fff' : '#333';
+ctx.lineWidth = isCenter ? 2 : 0.5;
+ctx.strokeRect(x, y, gridSize, gridSize);
+
+// Fill with "sample quality" color
+const quality = 0.2 + 0.6 * rand();
+ctx.fillStyle = `rgba(78, 205, 196, ${quality * 0.15})`;
+ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+
+// Small reservoir indicator
+ctx.beginPath();
+ctx.arc(x + gridSize/2, y + gridSize/2, 4, 0, TAU);
+ctx.fillStyle = `rgba(255, 217, 61, ${quality})`;
+ctx.fill();
+}
+}
+
+// Highlight spatial neighbors
+const centerX = gridX + centerCol * gridSize + gridSize/2;
+const centerY = gridY + centerRow * gridSize + gridSize/2;
+
+const neighborOffsets = [
+[-1, -1], [1, 0], [0, 1], [-1, 1], [1, -1], [2, 0], [0, -2], [-2, 1]
+];
+
+for (let i = 0; i < numNeighbors; i++) {
+const [dc, dr] = neighborOffsets[i % neighborOffsets.length];
+const nx = centerX + dc * gridSize;
+const ny = centerY + dr * gridSize;
+
+// Draw connection line
+ctx.beginPath();
+ctx.moveTo(centerX, centerY);
+ctx.lineTo(nx, ny);
+ctx.strokeStyle = 'rgba(107, 203, 119, 0.6)';
+ctx.lineWidth = 2;
+ctx.stroke();
+
+// Highlight neighbor
+ctx.beginPath();
+ctx.arc(nx, ny, 8, 0, TAU);
+ctx.strokeStyle = '#6bcb77';
+ctx.lineWidth = 2;
+ctx.stroke();
+}
+
+// Temporal history visualization
+const tempX = 50, tempY = H - 80;
+ctx.fillStyle = '#a78bfa';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillText('Temporal history:', tempX, tempY);
+
+for (let i = 0; i < numTemporal; i++) {
+const x = tempX + 110 + i * 40;
+ctx.fillStyle = `rgba(167, 139, 250, ${1 - i * 0.15})`;
+ctx.fillRect(x, tempY - 12, 30, 16);
+ctx.fillStyle = '#000';
+ctx.font = '9px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText(`t-${i+1}`, x + 15, tempY);
+}
+
+// Effective sample count
+const M = 4;
+const Q = 4;
+const effectiveM = M * (1 + numNeighbors) * Math.min(numTemporal + 1, Q);
+ctx.fillStyle = '#ffd93d';
+ctx.font = '13px sans-serif';
+ctx.textAlign = 'right';
+ctx.fillText(`Effective M ≈ ${effectiveM}`, W - 30, H - 20);
+ctx.fillStyle = '#666';
+ctx.font = '10px sans-serif';
+ctx.fillText(`(initial M=${M} × ${1+numNeighbors} spatial × min(${numTemporal+1}, Q=${Q}) temporal)`, W - 30, H - 5);
+}
+
+// ===== MIS DEMO =====
+const misCanvas = document.getElementById('misCanvas');
+const misCtx = misCanvas.getContext('2d');
+let misMode = 'none';
+
+function setMISMode(mode) {
+misMode = mode;
+document.querySelectorAll('#btnNoMIS,#btnStochMIS,#btnTalbotMIS').forEach(b => b.classList.remove('active'));
+if (mode === 'none') document.getElementById('btnNoMIS').classList.add('active');
+else if (mode === 'stochastic') document.getElementById('btnStochMIS').classList.add('active');
+else document.getElementById('btnTalbotMIS').classList.add('active');
+renderMIS();
+}
+
+function renderMIS() {
+const W = misCanvas.width, H = misCanvas.height;
+const ctx = misCtx;
+const imgData = ctx.createImageData(W, H);
+const data = imgData.data;
+
+for (let py = 0; py < H; py += 2) {
+for (let px = 0; px < W; px += 2) {
+let luminance = 0;
+const baseVal = 0.15 + 0.1 * Math.sin(px * 0.02) * Math.cos(py * 0.03);
+
+// Simulate different MIS strategies
+if (misMode === 'none') {
+// Fireflies
+luminance = baseVal;
+if (rand() < 0.003) luminance += rand() * 5; // Firefly
+} else if (misMode === 'stochastic') {
+// Less fireflies but more general noise
+luminance = baseVal + (rand() - 0.5) * 0.08;
+if (rand() < 0.0005) luminance += rand() * 2;
+} else {
+// Talbot: clean
+luminance = baseVal + (rand() - 0.5) * 0.03;
+}
+
+luminance = clamp(luminance, 0, 1);
+const r = luminance * 200, g = luminance * 180, b = luminance * 220;
+
+for (let dy = 0; dy < 2; dy++) {
+for (let dx = 0; dx < 2; dx++) {
+const idx = ((py + dy) * W + (px + dx)) * 4;
+data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 255;
+}
+}
+}
+}
+
+ctx.putImageData(imgData, 0, 0);
+
+// Label
+ctx.fillStyle = '#fff';
+ctx.font = '13px sans-serif';
+ctx.textAlign = 'center';
+const labels = { none: 'No MIS — fireflies dominate', stochastic: 'Stochastic MIS — reduced fireflies, added noise', talbot: 'Talbot MIS — clean results (O(N²) cost)' };
+ctx.fillText(labels[misMode], W/2, H - 10);
+}
+
+// ===== TEMPORAL DEMO =====
+const temporalCanvas = document.getElementById('temporalCanvas');
+const tempCtx = temporalCanvas.getContext('2d');
+let temporalMode = 'reproj';
+
+function setTemporalMode(mode) {
+temporalMode = mode;
+document.querySelectorAll('#btnNoReproj,#btnReproj').forEach(b => b.classList.remove('active'));
+if (mode === 'none') document.getElementById('btnNoReproj').classList.add('active');
+else document.getElementById('btnReproj').classList.add('active');
+renderTemporal();
+}
+
+function updateTemporal() {
+const motion = parseInt(document.getElementById('tempMotion').value);
+document.getElementById('tempMotionVal').textContent = motion + '%';
+renderTemporal();
+}
+
+function renderTemporal() {
+const W = temporalCanvas.width, H = temporalCanvas.height;
+const ctx = tempCtx;
+const motion = parseInt(document.getElementById('tempMotion').value) / 100;
+
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+// Draw a volume blob (current frame)
+const blobX = W/2, blobY = H/2 - 20;
+const blobRadius = 100;
+
+// Previous frame position (shifted by motion)
+const prevBlobX = blobX - motion * 80;
+
+// Draw previous frame blob (ghost)
+ctx.beginPath();
+ctx.arc(prevBlobX, blobY, blobRadius, 0, TAU);
+ctx.fillStyle = 'rgba(167, 139, 250, 0.1)';
+ctx.fill();
+ctx.strokeStyle = 'rgba(167, 139, 250, 0.3)';
+ctx.lineWidth = 1;
+ctx.stroke();
+ctx.fillStyle = '#a78bfa';
+ctx.font = '10px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('t-1', prevBlobX, blobY - blobRadius - 8);
+
+// Current frame blob
+ctx.beginPath();
+ctx.arc(blobX, blobY, blobRadius, 0, TAU);
+ctx.fillStyle = 'rgba(78, 205, 196, 0.15)';
+ctx.fill();
+ctx.strokeStyle = 'rgba(78, 205, 196, 0.5)';
+ctx.lineWidth = 1.5;
+ctx.stroke();
+ctx.fillStyle = '#4ecdc4';
+ctx.fillText('t (current)', blobX, blobY - blobRadius - 8);
+
+// Motion vector
+ctx.beginPath();
+ctx.moveTo(prevBlobX, blobY);
+ctx.lineTo(blobX, blobY);
+ctx.strokeStyle = '#ffd93d';
+ctx.lineWidth = 2;
+ctx.setLineDash([4, 4]);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Arrow head
+ctx.beginPath();
+ctx.moveTo(blobX - 10, blobY - 5);
+ctx.lineTo(blobX, blobY);
+ctx.lineTo(blobX - 10, blobY + 5);
+ctx.strokeStyle = '#ffd93d';
+ctx.stroke();
+
+// Draw reprojection illustration
+if (temporalMode === 'none') {
+// Without reprojection: show wrong lookup location
+const wrongX = blobX, wrongY = blobY;
+ctx.beginPath();
+ctx.arc(wrongX, wrongY, 8, 0, TAU);
+ctx.strokeStyle = '#ff6b6b';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#ff6b6b';
+ctx.font = '10px sans-serif';
+ctx.fillText('wrong prior lookup', wrongX, wrongY + 22);
+
+// Halo effect
+ctx.beginPath();
+ctx.arc(blobX, blobY, blobRadius + 15, 0, TAU);
+ctx.strokeStyle = 'rgba(255, 107, 107, 0.3)';
+ctx.lineWidth = 8;
+ctx.stroke();
+ctx.fillStyle = '#ff6b6b';
+ctx.font = '11px sans-serif';
+ctx.fillText('← halo artifact', blobX + blobRadius + 40, blobY);
+} else {
+// With reprojection: show correct lookup at x1 motion vector
+const x1X = blobX + randRange(-30, 30);
+const x1Y = blobY + randRange(-30, 30);
+const reprojX = x1X - motion * 80;
+
+// x1 vertex
+ctx.beginPath();
+ctx.arc(x1X, x1Y, 5, 0, TAU);
+ctx.fillStyle = '#ff6b6b';
+ctx.fill();
+ctx.fillStyle = '#ff6b6b';
+ctx.font = '10px sans-serif';
+ctx.fillText('x₁', x1X + 10, x1Y);
+
+// Reprojected lookup
+ctx.beginPath();
+ctx.moveTo(x1X, x1Y);
+ctx.lineTo(reprojX, x1Y);
+ctx.strokeStyle = 'rgba(107, 203, 119, 0.6)';
+ctx.lineWidth = 1.5;
+ctx.setLineDash([3, 3]);
+ctx.stroke();
+ctx.setLineDash([]);
+
+ctx.beginPath();
+ctx.arc(reprojX, x1Y, 5, 0, TAU);
+ctx.fillStyle = '#6bcb77';
+ctx.fill();
+ctx.fillStyle = '#6bcb77';
+ctx.fillText('prior reservoir', reprojX, x1Y - 12);
+}
+
+// Status text
+ctx.fillStyle = '#888';
+ctx.font = '12px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText(temporalMode === 'reproj' ? 'Reprojection via x₁ motion vector — correct temporal lookup' : 'No reprojection — reusing from wrong spatial location', W/2, H - 15);
+}
+
+// ===== TRANSMITTANCE DEMO =====
+const transmittanceCanvas = document.getElementById('transmittanceCanvas');
+const transCtx = transmittanceCanvas.getContext('2d');
+
+function updateTransmittance() {
+const stage = parseInt(document.getElementById('transStage').value);
+const labels = ['Candidates (T*)', 'Resampling (T̃)', 'Final Shading (T)'];
+document.getElementById('transStageVal').textContent = labels[stage];
+renderTransmittance(stage);
+}
+
+function renderTransmittance(stage) {
+const W = transmittanceCanvas.width, H = transmittanceCanvas.height;
+const ctx = transCtx;
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+const margin = 60;
+const plotW = W - margin * 2;
+const plotH = H - 120;
+const baseY = H - 70;
+
+// Axis
+ctx.strokeStyle = '#333';
+ctx.beginPath();
+ctx.moveTo(margin, baseY);
+ctx.lineTo(margin + plotW, baseY);
+ctx.moveTo(margin, baseY);
+ctx.lineTo(margin, baseY - plotH);
+ctx.stroke();
+
+// True transmittance (reference)
+ctx.beginPath();
+for (let i = 0; i <= plotW; i++) {
+const t = i / plotW;
+const density = 0.5 + 0.4 * Math.sin(t * 12) + 0.2 * Math.cos(t * 7 + 1);
+const T = Math.exp(-density * t * 3);
+const x = margin + i;
+const y = baseY - T * plotH;
+if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+// Stage-specific curve
+const colors = ['#4ecdc4', '#6bcb77', '#ff6b6b'];
+const labels = ['T* piecewise-constant (Mip 1 + BC4)', 'T̃ ray-marched (trilinear Mip 1)', 'T analytical (full-res regular tracking)'];
+
+ctx.beginPath();
+const stepSizes = [plotW / 8, plotW / 20, 1]; // Coarse to fine
+const stepSize = stepSizes[stage];
+
+if (stage === 0) {
+// Piecewise constant
+for (let i = 0; i < plotW; i += stepSize) {
+const t = (i + stepSize/2) / plotW;
+const density = 0.5 + 0.4 * Math.sin(t * 12) + 0.2 * Math.cos(t * 7 + 1);
+const T = Math.exp(-density * t * 3);
+const x1 = margin + i;
+const x2 = margin + Math.min(i + stepSize, plotW);
+const y = baseY - T * plotH;
+if (i === 0) ctx.moveTo(x1, y);
+ctx.lineTo(x1, y);
+ctx.lineTo(x2, y);
+}
+} else if (stage === 1) {
+// Ray marched (linear interpolation between samples)
+for (let i = 0; i <= plotW; i += stepSize) {
+const t = i / plotW;
+const density = 0.5 + 0.4 * Math.sin(t * 12) + 0.2 * Math.cos(t * 7 + 1);
+const T = Math.exp(-density * t * 3) + (rand() - 0.5) * 0.01;
+const x = margin + i;
+const y = baseY - T * plotH;
+if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+} else {
+// Analytical (exact)
+for (let i = 0; i <= plotW; i++) {
+const t = i / plotW;
+const density = 0.5 + 0.4 * Math.sin(t * 12) + 0.2 * Math.cos(t * 7 + 1);
+const T = Math.exp(-density * t * 3);
+const x = margin + i;
+const y = baseY - T * plotH;
+if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+}
+ctx.strokeStyle = colors[stage];
+ctx.lineWidth = 2.5;
+ctx.stroke();
+
+// Info
+ctx.fillStyle = colors[stage];
+ctx.font = '12px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillText(labels[stage], margin, 25);
+
+const costs = ['Low cost (64:1 compression)', 'Medium cost (per-reuse evaluation)', 'High cost (once per pixel, unbiased)'];
+ctx.fillStyle = '#666';
+ctx.fillText(costs[stage], margin, 45);
+
+// Pipeline stage indicator
+ctx.fillStyle = '#444';
+ctx.font = '10px sans-serif';
+ctx.textAlign = 'center';
+const stageNames = ['Initial Candidates', 'Spatiotemporal Reuse', 'Final Shading'];
+for (let i = 0; i < 3; i++) {
+const x = margin + (i + 0.5) * plotW / 3;
+ctx.fillStyle = i === stage ? colors[i] : '#444';
+ctx.fillText(stageNames[i], x, baseY + 25);
+ctx.fillText(i === stage ? '●' : '○', x, baseY + 40);
+}
+}
+
+// ===== PIPELINE DEMO =====
+const pipelineCanvas = document.getElementById('pipelineCanvas');
+const pipeCtx = pipelineCanvas.getContext('2d');
+
+function updatePipeline() {
+const step = parseInt(document.getElementById('pipeStep').value);
+const labels = ['1. Generate Candidates', '2. Temporal Reuse', '3. Spatial Reuse', '4. Final Shading'];
+document.getElementById('pipeStepVal').textContent = labels[step];
+renderPipeline(step);
+}
+
+function renderPipeline(step) {
+const W = pipelineCanvas.width, H = pipelineCanvas.height;
+const ctx = pipeCtx;
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+// Draw 4 stage boxes
+const boxW = 160, boxH = 80;
+const startX = 40;
+const spacing = (W - startX * 2 - boxW) / 3;
+const boxY = 30;
+
+const stageColors = ['#4ecdc4', '#a78bfa', '#6bcb77', '#ff6b6b'];
+const stageLabels = ['Generate\nM=4 paths', 'Temporal\nReuse (Q=4)', 'Spatial\nReuse (N=3)', 'Final\nShading'];
+
+for (let i = 0; i < 4; i++) {
+const x = startX + i * spacing;
+const isActive = i === step;
+
+ctx.fillStyle = isActive ? stageColors[i] + '33' : '#1a1a2e';
+ctx.strokeStyle = isActive ? stageColors[i] : '#333';
+ctx.lineWidth = isActive ? 2 : 1;
+ctx.beginPath();
+ctx.roundRect(x, boxY, boxW, boxH, 8);
+ctx.fill();
+ctx.stroke();
+
+ctx.fillStyle = isActive ? stageColors[i] : '#666';
+ctx.font = isActive ? 'bold 11px sans-serif' : '11px sans-serif';
+ctx.textAlign = 'center';
+const lines = stageLabels[i].split('\n');
+ctx.fillText(lines[0], x + boxW/2, boxY + 35);
+ctx.fillText(lines[1], x + boxW/2, boxY + 52);
+
+// Arrow
+if (i < 3) {
+ctx.beginPath();
+ctx.moveTo(x + boxW + 5, boxY + boxH/2);
+ctx.lineTo(x + spacing - 5, boxY + boxH/2);
+ctx.strokeStyle = '#444';
+ctx.lineWidth = 1;
+ctx.stroke();
+ctx.beginPath();
+ctx.moveTo(x + spacing - 10, boxY + boxH/2 - 4);
+ctx.lineTo(x + spacing - 5, boxY + boxH/2);
+ctx.lineTo(x + spacing - 10, boxY + boxH/2 + 4);
+ctx.stroke();
+}
+}
+
+// Detail area below
+const detailY = 140;
+const detailH = H - detailY - 20;
+
+ctx.fillStyle = '#111125';
+ctx.beginPath();
+ctx.roundRect(30, detailY, W - 60, detailH, 8);
+ctx.fill();
+ctx.strokeStyle = stageColors[step] + '66';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+// Stage-specific visualization
+const dcx = W/2, dcy = detailY + detailH/2;
+
+if (step === 0) {
+// Generate candidates - show random walks
+ctx.fillStyle = '#4ecdc4';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Generating M=4 random walks, each producing 2K candidate paths', dcx, detailY + 25);
+
+const camX = dcx, camY = detailY + detailH - 30;
+ctx.beginPath();
+ctx.arc(camX, camY, 5, 0, TAU);
+ctx.fillStyle = '#4ecdc4';
+ctx.fill();
+
+for (let m = 0; m < 4; m++) {
+const angle = -PI/2 + (m - 1.5) * 0.3;
+const len = 120 + m * 20;
+const endX = camX + Math.cos(angle) * len;
+const endY = camY + Math.sin(angle) * len;
+
+ctx.beginPath();
+ctx.moveTo(camX, camY);
+// Random walk segments
+let px = camX, py = camY;
+for (let k = 0; k < 3; k++) {
+const nx = px + (endX - camX) / 3 + randRange(-20, 20);
+const ny = py + (endY - camY) / 3 + randRange(-10, 10);
+ctx.lineTo(nx, ny);
+px = nx; py = ny;
+}
+ctx.strokeStyle = `rgba(78, 205, 196, ${0.3 + m * 0.15})`;
+ctx.lineWidth = 1.5;
+ctx.stroke();
+}
+
+// Highlight selected
+ctx.fillStyle = '#ffd93d';
+ctx.font = '10px sans-serif';
+ctx.fillText('→ Select best via RIS (streaming reservoir sampling)', dcx, detailY + detailH - 10);
+
+} else if (step === 1) {
+// Temporal reuse
+ctx.fillStyle = '#a78bfa';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Reproject x₁ motion vector → find prior frame reservoir → combine via RIS', dcx, detailY + 25);
+
+// Current frame reservoir
+ctx.fillStyle = '#a78bfa33';
+ctx.fillRect(dcx + 50, dcy - 30, 100, 60);
+ctx.strokeStyle = '#a78bfa';
+ctx.strokeRect(dcx + 50, dcy - 30, 100, 60);
+ctx.fillStyle = '#a78bfa';
+ctx.font = '10px sans-serif';
+ctx.fillText('Current', dcx + 100, dcy - 35);
+
+// Prior frame reservoir
+ctx.fillStyle = '#a78bfa22';
+ctx.fillRect(dcx - 150, dcy - 30, 100, 60);
+ctx.strokeStyle = 'rgba(167,139,250,0.5)';
+ctx.strokeRect(dcx - 150, dcy - 30, 100, 60);
+ctx.fillStyle = 'rgba(167,139,250,0.7)';
+ctx.fillText('Prior (t-1)', dcx - 100, dcy - 35);
+
+// Arrow with MV label
+ctx.beginPath();
+ctx.moveTo(dcx - 45, dcy);
+ctx.lineTo(dcx + 45, dcy);
+ctx.strokeStyle = '#ffd93d';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#ffd93d';
+ctx.font = '9px sans-serif';
+ctx.fillText('motion vector at x₁', dcx, dcy - 10);
+
+} else if (step === 2) {
+// Spatial reuse
+ctx.fillStyle = '#6bcb77';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Sample 3 neighbors within 10px radius → combine with Talbot MIS', dcx, detailY + 25);
+
+// Center pixel
+ctx.beginPath();
+ctx.arc(dcx, dcy, 20, 0, TAU);
+ctx.fillStyle = '#6bcb7733';
+ctx.fill();
+ctx.strokeStyle = '#fff';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#fff';
+ctx.font = '9px sans-serif';
+ctx.fillText('q', dcx, dcy + 4);
+
+// Neighbors
+const nAngles = [0.8, 2.5, 4.2];
+for (let i = 0; i < 3; i++) {
+const nx = dcx + Math.cos(nAngles[i]) * 80;
+const ny = dcy + Math.sin(nAngles[i]) * 60;
+
+ctx.beginPath();
+ctx.moveTo(dcx, dcy);
+ctx.lineTo(nx, ny);
+ctx.strokeStyle = 'rgba(107, 203, 119, 0.5)';
+ctx.lineWidth = 1.5;
+ctx.stroke();
+
+ctx.beginPath();
+ctx.arc(nx, ny, 12, 0, TAU);
+ctx.fillStyle = '#6bcb7733';
+ctx.fill();
+ctx.strokeStyle = '#6bcb77';
+ctx.lineWidth = 1.5;
+ctx.stroke();
+ctx.fillStyle = '#6bcb77';
+ctx.fillText(`q'${i+1}`, nx, ny + 4);
+}
+
+} else {
+// Final shading
+ctx.fillStyle = '#ff6b6b';
+ctx.font = '11px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Evaluate F(λᵣ) with unbiased analytical transmittance for the ONE selected path', dcx, detailY + 25);
+
+// Single golden path
+const camX = dcx - 100, camY = dcy + 60;
+const lightX = dcx + 100, lightY = dcy - 60;
+const scatterX = dcx, scatterY = dcy;
+
+ctx.beginPath();
+ctx.moveTo(camX, camY);
+ctx.lineTo(scatterX, scatterY);
+ctx.lineTo(lightX, lightY);
+ctx.strokeStyle = '#ffd93d';
+ctx.lineWidth = 3;
+ctx.stroke();
+
+ctx.beginPath();
+ctx.arc(scatterX, scatterY, 6, 0, TAU);
+ctx.fillStyle = '#ffd93d';
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(camX, camY, 5, 0, TAU);
+ctx.fillStyle = '#4ecdc4';
+ctx.fill();
+ctx.fillStyle = '#4ecdc4';
+ctx.font = '10px sans-serif';
+ctx.fillText('camera', camX, camY + 18);
+
+ctx.beginPath();
+ctx.arc(lightX, lightY, 5, 0, TAU);
+ctx.fillStyle = '#ff6b6b';
+ctx.fill();
+ctx.fillStyle = '#ff6b6b';
+ctx.fillText('light', lightX, lightY - 12);
+
+ctx.fillStyle = '#ffd93d';
+ctx.fillText('λᵣ (final path)', scatterX, scatterY + 22);
+}
+}
+
+// ===== CONVERGENCE DEMO =====
+const convergenceCanvas = document.getElementById('convergenceCanvas');
+const convCtx = convergenceCanvas.getContext('2d');
+
+function updateConvergence() {
+const time = parseInt(document.getElementById('convTime').value);
+document.getElementById('convTimeVal').textContent = time + 'ms';
+renderConvergence(time);
+}
+
+function renderConvergence(currentTime) {
+const W = convergenceCanvas.width, H = convergenceCanvas.height;
+const ctx = convCtx;
+ctx.clearRect(0, 0, W, H);
+ctx.fillStyle = '#0a0a18';
+ctx.fillRect(0, 0, W, H);
+
+const margin = { left: 70, right: 30, top: 30, bottom: 50 };
+const plotW = W - margin.left - margin.right;
+const plotH = H - margin.top - margin.bottom;
+
+// Log-log axes
+const timeRange = [50, 10000]; // ms
+const mseRange = [0.0001, 0.1];
+
+function toPlotX(t) { return margin.left + (Math.log10(t) - Math.log10(timeRange[0])) / (Math.log10(timeRange[1]) - Math.log10(timeRange[0])) * plotW; }
+function toPlotY(mse) { return margin.top + plotH - (Math.log10(mse) - Math.log10(mseRange[0])) / (Math.log10(mseRange[1]) - Math.log10(mseRange[0])) * plotH; }
+
+// Grid
+ctx.strokeStyle = '#222';
+ctx.lineWidth = 0.5;
+for (let t = 100; t <= 10000; t *= 10) {
+const x = toPlotX(t);
+ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, margin.top + plotH); ctx.stroke();
+}
+for (let mse = 0.001; mse <= 0.1; mse *= 10) {
+const y = toPlotY(mse);
+ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(margin.left + plotW, y); ctx.stroke();
+}
+
+// Axes
+ctx.strokeStyle = '#444';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.moveTo(margin.left, margin.top + plotH);
+ctx.lineTo(margin.left + plotW, margin.top + plotH);
+ctx.moveTo(margin.left, margin.top);
+ctx.lineTo(margin.left, margin.top + plotH);
+ctx.stroke();
+
+// Labels
+ctx.fillStyle = '#666';
+ctx.font = '10px sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('Time (ms)', W/2, H - 10);
+ctx.save();
+ctx.translate(15, H/2);
+ctx.rotate(-PI/2);
+ctx.fillText('MSE', 0, 0);
+ctx.restore();
+
+// Tick labels
+[100, 1000, 10000].forEach(t => {
+ctx.fillText(t >= 1000 ? (t/1000)+'s' : t+'ms', toPlotX(t), margin.top + plotH + 18);
+});
+[0.001, 0.01, 0.1].forEach(m => {
+ctx.textAlign = 'right';
+ctx.fillText(m.toString(), margin.left - 8, toPlotY(m) + 4);
+});
+
+// Baseline curve (higher MSE)
+ctx.beginPath();
+for (let t = 50; t <= 10000; t += 20) {
+const mse = 0.05 / Math.sqrt(t / 50);
+const x = toPlotX(t), y = toPlotY(mse);
+if (t === 50) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = '#ff6b6b';
+ctx.lineWidth = 2.5;
+ctx.stroke();
+
+// ReSTIR curve (lower MSE)
+ctx.beginPath();
+for (let t = 50; t <= 10000; t += 20) {
+const mse = 0.015 / Math.sqrt(t / 50);
+const x = toPlotX(t), y = toPlotY(mse);
+if (t === 50) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.strokeStyle = '#4ecdc4';
+ctx.lineWidth = 2.5;
+ctx.stroke();
+
+// Current time marker
+const markerX = toPlotX(currentTime);
+ctx.beginPath();
+ctx.moveTo(markerX, margin.top);
+ctx.lineTo(markerX, margin.top + plotH);
+ctx.strokeStyle = 'rgba(255, 217, 61, 0.5)';
+ctx.lineWidth = 1;
+ctx.setLineDash([4, 4]);
+ctx.stroke();
+ctx.setLineDash([]);
+
+// MSE values at current time
+const baselineMSE = 0.05 / Math.sqrt(currentTime / 50);
+const restirMSE = 0.015 / Math.sqrt(currentTime / 50);
+
+ctx.beginPath();
+ctx.arc(markerX, toPlotY(baselineMSE), 5, 0, TAU);
+ctx.fillStyle = '#ff6b6b';
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(markerX, toPlotY(restirMSE), 5, 0, TAU);
+ctx.fillStyle = '#4ecdc4';
+ctx.fill();
+
+// Legend
+ctx.font = '12px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillStyle = '#ff6b6b';
+ctx.fillText(`● Baseline: MSE ${baselineMSE.toFixed(4)}`, margin.left + 20, margin.top + 20);
+ctx.fillStyle = '#4ecdc4';
+ctx.fillText(`● ReSTIR: MSE ${restirMSE.toFixed(4)}`, margin.left + 20, margin.top + 38);
+ctx.fillStyle = '#ffd93d';
+ctx.fillText(`${(baselineMSE / restirMSE).toFixed(1)}× improvement`, margin.left + 20, margin.top + 56);
+}
+
+// ===== INITIAL RENDERS =====
+function initAll() {
+renderHero();
+updateVRE();
+updateSampling();
+updateRIS();
+updateReservoir();
+renderMIS();
+renderTemporal();
+updateTransmittance();
+updatePipeline();
+updateConvergence();
+}
+
+// Canvas roundRect polyfill
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+this.moveTo(x + r, y);
+this.lineTo(x + w - r, y);
+this.quadraticCurveTo(x + w, y, x + w, y + r);
+this.lineTo(x + w, y + h - r);
+this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+this.lineTo(x + r, y + h);
+this.quadraticCurveTo(x, y + h, x, y + h - r);
+this.lineTo(x, y + r);
+this.quadraticCurveTo(x, y, x + r, y);
+this.closePath();
+};
+}
+
+window.addEventListener('load', initAll);
+window.addEventListener('resize', () => { setTimeout(initAll, 100); });
+</script>
+</body>
+</html>

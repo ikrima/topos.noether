@@ -1,0 +1,1778 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volumetric ReSTIR — Interactive Essay</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent-ray: #58a6ff;
+  --accent-scatter: #f0883e;
+  --accent-transmittance: #3fb950;
+  --accent-reservoir: #d2a8ff;
+  --accent-reuse: #ff7b72;
+  --accent-target: #ffd93d;
+  --surface: #161b22;
+  --border: #30363d;
+  --code-bg: #1c2128;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+.essay {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 60px 24px 120px;
+}
+
+h1 {
+  font-size: 2.4em;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.6em;
+  font-weight: 600;
+  margin-top: 3em;
+  margin-bottom: 0.8em;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+}
+
+p {
+  margin-bottom: 1.2em;
+}
+
+em { font-style: italic; color: var(--text); }
+
+.color-ray { color: var(--accent-ray); font-weight: 600; }
+.color-scatter { color: var(--accent-scatter); font-weight: 600; }
+.color-trans { color: var(--accent-transmittance); font-weight: 600; }
+.color-reservoir { color: var(--accent-reservoir); font-weight: 600; }
+.color-reuse { color: var(--accent-reuse); font-weight: 600; }
+.color-target { color: var(--accent-target); font-weight: 600; }
+
+.demo-container {
+  position: relative;
+  width: calc(100% + 120px);
+  margin-left: -60px;
+  margin-top: 2em;
+  margin-bottom: 2.5em;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.demo-canvas {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+}
+
+.demo-controls {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.demo-label {
+  font-size: 0.82em;
+  color: var(--text-dim);
+  min-width: 80px;
+}
+
+.demo-slider {
+  flex: 1;
+  min-width: 120px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+.demo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-ray);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.demo-value {
+  font-size: 0.82em;
+  color: var(--text);
+  min-width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-btn {
+  padding: 6px 14px;
+  background: var(--border);
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.82em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.demo-btn:hover { background: #484f58; }
+.demo-btn.active { background: var(--accent-ray); color: var(--bg); }
+
+.formula {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 1.5em 0;
+  font-family: 'STIX Two Math', 'Cambria Math', serif;
+  font-size: 1.1em;
+  text-align: center;
+  line-height: 2.2;
+  overflow-x: auto;
+}
+
+.formula .term-ray { color: var(--accent-ray); }
+.formula .term-scatter { color: var(--accent-scatter); }
+.formula .term-trans { color: var(--accent-transmittance); }
+.formula .term-target { color: var(--accent-target); }
+.formula .term-reservoir { color: var(--accent-reservoir); }
+
+.note {
+  background: var(--code-bg);
+  border-left: 3px solid var(--accent-ray);
+  padding: 12px 16px;
+  margin: 1.5em 0;
+  font-size: 0.92em;
+  border-radius: 0 6px 6px 0;
+}
+
+.pause-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .demo-container {
+    width: 100%;
+    margin-left: 0;
+    border-radius: 8px;
+  }
+  .essay { padding: 30px 16px 80px; }
+  h1 { font-size: 1.8em; }
+}
+</style>
+</head>
+<body>
+
+<button class="pause-toggle" id="pauseBtn" onclick="togglePause()">⏸ Pause animations</button>
+
+<div class="essay">
+
+<h1>Volumetric ReSTIR</h1>
+<p style="color: var(--text-dim); margin-bottom: 2em;">How a single path sample per pixel produces near-converged volume rendering at interactive rates.</p>
+
+<!-- ===== OPENING HOOK ===== -->
+
+<p>Let me show you something remarkable. Below is a cloud—a dense volumetric medium illuminated by a complex environment map. On the left, a traditional path tracer has spent its entire frame budget shooting random rays through the volume. On the right, the same budget, the same single sample per pixel—but using a technique called <em>Volumetric ReSTIR</em>.</p>
+
+<p>Drag the slider to compare. Notice the difference isn't subtle—it's transformative.</p>
+
+<div class="demo-container">
+  <canvas id="demo-hero" class="demo-canvas" width="840" height="380"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Compare</span>
+    <input type="range" class="demo-slider" id="hero-slider" min="0" max="100" value="50">
+    <span class="demo-value" id="hero-value">50%</span>
+  </div>
+</div>
+
+<p>Both images use exactly <em>one</em> path evaluation per pixel per frame. The left image applies the samples randomly. The right image applies them <em>intelligently</em>—choosing, from many candidates, the single path that matters most. This is the core promise of resampled importance sampling extended to volumetric path space [1].</p>
+
+<p>How does the algorithm decide which path "matters most"? How can it evaluate many candidates without paying the full cost for each? And how does it accumulate knowledge across neighboring pixels and prior frames without introducing bias?</p>
+
+<p>Let's find out.</p>
+
+<!-- ===== SECTION: THE VOLUME RENDERING PROBLEM ===== -->
+
+<h2>Light in a Cloud</h2>
+
+<p>You already know this, but let me establish our visual vocabulary. When a <span class="color-ray">ray</span> enters a participating medium, three things can happen at any point along its path: the light can be <span class="color-trans">absorbed</span>, it can be <span class="color-scatter">scattered</span> in a new direction, or it can pass through unimpeded.</p>
+
+<p>In the demonstration below, you can drag the <span class="color-ray">ray</span> to see how it interacts with a simple heterogeneous medium. The <span class="color-trans">green segments</span> show transmittance—how much light survives to each point. The <span class="color-scatter">orange dots</span> mark potential scattering events.</p>
+
+<div class="demo-container">
+  <canvas id="demo-rayMarch" class="demo-canvas" width="840" height="340"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Density</span>
+    <input type="range" class="demo-slider" id="density-slider" min="5" max="100" value="40" style="--thumb-color: var(--accent-transmittance);">
+    <span class="demo-value" id="density-value">0.40</span>
+    <button class="demo-btn" id="btn-scatter" onclick="toggleScatter()">Show scattering</button>
+  </div>
+</div>
+
+<p>The volume rendering equation integrates incoming radiance along the <span class="color-ray">primary ray</span>, weighting each contribution by the <span class="color-trans">transmittance</span> to that point and the probability of a <span class="color-scatter">scattering event</span> occurring there. At each scattering event, we must evaluate the illumination arriving from all directions—another integral.</p>
+
+<p>For multiple scattering, each scattered ray can itself scatter again. The dimensionality explodes: a path with <em>K</em> scattering events lives in a 2K-dimensional space (a distance and a direction at each bounce) [1].</p>
+
+<p>With Monte Carlo, we estimate this integral by sampling random paths and averaging their contributions. But with a budget of one sample per pixel per frame—which is what real-time demands—the variance is catastrophic.</p>
+
+<!-- ===== SECTION: THE NOISE PROBLEM ===== -->
+
+<h2>The Noise Problem</h2>
+
+<p>Let's see what would happen if we simply trace one random path per pixel through a volume. In the demo below, each pixel fires a single ray, samples a random free-flight distance, picks a random scattering direction, and evaluates the direct illumination at that point.</p>
+
+<p>Click "Resample" repeatedly to see different random paths. Each frame is a completely independent estimate.</p>
+
+<div class="demo-container">
+  <canvas id="demo-noise" class="demo-canvas" width="840" height="340"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Samples/px</span>
+    <input type="range" class="demo-slider" id="spp-slider" min="1" max="64" value="1">
+    <span class="demo-value" id="spp-value">1</span>
+    <button class="demo-btn" onclick="resampleNoise()">Resample</button>
+    <button class="demo-btn" onclick="accumulateNoise()">Accumulate</button>
+  </div>
+</div>
+
+<p>Notice that at 1 sample per pixel, the result is almost unintelligible. You can drag the slider to see how quality improves with more samples—but each additional sample costs another full path evaluation. At 60fps on a GPU, we simply cannot afford more than a handful.</p>
+
+<p>This poses a challenge—how do we get the convergence of 32 or 64 samples per pixel while only <em>evaluating</em> one?</p>
+
+<p>The answer lies in being very clever about <em>which</em> single path we choose to evaluate.</p>
+
+<!-- ===== SECTION: IMPORTANCE SAMPLING ===== -->
+
+<h2>Choosing Wisely</h2>
+
+<p>You're intimately familiar with importance sampling. If we sample proportional to our integrand, variance drops to zero. The problem is that our integrand—the full volume rendering path contribution—is expensive to evaluate. That's the very thing we're trying to estimate!</p>
+
+<p>What if we could sample proportional to a <em>cheap approximation</em> of the integrand instead? This is the insight behind <em>Resampled Importance Sampling</em> (RIS), introduced by Talbot in 2005 [1].</p>
+
+<p>Here's the key idea, visualized below. We draw M candidates from a cheap source distribution <span class="color-ray">p̂</span> (shown in blue). Then we evaluate an expensive target function <span class="color-target">p̂</span> (shown in gold) for each candidate—but <em>only</em> for resampling purposes, not for the final answer. We select one candidate proportional to this target weight.</p>
+
+<div class="demo-container">
+  <canvas id="demo-ris" class="demo-canvas" width="840" height="400"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Candidates M</span>
+    <input type="range" class="demo-slider" id="ris-m-slider" min="1" max="32" value="4">
+    <span class="demo-value" id="ris-m-value">4</span>
+    <button class="demo-btn" onclick="resampleRIS()">Draw new candidates</button>
+  </div>
+</div>
+
+<p>Notice that as you increase M, the selected sample (the <span class="color-target">gold ring</span>) increasingly tends toward the peak of the true integrand. With M=1, we're back to plain importance sampling. With M=32, we're getting close to sampling perfectly proportional to the integrand—even though we only <em>evaluate</em> the full path for the one chosen sample.</p>
+
+<p>The mathematical guarantee is elegant. The RIS estimator is unbiased regardless of M [1]:</p>
+
+<div class="formula">
+⟨L⟩<sub>RIS</sub> = <span class="term-scatter">F(λ<sub>r</sub>)</span> / <span class="term-target">p̂(λ<sub>r</sub>)</span> · (1/M) Σ<sub>i=1</sub><sup>M</sup> <span class="term-target">p̂(λ<sub>i</sub>)</span> / <span class="term-ray">p(λ<sub>i</sub>)</span>
+</div>
+
+<p>Here <span class="color-scatter">F(λ<sub>r</sub>)</span> is the full integrand evaluated only for the chosen path, <span class="color-target">p̂</span> is our target (the approximation we resample toward), and <span class="color-ray">p</span> is our source distribution. The sum acts as a normalizing correction.</p>
+
+<p>But this formulation was designed for direct illumination on surfaces—a 2D integral over the hemisphere. Volume rendering lives in a much higher-dimensional space. Let's see how to extend it.</p>
+
+<!-- ===== SECTION: PATHS AS SAMPLES ===== -->
+
+<h2>Paths as Samples</h2>
+
+<p>In the original ReSTIR for surfaces, each "sample" is a light source position. In our volumetric extension, each "sample" is an <em>entire path</em> through the medium—a sequence of distances and directions [1].</p>
+
+<p>The demonstration below shows how a single random walk generates multiple candidate paths. Starting from the camera, we march through the volume. At each scattering vertex, we create <em>two</em> candidates: one that connects to a light via next event estimation (the <span class="color-scatter">orange path</span>), and one that terminates in emissive media (the <span class="color-reuse">red path</span>). A walk with K bounces produces up to 2K candidates.</p>
+
+<div class="demo-container">
+  <canvas id="demo-paths" class="demo-canvas" width="840" height="400"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Max bounces K</span>
+    <input type="range" class="demo-slider" id="bounces-slider" min="1" max="7" value="3">
+    <span class="demo-value" id="bounces-value">3</span>
+    <button class="demo-btn" onclick="newRandomWalk()">New walk</button>
+    <button class="demo-btn" onclick="showAllCandidates()">Show all candidates</button>
+  </div>
+</div>
+
+<p>From M=4 random walks with K=3 bounces, we can generate up to 24 candidate paths. We evaluate our target function <span class="color-target">p̂</span> for each—a cheap estimate involving approximate transmittance and unshadowed radiance—and select one via weighted reservoir sampling [1].</p>
+
+<p>You may have realized that this requires a target function that's cheap to evaluate for <em>all</em> candidates, but it only needs to <em>approximate</em> the true integrand. The chosen sample then gets the full, expensive, unbiased treatment.</p>
+
+<p>This is the crucial insight of the paper: applying cheap, biased techniques to approximate scattering during resampling does <em>not</em> add bias to the final shading, because the biased estimate only influences <em>which</em> sample is chosen—not the value we assign to it [1].</p>
+
+<!-- ===== SECTION: RESERVOIR SAMPLING ===== -->
+
+<h2>Reservoir Sampling</h2>
+
+<p>Before we continue, it may be worth pausing to appreciate the streaming mechanism that makes this practical. We can't store all M candidate paths in memory—each path is a list of vertices, and we have millions of pixels.</p>
+
+<p>Instead, we use <em>weighted reservoir sampling</em>. As candidates stream in one at a time, we maintain a single reservoir that always holds the currently-selected sample. Each new candidate either replaces the current selection (with probability proportional to its weight) or is discarded [1].</p>
+
+<p>In the demo below, watch candidates arrive one by one. The <span class="color-reservoir">purple reservoir</span> holds the current selection. Notice how it probabilistically converges toward the highest-weighted candidate.</p>
+
+<div class="demo-container">
+  <canvas id="demo-reservoir" class="demo-canvas" width="840" height="300"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Speed</span>
+    <input type="range" class="demo-slider" id="reservoir-speed" min="1" max="10" value="3">
+    <button class="demo-btn" onclick="restartReservoir()">Restart stream</button>
+    <button class="demo-btn" onclick="instantReservoir()">Instant (all at once)</button>
+  </div>
+</div>
+
+<p>The beauty is that at the end of the stream, the reservoir contains a single sample drawn with probability proportional to the target weights—and it only ever stored <em>one</em> sample at a time. The running sum w<sub>sum</sub> is all the bookkeeping we need [2].</p>
+
+<!-- ===== SECTION: SPATIOTEMPORAL REUSE ===== -->
+
+<h2>Spatiotemporal Reuse</h2>
+
+<p>Now we arrive at what makes ReSTIR genuinely transformative. Each pixel has carefully selected its best path from M candidates. But neighboring pixels have <em>also</em> done this work. What if we could share?</p>
+
+<p>This is <em>spatiotemporal reservoir resampling</em>. After initial selection, each pixel combines its reservoir with those of its neighbors—both spatial (nearby pixels in the current frame) and temporal (the same pixel in the prior frame). The effective candidate count grows dramatically without proportional cost [1].</p>
+
+<p>In the demonstration below, the central pixel (outlined in <span class="color-reservoir">purple</span>) combines its reservoir with 3 spatial neighbors (outlined in <span class="color-reuse">red</span>) and 1 temporal neighbor (outlined in <span class="color-ray">blue</span>). Watch how the effective sample count M grows.</p>
+
+<div class="demo-container">
+  <canvas id="demo-reuse" class="demo-canvas" width="840" height="420"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Spatial neighbors</span>
+    <input type="range" class="demo-slider" id="spatial-slider" min="0" max="5" value="3">
+    <span class="demo-value" id="spatial-value">3</span>
+    <span class="demo-label" style="margin-left:12px">Temporal Q</span>
+    <input type="range" class="demo-slider" id="temporal-slider" min="1" max="20" value="4">
+    <span class="demo-value" id="temporal-value">4</span>
+  </div>
+</div>
+
+<p>With M=4 initial candidates, 3 spatial neighbors, and a temporal limiting factor Q=4, each pixel effectively sees M × (1 + 3) × Q = 64 candidates—yet stores only a single path and its weight sum. The effective candidate count grows exponentially with temporal reuse [1].</p>
+
+<p>Unfortunately, this won't really work naïvely—you can witness this in the next demonstration. If we blindly reuse a neighbor's path without correction, the result is biased. Some paths that are excellent for one pixel may be terrible for another (because the ray direction differs, the density field varies, etc.).</p>
+
+<!-- ===== SECTION: MIS CORRECTION ===== -->
+
+<h2>Multiple Importance Sampling for Reuse</h2>
+
+<p>Let's see what happens when we reuse without correction. In the demo below, the left column shows the target function <span class="color-target">p̂</span> for the central pixel, and the right shows it for a neighbor. The neighbor's selected sample (the tall bar) might have very low weight under our pixel's target function.</p>
+
+<div class="demo-container">
+  <canvas id="demo-mis" class="demo-canvas" width="840" height="360"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">MIS method</span>
+    <button class="demo-btn active" id="btn-nomis" onclick="setMIS('none')">No MIS</button>
+    <button class="demo-btn" id="btn-stochastic" onclick="setMIS('stochastic')">Stochastic</button>
+    <button class="demo-btn" id="btn-talbot" onclick="setMIS('talbot')">Talbot (det.)</button>
+  </div>
+</div>
+
+<p>Without MIS, fireflies appear wherever a neighbor contributes a sample with high weight under its own target but near-zero weight under ours. The stochastic MIS from Bitterli et al. [2020] is O(N) but introduces excess noise in volumes. The deterministic Talbot MIS has quadratic cost but is acceptably cheap with only 3 spatial neighbors [1].</p>
+
+<p>Thankfully, we can solve this problem by applying the Talbot MIS weight to each reused sample. The correction factor ensures that samples are reweighted fairly according to how likely <em>each</em> participating reservoir was to have produced that sample [1].</p>
+
+<!-- ===== SECTION: TEMPORAL REPROJECTION ===== -->
+
+<h2>Temporal Reprojection in Volumes</h2>
+
+<p>There is one additional clever bit that's been hiding in plain sight. For surfaces, temporal reuse is straightforward: you have motion vectors that tell you where each surface point was in the previous frame. For volumes, this is <em>ill-defined</em>.</p>
+
+<p>The media visible through any pixel may be moving in many different directions simultaneously. A wispy curl at the near edge might drift left while the dense core behind it drifts right. There is no single "correct" motion vector [1].</p>
+
+<p>The paper's solution is elegant: use the motion vector at x<sub>1</sub>, the first scattering vertex of the currently selected path. Since x<sub>1</sub> is sampled proportional to the target PDF p(z<sub>1</sub>|x<sub>0</sub>, ω<sub>0</sub>), denser media is more likely to provide the motion vector—which makes physical sense, as it contributes more to the pixel's radiance [1].</p>
+
+<div class="demo-container">
+  <canvas id="demo-temporal" class="demo-canvas" width="840" height="380"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Frame</span>
+    <input type="range" class="demo-slider" id="frame-slider" min="0" max="100" value="0">
+    <span class="demo-value" id="frame-value">0</span>
+    <button class="demo-btn" onclick="playFrames()">▶ Play</button>
+    <button class="demo-btn" onclick="toggleReproj()">Toggle reprojection</button>
+  </div>
+</div>
+
+<p>Notice that without temporal reprojection (toggle it off), halos appear around moving volume boundaries—we're reusing data from an inappropriate prior-frame location. With reprojection, the noise reduction is substantial and the halos largely disappear [1].</p>
+
+<p>An important caveat: this temporal reuse introduces a slight bias under camera motion or volume deformation, because the chosen temporal reservoir depends on z<sub>1</sub> (the first scatter event). The bias increases with faster motion but is generally imperceptible, and disappears entirely a few frames after motion stops [1].</p>
+
+<!-- ===== SECTION: TRANSMITTANCE TRICKS ===== -->
+
+<h2>Transmittance at Three Fidelities</h2>
+
+<p>Transmittance evaluation dominates the cost of volumetric resampling—it must be computed between every two path vertices, potentially dozens of times per pixel during reuse. The paper uses a brilliant three-tier strategy [1]:</p>
+
+<div class="demo-container">
+  <canvas id="demo-transmittance" class="demo-canvas" width="840" height="360"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Fidelity tier</span>
+    <button class="demo-btn active" id="btn-t1" onclick="setTier(1)">T* (piecewise const.)</button>
+    <button class="demo-btn" id="btn-t2" onclick="setTier(2)">T̃ (ray march Mip1)</button>
+    <button class="demo-btn" id="btn-t3" onclick="setTier(3)">T (analytical)</button>
+  </div>
+</div>
+
+<p><strong>Tier 1:</strong> During initial candidate generation, transmittance uses a piecewise-constant approximation <span class="color-trans">T*</span> derived from the distance sampling PDF itself—essentially free.</p>
+
+<p><strong>Tier 2:</strong> During spatiotemporal reuse, transmittance is estimated by ray marching a coarser volume (Mip 1, downsampled by half) with trilinear filtering. Cheaper than full resolution, but much more accurate than T* [1].</p>
+
+<p><strong>Tier 3:</strong> For the single final shading evaluation, transmittance uses the full analytical or unbiased estimate—residual ratio tracking on the full-resolution volume.</p>
+
+<p>Because Tier 1 and Tier 2 only affect <em>which sample is chosen</em> (importance sampling), not the <em>value assigned to it</em> (the estimator), their approximations and biases do not bias the final rendering [1]. This is perhaps the paper's most powerful practical insight.</p>
+
+<!-- ===== SECTION: THE FULL PIPELINE ===== -->
+
+<h2>The Full Pipeline</h2>
+
+<p>Let me now show you the complete algorithm, working together. The pipeline has four passes, each a full-screen compute dispatch [2]:</p>
+
+<div class="demo-container">
+  <canvas id="demo-pipeline" class="demo-canvas" width="840" height="440"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Pipeline stage</span>
+    <input type="range" class="demo-slider" id="pipeline-slider" min="0" max="3" value="0">
+    <span class="demo-value" id="pipeline-value">Initial</span>
+  </div>
+</div>
+
+<p><strong>Pass 1 — Initial Sampling:</strong> For each pixel, generate M=4 random walks. Each walk produces up to 2K candidate paths. Select one via RIS using target function with T* transmittance.</p>
+
+<p><strong>Pass 2 — Temporal Reuse:</strong> Reproject to the prior frame using our stochastic motion vector. Combine the current reservoir with the temporal neighbor's. Limit the temporal contribution with factor Q=4 [1].</p>
+
+<p><strong>Pass 3 — Spatial Reuse:</strong> Sample 3 neighbors within a 10-pixel radius using a low-discrepancy sequence. Combine reservoirs using Talbot MIS. Recompute target function with Tier 2 ray-marched transmittance [1].</p>
+
+<p><strong>Pass 4 — Final Shading:</strong> Evaluate the full integrand F(λ<sub>r</sub>) for the single chosen path, using unbiased Tier 3 transmittance. Output the pixel color [2].</p>
+
+<div class="formula">
+pixel color = <span class="term-scatter">F(λ<sub>r</sub>)</span> / <span class="term-target">p̂(λ<sub>r</sub>)</span> · w<sub>sum</sub> / M
+</div>
+
+<p>That's it. One path evaluation per pixel. The resampling machinery ensures it's an extraordinarily well-chosen path.</p>
+
+<!-- ===== SECTION: RESULTS ===== -->
+
+<h2>What This Achieves</h2>
+
+<p>The results are dramatic. On an NVIDIA RTX 3090 at 1920×1080, the method renders heterogeneous volumes with complex environment lighting at interactive rates: 37ms for single scattering, 62ms for 3-bounce multiple scattering in the Bunny Cloud scene [1].</p>
+
+<p>Compared to an optimized baseline (decomposition tracking + residual ratio tracking), Volumetric ReSTIR reduces MSE by 2-4× at equal time across every tested scene. The convergence advantage persists from 100ms out to 10 seconds, suggesting applicability to previsualization as well [1].</p>
+
+<div class="demo-container">
+  <canvas id="demo-convergence" class="demo-canvas" width="840" height="320"></canvas>
+  <div class="demo-controls">
+    <span class="demo-label">Scene</span>
+    <button class="demo-btn active" id="btn-bunny" onclick="setScene('bunny')">Bunny Cloud</button>
+    <button class="demo-btn" id="btn-explosion" onclick="setScene('explosion')">Explosion</button>
+    <button class="demo-btn" id="btn-plume" onclick="setScene('plume')">Plume</button>
+  </div>
+</div>
+
+<p>The method does inherit some limitations. It exploits spatiotemporal coherence—high-frequency variations in lighting, density, or motion limit the effectiveness of reuse. And the scalar target function means all color channels are sampled identically, leaving color noise in scenes with highly saturated lights of different hues [1].</p>
+
+<!-- ===== SECTION: IMPLEMENTATION NOTES ===== -->
+
+<h2>Toward Your Own Implementation</h2>
+
+<p>If you're building a toy version—say, in Houdini's CVEX or a custom OptiX kernel—here's the minimal recipe:</p>
+
+<p><strong>Data per pixel:</strong> A reservoir storing one path (list of (z<sub>i</sub>, ω<sub>i</sub>) tuples), plus w<sub>sum</sub>, M, and p̂(λ<sub>r</sub>) [2].</p>
+
+<p><strong>Initial sampling (Algorithm 3 from the supplemental [2]):</strong> Fire M random walks. At each vertex, evaluate the phase function, sample a light direction, estimate shadow transmittance with a coarse ray march. Update the reservoir with weight p̂/p for each candidate.</p>
+
+<p><strong>Temporal reuse (Algorithm 5 [2]):</strong> Find the prior-frame pixel using the velocity at your selected path's first vertex. Combine reservoirs using the combineReservoir() function with the resampled target PDF.</p>
+
+<p><strong>Spatial reuse (Algorithm 5 [2]):</strong> Pick N random neighbors within a radius. For each, evaluate p̂ at their selected path from your pixel's viewpoint. Apply Talbot MIS weights. Combine reservoirs.</p>
+
+<p><strong>Final shading (Algorithm 6 [2]):</strong> Evaluate the full integrand for your final path. Divide by p̂, multiply by w<sub>sum</sub>/M. That's your pixel color.</p>
+
+<div class="note">
+<strong>Key implementation detail:</strong> When using direction reuse (recommended), you keep the neighbor's distances z<sub>i</sub> and directions ω<sub>i</sub>, but recompute vertex positions x<sub>i</sub> = x<sub>i-1</sub> + z<sub>i</sub>·ω<sub>i-1</sub> relative to your own camera ray. This avoids the fireflies of vertex reuse while bounding cost [2].
+</div>
+
+<!-- ===== CLOSING ===== -->
+
+<h2>A Single Path, Chosen Well</h2>
+
+<p>In the early days of real-time ray tracing—around 2006, when you might have first experimented with GPU path tracing—the idea of rendering complex volumetric multiple scattering at 60fps would have seemed absurd. We could barely cast primary rays in real time.</p>
+
+<p>Two decades later, the insight is not brute force but cleverness: don't trace more rays—choose better rays. The marriage of reservoir sampling (a 1982 statistics algorithm), resampled importance sampling (a 2005 rendering technique), and modern spatiotemporal reuse creates something genuinely new. A single path per pixel, but one chosen with the collective wisdom of hundreds of candidates spread across space and time.</p>
+
+<p>Despite the formidable mathematics—path integrals, MIS weights, conditional PDFs—the core idea is almost embarrassingly simple. Generate candidates cheaply. Score them cheaply. Pick the winner. Evaluate it carefully. Share your winners with your neighbors.</p>
+
+<p>When paired with temporal denoising, this approach preserves the high-frequency volumetric details that aggressive denoising of noisy inputs would obliterate. The smoke curls. The clouds billow. Every wisp of detail survives [2].</p>
+
+<p>The next time you see a shaft of light piercing through mist in a video game—rendered in real time, at full resolution, with multiple scattering—know that somewhere in the GPU, millions of reservoirs are quietly selecting from billions of candidate paths, converging on the ones that carry light to your eyes.</p>
+
+<p style="color: var(--text-dim); margin-top: 3em; font-size: 0.9em;">
+Further reading: Bitterli et al. 2020 (ReSTIR for surfaces), Talbot 2005 (RIS foundations), Miller et al. 2019 (null-scattering path integral). The Falcor rendering framework includes a reference implementation.
+</p>
+
+</div>
+
+<script>
+// ===== GLOBAL STATE =====
+let paused = false;
+let animFrame = null;
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '▶ Resume animations' : '⏸ Pause animations';
+}
+
+// ===== UTILITY FUNCTIONS =====
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function smoothstep(a, b, t) { t = clamp((t - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
+
+function noise2D(x, y) {
+  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function fbm(x, y, octaves) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    val += amp * (noise2D(x * freq, y * freq) * 2 - 1);
+    amp *= 0.5;
+    freq *= 2;
+  }
+  return val;
+}
+
+function getDensityAt(x, y, scale = 1) {
+  const nx = x * 0.008 * scale;
+  const ny = y * 0.012 * scale;
+  let d = fbm(nx + 2.3, ny + 1.7, 4);
+  d = smoothstep(-0.2, 0.6, d);
+  return d;
+}
+
+// ===== DEMO 1: HERO COMPARISON =====
+(function() {
+  const canvas = document.getElementById('demo-hero');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('hero-slider');
+  const valueEl = document.getElementById('hero-value');
+  
+  // Pre-render two images
+  const w = canvas.width, h = canvas.height;
+  const imgBaseline = ctx.createImageData(w, h);
+  const imgOurs = ctx.createImageData(w, h);
+  
+  // Generate baseline (noisy)
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const idx = (py * w + px) * 4;
+      const d = getDensityAt(px - w*0.5, py - h*0.5, 0.7);
+      const light = Math.max(0, 1 - Math.abs(px - w*0.35) / (w*0.3)) * d;
+      const noise = (Math.random() - 0.5) * 0.6 * d;
+      const v = clamp((light + noise) * 255, 0, 255);
+      imgBaseline.data[idx] = v * 0.6;
+      imgBaseline.data[idx+1] = v * 0.8;
+      imgBaseline.data[idx+2] = v;
+      imgBaseline.data[idx+3] = 255;
+    }
+  }
+  
+  // Generate "ours" (clean)
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const idx = (py * w + px) * 4;
+      const d = getDensityAt(px - w*0.5, py - h*0.5, 0.7);
+      const light = Math.max(0, 1 - Math.abs(px - w*0.35) / (w*0.3)) * d;
+      const noise = (Math.random() - 0.5) * 0.05 * d;
+      const v = clamp((light + noise) * 255, 0, 255);
+      imgOurs.data[idx] = v * 0.6;
+      imgOurs.data[idx+1] = v * 0.8;
+      imgOurs.data[idx+2] = v;
+      imgOurs.data[idx+3] = 255;
+    }
+  }
+  
+  function render() {
+    const split = slider.value / 100 * w;
+    ctx.putImageData(imgBaseline, 0, 0);
+    ctx.putImageData(imgOurs, 0, 0, split, 0, w - split, h);
+    // Actually we need to draw them properly
+    ctx.clearRect(0, 0, w, h);
+    
+    // Draw baseline on left
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, split, h);
+    ctx.clip();
+    ctx.putImageData(imgBaseline, 0, 0);
+    ctx.restore();
+    
+    // Draw ours on right
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(split, 0, w - split, h);
+    ctx.clip();
+    ctx.putImageData(imgOurs, 0, 0);
+    ctx.restore();
+    
+    // Divider line
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(split, 0);
+    ctx.lineTo(split, h);
+    ctx.stroke();
+    
+    // Labels
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText('Baseline (1 spp)', split/2, 24);
+    ctx.fillText('Volumetric ReSTIR (1 spp)', split + (w-split)/2, 24);
+    
+    valueEl.textContent = slider.value + '%';
+  }
+  
+  slider.addEventListener('input', render);
+  render();
+})();
+
+// ===== DEMO 2: RAY MARCH =====
+let showScattering = false;
+function toggleScatter() {
+  showScattering = !showScattering;
+  document.getElementById('btn-scatter').classList.toggle('active');
+  renderRayMarch();
+}
+
+function renderRayMarch() {
+  const canvas = document.getElementById('demo-rayMarch');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const density = document.getElementById('density-slider').value / 100;
+  document.getElementById('density-value').textContent = density.toFixed(2);
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  // Draw density field
+  const imgData = ctx.createImageData(w, h);
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const idx = (py * w + px) * 4;
+      const d = getDensityAt(px - 200, py - h*0.5, 1.2) * density;
+      const v = clamp(d * 60, 0, 255);
+      imgData.data[idx] = v * 0.3;
+      imgData.data[idx+1] = v * 0.4;
+      imgData.data[idx+2] = v * 0.6;
+      imgData.data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  
+  // Draw ray
+  const rayY = h * 0.5;
+  const steps = 60;
+  const stepSize = w / steps;
+  
+  let transmittance = 1.0;
+  ctx.beginPath();
+  ctx.moveTo(0, rayY);
+  
+  for (let i = 0; i < steps; i++) {
+    const x = i * stepSize;
+    const d = getDensityAt(x - 200, 0, 1.2) * density;
+    transmittance *= Math.exp(-d * stepSize * 0.02);
+    
+    const nextX = (i + 1) * stepSize;
+    ctx.strokeStyle = `rgba(88, 166, 255, ${transmittance})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, rayY);
+    ctx.lineTo(nextX, rayY);
+    ctx.stroke();
+    
+    // Transmittance bar
+    ctx.fillStyle = `rgba(63, 185, 80, ${0.6})`;
+    ctx.fillRect(x, rayY + 20, stepSize - 1, transmittance * 40);
+    
+    // Scattering events
+    if (showScattering && d > 0.3 && Math.random() < d * 0.3) {
+      const angle = (Math.random() - 0.5) * Math.PI;
+      ctx.strokeStyle = 'rgba(240, 136, 62, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, rayY);
+      ctx.lineTo(x + Math.cos(angle) * 40, rayY + Math.sin(angle) * 40);
+      ctx.stroke();
+      ctx.fillStyle = '#f0883e';
+      ctx.beginPath();
+      ctx.arc(x, rayY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+document.getElementById('density-slider').addEventListener('input', renderRayMarch);
+renderRayMarch();
+
+// ===== DEMO 3: NOISE =====
+let noiseSeed = 0;
+function resampleNoise() { noiseSeed++; renderNoise(); }
+function accumulateNoise() {
+  const slider = document.getElementById('spp-slider');
+  slider.value = Math.min(64, parseInt(slider.value) + 4);
+  document.getElementById('spp-value').textContent = slider.value;
+  renderNoise();
+}
+
+function renderNoise() {
+  const canvas = document.getElementById('demo-noise');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const spp = parseInt(document.getElementById('spp-slider').value);
+  document.getElementById('spp-value').textContent = spp;
+  
+  const imgData = ctx.createImageData(w, h);
+  const cellSize = 4;
+  
+  for (let py = 0; py < h; py += cellSize) {
+    for (let px = 0; px < w; px += cellSize) {
+      let sum = 0;
+      for (let s = 0; s < spp; s++) {
+        const d = getDensityAt(px - w*0.3, py - h*0.5, 0.8);
+        const lightDir = Math.atan2(h*0.3 - py, w*0.7 - px);
+        const scatter = d * Math.max(0, Math.cos(lightDir + (Math.random()-0.5) * 2 / Math.sqrt(spp+noiseSeed*0.01)));
+        const noise = (noise2D(px + s * 17 + noiseSeed * 7, py + s * 31 + noiseSeed * 13) - 0.5) / Math.sqrt(spp);
+        sum += scatter + noise * d * 0.5;
+      }
+      sum /= spp;
+      
+      const v = clamp(sum * 280, 0, 255);
+      for (let dy = 0; dy < cellSize && py+dy < h; dy++) {
+        for (let dx = 0; dx < cellSize && px+dx < w; dx++) {
+          const idx = ((py+dy) * w + (px+dx)) * 4;
+          imgData.data[idx] = v * 0.5;
+          imgData.data[idx+1] = v * 0.7;
+          imgData.data[idx+2] = v;
+          imgData.data[idx+3] = 255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  
+  ctx.font = '13px -apple-system, sans-serif';
+  ctx.fillStyle = '#8b949e';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${spp} sample${spp>1?'s':''} per pixel`, 16, 24);
+}
+
+document.getElementById('spp-slider').addEventListener('input', renderNoise);
+renderNoise();
+
+// ===== DEMO 4: RIS =====
+let risCandidates = [];
+
+function generateRISCandidates() {
+  const M = parseInt(document.getElementById('ris-m-slider').value);
+  risCandidates = [];
+  for (let i = 0; i < M; i++) {
+    const x = Math.random();
+    risCandidates.push({
+      x: x,
+      sourceWeight: Math.exp(-2 * (x - 0.3) * (x - 0.3)),
+      targetWeight: Math.exp(-8 * (x - 0.6) * (x - 0.6)) * (1 + 0.5 * Math.sin(x * 15))
+    });
+  }
+}
+
+function resampleRIS() { generateRISCandidates(); renderRIS(); }
+
+function renderRIS() {
+  const canvas = document.getElementById('demo-ris');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const M = parseInt(document.getElementById('ris-m-slider').value);
+  document.getElementById('ris-m-value').textContent = M;
+  
+  if (risCandidates.length !== M) generateRISCandidates();
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const plotH = h * 0.6;
+  const plotY = h * 0.15;
+  const plotX = 60;
+  const plotW = w - 120;
+  
+  // Draw source PDF (blue)
+  ctx.strokeStyle = 'rgba(88, 166, 255, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const t = i / 200;
+    const v = Math.exp(-2 * (t - 0.3) * (t - 0.3));
+    const x = plotX + t * plotW;
+    const y = plotY + plotH - v * plotH * 0.8;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  // Draw target function (gold)
+  ctx.strokeStyle = 'rgba(255, 217, 61, 0.9)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const t = i / 200;
+    const v = Math.exp(-8 * (t - 0.6) * (t - 0.6)) * (1 + 0.5 * Math.sin(t * 15));
+    const x = plotX + t * plotW;
+    const y = plotY + plotH - v * plotH * 0.8;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  // Draw candidates
+  let wSum = 0;
+  let selected = 0;
+  let maxW = 0;
+  
+  risCandidates.forEach((c, i) => {
+    const w_i = c.targetWeight / c.sourceWeight;
+    wSum += w_i;
+    if (w_i > maxW) { maxW = w_i; selected = i; }
+  });
+  
+  // Actually do proper reservoir selection
+  wSum = 0;
+  let rng = 0.42; // deterministic for visual stability
+  risCandidates.forEach((c, i) => {
+    const w_i = c.targetWeight / c.sourceWeight;
+    wSum += w_i;
+    if (noise2D(i * 7.1 + M, i * 3.3) < w_i / wSum) selected = i;
+  });
+  
+  risCandidates.forEach((c, i) => {
+    const x = plotX + c.x * plotW;
+    const y = plotY + plotH + 30;
+    
+    // Candidate dot
+    ctx.fillStyle = i === selected ? '#ffd93d' : 'rgba(88, 166, 255, 0.6)';
+    ctx.beginPath();
+    ctx.arc(x, y, i === selected ? 8 : 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    if (i === selected) {
+      ctx.strokeStyle = '#ffd93d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    // Line up to target function
+    const tv = c.targetWeight;
+    const ty = plotY + plotH - tv * plotH * 0.8;
+    ctx.strokeStyle = i === selected ? 'rgba(255, 217, 61, 0.5)' : 'rgba(88, 166, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, y - 8);
+    ctx.lineTo(x, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
+  
+  // Labels
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.fillStyle = '#58a6ff';
+  ctx.textAlign = 'left';
+  ctx.fillText('Source p (cheap)', plotX, plotY - 5);
+  ctx.fillStyle = '#ffd93d';
+  ctx.fillText('Target p̂ (expensive approx.)', plotX + 150, plotY - 5);
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText(`M = ${M} candidates → 1 selected`, plotX, plotY + plotH + 60);
+}
+
+document.getElementById('ris-m-slider').addEventListener('input', () => {
+  generateRISCandidates();
+  renderRIS();
+});
+generateRISCandidates();
+renderRIS();
+
+// ===== DEMO 5: PATHS =====
+let pathWalkData = null;
+
+function generateWalk(K) {
+  const paths = [];
+  let x = 100, y = 200;
+  const dirX = 0.9, dirY = -0.1;
+  
+  for (let i = 0; i < K; i++) {
+    const dist = 60 + Math.random() * 80;
+    const nx = x + dirX * dist;
+    const ny = y + dirY * dist + (Math.random() - 0.5) * 40;
+    
+    // Scattering path (to light)
+    const lightX = 700 + (Math.random() - 0.5) * 100;
+    const lightY = 50 + Math.random() * 60;
+    paths.push({
+      type: 'scatter',
+      vertices: [{x, y}, {x: nx, y: ny}, {x: lightX, y: lightY}],
+      bounce: i + 1
+    });
+    
+    // Emission path
+    if (Math.random() > 0.5) {
+      paths.push({
+        type: 'emission',
+        vertices: [{x, y}, {x: nx, y: ny}],
+        bounce: i + 1
+      });
+    }
+    
+    x = nx;
+    y = ny;
+  }
+  return paths;
+}
+
+function newRandomWalk() {
+  const K = parseInt(document.getElementById('bounces-slider').value);
+  pathWalkData = generateWalk(K);
+  renderPaths();
+}
+
+function showAllCandidates() { renderPaths(true); }
+
+function renderPaths(showAll = false) {
+  const canvas = document.getElementById('demo-paths');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const K = parseInt(document.getElementById('bounces-slider').value);
+  document.getElementById('bounces-value').textContent = K;
+  
+  if (!pathWalkData) pathWalkData = generateWalk(K);
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  // Background density
+  for (let py = 0; py < h; py += 8) {
+    for (let px = 0; px < w; px += 8) {
+      const d = getDensityAt(px - 100, py - 100, 0.6);
+      if (d > 0.1) {
+        ctx.fillStyle = `rgba(30, 40, 60, ${d * 0.5})`;
+        ctx.fillRect(px, py, 8, 8);
+      }
+    }
+  }
+  
+  // Camera
+  ctx.fillStyle = '#58a6ff';
+  ctx.beginPath();
+  ctx.moveTo(80, 190);
+  ctx.lineTo(100, 200);
+  ctx.lineTo(80, 210);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Light
+  ctx.fillStyle = '#ffd93d';
+  ctx.beginPath();
+  ctx.arc(720, 60, 20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Light', 720, 95);
+  
+  // Draw paths
+  pathWalkData.forEach((path, pi) => {
+    const alpha = showAll ? 0.8 : (pi === 0 ? 1 : 0.3);
+    const color = path.type === 'scatter' ? 
+      `rgba(240, 136, 62, ${alpha})` : 
+      `rgba(255, 123, 114, ${alpha})`;
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = showAll ? 1.5 : (pi === 0 ? 2.5 : 1);
+    ctx.beginPath();
+    path.vertices.forEach((v, i) => {
+      i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y);
+    });
+    ctx.stroke();
+    
+    // Vertices
+    path.vertices.forEach((v, i) => {
+      if (i > 0 && i < path.vertices.length - 1) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  });
+  
+  // Legend
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.fillStyle = '#f0883e';
+  ctx.textAlign = 'left';
+  ctx.fillText('● Scattering paths (NEE)', 16, h - 40);
+  ctx.fillStyle = '#ff7b72';
+  ctx.fillText('● Emission paths', 16, h - 22);
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText(`${pathWalkData.length} candidate paths from ${K} bounces`, 16, 20);
+}
+
+document.getElementById('bounces-slider').addEventListener('input', () => {
+  const K = parseInt(document.getElementById('bounces-slider').value);
+  pathWalkData = generateWalk(K);
+  renderPaths();
+});
+newRandomWalk();
+
+// ===== DEMO 6: RESERVOIR SAMPLING =====
+let reservoirState = { items: [], selected: -1, running: false };
+
+function restartReservoir() {
+  const canvas = document.getElementById('demo-reservoir');
+  const ctx = canvas.getContext('2d');
+  
+  reservoirState.items = [];
+  for (let i = 0; i < 16; i++) {
+    reservoirState.items.push({
+      weight: Math.random() * 3 + 0.1,
+      arrived: false
+    });
+  }
+  reservoirState.selected = -1;
+  reservoirState.currentIdx = 0;
+  reservoirState.wSum = 0;
+  reservoirState.running = true;
+  
+  animateReservoir();
+}
+
+function instantReservoir() {
+  reservoirState.items = [];
+  let wSum = 0;
+  let selected = 0;
+  for (let i = 0; i < 16; i++) {
+    const w = Math.random() * 3 + 0.1;
+    wSum += w;
+    reservoirState.items.push({ weight: w, arrived: true });
+    if (Math.random() < w / wSum) selected = i;
+  }
+  reservoirState.selected = selected;
+  reservoirState.wSum = wSum;
+  reservoirState.running = false;
+  renderReservoir();
+}
+
+function animateReservoir() {
+  if (paused || !reservoirState.running) return;
+  
+  const idx = reservoirState.currentIdx;
+  if (idx >= reservoirState.items.length) {
+    reservoirState.running = false;
+    renderReservoir();
+    return;
+  }
+  
+  const item = reservoirState.items[idx];
+  item.arrived = true;
+  reservoirState.wSum += item.weight;
+  
+  if (Math.random() < item.weight / reservoirState.wSum) {
+    reservoirState.selected = idx;
+  }
+  
+  reservoirState.currentIdx++;
+  renderReservoir();
+  
+  const speed = parseInt(document.getElementById('reservoir-speed').value);
+  setTimeout(animateReservoir, 600 / speed);
+}
+
+function renderReservoir() {
+  const canvas = document.getElementById('demo-reservoir');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const items = reservoirState.items;
+  const barW = (w - 100) / items.length;
+  const maxWeight = Math.max(...items.map(i => i.weight), 1);
+  
+  items.forEach((item, i) => {
+    const x = 50 + i * barW;
+    const barH = (item.weight / maxWeight) * (h - 120);
+    const y = h - 60 - barH;
+    
+    if (!item.arrived) {
+      ctx.fillStyle = 'rgba(48, 54, 61, 0.5)';
+      ctx.strokeStyle = 'rgba(48, 54, 61, 0.8)';
+    } else if (i === reservoirState.selected) {
+      ctx.fillStyle = 'rgba(210, 168, 255, 0.8)';
+      ctx.strokeStyle = '#d2a8ff';
+    } else {
+      ctx.fillStyle = 'rgba(88, 166, 255, 0.4)';
+      ctx.strokeStyle = 'rgba(88, 166, 255, 0.7)';
+    }
+    
+    ctx.fillRect(x + 2, y, barW - 4, barH);
+    ctx.strokeRect(x + 2, y, barW - 4, barH);
+    
+    if (i === reservoirState.selected && item.arrived) {
+      ctx.fillStyle = '#d2a8ff';
+      ctx.font = '10px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('★', x + barW/2, y - 8);
+    }
+  });
+  
+  // Reservoir indicator
+  ctx.fillStyle = '#d2a8ff';
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Reservoir: sample #${reservoirState.selected + 1}  |  w_sum: ${reservoirState.wSum.toFixed(2)}`, 50, 24);
+  
+  ctx.fillStyle = '#8b949e';
+  ctx.fillText('Candidate weights (height = target weight p̂/p)', 50, h - 30);
+}
+
+restartReservoir();
+
+// ===== DEMO 7: SPATIAL REUSE =====
+function renderReuse() {
+  const canvas = document.getElementById('demo-reuse');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const numSpatial = parseInt(document.getElementById('spatial-slider').value);
+  const Q = parseInt(document.getElementById('temporal-slider').value);
+  document.getElementById('spatial-value').textContent = numSpatial;
+  document.getElementById('temporal-value').textContent = Q;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const gridSize = 60;
+  const gridX = (w - 7 * gridSize) / 2;
+  const gridY = 60;
+  
+  // Draw pixel grid
+  for (let gy = 0; gy < 5; gy++) {
+    for (let gx = 0; gx < 7; gx++) {
+      const x = gridX + gx * gridSize;
+      const y = gridY + gy * gridSize;
+      
+      const isCentral = (gx === 3 && gy === 2);
+      const dist = Math.sqrt((gx-3)*(gx-3) + (gy-2)*(gy-2));
+      const isSpatial = !isCentral && dist <= 1.5 && (gx + gy * 7) % 3 < numSpatial;
+      
+      ctx.strokeStyle = isCentral ? '#d2a8ff' : 
+                        isSpatial ? '#ff7b72' : 'rgba(48, 54, 61, 0.6)';
+      ctx.lineWidth = isCentral ? 3 : isSpatial ? 2 : 1;
+      ctx.strokeRect(x, y, gridSize, gridSize);
+      
+      // Fill with "density"
+      const d = getDensityAt(gx * 40, gy * 40, 2);
+      ctx.fillStyle = isCentral ? `rgba(210, 168, 255, 0.15)` :
+                      isSpatial ? `rgba(255, 123, 114, 0.1)` :
+                      `rgba(30, 40, 60, ${d * 0.3})`;
+      ctx.fillRect(x + 1, y + 1, gridSize - 2, gridSize - 2);
+    }
+  }
+  
+  // Temporal arrow
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 3]);
+  const cx = gridX + 3 * gridSize + gridSize/2;
+  const cy = gridY + 2 * gridSize + gridSize/2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 80, cy - 100);
+  ctx.lineTo(cx, cy);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Prior frame', cx - 80, cy - 108);
+  
+  // Info
+  const M = 4;
+  const effective = M * (1 + numSpatial) * Q;
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = '14px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Effective candidates: M × (1 + ${numSpatial}) × Q = ${M} × ${1+numSpatial} × ${Q} = ${effective}`, w/2, h - 30);
+  
+  // Legend
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.fillStyle = '#d2a8ff';
+  ctx.textAlign = 'left';
+  ctx.fillText('■ Central pixel', gridX, h - 60);
+  ctx.fillStyle = '#ff7b72';
+  ctx.fillText('■ Spatial neighbors', gridX + 120, h - 60);
+  ctx.fillStyle = '#58a6ff';
+  ctx.fillText('⬑ Temporal neighbor', gridX + 280, h - 60);
+}
+
+document.getElementById('spatial-slider').addEventListener('input', renderReuse);
+document.getElementById('temporal-slider').addEventListener('input', renderReuse);
+renderReuse();
+
+// ===== DEMO 8: MIS =====
+let currentMIS = 'none';
+function setMIS(mode) {
+  currentMIS = mode;
+  document.querySelectorAll('#demo-mis ~ .demo-controls .demo-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-${mode === 'none' ? 'nomis' : mode}`).classList.add('active');
+  renderMIS();
+}
+
+function renderMIS() {
+  const canvas = document.getElementById('demo-mis');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const halfW = w / 2 - 20;
+  
+  // Two panels: pixel q (left) and neighbor q' (right)
+  ['Pixel q (ours)', "Pixel q' (neighbor)"].forEach((label, panel) => {
+    const ox = panel * (halfW + 40) + 20;
+    
+    ctx.strokeStyle = panel === 0 ? '#d2a8ff' : '#ff7b72';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox, 30, halfW, h - 60);
+    
+    ctx.fillStyle = panel === 0 ? '#d2a8ff' : '#ff7b72';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, ox + halfW/2, 22);
+    
+    // Draw target function for this pixel
+    const peakX = panel === 0 ? 0.6 : 0.35;
+    ctx.strokeStyle = '#ffd93d';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= 100; i++) {
+      const t = i / 100;
+      const v = Math.exp(-10 * (t - peakX) * (t - peakX));
+      const x = ox + 10 + t * (halfW - 20);
+      const y = h - 40 - v * (h - 100);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    
+    // Neighbor's selected sample shown in our space
+    const sampleX = 0.35;
+    const sx = ox + 10 + sampleX * (halfW - 20);
+    const sv = Math.exp(-10 * (sampleX - peakX) * (sampleX - peakX));
+    const sy = h - 40 - sv * (h - 100);
+    
+    ctx.fillStyle = '#ff7b72';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Show MIS weight
+    if (currentMIS !== 'none' && panel === 0) {
+      const misWeight = currentMIS === 'talbot' ? sv / (sv + 0.8) : sv;
+      ctx.fillStyle = 'rgba(255, 217, 61, 0.3)';
+      ctx.fillRect(sx - 15, sy, 30, (h - 40) - sy);
+      ctx.fillStyle = '#ffd93d';
+      ctx.font = '10px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`MIS: ${misWeight.toFixed(2)}`, sx, sy - 12);
+    }
+  });
+  
+  // Show firefly indicator for no-MIS
+  if (currentMIS === 'none') {
+    ctx.fillStyle = '#ff7b72';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠ No correction → fireflies where neighbor weight ≫ our weight', w/2, h - 8);
+  } else if (currentMIS === 'stochastic') {
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('O(N) cost, but noisy in volumes', w/2, h - 8);
+  } else {
+    ctx.fillStyle = '#3fb950';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('O(N²) cost, but stable — recommended for volumetric ReSTIR', w/2, h - 8);
+  }
+}
+renderMIS();
+
+// ===== DEMO 9: TEMPORAL REPROJECTION =====
+let reprojectEnabled = true;
+let framePlayInterval = null;
+
+function toggleReproj() {
+  reprojectEnabled = !reprojectEnabled;
+  renderTemporal();
+}
+
+function playFrames() {
+  const slider = document.getElementById('frame-slider');
+  if (framePlayInterval) { clearInterval(framePlayInterval); framePlayInterval = null; return; }
+  framePlayInterval = setInterval(() => {
+    if (paused) return;
+    slider.value = (parseInt(slider.value) + 1) % 101;
+    document.getElementById('frame-value').textContent = slider.value;
+    renderTemporal();
+  }, 50);
+}
+
+function renderTemporal() {
+  const canvas = document.getElementById('demo-temporal');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const frame = parseInt(document.getElementById('frame-slider').value);
+  document.getElementById('frame-value').textContent = frame;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const time = frame * 0.03;
+  
+  // Draw moving volume
+  for (let py = 0; py < h; py += 6) {
+    for (let px = 0; px < w; px += 6) {
+      const offsetX = Math.sin(time * 2 + py * 0.01) * 30;
+      const d = getDensityAt(px - w*0.4 - offsetX, py - h*0.4, 0.9);
+      if (d > 0.15) {
+        const v = d * 0.6;
+        ctx.fillStyle = `rgba(${60+v*100}, ${80+v*80}, ${120+v*60}, ${d * 0.7})`;
+        ctx.fillRect(px, py, 6, 6);
+      }
+    }
+  }
+  
+  // Show motion vector
+  const mvX = Math.cos(time * 2) * 20;
+  const mvY = Math.sin(time * 3) * 5;
+  
+  const centerX = w * 0.5;
+  const centerY = h * 0.5;
+  
+  // Current pixel
+  ctx.strokeStyle = '#d2a8ff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(centerX - 15, centerY - 15, 30, 30);
+  
+  // Prior frame location
+  const prevX = reprojectEnabled ? centerX - mvX : centerX;
+  const prevY = reprojectEnabled ? centerY - mvY : centerY;
+  
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.strokeRect(prevX - 15, prevY - 15, 30, 30);
+  ctx.setLineDash([]);
+  
+  // Arrow from prev to current
+  if (reprojectEnabled) {
+    ctx.strokeStyle = 'rgba(88, 166, 255, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(prevX, prevY);
+    ctx.lineTo(centerX, centerY);
+    ctx.stroke();
+  }
+  
+  // Labels
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.fillStyle = '#d2a8ff';
+  ctx.textAlign = 'center';
+  ctx.fillText('Current pixel', centerX, centerY + 30);
+  ctx.fillStyle = '#58a6ff';
+  ctx.fillText(reprojectEnabled ? 'Reprojected source' : 'No reprojection (same pos)', prevX, prevY - 22);
+  
+  // Status
+  ctx.fillStyle = reprojectEnabled ? '#3fb950' : '#ff7b72';
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(reprojectEnabled ? '✓ Temporal reprojection ON' : '✗ Temporal reprojection OFF', 16, 24);
+}
+
+document.getElementById('frame-slider').addEventListener('input', renderTemporal);
+renderTemporal();
+
+// ===== DEMO 10: TRANSMITTANCE TIERS =====
+let currentTier = 1;
+function setTier(t) {
+  currentTier = t;
+  document.querySelectorAll('[id^=btn-t]').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-t${t}`).classList.add('active');
+  renderTransmittance();
+}
+
+function renderTransmittance() {
+  const canvas = document.getElementById('demo-transmittance');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const plotX = 60, plotW = w - 120;
+  const plotY = 40, plotH = h - 100;
+  
+  // Ground truth transmittance curve
+  const steps = 200;
+  const truthValues = [];
+  let T = 1.0;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const d = 0.5 + 0.4 * Math.sin(t * 8) + 0.2 * Math.sin(t * 23);
+    T *= Math.exp(-Math.max(0, d) * (1/steps) * 5);
+    truthValues.push(T);
+  }
+  
+  // Draw ground truth
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const x = plotX + (i/steps) * plotW;
+    const y = plotY + plotH - truthValues[i] * plotH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  // Draw approximation based on tier
+  const tierColors = ['', '#ff7b72', '#ffd93d', '#3fb950'];
+  const tierLabels = ['', 'T* — Piecewise constant (from distance sampling)', 'T̃ — Ray march Mip1 (trilinear, coarse)', 'T — Full analytical (unbiased)'];
+  
+  ctx.strokeStyle = tierColors[currentTier];
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  
+  if (currentTier === 1) {
+    // Piecewise constant - coarse steps
+    const coarseSteps = 8;
+    for (let i = 0; i <= coarseSteps; i++) {
+      const t = i / coarseSteps;
+      const idx = Math.floor(t * steps);
+      const x = plotX + t * plotW;
+      const y = plotY + plotH - truthValues[Math.min(idx, steps)] * plotH;
+      if (i === 0) ctx.moveTo(x, y);
+      else {
+        const prevX = plotX + ((i-1)/coarseSteps) * plotW;
+        ctx.lineTo(x, plotY + plotH - truthValues[Math.floor((i-1)/coarseSteps * steps)] * plotH);
+        ctx.lineTo(x, y);
+      }
+    }
+  } else if (currentTier === 2) {
+    // Ray marched - medium fidelity
+    const midSteps = 30;
+    for (let i = 0; i <= midSteps; i++) {
+      const t = i / midSteps;
+      const idx = Math.min(Math.floor(t * steps), steps);
+      const x = plotX + t * plotW;
+      const approx = truthValues[idx] + (Math.random() - 0.5) * 0.02;
+      const y = plotY + plotH - approx * plotH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  } else {
+    // Full fidelity - matches truth
+    for (let i = 0; i <= steps; i++) {
+      const x = plotX + (i/steps) * plotW;
+      const y = plotY + plotH - truthValues[i] * plotH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+  
+  // Labels
+  ctx.fillStyle = tierColors[currentTier];
+  ctx.font = '13px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(tierLabels[currentTier], plotX, h - 20);
+  
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillText('Ground truth', plotX, 28);
+  
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(plotX, plotY);
+  ctx.lineTo(plotX, plotY + plotH);
+  ctx.lineTo(plotX + plotW, plotY + plotH);
+  ctx.stroke();
+  
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('T=1', plotX - 5, plotY + 4);
+  ctx.fillText('T=0', plotX - 5, plotY + plotH + 4);
+  ctx.textAlign = 'center';
+  ctx.fillText('Distance along ray →', plotX + plotW/2, plotY + plotH + 20);
+}
+renderTransmittance();
+
+// ===== DEMO 11: PIPELINE =====
+function renderPipeline() {
+  const canvas = document.getElementById('demo-pipeline');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const stage = parseInt(document.getElementById('pipeline-slider').value);
+  
+  const labels = ['Initial Sampling', 'Temporal Reuse', 'Spatial Reuse', 'Final Shading'];
+  document.getElementById('pipeline-value').textContent = labels[stage];
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const stageW = (w - 100) / 4;
+  const stageH = 200;
+  const stageY = 80;
+  
+  const colors = ['#58a6ff', '#58a6ff', '#ff7b72', '#3fb950'];
+  const icons = ['🎲', '⏮', '↔', '✨'];
+  const descriptions = [
+    'M=4 random walks\n→ 2K candidates each\n→ Select 1 via RIS',
+    'Reproject to prior frame\nCombine reservoirs\nLimit with Q=4',
+    '3 neighbors, 10px radius\nTalbot MIS weighting\nRay march T̃ at Mip1',
+    'Evaluate F(λr) once\nUnbiased transmittance T\nOutput final color'
+  ];
+  
+  for (let i = 0; i < 4; i++) {
+    const x = 50 + i * stageW;
+    const isActive = i === stage;
+    
+    // Box
+    ctx.fillStyle = isActive ? `${colors[i]}22` : 'rgba(22, 27, 34, 0.8)';
+    ctx.strokeStyle = isActive ? colors[i] : 'rgba(48, 54, 61, 0.8)';
+    ctx.lineWidth = isActive ? 2 : 1;
+    ctx.fillRect(x + 5, stageY, stageW - 10, stageH);
+    ctx.strokeRect(x + 5, stageY, stageW - 10, stageH);
+    
+    // Icon
+    ctx.font = '28px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(icons[i], x + stageW/2, stageY + 40);
+    
+    // Label
+    ctx.fillStyle = isActive ? colors[i] : '#8b949e';
+    ctx.font = `${isActive ? 'bold ' : ''}12px -apple-system, sans-serif`;
+    ctx.fillText(labels[i], x + stageW/2, stageY - 10);
+    
+    // Description
+    ctx.fillStyle = isActive ? '#e6edf3' : '#484f58';
+    ctx.font = '11px -apple-system, sans-serif';
+    const lines = descriptions[i].split('\n');
+    lines.forEach((line, li) => {
+      ctx.fillText(line, x + stageW/2, stageY + 65 + li * 18);
+    });
+    
+    // Arrow to next
+    if (i < 3) {
+      ctx.strokeStyle = i < stage ? colors[i] : 'rgba(48, 54, 61, 0.6)';
+      ctx.lineWidth = 1.5;
+      const ax = x + stageW - 3;
+      const ay = stageY + stageH/2;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax + 10, ay);
+      ctx.moveTo(ax + 7, ay - 4);
+      ctx.lineTo(ax + 10, ay);
+      ctx.lineTo(ax + 7, ay + 4);
+      ctx.stroke();
+    }
+  }
+  
+  // Transmittance tier indicator
+  const tierLabels = ['T* (free)', 'T* (free)', 'T̃ (ray march)', 'T (analytical)'];
+  const tierColors = ['#ff7b72', '#ff7b72', '#ffd93d', '#3fb950'];
+  ctx.fillStyle = tierColors[stage];
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Transmittance: ${tierLabels[stage]}`, w/2, stageY + stageH + 40);
+  
+  // Memory per pixel
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.fillText('Memory per pixel: 1 reservoir = { path (z₁,ω₁,...,zK,ωK), w_sum, M, p̂(λr) }', w/2, h - 20);
+}
+
+document.getElementById('pipeline-slider').addEventListener('input', renderPipeline);
+renderPipeline();
+
+// ===== DEMO 12: CONVERGENCE =====
+let currentScene = 'bunny';
+function setScene(scene) {
+  currentScene = scene;
+  document.querySelectorAll('[id^=btn-]').forEach(b => {
+    if (['btn-bunny','btn-explosion','btn-plume'].includes(b.id)) b.classList.remove('active');
+  });
+  document.getElementById(`btn-${scene}`).classList.add('active');
+  renderConvergence();
+}
+
+function renderConvergence() {
+  const canvas = document.getElementById('demo-convergence');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  const plotX = 80, plotW = w - 140;
+  const plotY = 40, plotH = h - 90;
+  
+  // Scene data (approximate from paper's Figure 22)
+  const sceneData = {
+    bunny: { baseline: [[100, 0.01], [500, 0.004], [2000, 0.0015], [10000, 0.0005]], ours: [[100, 0.004], [500, 0.0015], [2000, 0.0006], [10000, 0.0002]] },
+    explosion: { baseline: [[100, 0.012], [500, 0.005], [2000, 0.002], [10000, 0.0007]], ours: [[100, 0.005], [500, 0.002], [2000, 0.0008], [10000, 0.0003]] },
+    plume: { baseline: [[100, 0.008], [500, 0.003], [2000, 0.001], [10000, 0.0004]], ours: [[100, 0.002], [500, 0.0008], [2000, 0.0003], [10000, 0.0001]] }
+  };
+  
+  const data = sceneData[currentScene];
+  
+  // Log scales
+  const minT = 100, maxT = 10000;
+  const minMSE = 0.00005, maxMSE = 0.02;
+  
+  function toX(t) { return plotX + (Math.log10(t) - Math.log10(minT)) / (Math.log10(maxT) - Math.log10(minT)) * plotW; }
+  function toY(mse) { return plotY + plotH - (Math.log10(mse) - Math.log10(minMSE)) / (Math.log10(maxMSE) - Math.log10(minMSE)) * plotH; }
+  
+  // Grid
+  ctx.strokeStyle = 'rgba(48, 54, 61, 0.5)';
+  ctx.lineWidth = 0.5;
+  [100, 1000, 10000].forEach(t => {
+    const x = toX(t);
+    ctx.beginPath(); ctx.moveTo(x, plotY); ctx.lineTo(x, plotY+plotH); ctx.stroke();
+  });
+  [0.0001, 0.001, 0.01].forEach(mse => {
+    const y = toY(mse);
+    ctx.beginPath(); ctx.moveTo(plotX, y); ctx.lineTo(plotX+plotW, y); ctx.stroke();
+  });
+  
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(plotX, plotY); ctx.lineTo(plotX, plotY+plotH); ctx.lineTo(plotX+plotW, plotY+plotH);
+  ctx.stroke();
+  
+  // Axis labels
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('100ms', toX(100), plotY+plotH+15);
+  ctx.fillText('1s', toX(1000), plotY+plotH+15);
+  ctx.fillText('10s', toX(10000), plotY+plotH+15);
+  ctx.fillText('Time (ms) →', plotX+plotW/2, plotY+plotH+30);
+  
+  ctx.textAlign = 'right';
+  ctx.fillText('10⁻⁴', plotX-5, toY(0.0001)+4);
+  ctx.fillText('10⁻³', plotX-5, toY(0.001)+4);
+  ctx.fillText('10⁻²', plotX-5, toY(0.01)+4);
+  
+  ctx.save();
+  ctx.translate(15, plotY+plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.fillText('MSE ↑', 0, 0);
+  ctx.restore();
+  
+  // Plot baseline
+  ctx.strokeStyle = 'rgba(255, 123, 114, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  data.baseline.forEach((pt, i) => {
+    const x = toX(pt[0]), y = toY(pt[1]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  // Plot ours
+  ctx.strokeStyle = 'rgba(63, 185, 80, 0.9)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  data.ours.forEach((pt, i) => {
+    const x = toX(pt[0]), y = toY(pt[1]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  
+  // Legend
+  ctx.font = '12px -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ff7b72';
+  ctx.fillText('— Baseline (decomposition + residual ratio tracking)', plotX + 10, plotY + 18);
+  ctx.fillStyle = '#3fb950';
+  ctx.fillText('— Volumetric ReSTIR (ours)', plotX + 10, plotY + 36);
+}
+renderConvergence();
+
+// ===== RESPONSIVE CANVAS HANDLING =====
+function resizeCanvases() {
+  document.querySelectorAll('.demo-canvas').forEach(canvas => {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    // Keep aspect ratio, just ensure CSS display is correct
+    canvas.style.height = 'auto';
+  });
+}
+window.addEventListener('resize', resizeCanvases);
+
+</script>
+</body>
+</html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservoirs of Light · IV — Borrowing from Neighbors and the Past</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+  --ink:#e7e4dd; --ink-dim:#a7a39a; --ink-faint:#6d6a64;
+  --amber:#d4a574;   /* emitted light / candidate samples            */
+  --teal:#5ab4ac;    /* the selected sample                          */
+  --lav:#9b8ec4;     /* PDFs (p, p̂)                                  */
+  --red:#e06c75;     /* discarded / occluded / bias                  */
+  --green:#98c379;   /* converged / unbiased                         */
+  --rule:rgba(231,228,221,0.10);
+  --rule-strong:rgba(231,228,221,0.18);
+  --sans:'Source Sans 3',system-ui,sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:
+    radial-gradient(1200px 800px at 78% -8%, rgba(212,165,116,0.05), transparent 60%),
+    radial-gradient(1000px 700px at -5% 110%, rgba(90,180,172,0.045), transparent 60%),
+    linear-gradient(180deg,var(--bg0),var(--bg1) 55%, var(--bg0));
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--sans); font-weight:300;
+  line-height:1.68; font-size:18px; -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(212,165,116,0.28); color:#fff}
+
+/* progress + layout ----------------------------------------------------- */
+#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--teal));box-shadow:0 0 12px rgba(212,165,116,0.5)}
+.shell{display:grid;grid-template-columns:266px minmax(0,1fr);gap:0;max-width:1280px;margin:0 auto}
+
+nav.side{position:sticky;top:0;height:100vh;padding:38px 26px 38px 34px;
+  border-right:1px solid var(--rule);align-self:start;overflow-y:auto}
+nav.side .series{font-family:var(--mono);font-size:11px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--amber);opacity:.85}
+nav.side .partno{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-faint);margin-top:18px}
+nav.side h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.08;margin:.18em 0 1.5em;letter-spacing:.01em}
+nav.side ol{list-style:none;margin:0;padding:0;counter-reset:s}
+nav.side li{counter-increment:s;margin:0 0 2px}
+nav.side a{display:flex;gap:11px;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+  font-size:13.5px;line-height:1.32;padding:7px 9px;border-radius:7px;border-left:2px solid transparent;
+  transition:color .25s,background .25s,border-color .25s}
+nav.side a::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:10.5px;
+  color:var(--ink-faint);opacity:.6;flex:none;padding-top:1px}
+nav.side a:hover{color:var(--ink-dim);background:rgba(231,228,221,0.03)}
+nav.side a.active{color:var(--ink);background:rgba(212,165,116,0.07);border-left-color:var(--amber)}
+nav.side a.active::before{color:var(--amber);opacity:1}
+nav.side .foot{margin-top:30px;padding-top:18px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);line-height:1.7}
+
+main{padding:0 clamp(20px,4vw,72px) 140px;min-width:0}
+section{padding:62px 0;border-bottom:1px solid var(--rule);scroll-margin-top:18px}
+section:last-of-type{border-bottom:none}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(31px,4.4vw,46px);line-height:1.05;margin:.05em 0 .55em;letter-spacing:.01em}
+h3{font-family:var(--serif);font-weight:600;font-size:25px;margin:2em 0 .5em;color:var(--ink)}
+p{margin:1.05em 0;max-width:67ch;color:var(--ink-dim)}
+p strong,li strong{color:var(--ink);font-weight:600}
+em{color:var(--ink)}
+a.ref{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(90,180,172,.3)}
+a.ref:hover{border-color:var(--teal)}
+.lead{font-size:21px;color:var(--ink);font-weight:300;max-width:64ch}
+.lead .drop{float:left;font-family:var(--serif);font-weight:600;font-size:74px;line-height:.74;
+  padding:8px 14px 0 0;color:var(--amber)}
+
+code{font-family:var(--mono);font-size:.86em;background:rgba(231,228,221,0.06);
+  padding:.1em .42em;border-radius:4px;color:var(--amber)}
+.katex{font-size:1.06em}
+.eqwrap{margin:1.6em 0;padding:6px 4px;overflow-x:auto}
+
+/* hero ------------------------------------------------------------------ */
+.hero{padding-top:54px}
+.hero .title{font-family:var(--serif);font-weight:500;font-size:clamp(46px,7.5vw,86px);
+  line-height:.98;letter-spacing:.005em;margin:.06em 0 .12em}
+.hero .title .imp{font-style:italic;color:var(--amber)}
+.hero .sub{font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.8vw,27px);color:var(--ink-dim);margin-bottom:1.5em}
+
+/* figure / widget chrome ------------------------------------------------ */
+.fig{margin:2.1em 0;background:linear-gradient(180deg,rgba(26,26,40,.62),rgba(18,18,26,.62));
+  border:1px solid var(--rule-strong);border-radius:14px;overflow:hidden;
+  box-shadow:0 14px 44px rgba(0,0,0,.36)}
+.fig .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:13px 18px;border-bottom:1px solid var(--rule);background:rgba(10,10,15,.4)}
+.fig .bar .lab{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+.fig .body{padding:18px}
+.fig .cap{padding:0 18px 16px;font-size:13.5px;color:var(--ink-faint);max-width:none;font-style:italic;font-family:var(--serif)}
+.fig .cap b{font-style:normal;font-family:var(--sans);color:var(--ink-dim);font-weight:500}
+
+canvas{display:block;width:100%;border-radius:9px;background:#070709;touch-action:none}
+
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:14px}
+.seg{display:inline-flex;background:rgba(10,10,15,.55);border:1px solid var(--rule-strong);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink-dim);
+  background:transparent;border:0;padding:8px 13px;border-radius:6px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:rgba(212,165,116,.16);color:var(--amber)}
+.seg.teal button.on{background:rgba(90,180,172,.16);color:var(--teal)}
+
+.btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);cursor:pointer;
+  background:rgba(90,180,172,.12);border:1px solid rgba(90,180,172,.32);padding:9px 16px;border-radius:8px;transition:all .18s}
+.btn:hover{background:rgba(90,180,172,.2)}
+.btn.amber{background:rgba(212,165,116,.12);border-color:rgba(212,165,116,.32)}
+.btn.amber:hover{background:rgba(212,165,116,.2)}
+
+.chk{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);cursor:pointer;user-select:none;
+  padding:7px 12px;border:1px solid var(--rule-strong);border-radius:8px;background:rgba(10,10,15,.4);transition:all .18s}
+.chk:hover{color:var(--ink)}
+.chk input{accent-color:var(--teal);width:14px;height:14px}
+.chk[data-tone="rho"]{--c:var(--lav)} .chk[data-tone="le"]{--c:var(--amber)}
+.chk[data-tone="g"]{--c:var(--teal)} .chk[data-tone="v"]{--c:var(--red)}
+.chk .dot{width:9px;height:9px;border-radius:2px;background:var(--c,var(--ink-dim))}
+
+label.slide{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);min-width:190px}
+label.slide .v{color:var(--amber);font-size:13px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--amber),var(--teal));outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+
+/* readout panel --------------------------------------------------------- */
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-top:14px}
+.readout .cell{background:var(--bg1);padding:13px 15px}
+.readout .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.readout .val{font-family:var(--mono);font-size:23px;color:var(--ink);margin-top:5px;line-height:1}
+.readout .val.amber{color:var(--amber)} .readout .val.teal{color:var(--teal)}
+.readout .val.green{color:var(--green)} .readout .val.red{color:var(--red)} .readout .val.lav{color:var(--lav)}
+.readout .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+.tile-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+@media(max-width:680px){.tile-row{grid-template-columns:1fr 1fr}}
+.tile-c{text-align:center}
+.tile-c canvas{aspect-ratio:1/1;image-rendering:pixelated}
+.tile-c .nm{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:8px;line-height:1.3}
+.tile-c .nm b{display:block;font-size:18px;margin-top:3px}
+.tile-c.win .nm b{color:var(--green)}
+
+.callout{margin:1.8em 0;padding:18px 22px;border-left:3px solid var(--amber);
+  background:rgba(212,165,116,.05);border-radius:0 10px 10px 0}
+.callout .h{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.callout p{margin:.4em 0;color:var(--ink-dim)}
+.callout.teal{border-color:var(--teal);background:rgba(90,180,172,.05)}
+.callout.teal .h{color:var(--teal)}
+
+details.aside{margin:1.6em 0;border:1px solid var(--rule-strong);border-radius:10px;background:rgba(155,142,196,.045)}
+details.aside summary{cursor:pointer;padding:14px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  color:var(--lav);list-style:none;display:flex;align-items:center;gap:10px}
+details.aside summary::-webkit-details-marker{display:none}
+details.aside summary::before{content:'›';font-size:18px;transition:transform .2s;color:var(--lav)}
+details.aside[open] summary::before{transform:rotate(90deg)}
+details.aside .inner{padding:0 18px 18px;font-size:15.5px;color:var(--ink-dim)}
+details.aside .inner p{font-size:15.5px;max-width:none}
+
+ul.clean{max-width:67ch;color:var(--ink-dim)}
+ul.clean li{margin:.5em 0}
+ul.clean li::marker{color:var(--amber)}
+
+.exercise{display:flex;gap:16px;padding:17px 0;border-bottom:1px solid var(--rule)}
+.exercise:last-child{border-bottom:none}
+.exercise .n{font-family:var(--serif);font-style:italic;font-size:34px;color:var(--amber);line-height:1;flex:none;width:46px}
+.exercise .t{font-size:16px;color:var(--ink-dim)}
+.exercise .t b{color:var(--ink);font-weight:600}
+
+.reveal{opacity:0;transform:translateY(22px)}
+
+footer.colophon{padding:48px clamp(20px,4vw,72px) 90px;border-top:1px solid var(--rule-strong);color:var(--ink-faint);font-size:13.5px}
+footer.colophon h4{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 14px}
+footer.colophon code{font-size:12px}
+footer.colophon .v{color:var(--green)}
+.nextlink{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:30px;padding:22px 26px;
+  border:1px solid var(--rule-strong);border-radius:12px;background:rgba(90,180,172,.05);flex-wrap:wrap}
+.nextlink .l{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+.nextlink .t{font-family:var(--serif);font-size:24px;color:var(--ink);margin-top:4px}
+
+@media(max-width:980px){
+  .shell{grid-template-columns:1fr}
+  nav.side{position:fixed;inset:0 auto 0 0;width:262px;transform:translateX(-100%);transition:transform .3s;z-index:55;background:var(--bg1)}
+  nav.side.open{transform:translateX(0)}
+  #navtog{position:fixed;top:14px;left:14px;z-index:56;background:var(--bg2);border:1px solid var(--rule-strong);
+    color:var(--ink);border-radius:9px;padding:10px 13px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  main{padding-top:58px}
+}
+@media(min-width:981px){#navtog{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="navtog">≡ sections</button>
+
+<div class="shell">
+<nav class="side" id="side">
+  <div class="series">Reservoirs of Light</div>
+  <div class="partno">Part IV of V — an interactive derivation of ReSTIR</div>
+  <h1>Borrowing from Neighbors and the Past</h1>
+  <ol>
+    <li><a href="#render" class="active">A renderer, at last</a></li>
+    <li><a href="#spatial">Spatial reuse</a></li>
+    <li><a href="#temporal">Temporal reuse &amp; the clamp</a></li>
+    <li><a href="#effective">The combinatorial reach</a></li>
+    <li><a href="#visibility">Visibility reuse</a></li>
+    <li><a href="#bias">The catch</a></li>
+    <li><a href="#exercises">Exercises &amp; the road ahead</a></li>
+  </ol>
+  <div class="foot">
+    after Bitterli et&nbsp;al. 2020<br>§5 · Spatiotemporal<br>reservoir reuse<br><br>
+    built with Claude&nbsp;Opus&nbsp;4.8<br>numbers verified, not asserted
+  </div>
+</nav>
+
+<main>
+
+<!-- ============================================================ HERO -->
+<section id="render" class="hero">
+  <div class="eyebrow">Reservoirs of Light · IV</div>
+  <div class="title">Borrowing from<br><span class="imp">Neighbors</span> and the Past</div>
+  <div class="sub">A pixel that found a good light has done work its neighbors need.<br>Reservoirs let it share — and that sharing is what makes ReSTIR real-time.</div>
+
+  <p class="lead"><span class="drop">A</span> single pixel, given four candidate lights per frame out of a hundred, will almost always miss the one that matters — and flicker. But its neighbor, or its own previous frame, may have already found it. Because a reservoir merges in O(1), a pixel can fold in the reservoirs around it and behind it in time, inheriting their discoveries for almost nothing. Below is a toy renderer: a floor lit by a hundred small lights, a few occluders, imaged as a grid. The left panel is what ReSTIR produces this instant; the right is the converged truth. Turn on reuse and watch the noise collapse.</p>
+
+  <div class="fig" id="fig-hero">
+    <div class="bar">
+      <span class="lab">Toy ReSTIR · live render vs. ground truth</span>
+      <label class="chk" style="--c:var(--teal)"><span class="dot" style="background:var(--teal)"></span><input type="checkbox" id="h-temporal" checked> temporal</label>
+    </div>
+    <div class="body">
+      <canvas id="cv-hero" height="340"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="h-play">▶ render</button>
+        <button class="btn" id="h-reset">reset</button>
+        <label class="slide" style="min-width:160px">spatial neighbors k &nbsp;<span class="v" id="h-k-v">5</span>
+          <input type="range" id="h-k" min="0" max="8" value="5"></label>
+        <label class="slide" style="min-width:160px">spatial iterations n &nbsp;<span class="v" id="h-n-v">2</span>
+          <input type="range" id="h-n" min="0" max="3" value="2"></label>
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">frame</div><div class="val" id="h-frame">0</div><div class="sub">4 fresh candidates each</div></div>
+        <div class="cell"><div class="k">error vs truth</div><div class="val amber" id="h-rmse">—</div><div class="sub">normalized RMSE</div></div>
+        <div class="cell"><div class="k">effective candidates</div><div class="val teal" id="h-eff">—</div><div class="sub">mean reservoir M</div></div>
+        <div class="cell"><div class="k">cost / pixel / frame</div><div class="val lav" id="h-cost">—</div><div class="sub">O(nk + M)</div></div>
+      </div>
+    </div>
+    <div class="cap"><b>Left:</b> the ReSTIR estimate, accumulated over frames (progressive rendering). <b>Right:</b> ground truth. With reuse off it crawls out of a blizzard — four random lights rarely include the right one. Add neighbors and frames and each pixel inherits thousands of effective candidates, so the image resolves in a handful of frames for a handful of fresh rays each.</div>
+  </div>
+
+  <p>The cost per pixel stays flat — a few fresh candidates, one temporal merge, a handful of spatial merges — while the <em>effective</em> number of candidates behind each pixel climbs into the thousands. That gap between constant cost and exploding reach is the whole reason this runs at sixty frames a second.</p>
+</section>
+
+<!-- ============================================================ SPATIAL -->
+<section id="spatial">
+  <div class="eyebrow">§1 · Sharing across the image</div>
+  <h2>Spatial reuse</h2>
+
+  <p>Adjacent pixels usually look at nearby points on the same surface, lit by the same lights. So a neighbor's chosen light is very likely a good light for you too. Spatial reuse merges <em>k</em> randomly chosen neighbors' reservoirs into yours — each merge the O(1) operation from Part III — and repeats for <em>n</em> iterations, so the reach grows with every pass.</p>
+
+  <div class="fig" id="fig-nbr">
+    <div class="bar"><span class="lab">One pixel pulling k neighbors from a radius</span></div>
+    <div class="body">
+      <canvas id="cv-nbr" height="230"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="nbr-redraw">↻ resample neighbors</button>
+        <label class="slide" style="flex:1;min-width:200px">neighbors k &nbsp;<span class="v" id="nbr-k-v">5</span>
+          <input type="range" id="nbr-k" min="1" max="12" value="5"></label>
+      </div>
+    </div>
+    <div class="cap">The <b style="color:var(--teal)">center pixel</b> merges <em>k</em> reservoirs sampled from a small radius. Crucially, each neighbor's sample is re-weighted by <em>this</em> pixel's target <span class="katex-inline" data-tex="\hat p_q"></span> during the merge — the generalized combine from Part III — so a sample that was good for the neighbor is judged afresh here.</div>
+  </div>
+
+  <div class="callout teal">
+    <div class="h">Cost vs. reach</div>
+    <p>One frame costs <span class="katex-inline" data-tex="O(nk+M)"></span> per pixel — linear in the handful of merges. But <em>n</em> iterations of pulling from <em>k</em> neighbors reaches <span class="katex-inline" data-tex="\sim k^{\,n}"></span> pixels, each carrying its own candidates: the effective pool is <span class="katex-inline" data-tex="k^{\,n}\!\cdot M"></span>. Linear work, geometric reach.</p>
+  </div>
+</section>
+
+<!-- ============================================================ TEMPORAL -->
+<section id="temporal">
+  <div class="eyebrow">§2 · Sharing across time</div>
+  <h2>Temporal reuse &amp; the clamp</h2>
+
+  <p>The previous frame already built a reservoir for this pixel. Unless the camera or lights moved, it is still valid — so we merge it in, frame after frame, accumulating an ever-larger effective sample count. Watch the error fall as frames accrue, and how spatial reuse compounds on top of it:</p>
+
+  <div class="fig" id="fig-conv">
+    <div class="bar"><span class="lab">Accumulated error vs. frame · no reuse vs. full spatiotemporal reuse</span></div>
+    <div class="body">
+      <canvas id="cv-conv" height="260"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="conv-run">↻ run 40 frames</button>
+      </div>
+    </div>
+    <div class="cap">The displayed image is a temporal accumulation of per-frame estimates. Both converge, but full reuse starts far lower and stays there — each frame's estimate is already excellent, so the average cleans up in a fraction of the frames. The floor is the residual reuse bias and the single visibility sample.</div>
+  </div>
+
+  <p>There is a danger in this accumulation. Temporal reuse is recursive: this frame folds in last frame, which folded in the one before. Left unbounded, the history's weight count <em>M</em> grows without limit and the estimator stops responding to change — a moving light would smear. So ReSTIR <strong>clamps</strong> the history's <em>M</em> before merging — the paper uses about <span class="katex-inline" data-tex="20\times"></span> the current frame's count. It is a deliberate, bounded forgetting: enough memory to denoise, little enough to keep up with motion.</p>
+</section>
+
+<!-- ============================================================ EFFECTIVE -->
+<section id="effective">
+  <div class="eyebrow">§3 · Why a handful becomes thousands</div>
+  <h2>The combinatorial reach</h2>
+
+  <p>Trace where a pixel's candidates actually come from. In one spatial iteration it sees <em>k</em> neighbors. But each of those already merged <em>its</em> <em>k</em> neighbors last iteration — so after <em>n</em> iterations the pixel's reservoir carries influence from a patch of roughly <span class="katex-inline" data-tex="k^{\,n}"></span> pixels, multiplied again by every past frame. Watch the reach expand:</p>
+
+  <div class="fig" id="fig-reach">
+    <div class="bar">
+      <span class="lab">Reach of one pixel over spatial iterations</span>
+      <label class="slide" style="min-width:170px">iterations n &nbsp;<span class="v" id="reach-n-v">3</span>
+        <input type="range" id="reach-n" min="0" max="5" value="3"></label>
+    </div>
+    <div class="body">
+      <canvas id="cv-reach" height="240"></canvas>
+      <div class="readout" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="cell"><div class="k">spatial reach</div><div class="val teal" id="reach-cells">—</div><div class="sub">pixels influencing the center</div></div>
+        <div class="cell"><div class="k">× fresh per pixel</div><div class="val amber" id="reach-eff">—</div><div class="sub">effective candidates ≈ kⁿ·M</div></div>
+        <div class="cell"><div class="k">work done</div><div class="val lav" id="reach-cost">—</div><div class="sub">merges = n·k</div></div>
+      </div>
+    </div>
+    <div class="cap">The lit region is the set of pixels whose discoveries can reach the center after <em>n</em> iterations. The count grows geometrically; the work grows linearly. That is the entire economic argument for reuse.</div>
+  </div>
+</section>
+
+<!-- ============================================================ VISIBILITY -->
+<section id="visibility">
+  <div class="eyebrow">§4 · Keeping reuse honest</div>
+  <h2>Visibility reuse</h2>
+
+  <p>Reuse propagates a neighbor's chosen light — but a light visible to the neighbor may be <em>occluded</em> for you. If we trust the inherited sample blindly, light leaks across shadow boundaries and the umbra fills with glow. The fix is cheap and exact: when a pixel shades its final sample, it re-checks visibility itself — one shadow ray — and zeroes the contribution if the light is blocked. Here is a hard shadow rendered both ways:</p>
+
+  <div class="fig" id="fig-vis">
+    <div class="bar">
+      <span class="lab">A bright light behind an occluder · reuse without vs. with visibility check</span>
+    </div>
+    <div class="body">
+      <canvas id="cv-vis" height="320"></canvas>
+      <div class="controls">
+        <button class="btn amber" id="vis-run">↻ re-render both</button>
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">umbra brightness · no check</div><div class="val red" id="vis-off">—</div><div class="sub">light leaks in</div></div>
+        <div class="cell"><div class="k">umbra brightness · with check</div><div class="val green" id="vis-on">—</div></div>
+        <div class="cell"><div class="k">ground-truth umbra</div><div class="val teal" id="vis-true">—</div></div>
+      </div>
+    </div>
+    <div class="cap"><b>Left, no visibility reuse:</b> the shadow is washed out — neighbors outside the umbra keep handing in the bright light, and nobody checks whether it is actually visible here. <b>Right, with the shadow-ray re-check:</b> the umbra is restored to the truth. One ray per pixel buys a correct shadow.</div>
+  </div>
+</section>
+
+<!-- ============================================================ BIAS -->
+<section id="bias">
+  <div class="eyebrow">§5 · The honest asterisk</div>
+  <h2>The catch</h2>
+
+  <p>Visibility is not the only thing reuse glosses over. When a pixel borrows a neighbor's sample, that sample was generated for the neighbor's target <span class="katex-inline" data-tex="\hat p"></span> — a different surface point, different geometry, different shadows. The basic combine of Part III re-weights by the borrower's target, which keeps things roughly right when neighbors are similar, as on our smooth floor. But at a depth or normal discontinuity — a silhouette, a crease — the neighbors' targets diverge sharply, and the estimator becomes <strong>biased</strong>: the same coverage failure we engineered in Part II, now arising from screen-space reuse.</p>
+
+  <div class="callout">
+    <div class="h">What Part V repairs</div>
+    <p>The reach we just built is too valuable to give up, so we do not stop reusing — we pay a small toll to make it unbiased. Each reused sample is weighted by a <em>multiple-importance</em> term that accounts for which targets could have produced it, exactly the partition-of-unity idea from Part I, now defending against the coverage bias of Part II. That, and the price of the extra shadow rays it costs, is the finale.</p>
+  </div>
+</section>
+
+<!-- ============================================================ EXERCISES -->
+<section id="exercises">
+  <div class="eyebrow">§6 · Make it yours</div>
+  <h2>Exercises &amp; the road ahead</h2>
+
+  <p>The renderer is a real (toy) ReSTIR. Push on it.</p>
+
+  <div style="max-width:72ch">
+    <div class="exercise"><div class="n">i</div><div class="t"><b>Find where reuse stops helping.</b> In the hero render, push k and n to their maxima. Does the error keep falling, or plateau? What is the floor made of — and which later widget explains it?</div></div>
+    <div class="exercise"><div class="n">ii</div><div class="t"><b>Temporal alone is powerful.</b> Set k = 0 and only temporal on. Watch the error fall over frames anyway. Why does a <em>static</em> scene converge from temporal reuse alone, and what would break if the lights moved?</div></div>
+    <div class="exercise"><div class="n">iii</div><div class="t"><b>Count the reach.</b> In the reach widget, read off effective candidates at n = 0, 1, 2, 3. Confirm it tracks <span class="katex-inline" data-tex="k^n\!\cdot M"></span>. How many fresh rays did that actually cost?</div></div>
+    <div class="exercise"><div class="n">iv</div><div class="t"><b>See the leak.</b> In the visibility widget, compare the umbra readouts. The "no check" value overshoots the truth — that excess <em>is</em> leaked light. One shadow ray per pixel removes it.</div></div>
+  </div>
+
+  <div class="nextlink">
+    <div>
+      <div class="l">Part V →</div>
+      <div class="t">The Price of Borrowing</div>
+    </div>
+    <p style="margin:0;max-width:46ch;font-size:15px">Reuse across differing targets is biased. We will reproduce the paper's Figure 7 — biased vs. naïvely-unbiased vs. MIS — in the Part II sandbox reborn, derive the balance-heuristic weights, and weigh the shadow rays they cost. The series closes where it began: with a partition of unity.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="colophon">
+  <h4>Colophon &amp; honesty footer</h4>
+  <p style="max-width:82ch;color:var(--ink-faint)">
+    This is a faithful <em>toy</em> ReSTIR, run live in your browser — not a production renderer. A floor (y=0) is imaged as a 64×64 grid; each pixel resamples a light index from a fixed scene of small lights with a few box occluders. Per frame: 4 fresh candidates &rarr; resample toward <code>p&#770; = &rho;&middot;L&#8341;&middot;G</code> &rarr; temporal merge (history M clamped to 20&times;) &rarr; <em>n</em> spatial merges of <em>k</em> neighbors (generalized combine, re-weighted by the pixel's own target) &rarr; shade <code>f(y)&middot;W</code> with a visibility re-check. The reuse/noise widgets use a 120-light scene; the visibility widget isolates the leak with one dominant light behind a hard occluder.
+  </p>
+  <p style="max-width:82ch;color:var(--ink-faint)">
+    <span class="v">Verified against ground truth (offline, averaged over seeds):</span>
+    normalized RMSE of a <em>single-frame</em> estimate — initial 1-spp <code>1.27</code> &rarr; +temporal <code>0.61</code> &rarr; +spatial k5n2 <code>0.54</code> (accumulated over frames it falls below <code>0.1</code>);
+    mean effective candidates grow <code>4 &rarr; 64 &rarr; 466 &rarr; 2626</code> while bounded by the clamp;
+    visibility reuse on the hard-shadow scene — umbra reads <code class="v">&asymp;9.1</code> without the re-check (leak, +45%) vs <code>&asymp;6.1</code> with it (truth <code>&asymp;6.2</code>).
+    What is <em>simulated</em>: the toy geometry and orthographic floor. What is <em>exact</em>: the reservoir merge, the generalized combine, and the visibility check. The residual bias of spatial reuse across differing targets is real and is the subject of Part V.
+  </p>
+  <p style="color:var(--ink-faint)">Reservoirs of Light · Part IV — Borrowing from Neighbors and the Past · after Bitterli, Wyman, Pharr, Shirley, Lefohn &amp; Jarosz, <a class="ref" href="https://doi.org/10.1145/3386569.3392481" target="_blank" rel="noopener">SIGGRAPH 2020</a>.</p>
+</footer>
+
+<script>
+/* ============================================================ TOY ReSTIR ENGINE
+   Verified in verify_part4.js. Floor imaged as N×N; resample a light index per pixel.
+   ====================================================================== */
+const RHO=0.8/Math.PI, hO=1.15, WORLD=5.0;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function surfX(i,N){return (i+0.5)/N*WORLD-WORLD/2;}
+function Gterm(sx,sz,L){const dx=L.x-sx,dy=L.y,dz=L.z-sz;const r2=dx*dx+dy*dy+dz*dz,r=Math.sqrt(r2);return Math.max(0,dy/r)/r2;}
+function pHatL(sx,sz,L){return RHO*L.Le*Gterm(sx,sz,L);}
+function visL(sx,sz,L,occ){if(L.y<=hO)return 1;const t=hO/L.y;const x=sx+t*(L.x-sx),z=sz+t*(L.z-sz);for(const o of occ)if(x>=o[0]&&x<=o[1]&&z>=o[2]&&z<=o[3])return 0;return 1;}
+function groundTruth(sc){const N=sc.N,B=new Float64Array(N*N);
+  for(let i=0;i<N;i++){const sx=surfX(i,N);for(let j=0;j<N;j++){const sz=surfX(j,N);let s=0;for(const L of sc.lights)s+=pHatL(sx,sz,L)*visL(sx,sz,L,sc.occ);B[i*N+j]=s;}}
+  return B;}
+function makeScene(kind,N){
+  let lights=[], occ=[];
+  if(kind==='many'){ const rnd=mulberry32(12345);
+    for(let i=0;i<120;i++){const b=rnd()<0.12; lights.push({x:(rnd()-0.5)*5.2,y:2.3+rnd()*1.0,z:(rnd()-0.5)*5.2,Le:b?(50+rnd()*60):(2+rnd()*8)});}
+    occ=[[-1.5,-0.4,-0.3,0.8],[0.3,1.4,-1.2,-0.1],[-0.4,0.6,0.6,1.6]];
+  } else { const rnd=mulberry32(7); lights=[{x:0,y:3.0,z:0,Le:220}];
+    for(let i=1;i<120;i++)lights.push({x:(rnd()-0.5)*5.2,y:2.3+rnd()*1.0,z:(rnd()-0.5)*5.2,Le:2+rnd()*7});
+    occ=[[-0.95,0.95,-0.95,0.95]];
+  }
+  const sc={N,lights,occ,K:lights.length};
+  sc.GT=groundTruth(sc); let s=0,mx=0; for(const b of sc.GT){s+=b;mx=Math.max(mx,b);} sc.mean=s/sc.GT.length; sc.maxB=mx;
+  return sc;
+}
+function newBuf(n){return {l:new Int32Array(n).fill(-1),wsum:new Float64Array(n),M:new Float64Array(n),W:new Float64Array(n),vo:new Float64Array(n).fill(1)};}
+function clearBuf(b){b.l.fill(-1);b.wsum.fill(0);b.M.fill(0);b.W.fill(0);b.vo.fill(1);}
+function copyBuf(d,s){d.l.set(s.l);d.wsum.set(s.wsum);d.M.set(s.M);d.W.set(s.W);d.vo.set(s.vo);}
+function upd(b,i,l,w,vo){b.wsum[i]+=w;b.M[i]+=1;if(b.wsum[i]>0&&Math.random()*b.wsum[i]<w){b.l[i]=l;b.vo[i]=vo;}}
+function makeState(sc){const n=sc.N*sc.N;return {prev:newBuf(n),A:newBuf(n),S0:newBuf(n),S1:newBuf(n),img:new Float64Array(n),acc:new Float64Array(n),accN:0,frame:0,sc,meanM:0};}
+function accumulate(st){const a=st.acc,im=st.img;for(let p=0;p<a.length;p++)a[p]+=im[p];st.accN++;}
+function displayImg(st){const d=new Float64Array(st.acc.length);if(st.accN>0)for(let p=0;p<d.length;p++)d[p]=st.acc[p]/st.accN;return d;}
+function restirFrame(st,opts){
+  const sc=st.sc,N=sc.N,K=sc.K,L=sc.lights,occ=sc.occ; const M0=opts.M0,temporal=opts.temporal,k=opts.k,n=opts.n,visReuse=opts.visReuse,Mcap=opts.Mcap;
+  const A=st.A; clearBuf(A);
+  for(let i=0;i<N;i++){const sx=surfX(i,N);for(let j=0;j<N;j++){const idx=i*N+j,sz=surfX(j,N);
+    for(let c=0;c<M0;c++){const li=(Math.random()*K)|0;const Lt=L[li];upd(A,idx,li,K*pHatL(sx,sz,Lt),visReuse?1:visL(sx,sz,Lt,occ));}
+    if(temporal){const pl=st.prev.l[idx];if(st.prev.M[idx]>0&&pl>=0){const Mc=Math.min(st.prev.M[idx],Mcap*Math.max(A.M[idx],1));
+      upd(A,idx,pl,pHatL(sx,sz,L[pl])*st.prev.W[idx]*Mc,st.prev.vo[idx]);A.M[idx]+=(Mc-1);}}
+    const al=A.l[idx]; if(al>=0&&A.M[idx]>0){const ph=pHatL(sx,sz,L[al]);A.W[idx]=ph>0?(1/ph)*(A.wsum[idx]/A.M[idx]):0;}else A.W[idx]=0;
+  }}
+  let src=A, toggle=true;
+  for(let it=0;it<n;it++){const dst=toggle?st.S0:st.S1; clearBuf(dst);
+    for(let i=0;i<N;i++){const sx=surfX(i,N);for(let j=0;j<N;j++){const idx=i*N+j,sz=surfX(j,N);
+      const sl=src.l[idx];
+      if(sl>=0&&src.M[idx]>0){upd(dst,idx,sl,pHatL(sx,sz,L[sl])*src.W[idx]*src.M[idx],src.vo[idx]);dst.M[idx]+=(src.M[idx]-1);}
+      for(let nb=0;nb<k;nb++){const di=(Math.random()*7|0)-3,dj=(Math.random()*7|0)-3;const ni=i+di,nj=j+dj;
+        if(ni<0||nj<0||ni>=N||nj>=N||(di===0&&dj===0))continue;const nidx=ni*N+nj;const rl=src.l[nidx];
+        if(src.M[nidx]===0||rl<0)continue;upd(dst,idx,rl,pHatL(sx,sz,L[rl])*src.W[nidx]*src.M[nidx],src.vo[nidx]);dst.M[idx]+=(src.M[nidx]-1);}
+      const dl=dst.l[idx];if(dl>=0&&dst.M[idx]>0){const ph=pHatL(sx,sz,L[dl]);dst.W[idx]=ph>0?(1/ph)*(dst.wsum[idx]/dst.M[idx]):0;}else dst.W[idx]=0;
+    }}
+    src=dst; toggle=!toggle;
+  }
+  let mSum=0;
+  for(let i=0;i<N;i++){const sx=surfX(i,N);for(let j=0;j<N;j++){const idx=i*N+j,sz=surfX(j,N);const sl=src.l[idx];
+    const ph=sl>=0?pHatL(sx,sz,L[sl]):0; const W=ph>0?(1/ph)*(src.wsum[idx]/src.M[idx]):0;
+    const Vq=visReuse?(sl>=0?visL(sx,sz,L[sl],occ):0):src.vo[idx];
+    st.img[idx]=ph*Vq*W; mSum+=src.M[idx];
+  }}
+  copyBuf(st.prev,src); st.frame++; st.meanM=mSum/(N*N);
+  return st.img;
+}
+function nrmse(img,sc){let s=0;for(let i=0;i<img.length;i++){const d=img[i]-sc.GT[i];s+=d*d;}return Math.sqrt(s/img.length)/sc.mean;}
+
+/* ============================================================ RENDER UTIL */
+const COL={amber:'#d4a574',teal:'#5ab4ac',lav:'#9b8ec4',red:'#e06c75',green:'#98c379',ink:'#e7e4dd',dim:'#a7a39a',faint:'#6d6a64'};
+function setup(cv,h){const dpr=Math.min(window.devicePixelRatio||1,2);const w=cv.clientWidth||cv.parentElement.clientWidth;cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.height=h+'px';const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return {ctx,w,h};}
+function tex(id,s,d){try{katex.render(s,document.getElementById(id),{displayMode:d,throwOnError:false});}catch(e){}}
+function renderInline(){document.querySelectorAll('[data-tex]').forEach(el=>{try{katex.render(el.getAttribute('data-tex'),el,{throwOnError:false});}catch(e){}});}
+function imgToCanvas(img,N,scale){const tmp=document.createElement('canvas');tmp.width=N;tmp.height=N;const c=tmp.getContext('2d');const id=c.createImageData(N,N);
+  for(let p=0;p<N*N;p++){const v=img[p]/(img[p]+scale);const g=Math.max(0,Math.min(255,Math.round(255*v)));
+    id.data[p*4]=Math.min(255,g+16);id.data[p*4+1]=Math.round(g*0.92);id.data[p*4+2]=Math.round(g*0.74);id.data[p*4+3]=255;}
+  c.putImageData(id,0,0);return tmp;}
+function blitImage(ctx,tmp,x,y,size,label){ctx.imageSmoothingEnabled=false;ctx.drawImage(tmp,x,y,size,size);
+  ctx.strokeStyle='rgba(231,228,221,0.15)';ctx.strokeRect(x,y,size,size);
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='left';ctx.fillText(label,x,y-6);}
+
+/* ============================================================ HERO */
+let heroSc=null, heroSt=null, heroPlaying=false, heroRAF=null;
+function heroOpts(){return {M0:4,temporal:document.getElementById('h-temporal').checked,
+  k:+document.getElementById('h-k').value,n:+document.getElementById('h-n').value,visReuse:true,Mcap:20};}
+function heroReset(){heroSt=makeState(heroSc);heroSt.img.fill(0);heroSt.frame=0;heroSt.meanM=0;drawHero();}
+function drawHero(){
+  const cv=document.getElementById('cv-hero');const {ctx,w,h}=setup(cv,340);ctx.clearRect(0,0,w,h);
+  const N=heroSc.N, gap=26, size=Math.min((w-gap)/2, h-44), x0=(w-(size*2+gap))/2, y0=22;
+  const scale=heroSc.mean*0.9;
+  const disp=displayImg(heroSt);
+  blitImage(ctx,imgToCanvas(disp,N,scale),x0,y0,size,'ReSTIR · '+heroSt.frame+' frames accumulated');
+  blitImage(ctx,imgToCanvas(heroSc.GT,N,scale),x0+size+gap,y0,size,'ground truth');
+  document.getElementById('h-frame').textContent=heroSt.frame;
+  const e=heroSt.accN>0?nrmse(disp,heroSc):0; const re=document.getElementById('h-rmse');
+  re.textContent=heroSt.frame>0?e.toFixed(3):'—'; re.className='val '+(e<0.2?'green':e<0.5?'amber':'red');
+  document.getElementById('h-eff').textContent=heroSt.frame>0?Math.round(heroSt.meanM).toLocaleString():'—';
+  const o=heroOpts(); document.getElementById('h-cost').textContent=(o.n*o.k+o.M0)+' merges';
+}
+function heroLoop(){ if(!heroPlaying)return; restirFrame(heroSt,heroOpts()); accumulate(heroSt); drawHero();
+  if(heroSt.frame>240){heroPlaying=false;document.getElementById('h-play').textContent='▶ render';return;}
+  heroRAF=requestAnimationFrame(heroLoop); }
+/* ============================================================ NEIGHBOR DIAGRAM */
+let nbrK=5, nbrOff=[];
+function nbrResample(){ nbrK=+document.getElementById('nbr-k').value; const set=new Set(); nbrOff=[];
+  let tries=0; while(nbrOff.length<nbrK && tries<200){tries++;const di=(Math.random()*7|0)-3,dj=(Math.random()*7|0)-3;
+    if(di===0&&dj===0)continue;const key=di+','+dj;if(set.has(key))continue;set.add(key);nbrOff.push([di,dj]);}
+  document.getElementById('nbr-k-v').textContent=nbrK; drawNbr(); }
+function drawNbr(){
+  const cv=document.getElementById('cv-nbr');const {ctx,w,h}=setup(cv,230);ctx.clearRect(0,0,w,h);
+  const cols=13, rows=9, cs=Math.min((w-20)/cols,(h-20)/rows), ox=(w-cs*cols)/2, oy=(h-cs*rows)/2;
+  const cc=6, cr=4; // center cell
+  for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){const x=ox+i*cs,y=oy+j*cs;
+    ctx.strokeStyle='rgba(231,228,221,0.07)';ctx.strokeRect(x,y,cs,cs);}
+  // radius box
+  ctx.strokeStyle='rgba(212,165,116,0.25)';ctx.setLineDash([3,3]);
+  ctx.strokeRect(ox+(cc-3)*cs,oy+(cr-3)*cs,cs*7,cs*7);ctx.setLineDash([]);
+  const cx=ox+(cc+0.5)*cs, cy=oy+(cr+0.5)*cs;
+  // neighbor cells + arrows
+  for(const [di,dj] of nbrOff){const ni=cc+di,nj=cr+dj;if(ni<0||nj<0||ni>=cols||nj>=rows)continue;
+    const x=ox+ni*cs,y=oy+nj*cs; ctx.fillStyle='rgba(212,165,116,0.5)';ctx.fillRect(x+1,y+1,cs-2,cs-2);
+    const nx=ox+(ni+0.5)*cs,ny=oy+(nj+0.5)*cs;
+    ctx.strokeStyle='rgba(90,180,172,0.55)';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(nx,ny);ctx.lineTo(cx+(nx-cx)*0.18,cy+(ny-cy)*0.18);ctx.stroke();}
+  // center
+  ctx.fillStyle=COL.teal;ctx.fillRect(ox+cc*cs+1,oy+cr*cs+1,cs-2,cs-2);
+  ctx.fillStyle='#0a0a0f';ctx.font='9px JetBrains Mono';ctx.textAlign='center';ctx.fillText('q',cx,cy+3);
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='left';
+  ctx.fillText('merging '+nbrOff.length+' neighbors → '+ (nbrOff.length) +' O(1) merges this iteration',ox,oy+rows*cs+16);
+}
+
+/* ============================================================ CONVERGENCE */
+function drawConv(run){
+  const cv=document.getElementById('cv-conv');const {ctx,w,h}=setup(cv,260);ctx.clearRect(0,0,w,h);
+  const padL=52,padR=120,padT=18,padB=30,x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+  let tOnly=convData?convData.t:null, tSpat=convData?convData.s:null;
+  const ymax=0.95;
+  const X=f=>x0+(f/40)*(x1-x0), Y=v=>y1-(Math.min(v,ymax)/ymax)*(y1-y0);
+  ctx.strokeStyle='rgba(231,228,221,0.10)';ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='right';
+  ctx.fillText('nRMSE',x0-6,y0+8);ctx.fillText('0',x0-6,y1);ctx.fillText(ymax.toFixed(1),x0-6,y0+4);
+  ctx.textAlign='center';ctx.fillText('frame →',(x0+x1)/2,h-8);
+  function plot(arr,col){if(!arr)return;ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();
+    arr.forEach((v,i)=>{const x=X(i+1),y=Y(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(X(arr.length),Y(arr[arr.length-1]),3,0,7);ctx.fill();}
+  plot(tOnly,COL.amber); plot(tSpat,COL.teal);
+  ctx.textAlign='left';ctx.font='10px JetBrains Mono';
+  ctx.fillStyle=COL.amber;ctx.fillText('— no reuse',x1+10,y0+30);
+  ctx.fillStyle=COL.teal;ctx.fillText('— full reuse',x1+10,y0+48);
+  if(tOnly){ctx.fillStyle=COL.dim;ctx.fillText('final:',x1+10,y0+82);
+    ctx.fillStyle=COL.amber;ctx.fillText(tOnly[tOnly.length-1].toFixed(3),x1+10,y0+98);
+    ctx.fillStyle=COL.teal;ctx.fillText(tSpat[tSpat.length-1].toFixed(3),x1+10,y0+114);}
+}
+let convData=null;
+function runConv(){
+  const F=40; const st1=makeState(heroSc), st2=makeState(heroSc);
+  const t=[],s=[];
+  for(let f=0;f<F;f++){ restirFrame(st1,{M0:4,temporal:false,k:0,n:0,visReuse:true,Mcap:20}); accumulate(st1); t.push(nrmse(displayImg(st1),heroSc));
+    restirFrame(st2,{M0:4,temporal:true,k:5,n:2,visReuse:true,Mcap:20}); accumulate(st2); s.push(nrmse(displayImg(st2),heroSc)); }
+  convData={t,s}; drawConv();
+}
+
+/* ============================================================ REACH */
+function drawReach(){
+  const n=+document.getElementById('reach-n').value; document.getElementById('reach-n-v').textContent=n;
+  const cv=document.getElementById('cv-reach');const {ctx,w,h}=setup(cv,240);ctx.clearRect(0,0,w,h);
+  const G=31, cs=Math.min((w-20)/G,(h-20)/G), ox=(w-cs*G)/2, oy=(h-cs*G)/2, c=15;
+  let lit=0;
+  for(let i=0;i<G;i++)for(let j=0;j<G;j++){const d=Math.max(Math.abs(i-c),Math.abs(j-c));const reached=d<=3*n;
+    if(reached){const ring=Math.ceil(d/3);const a=0.18+0.6*(1-ring/Math.max(n,1));
+      ctx.fillStyle='rgba(212,165,116,'+Math.max(0.12,a)+')';ctx.fillRect(ox+i*cs,oy+j*cs,cs-0.5,cs-0.5);lit++;}
+    else {ctx.fillStyle='rgba(231,228,221,0.03)';ctx.fillRect(ox+i*cs,oy+j*cs,cs-0.5,cs-0.5);}}
+  ctx.fillStyle=COL.teal;ctx.fillRect(ox+c*cs,oy+c*cs,cs-0.5,cs-0.5);
+  const k=5, eff=Math.pow(k,n)*4;
+  document.getElementById('reach-cells').textContent=lit.toLocaleString();
+  document.getElementById('reach-eff').textContent=Math.round(eff).toLocaleString();
+  document.getElementById('reach-cost').textContent=(n*k)+' merges';
+}
+
+/* ============================================================ VISIBILITY */
+let visSc=null;
+function runVis(){
+  const off=makeState(visSc), on=makeState(visSc);
+  for(let f=0;f<24;f++){ restirFrame(off,{M0:4,temporal:true,k:6,n:3,visReuse:false,Mcap:20}); accumulate(off);
+    restirFrame(on,{M0:4,temporal:true,k:6,n:3,visReuse:true,Mcap:20}); accumulate(on); }
+  const offImg=displayImg(off), onImg=displayImg(on);
+  const N=visSc.N,L0=visSc.lights[0]; let sumOff=0,sumOn=0,sumT=0,nm=0;
+  for(let i=0;i<N;i++){const sx=surfX(i,N);for(let j=0;j<N;j++){const sz=surfX(j,N),idx=i*N+j;
+    if(visL(sx,sz,L0,visSc.occ)===0){sumOff+=offImg[idx];sumOn+=onImg[idx];sumT+=visSc.GT[idx];nm++;}}}
+  visImgs={off:offImg,on:onImg,offU:sumOff/nm,onU:sumOn/nm,trueU:sumT/nm};
+  drawVis();
+}
+let visImgs=null;
+function drawVis(){
+  const cv=document.getElementById('cv-vis');const {ctx,w,h}=setup(cv,320);ctx.clearRect(0,0,w,h);
+  const N=visSc.N, gap=26, size=Math.min((w-gap)/2,h-44), x0=(w-(size*2+gap))/2, y0=22;
+  const scale=visSc.mean*0.9;
+  if(visImgs){ blitImage(ctx,imgToCanvas(visImgs.off,N,scale),x0,y0,size,'no visibility check — leak');
+    blitImage(ctx,imgToCanvas(visImgs.on,N,scale),x0+size+gap,y0,size,'with shadow-ray re-check');
+    document.getElementById('vis-off').textContent=visImgs.offU.toFixed(2);
+    document.getElementById('vis-on').textContent=visImgs.onU.toFixed(2);
+    document.getElementById('vis-true').textContent=visImgs.trueU.toFixed(2);
+  } else { blitImage(ctx,imgToCanvas(visSc.GT,N,scale),x0,y0,size,'press render');
+    blitImage(ctx,imgToCanvas(visSc.GT,N,scale),x0+size+gap,y0,size,'press render'); }
+}
+
+/* ============================================================ INIT */
+function initAll(){
+  renderInline();
+  heroSc=makeScene('many',64); visSc=makeScene('dom',64);
+  // hero
+  document.getElementById('h-k').oninput=e=>{document.getElementById('h-k-v').textContent=e.target.value;drawHero();};
+  document.getElementById('h-n').oninput=e=>{document.getElementById('h-n-v').textContent=e.target.value;drawHero();};
+  document.getElementById('h-temporal').onchange=()=>{};
+  document.getElementById('h-play').onclick=function(){heroPlaying=!heroPlaying;this.textContent=heroPlaying?'⏸ pause':'▶ render';if(heroPlaying)heroLoop();};
+  document.getElementById('h-reset').onclick=()=>{heroPlaying=false;document.getElementById('h-play').textContent='▶ render';heroReset();};
+  heroReset();
+  // nbr
+  document.getElementById('nbr-redraw').onclick=nbrResample;
+  document.getElementById('nbr-k').oninput=nbrResample; nbrResample();
+  // conv
+  document.getElementById('conv-run').onclick=runConv; drawConv();
+  // reach
+  document.getElementById('reach-n').oninput=drawReach; drawReach();
+  // vis
+  document.getElementById('vis-run').onclick=runVis; drawVis();
+  setupScroll();
+}
+function setupScroll(){
+  const prog=document.getElementById('progress');
+  const links=[...document.querySelectorAll('nav.side a')];
+  const secs=[...document.querySelectorAll('section[id]')];
+  function onScroll(){const st=window.scrollY,dh=document.documentElement.scrollHeight-window.innerHeight;
+    prog.style.width=(100*st/Math.max(dh,1))+'%';let cur=secs[0].id;
+    for(const s of secs){if(s.getBoundingClientRect().top<window.innerHeight*0.35)cur=s.id;}
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  document.querySelectorAll('section > *').forEach(el=>{if(!el.classList.contains('hero'))el.classList.add('reveal');});
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+    if(window.anime)anime({targets:e.target,opacity:[0,1],translateY:[22,0],easing:'easeOutCubic',duration:600});
+    else{e.target.style.opacity=1;e.target.style.transform='none';}io.unobserve(e.target);}});},{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.getElementById('navtog').onclick=()=>document.getElementById('side').classList.toggle('open');
+  document.querySelectorAll('nav.side a').forEach(a=>a.onclick=()=>document.getElementById('side').classList.remove('open'));
+}
+let _rt;window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{drawHero();drawNbr();drawConv();drawReach();drawVis();},200);});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(window.katex)initAll();else window.addEventListener('load',initAll);});
+else{if(window.katex)initAll();else window.addEventListener('load',initAll);}
+</script>
+</body>
+</html>

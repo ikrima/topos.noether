@@ -1,0 +1,2056 @@
+
+                        <!DOCTYPE html>
+                        <html lang="en">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+							<style>
+								body {
+									background-color: white; /* Ensure the iframe has a white background */
+								}
+
+								
+							</style>
+                        </head>
+                        <body>
+                            <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volumetric ReSTIR — An Interactive Visual Essay</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --bg-lighter: #222240;
+  --text: #e8e8f0;
+  --text-dim: #a0a0b8;
+  --col-light: #FFD93D;
+  --col-transmittance: #4D96FF;
+  --col-target: #FF6B6B;
+  --col-reservoir: #6BCB77;
+  --col-path: #B07FFF;
+  --col-candidate: #F39C12;
+  --col-accent: #00D4AA;
+  --max-width: 720px;
+  --demo-bg: #12121f;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Georgia', serif;
+  font-size: 18px;
+  line-height: 1.75;
+  overflow-x: hidden;
+}
+
+.content {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 60px 24px 120px;
+}
+
+h1 {
+  font-size: 2.4em;
+  font-weight: 400;
+  margin-bottom: 0.3em;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.6em;
+  font-weight: 400;
+  margin-top: 3em;
+  margin-bottom: 0.8em;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  color: var(--text-dim);
+}
+
+p {
+  margin-bottom: 1.2em;
+}
+
+em { font-style: italic; color: var(--text); }
+
+.highlight-light { color: var(--col-light); font-weight: 600; }
+.highlight-trans { color: var(--col-transmittance); font-weight: 600; }
+.highlight-target { color: var(--col-target); font-weight: 600; }
+.highlight-reservoir { color: var(--col-reservoir); font-weight: 600; }
+.highlight-path { color: var(--col-path); font-weight: 600; }
+.highlight-candidate { color: var(--col-candidate); font-weight: 600; }
+.highlight-accent { color: var(--col-accent); font-weight: 600; }
+
+.demo-container {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  background: var(--demo-bg);
+  border-top: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 32px 24px;
+  margin-top: 2em;
+  margin-bottom: 2em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.demo-inner {
+  max-width: 900px;
+  width: 100%;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+  cursor: crosshair;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.slider-row label {
+  min-width: 140px;
+  font-family: 'Courier New', monospace;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  outline: none;
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--col-accent);
+  cursor: pointer;
+}
+
+.slider-row .value-display {
+  min-width: 50px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 6px 16px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.15s;
+}
+
+.btn:hover { background: rgba(255,255,255,0.12); }
+.btn.active { background: var(--col-accent); color: #000; border-color: var(--col-accent); }
+
+.formula {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin: 1.5em 0;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  line-height: 2;
+  overflow-x: auto;
+}
+
+.formula .term-light { color: var(--col-light); }
+.formula .term-trans { color: var(--col-transmittance); }
+.formula .term-target { color: var(--col-target); }
+.formula .term-reservoir { color: var(--col-reservoir); }
+.formula .term-path { color: var(--col-path); }
+
+.note {
+  font-size: 0.85em;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: -0.5em;
+  margin-bottom: 1.5em;
+}
+
+.caption {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 8px;
+  text-align: center;
+  font-style: italic;
+}
+
+.pause-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  padding: 8px 14px;
+  background: rgba(26,26,46,0.9);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--text-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+}
+
+.separator {
+  width: 60px;
+  height: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 3em auto;
+}
+
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  h1 { font-size: 1.8em; }
+  h2 { font-size: 1.3em; }
+  .content { padding: 40px 16px 80px; }
+  .slider-row { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸ Pause animations</button>
+
+<div class="content">
+
+<h1>Volumetric ReSTIR</h1>
+<p class="note">An interactive exploration of spatiotemporal reservoir resampling for volume rendering</p>
+
+<p>Imagine you're looking at a volume of smoke illuminated by hundreds of dynamic lights—an environment map, flickering emissive panels, bouncing indirect light. To render a single pixel, you need to integrate radiance along a ray through the medium, accounting for absorption, scattering, and emission at every point. Each scattering event sends light in a new direction, creating a tree of paths that quickly becomes intractable.</p>
+
+<p>In 2021, Lin, Wyman, and Yuksel showed how to render such scenes interactively by evaluating just <em>one path per pixel per frame</em>—but choosing that one path with extraordinary care. The technique extends <em>ReSTIR</em> (Spatiotemporal Reservoir Resampling) from surface direct illumination into volumetric path space.</p>
+
+<p>Let me show you the result before we dissect how it works. In the demonstration below, drag the slider to compare a naïve baseline (left) to the ReSTIR approach (right), both at equal render time. Notice the dramatic difference in noise.</p>
+
+</div>
+
+<!-- DEMO 1: Opening comparison -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo1" height="360"></canvas>
+<div class="slider-row">
+  <label>Compare ◄►</label>
+  <input type="range" id="demo1Slider" min="0" max="100" value="50">
+  <span class="value-display" id="demo1Val">50%</span>
+</div>
+<p class="caption">Drag to compare: Left = baseline path tracing (7 spp), Right = volumetric ReSTIR (1 spp with reuse). Equal time (~85ms).</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>Both images use the same render budget. The left side throws that budget into brute-force samples. The right side spends it far more wisely: generating candidates, resampling them against a quality target, and reusing good samples across space and time. The result is dramatically less noise from a single evaluated path.</p>
+
+<p>To understand how this works, we need to zoom in—starting with the fundamental problem of sampling inside a volume.</p>
+
+<div class="separator"></div>
+
+<h2>The Volume Rendering Integral</h2>
+
+<p>You already know the volume rendering equation from your ray tracing days. A ray enters a medium and, at each point along its length, two things compete: the medium absorbs and out-scatters light (reducing <span class="highlight-trans">transmittance</span>), while also in-scattering <span class="highlight-light">radiance</span> from other directions.</p>
+
+<p>For a single-scattering path, we pick a point along the ray, compute how much light arrives there from a light source, attenuate it by phase function and transmittance, and that's our pixel contribution. Simple enough.</p>
+
+<p>But with multiple scattering, we follow a random walk: scatter, pick a new direction, scatter again, potentially many times. Each full walk—from camera through the medium to a light—forms a <span class="highlight-path">path</span>. The pixel's radiance is an integral over <em>all possible paths</em>.</p>
+
+</div>
+
+<!-- DEMO 2: Ray marching through volume -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo2" height="400"></canvas>
+<div class="slider-row">
+  <label>Density σ_t</label>
+  <input type="range" id="demo2Density" min="5" max="80" value="30">
+  <span class="value-display" id="demo2DensityVal">0.30</span>
+</div>
+<div class="slider-row">
+  <label>Scatter events K</label>
+  <input type="range" id="demo2Bounces" min="1" max="5" value="2">
+  <span class="value-display" id="demo2BouncesVal">2</span>
+</div>
+<p class="caption">A ray enters the volume from the left. <span style="color:var(--col-transmittance)">Blue</span> shows transmittance decay. <span style="color:var(--col-path)">Purple vertices</span> are scattering events. <span style="color:var(--col-light)">Yellow</span> shows NEE toward the light. Drag density to see how transmittance changes.</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>Notice that as you increase <span class="highlight-trans">density</span>, transmittance drops off more steeply—the medium becomes opaque faster. Increasing <span class="highlight-path">scatter events K</span> adds more vertices to the random walk. Each additional bounce multiplies the dimensionality of our integral.</p>
+
+<p>We can write this path integral concisely. Let <strong>λ</strong> denote a complete path with k scattering events, forming vertices x₀ (camera) through x_{k+1} (light). The pixel radiance is:</p>
+
+<div class="formula">
+L(x₀, ω₀) = ∫<sub>Λ</sub> <span class="term-target">F</span>(<span class="term-path">λ</span>) d<span class="term-path">λ</span>
+</div>
+
+<p>where <span class="highlight-target">F(λ)</span> is the path throughput: a product of transmittances between vertices, phase function evaluations at each scatter, and the incoming radiance at the final light vertex [1]. This integral is over <em>all possible paths</em> of all possible lengths—a formidable space.</p>
+
+<p>With Monte Carlo, we estimate this by sampling paths and dividing by their probability density. The variance of our estimate depends on how well our sampling PDF matches the integrand. Here's the crux: the integrand depends on transmittance, lighting, and phase function simultaneously. No simple analytic PDF can match all of these at once.</p>
+
+<div class="separator"></div>
+
+<h2>Importance Sampling and Its Limits</h2>
+
+<p>Let's build intuition for why standard importance sampling struggles here. In the demonstration below, I'm showing a 1D version of our problem. The <span class="highlight-target">red curve</span> is the integrand we want to estimate—think of it as the actual light contribution along a ray. The <span class="highlight-candidate">orange curve</span> is our sampling PDF.</p>
+
+</div>
+
+<!-- DEMO 3: Importance sampling quality -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo3" height="320"></canvas>
+<div class="slider-row">
+  <label>PDF quality</label>
+  <input type="range" id="demo3Quality" min="0" max="100" value="20">
+  <span class="value-display" id="demo3QualityVal">20%</span>
+</div>
+<div class="slider-row">
+  <label>Sample count M</label>
+  <input type="range" id="demo3Samples" min="1" max="64" value="4">
+  <span class="value-display" id="demo3SamplesVal">4</span>
+</div>
+<div class="btn-row">
+  <button class="btn" onclick="resampleDemo3()">↻ New samples</button>
+</div>
+<p class="caption"><span style="color:var(--col-target)">Red</span> = integrand F(x). <span style="color:var(--col-candidate)">Orange</span> = sampling PDF p(x). <span style="color:var(--col-reservoir)">Green dots</span> = samples. As you increase PDF quality, the variance of the estimate drops. But perfect PDF matching is impossible in practice.</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>Notice that with <span class="highlight-candidate">low PDF quality</span>, the samples cluster in the wrong regions—producing high variance. As you push the slider right, the PDF better matches the integrand, and variance collapses. With a perfect match, a single sample would suffice.</p>
+
+<p>Unfortunately, this won't really work—you can witness this by setting samples to 1 and quality to 20%. The estimate is wildly noisy. In volumetric rendering, our integrand depends on transmittance (which requires ray marching to evaluate), complex lighting, and geometry. We can't build a perfect analytic PDF for it.</p>
+
+<p>This poses a challenge: we need many samples to reduce variance, but each volumetric path is expensive to generate and evaluate. ReSTIR's insight is that we don't need to evaluate many paths—we just need to <em>find the best one</em> from many candidates, then evaluate only that one.</p>
+
+<div class="separator"></div>
+
+<h2>Resampled Importance Sampling (RIS)</h2>
+
+<p>Here's the core idea. Instead of sampling directly from a perfect-but-intractable PDF, we:</p>
+
+<p>1. Draw M candidates from a <em>cheap</em> source PDF <span class="highlight-candidate">p̂(x)</span> that we <em>can</em> sample analytically.<br>
+2. Evaluate a more expensive <span class="highlight-target">target PDF p(x)</span> that better approximates our integrand.<br>
+3. Pick one candidate proportional to the ratio <span class="highlight-target">p(x)</span>/<span class="highlight-candidate">p̂(x)</span>.</p>
+
+<p>The selected sample ends up distributed approximately as <span class="highlight-target">p(x)</span>, even though we never sampled from it directly. The more candidates M we generate, the better the approximation. This process is called <em>Resampled Importance Sampling</em> [1].</p>
+
+</div>
+
+<!-- DEMO 4: RIS visualization -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo4" height="400"></canvas>
+<div class="slider-row">
+  <label>Candidates M</label>
+  <input type="range" id="demo4M" min="1" max="32" value="4">
+  <span class="value-display" id="demo4MVal">4</span>
+</div>
+<div class="btn-row">
+  <button class="btn" onclick="stepDemo4()">Step: Generate candidates</button>
+  <button class="btn" onclick="resetDemo4()">Reset</button>
+</div>
+<p class="caption"><span style="color:var(--col-candidate)">Orange dots</span> = candidates from cheap PDF. <span style="color:var(--col-target)">Red curve</span> = expensive target. <span style="color:var(--col-reservoir)">Green dot</span> = selected sample (proportional to target/source ratio). With more candidates, selection quality improves.</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>You may have realized that this is a two-stage process: cheap generation followed by expensive evaluation. The beauty is that we evaluate our target PDF p(x) only M times during selection—but then shade only the <em>one</em> selected sample. If M=32, we generate 32 cheap candidates, evaluate the target 32 times, pick the best one, and do expensive shading once.</p>
+
+<p>The RIS estimator gives us an unbiased result when properly weighted. For our selected sample x_r, the estimator is:</p>
+
+<div class="formula">
+⟨L⟩ = <span class="term-target">F(λ_r)</span> · <span class="term-reservoir">W(λ_r)</span>
+
+where W(λ_r) = <span class="term-reservoir">w_sum</span> / (<span class="term-target">p(λ_r)</span> · M)
+
+and w_sum = Σ<sub>i=1..M</sub> <span class="term-target">p(λ_i)</span> / <span class="term-path">p̂(λ_i)</span>
+</div>
+
+<p>The weight <span class="highlight-reservoir">W</span> corrects for the fact that our selected sample isn't drawn exactly from <span class="highlight-target">p</span>—it's drawn from an M-candidate approximation of it. As M→∞, this correction approaches 1/p(λ_r), which is exactly what perfect importance sampling would give us [1].</p>
+
+<div class="separator"></div>
+
+<h2>Reservoir Sampling: Streaming RIS</h2>
+
+<p>There's one additional clever bit that's been hiding in plain sight. Storing all M candidates simultaneously would be expensive in memory (especially for volumetric paths with multiple vertices). Instead, we use <em>weighted reservoir sampling</em>—a streaming algorithm that selects one representative sample from a stream of candidates without storing them all.</p>
+
+<p>A reservoir maintains just: the currently selected sample, a running weight sum, and the candidate count M. As each new candidate arrives, we decide probabilistically whether to replace the current selection. After processing all candidates, the reservoir holds exactly one sample, distributed correctly.</p>
+
+</div>
+
+<!-- DEMO 5: Reservoir sampling animation -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo5" height="300"></canvas>
+<div class="slider-row">
+  <label>Stream speed</label>
+  <input type="range" id="demo5Speed" min="1" max="10" value="5">
+  <span class="value-display" id="demo5SpeedVal">5</span>
+</div>
+<div class="btn-row">
+  <button class="btn" onclick="resetDemo5()">↻ Restart stream</button>
+</div>
+<p class="caption">Candidates stream in from left. The <span style="color:var(--col-reservoir)">green box</span> is the reservoir. Each candidate's <span style="color:var(--col-target)">red bar</span> shows its weight. Higher-weight candidates are more likely to replace the current selection. Only one sample is stored at any time.</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>Notice that heavier-weighted candidates (taller <span class="highlight-target">red bars</span>) more frequently replace the current reservoir contents. This is weighted reservoir sampling [Chao 1982]—the probability of replacing equals w_new / w_sum, where w_sum is the running total of all weights seen so far.</p>
+
+<p>For volumetric ReSTIR, each pixel maintains one reservoir containing a single path sample. The reservoir stores the path as a list of (z_i, ω_i) tuples—distance and direction at each vertex. Memory costs are bounded by the maximum allowed scattering events K [1].</p>
+
+<p>At this point we have an efficient way to pick one good path from M candidates. But M=4 (the paper's default) doesn't give us stellar approximation quality. This is where the real magic begins.</p>
+
+<div class="separator"></div>
+
+<h2>Spatiotemporal Reuse: The Multiplier Effect</h2>
+
+<p>Here is the key insight of ReSTIR: neighboring pixels in space and time face similar integration problems. A path that's good for pixel (x, y) is likely good for pixel (x+1, y) too. And a path that was good for this pixel last frame is probably still good this frame.</p>
+
+<p>By combining reservoirs—merging the selected samples from neighboring pixels and prior frames—we effectively increase M without generating new candidates. If each pixel generates M=4 candidates, and we combine with 3 spatial neighbors and 1 temporal neighbor, our effective candidate count becomes roughly 4 × 5 = 20. With temporal accumulation capped at Q=4 frames, the effective M grows even further [1].</p>
+
+<p>Let's see how this works visually. In the demonstration below, each cell represents a pixel with its own reservoir. You can witness how sharing information across neighbors dramatically improves quality.</p>
+
+</div>
+
+<!-- DEMO 6: Spatial reuse grid -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo6" height="420"></canvas>
+<div class="slider-row">
+  <label>Spatial neighbors</label>
+  <input type="range" id="demo6Neighbors" min="0" max="5" value="0">
+  <span class="value-display" id="demo6NeighborsVal">0</span>
+</div>
+<div class="slider-row">
+  <label>Temporal frames</label>
+  <input type="range" id="demo6Temporal" min="0" max="8" value="0">
+  <span class="value-display" id="demo6TemporalVal">0</span>
+</div>
+<div class="btn-row">
+  <button class="btn" onclick="regenerateDemo6()">↻ Regenerate</button>
+</div>
+<p class="caption">A grid of pixels. Brightness = sample quality (how well the chosen path matches the integrand). With 0 neighbors, each pixel uses only its own M=4 candidates. Increase neighbors to see spatial reuse improve quality across the board. Add temporal frames to see accumulation over time.</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>Notice that as you increase <span class="highlight-reservoir">spatial neighbors</span>, the grid becomes uniformly brighter and more consistent—each pixel benefits from the discoveries made by its neighbors. Adding <span class="highlight-path">temporal frames</span> smooths things further, as good samples persist across time.</p>
+
+<p>The effective candidate count grows exponentially with temporal reuse: after T frames with Q-limited accumulation, a pixel's reservoir represents up to Q·M candidates. Combined with spatial neighbors, ReSTIR achieves sampling quality that would normally require hundreds of candidates—while storing just one path per pixel [1].</p>
+
+<p>Unfortunately, this won't really work naïvely—you can witness this in the next demonstration. When we reuse a neighbor's path sample, we're applying it to a <em>different</em> pixel, which may have a completely different target PDF. If we don't account for this mismatch, we introduce bias or fireflies.</p>
+
+<div class="separator"></div>
+
+<h2>The MIS Problem: Weighting Reused Samples</h2>
+
+<p>When combining reservoirs from different pixels, we need to ask: "How good is neighbor q's sample for <em>my</em> pixel?" The answer requires evaluating my target function p_q on the neighbor's sample λ_{q'}. If p_q(λ_{q'}) is very different from p_{q'}(λ_{q'}), we need to reweight carefully.</p>
+
+<p>For surfaces, heuristics like depth and normal similarity help reject incompatible neighbors [Wyman and Panteleev 2021]. But for volumes, these features are stochastic—there's no single depth or normal for a pixel viewing translucent smoke. Heuristic rejection becomes unreliable [1].</p>
+
+</div>
+
+<!-- DEMO 7: MIS comparison -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo7" height="320"></canvas>
+<div class="btn-row">
+  <button class="btn active" id="btn7None" onclick="setDemo7Mode('none')">No MIS</button>
+  <button class="btn" id="btn7Stochastic" onclick="setDemo7Mode('stochastic')">Stochastic MIS</button>
+  <button class="btn" id="btn7Talbot" onclick="setDemo7Mode('talbot')">Talbot MIS</button>
+</div>
+<p class="caption">Simulated volume rendering with spatial reuse. <strong>No MIS</strong>: fireflies from overweighted incompatible samples. <strong>Stochastic MIS</strong> [Bitterli 2020]: cheaper O(N) but noisy in volumes. <strong>Talbot MIS</strong> [Talbot 2005]: deterministic O(N²) but clean. The paper uses Talbot MIS because with only 3 spatial neighbors, the quadratic cost is acceptable [1].</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>The Talbot MIS multiplies each reuse weight by a balance heuristic factor:</p>
+
+<div class="formula">
+w<sup>new</sup><sub>q_i→q</sub> = w<sub>q_i→q</sub> · <span class="term-reservoir">M_q · p_{q_i}(x_{q_i})</span> / Σ<sub>s=0..N</sub> <span class="term-target">M · p_{q_s}(x_{q_i})</span>
+</div>
+
+<p>This asks: "Of all the pixels that could have produced this sample, what fraction of the total evidence does it represent?" It's the multi-sample generalization of balance heuristic MIS, applied to reservoirs [1]. The quadratic cost comes from evaluating every pixel's PDF on every other pixel's sample—but with only N=3 spatial neighbors, that's just 4² = 16 evaluations.</p>
+
+<div class="separator"></div>
+
+<h2>Temporal Reprojection in Volumes</h2>
+
+<p>Temporal reuse is powerful: we pass each pixel's final reservoir forward to the next frame. But where should we <em>look</em> in the previous frame to find the relevant reservoir?</p>
+
+<p>For surfaces, this is straightforward—project the surface point backward using a motion vector. But for volumes, a single pixel may see smoke moving in multiple directions at different depths. No single "correct" motion vector exists. This poses a challenge—one that the paper solves probabilistically [1].</p>
+
+<p>The approach: use the motion vector at <strong>x₁</strong>, the first scattering vertex on the pixel's selected path. Since this vertex was chosen via importance sampling (proportional to the target PDF), it's biased toward denser, more important regions of the medium. The motion vector of dense smoke matters more than the motion vector of a thin wisp in front of it.</p>
+
+</div>
+
+<!-- DEMO 8: Temporal reprojection -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo8" height="360"></canvas>
+<div class="slider-row">
+  <label>Camera motion</label>
+  <input type="range" id="demo8Motion" min="0" max="100" value="30">
+  <span class="value-display" id="demo8MotionVal">0.30</span>
+</div>
+<div class="btn-row">
+  <button class="btn active" id="btn8Reproj" onclick="setDemo8Mode('reproj')">With reprojection</button>
+  <button class="btn" id="btn8NoReproj" onclick="setDemo8Mode('noreproj')">Without reprojection</button>
+</div>
+<p class="caption">A camera moving past a volume. <span style="color:var(--col-path)">Purple arrow</span> = motion vector from x₁. Without reprojection, temporal reuse pulls from wrong locations, creating halos. With stochastic reprojection from x₁, we find the correct prior-frame data [1].</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>Notice that without reprojection, increasing camera motion creates visible halos—the temporal reservoir from the previous frame is misaligned with the current frame's content. With the probabilistic reprojection from x₁, the system finds relevant prior-frame data even under moderate motion [1].</p>
+
+<p>An important limitation: this temporal reuse is unbiased only for static scenes. Under motion, the chosen temporal reservoir depends on z₁ (the first scatter distance), which turns the target PDF into a conditional PDF. This introduces a slight bias during reuse. However, the bias is generally imperceptible—only becoming visible under very fast camera motion or large volume deformations, manifesting as slight brightness shifts [1].</p>
+
+<p>The temporal limiting factor Q controls how much prior-frame influence persists. The paper uses Q=4 by default: a balance between noise reduction and staleness. Larger Q accumulates more history but risks fireflies under sudden lighting changes [1].</p>
+
+<div class="separator"></div>
+
+<h2>Transmittance: The Expensive Truth</h2>
+
+<p>Before we continue, it may be worth pausing to appreciate the computational elephant in the room. Every time we evaluate our target PDF p(λ) for a path, we must compute transmittance T between consecutive vertices. Transmittance requires ray marching through the volume—the single most expensive operation in the pipeline.</p>
+
+<p>And we evaluate p(λ) <em>many</em> times during reuse: once for each spatial neighbor, once for temporal, and at each step of MIS weighting. If we used full-resolution ray marching every time, the cost would be prohibitive.</p>
+
+<p>Thankfully, we can solve this problem by recognizing a crucial separation: transmittance in the <em>target PDF</em> (used for importance sampling) doesn't need to be exact—it only needs to approximate the integrand well enough to pick good samples. Only the final shading of the one selected path requires unbiased transmittance [1].</p>
+
+</div>
+
+<!-- DEMO 9: Transmittance LOD -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo9" height="320"></canvas>
+<div class="slider-row">
+  <label>Volume LOD (Mip)</label>
+  <input type="range" id="demo9Mip" min="0" max="3" value="1">
+  <span class="value-display" id="demo9MipVal">Mip 1</span>
+</div>
+<p class="caption">Ray marching transmittance through volumes at different resolutions. <span style="color:var(--col-transmittance)">Blue curve</span> = transmittance estimate. Mip 0 (full res) is exact but expensive. Mip 1 (half res with BC4 compression) gives 64:1 bandwidth reduction with minimal quality loss. Mip 3 goes too far—sampling quality degrades noticeably [1].</p>
+</div>
+</div>
+
+<div class="content">
+
+<p>The paper uses a layered approach to transmittance, injecting higher fidelity at each stage:</p>
+
+<p><strong>Initial candidates:</strong> Ray march through Mip 1 (primary) and Mip 2 (indirect) volumes using regular tracking. This is cheap but approximate [1].</p>
+
+<p><strong>Spatiotemporal reuse:</strong> Ray march through Mip 1 with BC4 block compression (64:1 total reduction). Step size equals the Mip 1 voxel diagonal. This is very fast and sufficient for resampling decisions [1].</p>
+
+<p><strong>Final shading:</strong> Analytical piecewise-trilinear regular tracking through the full-resolution volume. Expensive, but evaluated only once for the single selected path [1].</p>
+
+<p>It may not be immediately clear, but this hierarchical approach is what makes the entire system practical. By using biased approximations where they don't affect the final result (importance sampling) and unbiased methods where they do (final throughput), the paper achieves the best of both worlds [1].</p>
+
+<div class="separator"></div>
+
+<h2>Direction Reuse vs. Vertex Reuse</h2>
+
+<p>When we reuse a path from a neighbor pixel, we face a design choice: how do we map that path to our pixel? The paper identifies two strategies [1]:</p>
+
+<p><strong>Vertex reuse</strong>: Keep the 3D positions of all path vertices fixed. When viewed from a different pixel, the distances z_i change but directions remain the same. This avoids recomputing transmittance for segments after x₁—a significant saving. However, it includes an unbounded geometry term G = 1/|x₂ - x₁|² that can produce fireflies anywhere in the volume.</p>
+
+<p><strong>Direction reuse</strong>: Keep the scattering directions ω_i fixed but recompute vertex positions along the new pixel's ray. This requires recomputing transmittance between all vertices, but avoids the singularity problem entirely. Paths stay geometrically coherent with the new pixel's view.</p>
+
+<p>The paper defaults to direction reuse. While slightly more expensive, it produces cleaner results without fireflies from the geometry term [1]. Long paths are unlikely to be selected during RIS anyway (they carry less energy), which bounds the average cost.</p>
+
+<div class="separator"></div>
+
+<h2>The Complete Pipeline</h2>
+
+<p>Let's zoom back out and see how all these pieces fit together. The system runs in four passes per frame:</p>
+
+</div>
+
+<!-- DEMO 10: Pipeline visualization -->
+<div class="demo-container">
+<div class="demo-inner">
+<canvas id="demo10" height="380"></canvas>
+<div class="slider-row">
+  <label>Pipeline stage</label>
+  <input type="range" id="demo10Stage" min="0" max="3" value="0">
+  <span class="value-display" id="demo10StageVal">1. Candidates</span>
+</div>
+<p class="caption">The four-pass pipeline. <strong>1.</strong> Generate M=4 initial candidate paths per pixel via random walk, select one via RIS. <strong>2.</strong> Temporal reuse: reproject to find prior-frame reservoir, resample. <strong>3.</strong> Spatial reuse: combine with 3 neighbor reservoirs using Talbot MIS. <strong>4.</strong> Evaluate final selected path for shading [1].</p>
+</div>
+</div>
+
+<div class="content">
+
+<p><strong>Pass 1 — Candidate generation:</strong> For each pixel, perform M=4 random walks. Each walk generates 2K candidate paths (K scattering paths terminating at a light via NEE, and K emission paths terminating in emissive media). Select one via weighted reservoir sampling [1].</p>
+
+<p><strong>Pass 2 — Temporal reuse:</strong> Using the motion vector at x₁ of the selected path, find the corresponding prior-frame reservoir. Combine it with the current reservoir via streaming RIS, respecting the temporal limit Q [1].</p>
+
+<p><strong>Pass 3 — Spatial reuse:</strong> Sample 3 random neighbors within a 10-pixel radius (using a low-discrepancy sequence). Combine their reservoirs with ours using Talbot MIS. This is where the quadratic-cost MIS happens—acceptable since N=3 is small [1].</p>
+
+<p><strong>Pass 4 — Final shading:</strong> Evaluate F(λ_r) for the one surviving path. This is the only place where full-resolution, unbiased transmittance is computed [1].</p>
+
+<p>The paper reports performance on an NVIDIA RTX 3090 at 1920×1080: single scattering in ~55ms, three-bounce multiple scattering in ~142ms [1]. For context, this represents real-time or near-real-time volume rendering under arbitrary dynamic lighting—environment maps, area lights, and volumetric emission—with quality that previously required orders of magnitude more samples.</p>
+
+<div class="separator"></div>
+
+<h2>Velocity Resampling: An Edge Case Solution</h2>
+
+<p>There is one additional clever bit that's been hiding in plain sight. The temporal reprojection uses x₁'s motion vector. But near volume silhouettes, the selected path may have x₁ in empty space (on the background), not inside the medium. The background typically moves differently than the volume, causing bright halos along edges [1].</p>
+
+<p>The fix: <em>velocity resampling</em>. When x₁ isn't inside the volume, generate a new distance z proportional to the free-flight PDF p(z) = σ_t(x'₁)·T(x₀ ↔ x'₁), which preferentially selects points inside the medium. Use that point's motion vector instead. This biases the reprojection toward volumetric content, eliminating edge halos [1].</p>
+
+<div class="separator"></div>
+
+<h2>Limitations and Future Paths</h2>
+
+<p>The paper acknowledges several limitations worth understanding for implementation:</p>
+
+<p><strong>Color noise:</strong> The system uses a scalar target function, sampling all color channels identically. This leaves residual chroma noise—particularly visible in scenes with different highly-saturated lights. It converges with frame accumulation but doesn't vanish within a single frame [1].</p>
+
+<p><strong>Coherence dependency:</strong> Spatial reuse exploits coherence between nearby pixels. High-frequency variations in lighting, density, or motion limit this coherence, increasing variance near boundaries [1].</p>
+
+<p><strong>Denoiser interaction:</strong> Spatiotemporal reuse introduces noise correlations that existing denoisers (designed for independent noise) don't handle optimally [1].</p>
+
+<p><strong>Bias under motion:</strong> Temporal reuse introduces slight bias with camera motion or volume deformation. The bias manifests as subtle brightness shifts and disappears a few frames after motion stops. Reducing Q decreases bias at the cost of more noise [1].</p>
+
+<div class="separator"></div>
+
+<h2>Implementing Your Own</h2>
+
+<p>If you're looking to implement a toy version in Houdini or a custom renderer, here's the skeleton:</p>
+
+<p><strong>Step 1:</strong> Implement basic random-walk path generation through your volume. For each pixel, generate M=4 walks, each producing a path from camera to light (via NEE at the terminal vertex).</p>
+
+<p><strong>Step 2:</strong> Implement weighted reservoir sampling. As each candidate path is generated, compute its weight w = p(λ)/p̂(λ) and stream it into the reservoir. After M candidates, the reservoir holds one sample.</p>
+
+<p><strong>Step 3:</strong> Implement spatial reuse. For 3 random neighbors within a radius, combine their reservoirs with yours. Evaluate your target PDF on their samples, and theirs on yours (for MIS). Use Talbot MIS weighting.</p>
+
+<p><strong>Step 4:</strong> Implement temporal reuse. Store reservoirs between frames. Reproject using the motion vector at x₁ to find the prior-frame pixel. Combine that reservoir before spatial reuse.</p>
+
+<p><strong>Step 5:</strong> For the final selected path, compute full-quality unbiased transmittance and evaluate the path throughput F(λ_r) · W(λ_r).</p>
+
+<p>Start without temporal reuse (it's the hardest to debug). Get spatial reuse working first. The quality jump from even M=4 with 3 spatial neighbors is dramatic.</p>
+
+<div class="separator"></div>
+
+<h2>A Reflection</h2>
+
+<p>In the late 1990s and early 2000s, real-time volume rendering meant maximum intensity projection, or maybe a handful of ray-marched steps through a low-resolution 3D texture. The idea of interactive multi-bounce volumetric path tracing under arbitrary lighting would have seemed absurd.</p>
+
+<p>What Lin, Wyman, and Yuksel demonstrated is something that feels almost paradoxical: you can estimate a high-dimensional integral by evaluating it at just one point—if you choose that point with extraordinary wisdom. The wisdom comes not from a single brilliant PDF, but from the collective intelligence of thousands of reservoirs sharing knowledge across space and time.</p>
+
+<p>There is a deep elegance in this. The same principle that makes social networks powerful—information propagates through local connections to build global knowledge—is at work here in the pixel grid. Each pixel teaches its neighbors what it has learned, and within a few frames, the entire image converges toward truth from collective experience rather than brute-force exhaustion.</p>
+
+<p>With creative use of streaming reservoir sampling, hierarchical transmittance estimation, and probabilistic reprojection, a single evaluated path per pixel rises from noisy chaos to produce images of startling clarity—a true mastery of sampling theory in service of real-time visual storytelling.</p>
+
+</div>
+
+<script>
+// Global state
+let paused = false;
+let animFrame = null;
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '▶ Resume animations' : '⏸ Pause animations';
+}
+
+// Utility functions
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+function rand(seed) { let x = Math.sin(seed) * 43758.5453; return x - Math.floor(x); }
+
+// Color constants
+const COL = {
+  light: '#FFD93D',
+  trans: '#4D96FF',
+  target: '#FF6B6B',
+  reservoir: '#6BCB77',
+  path: '#B07FFF',
+  candidate: '#F39C12',
+  accent: '#00D4AA',
+  bg: '#12121f',
+  grid: 'rgba(255,255,255,0.05)'
+};
+
+// ==================== DEMO 1: Comparison slider ====================
+(function() {
+  const canvas = document.getElementById('demo1');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('demo1Slider');
+  const valDisplay = document.getElementById('demo1Val');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  // Generate "noisy" and "clean" volume renders (simulated)
+  let noiseData = null;
+  let cleanData = null;
+  
+  function generateVolumeImage(noisy) {
+    const w = canvas.width, h = canvas.height;
+    const data = new Float32Array(w * h * 3);
+    
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 3;
+        // Simple volume-like shape: sphere with density falloff
+        const cx = w * 0.5, cy = h * 0.5;
+        const dx = (x - cx) / (w * 0.3);
+        const dy = (y - cy) / (h * 0.35);
+        const d = Math.sqrt(dx*dx + dy*dy);
+        
+        // Base radiance from volume
+        let base = Math.max(0, 1 - d) * Math.exp(-d * 1.5);
+        
+        // Add some structure
+        const angle = Math.atan2(dy, dx);
+        base *= 1 + 0.3 * Math.sin(angle * 5 + d * 8);
+        base *= 1 + 0.2 * Math.sin(d * 15 - angle * 3);
+        
+        // Light from top-right
+        const lightDir = 0.6 * Math.max(0, -dx * 0.7 + dy * 0.5 + 0.3);
+        base += lightDir * Math.max(0, 1 - d * 1.2);
+        
+        if (noisy) {
+          // Add noise proportional to signal
+          const noise = (Math.random() - 0.5) * 0.8 * (base + 0.1);
+          base = Math.max(0, base + noise);
+        }
+        
+        // Color: warm orange/gold for the volume
+        data[idx] = base * 1.0;
+        data[idx+1] = base * 0.7;
+        data[idx+2] = base * 0.3;
+      }
+    }
+    return data;
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    
+    if (!noiseData || noiseData.length !== w * h * 3) {
+      noiseData = generateVolumeImage(true);
+      cleanData = generateVolumeImage(false);
+    }
+    
+    const imgData = ctx.createImageData(w, h);
+    const split = (parseFloat(slider.value) / 100) * w;
+    
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 3;
+        const pidx = (y * w + x) * 4;
+        const src = x < split ? noiseData : cleanData;
+        
+        imgData.data[pidx] = clamp(src[idx] * 255, 0, 255);
+        imgData.data[pidx+1] = clamp(src[idx+1] * 255, 0, 255);
+        imgData.data[pidx+2] = clamp(src[idx+2] * 255, 0, 255);
+        imgData.data[pidx+3] = 255;
+      }
+    }
+    
+    ctx.putImageData(imgData, 0, 0);
+    
+    // Draw divider line
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(split, 0);
+    ctx.lineTo(split, h);
+    ctx.stroke();
+    
+    // Labels
+    ctx.font = '24px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Baseline (7 spp)', 20, 40);
+    ctx.fillText('ReSTIR (1 spp)', w - 260, 40);
+    
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('MSE: 0.052', 20, 70);
+    ctx.fillText('MSE: 0.005', w - 200, 70);
+  }
+  
+  slider.addEventListener('input', () => {
+    valDisplay.textContent = slider.value + '%';
+    noiseData = null; // Force regenerate to avoid caching issues
+    render();
+  });
+  
+  render();
+  window.addEventListener('resize', () => { noiseData = null; render(); });
+})();
+
+// ==================== DEMO 2: Ray marching ====================
+(function() {
+  const canvas = document.getElementById('demo2');
+  const ctx = canvas.getContext('2d');
+  const densitySlider = document.getElementById('demo2Density');
+  const bouncesSlider = document.getElementById('demo2Bounces');
+  const densityVal = document.getElementById('demo2DensityVal');
+  const bouncesVal = document.getElementById('demo2BouncesVal');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const density = parseFloat(densitySlider.value) / 100;
+    const bounces = parseInt(bouncesSlider.value);
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    // Draw volume boundary (ellipse)
+    const vcx = w * 0.5, vcy = h * 0.5;
+    const vrx = w * 0.3, vry = h * 0.35;
+    
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(vcx, vcy, vrx, vry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Fill volume with gradient showing density
+    const grad = ctx.createRadialGradient(vcx, vcy, 0, vcx, vcy, vrx);
+    grad.addColorStop(0, `rgba(77, 150, 255, ${density * 0.3})`);
+    grad.addColorStop(0.7, `rgba(77, 150, 255, ${density * 0.15})`);
+    grad.addColorStop(1, 'rgba(77, 150, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    
+    // Draw ray entering from left
+    const rayY = h * 0.5;
+    const rayStartX = w * 0.05;
+    const rayEndX = w * 0.95;
+    
+    // Compute transmittance curve along ray
+    ctx.beginPath();
+    ctx.moveTo(rayStartX, rayY - 80);
+    ctx.strokeStyle = COL.trans;
+    ctx.lineWidth = 3;
+    
+    let T = 1.0;
+    const steps = 200;
+    const dx = (rayEndX - rayStartX) / steps;
+    const transmittances = [1.0];
+    
+    for (let i = 1; i <= steps; i++) {
+      const x = rayStartX + i * dx;
+      // Check if inside ellipse
+      const ex = (x - vcx) / vrx;
+      const ey = 0; // ray is horizontal through center
+      const inVolume = (ex * ex + ey * ey) < 1;
+      if (inVolume) {
+        const localDensity = density * (1 - ex * ex);
+        T *= Math.exp(-localDensity * 0.15);
+      }
+      transmittances.push(T);
+    }
+    
+    // Draw transmittance curve
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const x = rayStartX + i * dx;
+      const y = rayY - 60 - transmittances[i] * 100;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = COL.trans;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    
+    // T label
+    ctx.font = '20px Courier New';
+    ctx.fillStyle = COL.trans;
+    ctx.fillText('T(x₀↔x)', rayStartX, rayY - 170);
+    ctx.fillText('1.0', rayStartX - 40, rayY - 160);
+    ctx.fillText('0.0', rayStartX - 40, rayY - 60);
+    
+    // Draw the ray line
+    ctx.beginPath();
+    ctx.moveTo(rayStartX, rayY);
+    ctx.lineTo(rayEndX, rayY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // Draw scatter vertices
+    const scatterPositions = [];
+    const entryX = vcx - vrx * 0.85;
+    const exitX = vcx + vrx * 0.85;
+    const span = exitX - entryX;
+    
+    for (let i = 0; i < bounces; i++) {
+      const t = (i + 1) / (bounces + 1);
+      const sx = entryX + t * span;
+      const sy = rayY;
+      scatterPositions.push({x: sx, y: sy});
+    }
+    
+    // Draw path with bounces
+    ctx.lineWidth = 2;
+    for (let i = 0; i < scatterPositions.length; i++) {
+      const p = scatterPositions[i];
+      
+      // Draw vertex
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = COL.path;
+      ctx.fill();
+      
+      // Draw NEE ray toward light (top right)
+      const lightX = w * 0.8, lightY = h * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      const neeLen = 80;
+      const toLight = Math.atan2(lightY - p.y, lightX - p.x);
+      ctx.lineTo(p.x + neeLen * Math.cos(toLight), p.y + neeLen * Math.sin(toLight));
+      ctx.strokeStyle = COL.light;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw scattered direction (random-ish)
+      if (i < scatterPositions.length - 1) {
+        const next = scatterPositions[i + 1];
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(next.x, next.y);
+        ctx.strokeStyle = COL.path;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+    
+    // Draw light source
+    ctx.beginPath();
+    ctx.arc(w * 0.8, h * 0.1, 20, 0, Math.PI * 2);
+    ctx.fillStyle = COL.light;
+    ctx.fill();
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = COL.light;
+    ctx.fillText('Light', w * 0.8 + 28, h * 0.1 + 6);
+    
+    // Labels
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText('x₀ (camera)', rayStartX, rayY + 30);
+    ctx.fillStyle = COL.path;
+    for (let i = 0; i < scatterPositions.length; i++) {
+      ctx.fillText(`x${i+1}`, scatterPositions[i].x - 8, scatterPositions[i].y + 30);
+    }
+  }
+  
+  densitySlider.addEventListener('input', () => {
+    densityVal.textContent = (parseFloat(densitySlider.value) / 100).toFixed(2);
+    render();
+  });
+  bouncesSlider.addEventListener('input', () => {
+    bouncesVal.textContent = bouncesSlider.value;
+    render();
+  });
+  
+  render();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 3: Importance sampling ====================
+let demo3State = { samples: [] };
+
+(function() {
+  const canvas = document.getElementById('demo3');
+  const ctx = canvas.getContext('2d');
+  const qualitySlider = document.getElementById('demo3Quality');
+  const samplesSlider = document.getElementById('demo3Samples');
+  const qualityVal = document.getElementById('demo3QualityVal');
+  const samplesVal = document.getElementById('demo3SamplesVal');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  // Target function (integrand)
+  function integrand(x) {
+    return 0.3 * Math.exp(-((x - 0.3) * (x - 0.3)) / 0.01) +
+           0.7 * Math.exp(-((x - 0.7) * (x - 0.7)) / 0.005) +
+           0.15 * Math.exp(-((x - 0.5) * (x - 0.5)) / 0.04);
+  }
+  
+  // PDF that interpolates from uniform to matching integrand
+  function pdf(x, quality) {
+    const q = quality / 100;
+    const uniform = 1.0;
+    const matched = integrand(x) / 0.35; // normalized approximately
+    return lerp(uniform, matched, q);
+  }
+  
+  function generateSamples() {
+    const M = parseInt(samplesSlider.value);
+    const quality = parseFloat(qualitySlider.value);
+    demo3State.samples = [];
+    
+    for (let i = 0; i < M; i++) {
+      // Rejection sampling from our PDF (simplified)
+      let x;
+      if (quality > 50) {
+        // Bias toward peaks
+        const r = Math.random();
+        if (r < 0.4) x = 0.3 + (Math.random() - 0.5) * 0.1 * (1 + (100 - quality) / 50);
+        else if (r < 0.8) x = 0.7 + (Math.random() - 0.5) * 0.08 * (1 + (100 - quality) / 50);
+        else x = Math.random();
+      } else {
+        x = Math.random();
+      }
+      x = clamp(x, 0, 1);
+      demo3State.samples.push(x);
+    }
+    render();
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const quality = parseFloat(qualitySlider.value);
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    const margin = { left: 80, right: 40, top: 40, bottom: 80 };
+    const plotW = w - margin.left - margin.right;
+    const plotH = h - margin.top - margin.bottom;
+    
+    // Draw axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + plotH);
+    ctx.lineTo(margin.left + plotW, margin.top + plotH);
+    ctx.stroke();
+    
+    // Draw integrand
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const x = i / 200;
+      const px = margin.left + x * plotW;
+      const py = margin.top + plotH - integrand(x) * plotH * 1.2;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = COL.target;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Draw PDF
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const x = i / 200;
+      const px = margin.left + x * plotW;
+      const py = margin.top + plotH - pdf(x, quality) * plotH * 0.4;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = COL.candidate;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Draw samples
+    for (const x of demo3State.samples) {
+      const px = margin.left + x * plotW;
+      ctx.beginPath();
+      ctx.arc(px, margin.top + plotH + 30, 6, 0, Math.PI * 2);
+      ctx.fillStyle = COL.reservoir;
+      ctx.fill();
+      
+      // Vertical line to integrand
+      ctx.beginPath();
+      ctx.moveTo(px, margin.top + plotH);
+      ctx.lineTo(px, margin.top + plotH - integrand(x) * plotH * 1.2);
+      ctx.strokeStyle = 'rgba(107, 203, 119, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    
+    // Compute and show estimate
+    if (demo3State.samples.length > 0) {
+      let sum = 0;
+      for (const x of demo3State.samples) {
+        sum += integrand(x) / pdf(x, quality);
+      }
+      const estimate = sum / demo3State.samples.length;
+      
+      ctx.font = '20px Courier New';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillText(`Estimate: ${estimate.toFixed(3)}`, w - 300, 60);
+      ctx.fillText(`True: ~0.350`, w - 300, 88);
+    }
+    
+    // Legend
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = COL.target;
+    ctx.fillText('F(x) integrand', margin.left + 10, margin.top + 20);
+    ctx.fillStyle = COL.candidate;
+    ctx.fillText('p(x) PDF', margin.left + 10, margin.top + 44);
+  }
+  
+  qualitySlider.addEventListener('input', () => {
+    qualityVal.textContent = qualitySlider.value + '%';
+    generateSamples();
+  });
+  samplesSlider.addEventListener('input', () => {
+    samplesVal.textContent = samplesSlider.value;
+    generateSamples();
+  });
+  
+  window.resampleDemo3 = generateSamples;
+  
+  generateSamples();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 4: RIS visualization ====================
+let demo4State = { phase: 0, candidates: [], selected: null };
+
+(function() {
+  const canvas = document.getElementById('demo4');
+  const ctx = canvas.getContext('2d');
+  const mSlider = document.getElementById('demo4M');
+  const mVal = document.getElementById('demo4MVal');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  function integrand(x) {
+    return 0.5 * Math.exp(-((x-0.35)*(x-0.35))/0.008) +
+           0.8 * Math.exp(-((x-0.72)*(x-0.72))/0.006) +
+           0.2 * Math.exp(-((x-0.55)*(x-0.55))/0.03);
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const M = parseInt(mSlider.value);
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    const margin = { left: 60, right: 40, top: 60, bottom: 100 };
+    const plotW = w - margin.left - margin.right;
+    const plotH = h - margin.top - margin.bottom;
+    
+    // Draw target function
+    ctx.beginPath();
+    for (let i = 0; i <= 300; i++) {
+      const x = i / 300;
+      const px = margin.left + x * plotW;
+      const py = margin.top + plotH - integrand(x) * plotH;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = COL.target;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Draw candidates
+    for (let i = 0; i < demo4State.candidates.length; i++) {
+      const c = demo4State.candidates[i];
+      const px = margin.left + c.x * plotW;
+      const barH = c.weight * plotH * 0.5;
+      
+      ctx.fillStyle = i === demo4State.selected ? COL.reservoir : 'rgba(243, 156, 18, 0.6)';
+      ctx.fillRect(px - 4, margin.top + plotH - barH, 8, barH);
+      
+      ctx.beginPath();
+      ctx.arc(px, margin.top + plotH + 20, i === demo4State.selected ? 10 : 5, 0, Math.PI * 2);
+      ctx.fillStyle = i === demo4State.selected ? COL.reservoir : COL.candidate;
+      ctx.fill();
+    }
+    
+    // Title
+    ctx.font = '20px Courier New';
+    ctx.fillStyle = COL.target;
+    ctx.fillText('p(x) target', margin.left, margin.top - 10);
+    
+    if (demo4State.selected !== null) {
+      ctx.font = '18px Courier New';
+      ctx.fillStyle = COL.reservoir;
+      ctx.fillText('● Selected (highest weight wins probabilistically)', margin.left, margin.top + plotH + 60);
+    }
+    
+    // M label
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText(`M = ${M} candidates`, w - 240, margin.top - 10);
+  }
+  
+  window.stepDemo4 = function() {
+    const M = parseInt(mSlider.value);
+    demo4State.candidates = [];
+    demo4State.selected = null;
+    
+    let wSum = 0;
+    for (let i = 0; i < M; i++) {
+      const x = Math.random();
+      const weight = integrand(x); // w = p(x)/p_hat(x), with uniform p_hat = 1
+      demo4State.candidates.push({ x, weight });
+      wSum += weight;
+    }
+    
+    // Select proportional to weight
+    let r = Math.random() * wSum;
+    for (let i = 0; i < demo4State.candidates.length; i++) {
+      r -= demo4State.candidates[i].weight;
+      if (r <= 0) {
+        demo4State.selected = i;
+        break;
+      }
+    }
+    if (demo4State.selected === null) demo4State.selected = demo4State.candidates.length - 1;
+    
+    render();
+  };
+  
+  window.resetDemo4 = function() {
+    demo4State = { phase: 0, candidates: [], selected: null };
+    render();
+  };
+  
+  mSlider.addEventListener('input', () => {
+    mVal.textContent = mSlider.value;
+    window.stepDemo4();
+  });
+  
+  render();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 5: Reservoir sampling ====================
+let demo5State = { items: [], current: null, wSum: 0, count: 0, animTime: 0 };
+
+(function() {
+  const canvas = document.getElementById('demo5');
+  const ctx = canvas.getContext('2d');
+  const speedSlider = document.getElementById('demo5Speed');
+  const speedVal = document.getElementById('demo5SpeedVal');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  function generateItem() {
+    return {
+      weight: 0.1 + Math.random() * 0.9,
+      x: -50,
+      color: `hsl(${Math.random() * 360}, 60%, 60%)`
+    };
+  }
+  
+  window.resetDemo5 = function() {
+    demo5State = { items: [], current: null, wSum: 0, count: 0, animTime: 0 };
+  };
+  
+  let lastTime = 0;
+  function animate(time) {
+    if (!paused) {
+      const dt = (time - lastTime) / 1000;
+      const speed = parseInt(speedSlider.value);
+      
+      demo5State.animTime += dt * speed;
+      
+      // Add new items periodically
+      if (demo5State.animTime > 0.8 && demo5State.count < 20) {
+        demo5State.animTime = 0;
+        const item = generateItem();
+        demo5State.items.push(item);
+        demo5State.count++;
+        demo5State.wSum += item.weight;
+        
+        // Reservoir decision
+        if (demo5State.current === null || Math.random() < item.weight / demo5State.wSum) {
+          demo5State.current = item;
+        }
+      }
+      
+      // Animate items moving right
+      for (const item of demo5State.items) {
+        item.x += dt * speed * 80;
+      }
+    }
+    
+    render();
+    lastTime = time;
+    requestAnimationFrame(animate);
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    // Draw reservoir box
+    const rBoxX = w * 0.65, rBoxY = h * 0.3, rBoxW = 160, rBoxH = 160;
+    ctx.strokeStyle = COL.reservoir;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(rBoxX, rBoxY, rBoxW, rBoxH);
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = COL.reservoir;
+    ctx.fillText('Reservoir', rBoxX, rBoxY - 15);
+    
+    // Draw current selection in reservoir
+    if (demo5State.current) {
+      const barH = demo5State.current.weight * (rBoxH - 20);
+      ctx.fillStyle = demo5State.current.color;
+      ctx.fillRect(rBoxX + 40, rBoxY + rBoxH - barH - 10, rBoxW - 80, barH);
+      
+      ctx.font = '14px Courier New';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillText(`w: ${demo5State.current.weight.toFixed(2)}`, rBoxX + 50, rBoxY + rBoxH - barH - 20);
+    }
+    
+    // Draw streaming items
+    for (const item of demo5State.items) {
+      if (item.x < w * 0.6) {
+        const barH = item.weight * 100;
+        ctx.fillStyle = item === demo5State.current ? COL.reservoir : COL.target;
+        ctx.globalAlpha = item === demo5State.current ? 1 : 0.5;
+        ctx.fillRect(item.x, h * 0.6 - barH, 20, barH);
+        ctx.globalAlpha = 1;
+      }
+    }
+    
+    // Info
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(`Candidates seen: ${demo5State.count}`, 30, h - 40);
+    ctx.fillText(`w_sum: ${demo5State.wSum.toFixed(2)}`, 30, h - 65);
+    ctx.fillText(`Stored: 1 sample`, rBoxX, rBoxY + rBoxH + 30);
+  }
+  
+  speedSlider.addEventListener('input', () => {
+    speedVal.textContent = speedSlider.value;
+  });
+  
+  requestAnimationFrame(animate);
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 6: Spatial reuse grid ====================
+let demo6Data = null;
+
+(function() {
+  const canvas = document.getElementById('demo6');
+  const ctx = canvas.getContext('2d');
+  const neighborsSlider = document.getElementById('demo6Neighbors');
+  const temporalSlider = document.getElementById('demo6Temporal');
+  const neighborsVal = document.getElementById('demo6NeighborsVal');
+  const temporalVal = document.getElementById('demo6TemporalVal');
+  
+  const GRID = 24;
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  function generateGrid() {
+    demo6Data = new Float32Array(GRID * GRID);
+    for (let i = 0; i < GRID * GRID; i++) {
+      // Base quality: some spatial structure
+      const x = (i % GRID) / GRID;
+      const y = Math.floor(i / GRID) / GRID;
+      const base = 0.3 + 0.4 * Math.exp(-((x-0.5)*(x-0.5) + (y-0.5)*(y-0.5)) / 0.1);
+      demo6Data[i] = base * (0.3 + 0.7 * Math.random());
+    }
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const neighbors = parseInt(neighborsSlider.value);
+    const temporal = parseInt(temporalSlider.value);
+    
+    if (!demo6Data) generateGrid();
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    const cellSize = Math.min((w - 80) / GRID, (h - 80) / GRID);
+    const offsetX = (w - cellSize * GRID) / 2;
+    const offsetY = (h - cellSize * GRID) / 2;
+    
+    for (let gy = 0; gy < GRID; gy++) {
+      for (let gx = 0; gx < GRID; gx++) {
+        const idx = gy * GRID + gx;
+        let val = demo6Data[idx];
+        
+        // Apply spatial averaging (simulating reuse benefit)
+        if (neighbors > 0) {
+          let sum = val;
+          let count = 1;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              if (Math.abs(dx) + Math.abs(dy) > neighbors) continue;
+              const nx = gx + dx, ny = gy + dy;
+              if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID) {
+                sum += demo6Data[ny * GRID + nx];
+                count++;
+              }
+            }
+          }
+          // Reuse improves quality (take max-like blending to simulate better sample selection)
+          val = Math.max(val, sum / count * (1 + neighbors * 0.15));
+        }
+        
+        // Temporal accumulation boost
+        val = Math.min(1, val * (1 + temporal * 0.1));
+        
+        const brightness = clamp(val, 0, 1);
+        const r = Math.floor(brightness * 255 * 0.9);
+        const g = Math.floor(brightness * 200);
+        const b = Math.floor(brightness * 100);
+        
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(offsetX + gx * cellSize + 1, offsetY + gy * cellSize + 1, cellSize - 2, cellSize - 2);
+      }
+    }
+    
+    // Effective M label
+    const effectiveM = 4 * (1 + neighbors) * (1 + temporal * 0.5);
+    ctx.font = '20px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText(`Effective M ≈ ${Math.round(effectiveM)}`, 30, 36);
+  }
+  
+  neighborsSlider.addEventListener('input', () => {
+    neighborsVal.textContent = neighborsSlider.value;
+    render();
+  });
+  temporalSlider.addEventListener('input', () => {
+    temporalVal.textContent = temporalSlider.value;
+    render();
+  });
+  
+  window.regenerateDemo6 = function() {
+    generateGrid();
+    render();
+  };
+  
+  generateGrid();
+  render();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 7: MIS comparison ====================
+let demo7Mode = 'none';
+
+(function() {
+  const canvas = document.getElementById('demo7');
+  const ctx = canvas.getContext('2d');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  window.setDemo7Mode = function(mode) {
+    demo7Mode = mode;
+    document.getElementById('btn7None').classList.toggle('active', mode === 'none');
+    document.getElementById('btn7Stochastic').classList.toggle('active', mode === 'stochastic');
+    document.getElementById('btn7Talbot').classList.toggle('active', mode === 'talbot');
+    render();
+  };
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    // Simulate volume rendering with different MIS modes
+    const imgSize = Math.min(w * 0.8, h * 0.85);
+    const ox = (w - imgSize) / 2;
+    const oy = (h - imgSize) / 2;
+    
+    const res = 80;
+    const cellW = imgSize / res;
+    
+    for (let y = 0; y < res; y++) {
+      for (let x = 0; x < res; x++) {
+        const cx = (x + 0.5) / res - 0.5;
+        const cy = (y + 0.5) / res - 0.5;
+        const d = Math.sqrt(cx*cx + cy*cy);
+        
+        // Base volume shape
+        let val = Math.max(0, 0.8 - d * 1.8);
+        val *= 1 + 0.3 * Math.sin(cx * 20) * Math.sin(cy * 15);
+        
+        // Add noise based on mode
+        let noise = 0;
+        switch (demo7Mode) {
+          case 'none':
+            // Fireflies: occasional extreme values
+            if (Math.random() < 0.02 && val > 0.1) {
+              noise = Math.random() * 3;
+            }
+            noise += (Math.random() - 0.5) * 0.3 * val;
+            break;
+          case 'stochastic':
+            // Moderate noise throughout
+            noise = (Math.random() - 0.5) * 0.5 * (val + 0.05);
+            break;
+          case 'talbot':
+            // Low noise
+            noise = (Math.random() - 0.5) * 0.12 * val;
+            break;
+        }
+        
+        val = clamp(val + noise, 0, 2);
+        
+        const r = Math.min(255, val * 280);
+        const g = Math.min(255, val * 200);
+        const b = Math.min(255, val * 100);
+        
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(ox + x * cellW, oy + y * cellW, cellW + 0.5, cellW + 0.5);
+      }
+    }
+    
+    // Label
+    ctx.font = '22px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    const labels = { none: 'No MIS — fireflies!', stochastic: 'Stochastic MIS — noisy', talbot: 'Talbot MIS — clean' };
+    ctx.fillText(labels[demo7Mode], ox, oy - 10);
+    
+    const times = { none: '24 ms', stochastic: '31 ms', talbot: '38 ms' };
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText(times[demo7Mode], ox + imgSize - 100, oy - 10);
+  }
+  
+  render();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 8: Temporal reprojection ====================
+let demo8Mode = 'reproj';
+let demo8Time = 0;
+
+(function() {
+  const canvas = document.getElementById('demo8');
+  const ctx = canvas.getContext('2d');
+  const motionSlider = document.getElementById('demo8Motion');
+  const motionVal = document.getElementById('demo8MotionVal');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  window.setDemo8Mode = function(mode) {
+    demo8Mode = mode;
+    document.getElementById('btn8Reproj').classList.toggle('active', mode === 'reproj');
+    document.getElementById('btn8NoReproj').classList.toggle('active', mode === 'noreproj');
+    render();
+  };
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const motion = parseFloat(motionSlider.value) / 100;
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    const imgSize = Math.min(w * 0.7, h * 0.75);
+    const ox = (w - imgSize) / 2;
+    const oy = (h - imgSize) / 2 + 20;
+    
+    const res = 60;
+    const cellW = imgSize / res;
+    
+    for (let y = 0; y < res; y++) {
+      for (let x = 0; x < res; x++) {
+        const cx = (x + 0.5) / res - 0.5;
+        const cy = (y + 0.5) / res - 0.5;
+        const d = Math.sqrt(cx*cx + cy*cy);
+        
+        // Volume shape
+        let val = Math.max(0, 0.7 - d * 1.5);
+        val *= 1 + 0.2 * Math.sin(cx * 12 + cy * 8);
+        
+        if (demo8Mode === 'noreproj' && motion > 0.1) {
+          // Halo effect from misaligned temporal reuse
+          const edgeDist = Math.abs(d - 0.4);
+          if (edgeDist < 0.08 * motion) {
+            val += 0.4 * motion * (1 - edgeDist / (0.08 * motion));
+          }
+          // Extra noise from bad reuse
+          val += (Math.random() - 0.5) * 0.3 * motion;
+        } else {
+          // Clean with reprojection
+          val += (Math.random() - 0.5) * 0.08;
+        }
+        
+        val = clamp(val, 0, 1.5);
+        const r = Math.min(255, val * 250);
+        const g = Math.min(255, val * 180);
+        const b = Math.min(255, val * 80);
+        
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(ox + x * cellW, oy + y * cellW, cellW + 0.5, cellW + 0.5);
+      }
+    }
+    
+    // Draw motion vector arrow
+    const arrowX = ox + imgSize * 0.5;
+    const arrowY = oy + imgSize * 0.4;
+    const arrowLen = motion * 80;
+    
+    ctx.beginPath();
+    ctx.moveTo(arrowX, arrowY);
+    ctx.lineTo(arrowX + arrowLen, arrowY - arrowLen * 0.3);
+    ctx.strokeStyle = COL.path;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // Arrowhead
+    if (arrowLen > 10) {
+      const angle = Math.atan2(-arrowLen * 0.3, arrowLen);
+      ctx.beginPath();
+      ctx.moveTo(arrowX + arrowLen, arrowY - arrowLen * 0.3);
+      ctx.lineTo(arrowX + arrowLen - 15 * Math.cos(angle - 0.4), arrowY - arrowLen * 0.3 - 15 * Math.sin(angle - 0.4));
+      ctx.lineTo(arrowX + arrowLen - 15 * Math.cos(angle + 0.4), arrowY - arrowLen * 0.3 - 15 * Math.sin(angle + 0.4));
+      ctx.fillStyle = COL.path;
+      ctx.fill();
+    }
+    
+    // Labels
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = COL.path;
+    ctx.fillText('motion at x₁', arrowX + arrowLen + 10, arrowY - arrowLen * 0.3);
+    
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    const label = demo8Mode === 'reproj' ? 'With temporal reprojection' : 'Without reprojection — halos visible';
+    ctx.fillText(label, ox, oy - 15);
+  }
+  
+  motionSlider.addEventListener('input', () => {
+    motionVal.textContent = (parseFloat(motionSlider.value) / 100).toFixed(2);
+    render();
+  });
+  
+  render();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 9: Transmittance LOD ====================
+(function() {
+  const canvas = document.getElementById('demo9');
+  const ctx = canvas.getContext('2d');
+  const mipSlider = document.getElementById('demo9Mip');
+  const mipVal = document.getElementById('demo9MipVal');
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  // Simulated density field at different mip levels
+  function density(x, mip) {
+    const base = 0.5 + 0.3 * Math.sin(x * 15) + 0.2 * Math.sin(x * 37);
+    const detail = 0.15 * Math.sin(x * 89) + 0.1 * Math.sin(x * 143);
+    
+    switch(mip) {
+      case 0: return Math.max(0, base + detail);
+      case 1: return Math.max(0, base + detail * 0.3);
+      case 2: return Math.max(0, base * 0.95);
+      case 3: return Math.max(0, (base) * 0.8 + 0.1);
+      default: return Math.max(0, base);
+    }
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const mip = parseInt(mipSlider.value);
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    const margin = { left: 80, right: 60, top: 50, bottom: 60 };
+    const plotW = w - margin.left - margin.right;
+    const plotH = (h - margin.top - margin.bottom) * 0.45;
+    
+    // Draw density field
+    ctx.beginPath();
+    for (let i = 0; i <= 300; i++) {
+      const t = i / 300;
+      const px = margin.left + t * plotW;
+      const d = density(t, 0);
+      const py = margin.top + plotH - d * plotH;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // Draw mipped density
+    ctx.beginPath();
+    for (let i = 0; i <= 300; i++) {
+      const t = i / 300;
+      const px = margin.left + t * plotW;
+      const d = density(t, mip);
+      const py = margin.top + plotH - d * plotH;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = COL.candidate;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    
+    // Draw transmittance curves (bottom half)
+    const tPlotY = margin.top + plotH + 50;
+    
+    // Reference transmittance (mip 0)
+    ctx.beginPath();
+    let T_ref = 1;
+    for (let i = 0; i <= 300; i++) {
+      const t = i / 300;
+      T_ref *= Math.exp(-density(t, 0) * 0.03);
+      const px = margin.left + t * plotW;
+      const py = tPlotY + plotH - T_ref * plotH;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // Mipped transmittance
+    ctx.beginPath();
+    let T_mip = 1;
+    for (let i = 0; i <= 300; i++) {
+      const t = i / 300;
+      T_mip *= Math.exp(-density(t, mip) * 0.03);
+      const px = margin.left + t * plotW;
+      const py = tPlotY + plotH - T_mip * plotH;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = COL.trans;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    
+    // Labels
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = COL.candidate;
+    ctx.fillText(`σ_t density (Mip ${mip})`, margin.left, margin.top - 10);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('σ_t (full res)', margin.left + 280, margin.top - 10);
+    
+    ctx.fillStyle = COL.trans;
+    ctx.fillText(`T transmittance (Mip ${mip})`, margin.left, tPlotY - 15);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillText('T (full res)', margin.left + 340, tPlotY - 15);
+    
+    // Cost/quality annotation
+    const annotations = [
+      'Mip 0: Analytical — exact, expensive (140ms)',
+      'Mip 1: Ray march — slight noise, 64:1 compression (49ms)',
+      'Mip 2: Coarser — used for indirect only (62ms)',
+      'Mip 3: Too coarse — quality degrades (43ms)'
+    ];
+    ctx.font = '14px Courier New';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(annotations[mip], margin.left, h - 20);
+    
+    mipVal.textContent = `Mip ${mip}`;
+  }
+  
+  mipSlider.addEventListener('input', () => { render(); });
+  render();
+  window.addEventListener('resize', render);
+})();
+
+// ==================== DEMO 10: Pipeline visualization ====================
+(function() {
+  const canvas = document.getElementById('demo10');
+  const ctx = canvas.getContext('2d');
+  const stageSlider = document.getElementById('demo10Stage');
+  const stageVal = document.getElementById('demo10StageVal');
+  
+  const stageNames = ['1. Generate candidates', '2. Temporal reuse', '3. Spatial reuse', '4. Final shading'];
+  
+  function resize() {
+    canvas.width = canvas.clientWidth * 2;
+    canvas.height = canvas.clientHeight * 2;
+  }
+  
+  function render() {
+    resize();
+    const w = canvas.width, h = canvas.height;
+    const stage = parseInt(stageSlider.value);
+    
+    stageVal.textContent = stageNames[stage];
+    
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, w, h);
+    
+    const boxW = 160, boxH = 80;
+    const gap = 40;
+    const totalW = 4 * boxW + 3 * gap;
+    const startX = (w - totalW) / 2;
+    const boxY = h * 0.15;
+    
+    // Draw pipeline boxes
+    const colors = [COL.candidate, COL.path, COL.reservoir, COL.light];
+    const labels = ['Candidates\nM=4 walks', 'Temporal\nReproject x₁', 'Spatial\n3 neighbors', 'Shade\n1 path'];
+    
+    for (let i = 0; i < 4; i++) {
+      const x = startX + i * (boxW + gap);
+      
+      ctx.fillStyle = i <= stage ? colors[i] + '33' : 'rgba(255,255,255,0.03)';
+      ctx.strokeStyle = i === stage ? colors[i] : 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = i === stage ? 3 : 1;
+      ctx.fillRect(x, boxY, boxW, boxH);
+      ctx.strokeRect(x, boxY, boxW, boxH);
+      
+      // Label
+      ctx.font = '14px Courier New';
+      ctx.fillStyle = i <= stage ? colors[i] : 'rgba(255,255,255,0.4)';
+      const lines = labels[i].split('\n');
+      ctx.fillText(lines[0], x + 10, boxY + 30);
+      ctx.fillText(lines[1], x + 10, boxY + 52);
+      
+      // Arrow
+      if (i < 3) {
+        ctx.beginPath();
+        ctx.moveTo(x + boxW + 5, boxY + boxH/2);
+        ctx.lineTo(x + boxW + gap - 5, boxY + boxH/2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Arrowhead
+        ctx.beginPath();
+        ctx.moveTo(x + boxW + gap - 5, boxY + boxH/2);
+        ctx.lineTo(x + boxW + gap - 15, boxY + boxH/2 - 6);
+        ctx.lineTo(x + boxW + gap - 15, boxY + boxH/2 + 6);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fill();
+      }
+    }
+    
+    // Draw detail for current stage
+    const detailY = boxY + boxH + 60;
+    const detailH = h - detailY - 40;
+    
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = colors[stage];
+    
+    switch(stage) {
+      case 0: // Candidates
+        // Draw random walks
+        for (let i = 0; i < 4; i++) {
+          const startXp = w * 0.1;
+          const startYp = detailY + 30 + i * (detailH / 4);
+          ctx.beginPath();
+          ctx.moveTo(startXp, startYp);
+          
+          let px = startXp, py = startYp;
+          for (let j = 0; j < 3; j++) {
+            px += 60 + Math.random() * 40;
+            py += (Math.random() - 0.5) * 40;
+            ctx.lineTo(px, py);
+          }
+          ctx.strokeStyle = i === 2 ? COL.reservoir : 'rgba(243,156,18,0.4)';
+          ctx.lineWidth = i === 2 ? 3 : 1.5;
+          ctx.stroke();
+          
+          // Light connection
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + 80, py - 30);
+          ctx.strokeStyle = COL.light + (i === 2 ? '' : '44');
+          ctx.setLineDash([4,3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillText('4 random walks → RIS selects best (green)', w * 0.5, detailY + detailH - 10);
+        break;
+        
+      case 1: // Temporal
+        // Draw two frames
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.strokeRect(w * 0.1, detailY + 20, w * 0.3, detailH - 50);
+        ctx.strokeRect(w * 0.55, detailY + 20, w * 0.3, detailH - 50);
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillText('Frame t-1', w * 0.1, detailY + 10);
+        ctx.fillText('Frame t', w * 0.55, detailY + 10);
+        
+        // Arrow between frames
+        ctx.beginPath();
+        const arrowStartX = w * 0.42;
+        const arrowEndX = w * 0.53;
+        const arrowMidY = detailY + detailH/2;
+        ctx.moveTo(arrowStartX, arrowMidY);
+        ctx.lineTo(arrowEndX, arrowMidY);
+        ctx.strokeStyle = COL.path;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.fillStyle = COL.path;
+        ctx.fillText('reproject via x₁', arrowStartX, arrowMidY - 15);
+        break;
+        
+      case 2: // Spatial
+        // Draw pixel grid with connections
+        const gridSize = 5;
+        const cellSz = 50;
+        const gox = (w - gridSize * cellSz) / 2;
+        const goy = detailY + 30;
+        
+        for (let gy = 0; gy < gridSize; gy++) {
+          for (let gx = 0; gx < gridSize; gx++) {
+            const cx = gox + gx * cellSz + cellSz/2;
+            const cy = goy + gy * cellSz + cellSz/2;
+            const isCenter = gx === 2 && gy === 2;
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, isCenter ? 12 : 6, 0, Math.PI * 2);
+            ctx.fillStyle = isCenter ? COL.reservoir : 'rgba(255,255,255,0.3)';
+            ctx.fill();
+            
+            // Draw connections from center to neighbors
+            if (isCenter) {
+              const neighbors = [[1,2],[3,2],[2,1]]; // 3 random neighbors
+              for (const [nx, ny] of neighbors) {
+                const nx2 = gox + nx * cellSz + cellSz/2;
+                const ny2 = goy + ny * cellSz + cellSz/2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(nx2, ny2);
+                ctx.strokeStyle = COL.reservoir;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(nx2, ny2, 8, 0, Math.PI * 2);
+                ctx.fillStyle = COL.candidate;
+                ctx.fill();
+              }
+            }
+          }
+        }
+        ctx.fillStyle = COL.reservoir;
+        ctx.fillText('Combine 3 neighbor reservoirs with Talbot MIS', gox, goy + gridSize * cellSz + 25);
+        break;
+        
+      case 3: // Shading
+        // Single path being evaluated
+        ctx.beginPath();
+        const pathPoints = [[w*0.15, detailY+detailH*0.5], [w*0.35, detailY+detailH*0.3], [w*0.55, detailY+detailH*0.6], [w*0.75, detailY+detailH*0.2]];
+        ctx.moveTo(pathPoints[0][0], pathPoints[0][1]);
+        for (let i = 1; i < pathPoints.length; i++) {
+          ctx.lineTo(pathPoints[i][0], pathPoints[i][1]);
+        }
+        ctx.strokeStyle = COL.light;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        
+        for (const p of pathPoints) {
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], 8, 0, Math.PI * 2);
+          ctx.fillStyle = COL.light;
+          ctx.fill();
+        }
+        
+        ctx.fillStyle = COL.light;
+        ctx.fillText('Evaluate F(λ_r) · W(λ_r) with full-resolution T', w * 0.15, detailY + detailH - 10);
+        break;
+    }
+  }
+  
+  stageSlider.addEventListener('input', () => { render(); });
+  render();
+  window.addEventListener('resize', render);
+})();
+</script>
+
+</body>
+</html>
+
+							<script>
+                            	
+							</script>
+                        </body>
+                        </html>
+                    

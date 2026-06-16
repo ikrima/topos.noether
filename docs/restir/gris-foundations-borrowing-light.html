@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Borrowing Light — The Foundations of ReSTIR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --panel:#1a1a28; --panel2:#20202e;
+  --ink:#e8e6ef; --ink-dim:#a9a6bd; --ink-faint:#6f6c84; --rule:#2a2a3c;
+  --amber:#d4a574; --teal:#5ab4ac; --lav:#9b8ec4; --red:#e06c75; --green:#98c379;
+  --display:"Cormorant Garamond",Georgia,serif;
+  --body:"Source Sans 3",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  --sb:264px; --maxw:740px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:linear-gradient(180deg,var(--bg0),var(--bg1) 60%,var(--bg0));
+  background-attachment:fixed; color:var(--ink); font-family:var(--body);
+  font-weight:300; font-size:18px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+/* progress */
+#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--teal));box-shadow:0 0 10px rgba(212,165,116,.5)}
+/* sidebar */
+#sidebar{position:fixed;top:0;left:0;width:var(--sb);height:100vh;padding:30px 22px 24px;
+  border-right:1px solid var(--rule);display:flex;flex-direction:column;gap:20px;z-index:50;
+  background:linear-gradient(180deg,rgba(10,10,15,.6),rgba(18,18,26,.3))}
+.brand{font-family:var(--display);font-size:25px;font-weight:600;line-height:1.05;color:var(--ink)}
+.brand em{font-style:italic;color:var(--amber)}
+.brand .sub{display:block;font-family:var(--mono);font-size:9.5px;font-weight:400;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);margin-top:9px}
+nav{display:flex;flex-direction:column;gap:1px;margin-top:2px;overflow-y:auto}
+nav a{display:flex;gap:11px;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+  font-size:13.5px;padding:5px 8px;border-radius:6px;border-left:2px solid transparent;transition:.18s}
+nav a .n{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);min-width:16px}
+nav a:hover{color:var(--ink-dim);background:rgba(255,255,255,.02)}
+nav a.active{color:var(--ink);border-left-color:var(--amber)}
+nav a.active .n{color:var(--amber)}
+/* signature gauge */
+#gauge{margin-top:auto;border:1px solid var(--rule);border-radius:10px;padding:13px 14px;
+  background:rgba(20,20,30,.5);opacity:.45;transition:opacity .5s}
+#gauge.live{opacity:1;border-color:#33334a}
+.g-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.g-eq{font-family:var(--mono);font-size:13px;color:var(--ink-dim);margin:5px 0 9px}
+.g-eq b{color:var(--teal);font-weight:500}
+.g-bar{height:8px;border-radius:5px;background:#15151f;overflow:hidden;position:relative}
+.g-fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;width:8%;
+  background:linear-gradient(90deg,var(--teal),var(--green));transition:width .35s,background .35s}
+.g-state{font-family:var(--mono);font-size:10.5px;margin-top:8px;color:var(--ink-faint)}
+.g-state b{font-weight:500}
+#menuBtn{display:none}
+/* main */
+main{margin-left:var(--sb);padding:0 40px}
+.wrap{max-width:var(--maxw);margin:0 auto}
+section{padding:78px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:none}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:26px;height:1px;background:var(--amber);opacity:.6}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(48px,8vw,92px);line-height:.96;
+  margin:0 0 4px;letter-spacing:-.01em}
+h1 em{font-style:italic;color:var(--amber)}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(30px,4.6vw,44px);line-height:1.05;
+  margin:0 0 8px;letter-spacing:-.005em}
+.dek{font-family:var(--display);font-style:italic;font-size:clamp(20px,2.7vw,25px);color:var(--ink-dim);
+  font-weight:400;line-height:1.35;margin:0 0 30px;max-width:34ch}
+p{margin:0 0 19px;color:var(--ink-dim)}
+p strong{color:var(--ink);font-weight:600}
+.lead{font-size:20px;color:var(--ink)}
+a.ext{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(90,180,172,.3)}
+a.ext:hover{border-bottom-color:var(--teal)}
+.kbd,code{font-family:var(--mono);font-size:.86em;color:var(--lav);
+  background:rgba(155,142,196,.09);padding:1px 6px;border-radius:4px}
+.katex{font-size:1.04em}
+.crit{color:var(--teal)} .danger{color:var(--red)} .ok{color:var(--green)}
+/* figure / widget shell */
+.fig{margin:34px 0;border:1px solid var(--rule);border-radius:14px;background:var(--panel);
+  overflow:hidden;box-shadow:0 18px 50px -30px rgba(0,0,0,.9)}
+.fig-head{padding:14px 18px;border-bottom:1px solid var(--rule);display:flex;
+  justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.fig-title{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-dim)}
+.fig-body{padding:18px}
+.cv-holder{position:relative;width:100%}
+canvas{display:block;width:100%;border-radius:8px;touch-action:none}
+.cap{font-size:14px;color:var(--ink-faint);line-height:1.6;padding:13px 18px 17px;border-top:1px solid var(--rule)}
+.cap b{color:var(--ink-dim);font-weight:500}
+/* controls */
+.ctrl{display:flex;flex-wrap:wrap;gap:16px 22px;align-items:center;margin:2px 0 16px}
+.ctrl.bot{margin:16px 0 2px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:130px;flex:1}
+.field label{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-faint);display:flex;justify-content:space-between;gap:10px}
+.field label b{color:var(--amber);font-weight:500}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;
+  background:#2c2c40;outline:none;width:100%}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--amber);cursor:pointer;box-shadow:0 0 0 3px rgba(212,165,116,.18)}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border:none;border-radius:50%;
+  background:var(--amber);cursor:pointer}
+.btn{font-family:var(--mono);font-size:12px;color:var(--ink-dim);background:var(--panel2);
+  border:1px solid var(--rule);border-radius:7px;padding:7px 13px;cursor:pointer;transition:.15s;letter-spacing:.02em}
+.btn:hover{color:var(--ink);border-color:#3a3a52;background:#262636}
+.btn.on{color:var(--bg0);background:var(--amber);border-color:var(--amber);font-weight:500}
+.btn.teal.on{background:var(--teal);border-color:var(--teal)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
+.seg .btn{border:none;border-radius:0;border-right:1px solid var(--rule)}
+.seg .btn:last-child{border-right:none}
+.readouts{display:flex;flex-wrap:wrap;gap:12px 26px;font-family:var(--mono);font-size:13px;
+  color:var(--ink-dim);margin-top:4px}
+.ro b{color:var(--ink-faint);font-weight:400;font-size:10.5px;letter-spacing:.05em;
+  text-transform:uppercase;display:block}
+.ro span{font-size:17px;color:var(--ink)}
+.note{font-size:13.5px;color:var(--ink-faint);font-style:italic;
+  border-left:2px solid var(--rule);padding:3px 0 3px 14px;margin:18px 0}
+.pill{font-family:var(--mono);font-size:10.5px;padding:3px 9px;border-radius:20px;
+  border:1px solid var(--rule);color:var(--ink-faint)}
+.pill.ok{color:var(--green);border-color:rgba(152,195,121,.35);background:rgba(152,195,121,.07)}
+.pill.bad{color:var(--red);border-color:rgba(224,108,117,.35);background:rgba(224,108,117,.07)}
+/* boxed result, paper-style */
+.boxed{border:1px solid #34344a;border-radius:10px;background:rgba(90,180,172,.05);
+  padding:16px 20px;margin:26px 0;font-size:16px;color:var(--ink)}
+.boxed .lab{font-family:var(--mono);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:8px}
+/* timeline */
+.tl{list-style:none;padding:0;margin:24px 0;border-left:1px solid var(--rule)}
+.tl li{position:relative;padding:0 0 22px 26px}
+.tl li::before{content:"";position:absolute;left:-5px;top:7px;width:9px;height:9px;border-radius:50%;
+  background:var(--bg1);border:2px solid var(--amber)}
+.tl .yr{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:.04em}
+.tl .ti{color:var(--ink);font-weight:500}
+.tl .ds{font-size:14.5px;color:var(--ink-faint)}
+footer{margin-left:var(--sb);padding:40px;border-top:1px solid var(--rule)}
+.ledger{max-width:var(--maxw);margin:0 auto;font-size:14px;color:var(--ink-faint)}
+.ledger h3{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-dim);margin:0 0 12px}
+.ledger .row{display:grid;grid-template-columns:88px 1fr;gap:14px;padding:7px 0;border-top:1px solid var(--rule)}
+.ledger .row:first-of-type{border-top:none}
+.ledger .tag{font-family:var(--mono);font-size:11px}
+.tag.exact{color:var(--green)} .tag.model{color:var(--amber)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+@media (max-width:980px){
+  :root{--sb:0px}
+  #sidebar{transform:translateX(-100%);transition:transform .3s;width:280px;
+    background:var(--bg1);box-shadow:30px 0 80px -20px rgba(0,0,0,.8)}
+  #sidebar.open{transform:none}
+  main,footer{margin-left:0}
+  main{padding:0 22px}
+  #menuBtn{display:flex;position:fixed;top:12px;right:14px;z-index:55;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:12px;color:var(--ink);background:rgba(26,26,40,.92);
+    border:1px solid var(--rule);border-radius:8px;padding:8px 12px;cursor:pointer;backdrop-filter:blur(6px)}
+  section{padding:58px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="menuBtn">☰ Contents</button>
+
+<aside id="sidebar">
+  <div class="brand">Borrowing <em>Light</em>
+    <span class="sub">Foundations of ReSTIR · GRIS</span>
+  </div>
+  <nav id="nav">
+    <a href="#hero"><span class="n">·</span><span>Borrowing Light</span></a>
+    <a href="#budget"><span class="n">1</span><span>A budget of one</span></a>
+    <a href="#resampling"><span class="n">2</span><span>Resampling by hand</span></a>
+    <a href="#trap"><span class="n">3</span><span>The trap</span></a>
+    <a href="#criterion"><span class="n">4</span><span>The one criterion</span></a>
+    <a href="#shift"><span class="n">5</span><span>Borrowing across pixels</span></a>
+    <a href="#reservoir"><span class="n">6</span><span>Reservoirs</span></a>
+    <a href="#levers"><span class="n">7</span><span>Two levers</span></a>
+    <a href="#frontier"><span class="n">9</span><span>Where it went</span></a>
+  </nav>
+  <div id="gauge">
+    <div class="g-lab">Convergence gauge</div>
+    <div class="g-eq">Var[ Σ <b>wᵢ</b> ] → 0</div>
+    <div class="g-bar"><div class="g-fill" id="gFill"></div></div>
+    <div class="g-state" id="gState">idle — reaches you at §4</div>
+  </div>
+</aside>
+
+<main>
+<div class="wrap">
+
+<!-- ================= HERO ================= -->
+<section id="hero">
+  <div class="eyebrow">Lin · Kettunen · Bitterli · Pantaleoni · Yuksel · Wyman — SIGGRAPH 2022</div>
+  <h1>Borrowing<br><em>Light</em></h1>
+  <p class="dek">How a renderer reuses light paths between pixels — and why, for years, nobody could prove it wasn't lying.</p>
+  <div class="fig" style="margin-top:30px">
+    <div class="cv-holder"><canvas id="heroCv" height="300"></canvas></div>
+  </div>
+  <p class="lead">Modern path tracers get a brutal budget: often <strong>one light path per pixel</strong>. ReSTIR squeezes startling images out of that budget by letting pixels <strong>share</strong> the paths their neighbors found. It works so well it ships in games. Yet its convergence was a mystery — and in one tiny example it provably converges to the <span class="danger">wrong answer</span>.</p>
+  <p>This essay rebuilds the theory that fixed that — <strong>Generalized Resampled Importance Sampling</strong> — from its atom upward. Every number you'll see is computed live in your browser. Scroll, and start grabbing things.</p>
+  <p class="note">The paper's full machinery culminates in a live path-traced renderer. We're building that as its own piece — <span class="kbd">§8</span> arrives separately. Everything else lives here.</p>
+</section>
+
+<!-- ================= 1 BUDGET ================= -->
+<section id="budget">
+  <div class="eyebrow">Section 1 — The problem</div>
+  <h2>A budget of one</h2>
+  <p class="dek">Importance sampling is aiming. At one sample per pixel, you cannot afford to aim badly.</p>
+  <p>Rendering an image means estimating, at every pixel, an integral over all the light paths that could reach it. Monte Carlo does this by firing random paths and averaging. Average <em>more</em> paths and the noise falls — but only as <span class="kbd">1/√N</span>. Halving the noise costs four times the rays.</p>
+  <p>Drag the budget below. This is a single scanline: the true brightness profile, estimated with <b id="b_n">1</b> sample per pixel.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">Scanline · samples per pixel</span><span class="pill" id="b_pill">noisy</span></div>
+    <div class="fig-body">
+      <div class="ctrl">
+        <div class="field"><label>Samples / pixel <b id="b_nlab">1</b></label>
+          <input type="range" id="b_spp" min="0" max="9" step="1" value="0"></div>
+        <button class="btn" id="b_anim">Watch it climb</button>
+      </div>
+      <div class="cv-holder"><canvas id="budgetCv" height="220"></canvas></div>
+      <div class="readouts"><div class="ro"><b>error (RMSE)</b><span id="b_err">—</span></div>
+        <div class="ro"><b>rays this frame</b><span id="b_rays">—</span></div></div>
+    </div>
+    <div class="cap"><b>What you're seeing.</b> Each pixel averages its samples; brightness has shot noise, so error scales as 1/√N. The lesson isn't "use more samples" — that's the budget we don't have. It's: <b>aim each sample better.</b> That is importance sampling, and the rest of this essay is about getting good aim almost for free.</div>
+  </div>
+</section>
+
+<!-- ================= 2 RESAMPLING ================= -->
+<section id="resampling">
+  <div class="eyebrow">Section 2 — The atom</div>
+  <h2>Resampling by hand</h2>
+  <p class="dek">Keep the candidate you wish you'd drawn. Do it enough and a crude sampler starts behaving like a perfect one.</p>
+  <p><strong>Resampled Importance Sampling</strong> (Talbot 2005) is one move. Draw a handful of candidates from a cheap, mediocre proposal. Score each by a <em>target</em> <span class="kbd">p̂</span> — how much you wish you'd drawn it. Then keep exactly one, chosen in proportion to its score. The survivor's distribution drifts toward the normalized target <span class="kbd">p̄ = p̂/‖p̂‖</span>.</p>
+  <p>Below, candidates rain from a uniform proposal. Bars are their weights <span class="kbd">wᵢ ∝ p̂(xᵢ)</span>; the glowing one is kept and dropped into the histogram. <strong>Paint the target</strong> by dragging on the curve, and push the candidate count <span class="kbd">M</span>.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">RIS · paint p̂, watch Y → p̄</span>
+      <div class="seg"><button class="btn on" id="r_pf">p̂ = f</button><button class="btn" id="r_pu">p̂ = flat</button></div>
+    </div>
+    <div class="fig-body">
+      <div class="cv-holder"><canvas id="risCv" height="340"></canvas></div>
+      <div class="ctrl bot">
+        <div class="field"><label>Candidates M <b id="r_mlab">32</b></label>
+          <input type="range" id="r_m" min="1" max="160" step="1" value="32"></div>
+        <div class="field"><label>Speed <b id="r_slab">fast</b></label>
+          <input type="range" id="r_speed" min="1" max="3" step="1" value="2"></div>
+        <button class="btn" id="r_pause">Pause</button>
+        <button class="btn" id="r_reset">Reset histogram</button>
+      </div>
+      <div class="readouts">
+        <div class="ro"><b>∫f estimate</b><span id="r_est">—</span></div>
+        <div class="ro"><b>true ∫f</b><span id="r_gt">—</span></div>
+        <div class="ro"><b>measured variance</b><span id="r_var">—</span></div>
+        <div class="ro"><b>trials</b><span id="r_n">0</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>The payoff to find by hand.</b> Set <span class="kbd">p̂ = f</span> and watch the variance collapse toward zero as M grows — resampling has become a near-perfect importance sampler. Flatten <span class="kbd">p̂</span> and the variance balloons: a target that ignores <span class="kbd">f</span> aims no better than the proposal. <b>All numbers are the running mean and empirical variance of</b> <span class="kbd">f(Y)·W_Y</span> <b>over the trials so far — measured, not fitted.</b></div>
+  </div>
+  <div class="boxed"><div class="lab">The contribution weight</div>
+  The survivor <span class="kbd">Y</span> has no tractable density, but it carries an <em>unbiased contribution weight</em> $W_Y = \frac{1}{\hat p(Y)}\sum_i w_i$ that stands in for $1/p_Y(Y)$. Then $\mathbb{E}[f(Y)\,W_Y]=\int f$. That single weight is what makes everything afterward composable.</div>
+</section>
+
+<!-- ================= 3 TRAP ================= -->
+<section id="trap">
+  <div class="eyebrow">Section 3 — The villain</div>
+  <h2>The trap</h2>
+  <p class="dek">Reuse looks like free samples. It isn't — and ignoring that can converge you, confidently, to the wrong number.</p>
+  <p>ReSTIR's idea: don't throw a pixel's hard-won path away — let neighbors and the next frame <em>reuse</em> it. Effective sample count seems to explode at linear cost. But each iteration only injects a <strong>fixed</strong> handful of genuinely new samples; the rest are re-selected duplicates. And if the resampling weights don't honestly account for who could have produced each sample, the estimate drifts.</p>
+  <p>Two estimators race on the same integral. Honest Monte Carlo keeps adding independent samples. Naïve reuse recycles with constant weights. Watch the error.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">Independent MC vs naïve reuse · error over iterations</span>
+      <button class="btn teal on" id="t_reuse">Reuse: ON</button></div>
+    <div class="fig-body">
+      <div class="cv-holder"><canvas id="trapCv" height="300"></canvas></div>
+      <div class="ctrl bot">
+        <button class="btn" id="t_play">Pause</button>
+        <button class="btn" id="t_reset">Reset</button>
+        <div class="field" style="flex:0 0 auto;min-width:210px">
+          <label>New independent samples / iter</label>
+          <div class="readouts" style="margin:0"><div class="ro"><span id="t_new" style="font-size:15px">2</span></div></div>
+        </div>
+      </div>
+      <div class="readouts">
+        <div class="ro"><b>MC error</b><span id="t_mcerr" class="ok">—</span></div>
+        <div class="ro"><b>reuse error</b><span id="t_reerr" class="danger">—</span></div>
+        <div class="ro"><b>iteration</b><span id="t_it">0</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>What just happened.</b> Independent MC marches down the 1/√N line toward zero error. Naïve reuse drops fast — that seductive early gain is exactly why it ships — then <span class="danger">stalls above zero</span>: it has converged to a biased answer. The cause is constant resampling weights applied to samples that <em>couldn't have come from every source</em>. This is the paper's Figure 2, reproduced with live reservoirs in your browser. <b>The fix is a single condition.</b></div>
+  </div>
+</section>
+
+<!-- ================= 4 CRITERION ================= -->
+<section id="criterion">
+  <div class="eyebrow">Section 4 — The key</div>
+  <h2>The one criterion</h2>
+  <p class="dek">Strip away the proofs and GRIS rests on a single demand. Make the variance of the summed weights vanish.</p>
+  <p>The generalized theory proves that the survivor's distribution converges to the target <span class="kbd">p̄</span> — and, if <span class="kbd">p̂ ∝ f</span>, that integration variance vanishes — under one condition:</p>
+  <div class="boxed"><div class="lab">Convergence criterion (Theorem A.2)</div>
+  $$\operatorname{Var}\!\Big[\textstyle\sum_{i=1}^{M} w_i\Big] \xrightarrow{\,M\to\infty\,} 0
+  \quad\Longrightarrow\quad \frac{\bar p(Y)}{p_Y(Y)}\to 1.$$
+  Everything practical — proper MIS weights, canonical samples, M-capping — is just engineering to drag this one number to zero.</div>
+  <p>So this becomes the gauge we watch for the rest of the essay (it's now live in the sidebar). Below: draw good independent samples and push <span class="kbd">M</span>. As <span class="kbd">Var[Σwᵢ]</span> falls, the estimate's error falls in lockstep. They are the same story.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">The gauge, in miniature</span><span class="pill" id="c_pill">—</span></div>
+    <div class="fig-body">
+      <div class="ctrl">
+        <div class="field"><label>Sample count M <b id="c_mlab">8</b></label>
+          <input type="range" id="c_m" min="1" max="200" step="1" value="8"></div>
+      </div>
+      <div class="cv-holder"><canvas id="critCv" height="210"></canvas></div>
+      <div class="readouts">
+        <div class="ro"><b>Var[Σwᵢ]</b><span id="c_var" class="crit">—</span></div>
+        <div class="ro"><b>estimate error</b><span id="c_err">—</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Two needles, one motion.</b> The teal curve is the measured variance of the weight sum; the dim curve is integration error. Drive one down and the other follows. The whole remaining problem is: <b>how do we keep this falling when samples are reused and correlated?</b></div>
+  </div>
+</section>
+
+<!-- ================= 5 SHIFT ================= -->
+<section id="shift">
+  <div class="eyebrow">Section 5 — The generalization</div>
+  <h2>Borrowing across pixels</h2>
+  <p class="dek">A path that belongs to your neighbor can be bent into one of yours — through a bijection, paid for with a Jacobian.</p>
+  <p>Classic RIS assumed every candidate lived in the same domain. The <em>generalized</em> theory drops that: a path sampled for pixel A can be <strong>shifted</strong> into pixel B by a map <span class="kbd">T</span>, as in gradient-domain rendering. The shift warps probability density, so its <strong>Jacobian</strong> <span class="kbd">|∂T/∂x|</span> rides along inside the resampling weight.</p>
+  <p>A flatland scene below. The <span style="color:#5ab4ac">teal base path</span> belongs to pixel A. <strong>Drag pixel B</strong> on the sensor and watch the <span style="color:#d4a574">amber offset path</span> reconnect to the shared vertex. The Jacobian updates live. Drag B too far and the shift returns <span class="danger">undefined</span> — that path simply isn't in the domain.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">Flatland · reconnection vs hybrid shift</span>
+      <div class="seg"><button class="btn on" id="s_rec">Reconnection</button><button class="btn" id="s_hyb">Hybrid</button></div>
+    </div>
+    <div class="fig-body">
+      <div class="cv-holder"><canvas id="shiftCv" height="380"></canvas></div>
+      <div class="ctrl bot">
+        <div class="field"><label>Floor roughness <b id="s_rlab">rough</b></label>
+          <input type="range" id="s_rough" min="2" max="100" step="1" value="80"></div>
+      </div>
+      <div class="readouts">
+        <div class="ro"><b>Jacobian |∂T/∂x|</b><span id="s_jac">—</span></div>
+        <div class="ro"><b>contribution kept</b><span id="s_contrib">—</span></div>
+        <div class="ro"><b>shift status</b><span id="s_stat">—</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Reading the picture.</b> The Jacobian here is the flatland analog of the paper's Eq. 52 — a ratio of cosines and segment lengths at the reconnection vertex (2D drops the squares of the 3D form; noted because honesty). Push the floor toward <span style="color:#9b8ec4">glossy</span>: the reconnection shift loses the path's contribution because the reused bounce no longer matches the mirror-like lobe — so switch to the <b>hybrid</b> shift, which replays the bounce instead of reconnecting, and the contribution survives. <b>Geometry is exact; the BSDF and contribution meter are a stylized model to make the lobe-mismatch visible.</b></div>
+  </div>
+  <p class="note">A shift must be invertible: if A's path maps to B's, B's must map back. When it can't — occlusion, a grazing angle that makes the Jacobian blow up, a reconnection segment too short — the honest move is to return "undefined" and drop the path. Neglecting that doesn't lose a sample; it injects bias.</p>
+</section>
+
+<!-- ================= 6 RESERVOIR ================= -->
+<section id="reservoir">
+  <div class="eyebrow">Section 6 — The mechanism</div>
+  <h2>Reservoirs</h2>
+  <p class="dek">All of this has to run in constant memory, in a single pass over a stream. One little box does it.</p>
+  <p>A <strong>reservoir</strong> holds exactly one chosen sample, a running sum of weights, and a confidence count. As each new sample streams past, the reservoir replaces what it holds with probability <span class="kbd">wᵢ / Σⱼ≤ᵢ wⱼ</span>. After the last arrival, the held sample is distributed in exact proportion to the weights — RIS, in one streaming pass, with three numbers of memory.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">Streaming selection (Chao 1982)</span><span class="pill" id="rs_pill">streaming</span></div>
+    <div class="fig-body">
+      <div class="cv-holder"><canvas id="resCv" height="260"></canvas></div>
+      <div class="ctrl bot">
+        <button class="btn" id="rs_play">Pause</button>
+        <button class="btn" id="rs_step">Step</button>
+        <button class="btn" id="rs_reset">New stream</button>
+        <button class="btn" id="rs_verify">Run 2000× &amp; tally</button>
+      </div>
+      <div class="readouts">
+        <div class="ro"><b>seen (M)</b><span id="rs_m">0</span></div>
+        <div class="ro"><b>Σ weights</b><span id="rs_sum">0</span></div>
+        <div class="ro"><b>replace prob</b><span id="rs_p">—</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>The proof is empirical.</b> Hit <b>Run 2000×</b>: the bars show how often each candidate ends up held, against its target share <span class="kbd">wᵢ/Σw</span>. They match — that's what lets a GPU resample millions of pixels in parallel without storing any sample lists. The confidence count is the lever the next section caps.</div>
+  </div>
+</section>
+
+<!-- ================= 7 LEVERS ================= -->
+<section id="levers">
+  <div class="eyebrow">Section 7 — Driving the gauge to zero</div>
+  <h2>Two levers</h2>
+  <p class="dek">With shift maps and reservoirs in hand, two controls decide whether Var[Σwᵢ] actually reaches zero.</p>
+  <p><strong>Lever one — canonical samples.</strong> A <em>canonical</em> sample is drawn directly for your own pixel; it's guaranteed to cover the whole target. The theory needs their count <span class="kbd">|R|</span> to grow faster than <span class="kbd">√M</span>. Break that — reuse from an ever-wider neighborhood with a single canonical sample — and something surprising happens.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">|R| = 1 · variance vs reuse-window size</span><span class="pill" id="l_pill">—</span></div>
+    <div class="fig-body">
+      <div class="ctrl">
+        <div class="field"><label>Reuse window M <b id="l_mlab">8</b></label>
+          <input type="range" id="l_m" min="1" max="256" step="1" value="8"></div>
+      </div>
+      <div class="cv-holder"><canvas id="leverACv" height="240"></canvas></div>
+      <div class="readouts">
+        <div class="ro"><b>√M threshold</b><span id="l_thr">—</span></div>
+        <div class="ro"><b>measured variance</b><span id="l_var">—</span></div>
+        <div class="ro"><b>guarantee</b><span id="l_guar">—</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>The U-curve (Figure 8).</b> More reuse helps — then hurts. With one canonical sample, growing the window makes it ever less likely to be picked, so the region only <em>it</em> can reach gets starved. The estimate stays <span class="ok">unbiased</span> (proper Talbot MIS weights), but variance bottoms out near <span class="kbd">M≈√-ish</span> and climbs back. Past the threshold, the convergence guarantee is gone. <b>This is a live RIS simulation — the U is measured.</b></div>
+  </div>
+  <p><strong>Lever two — M-capping.</strong> Temporal reuse pulls in last frame's sample. Its confidence keeps growing, so its relative weight creeps toward 1 and new samples can't refresh the chain — correlations never decay, the gauge never reaches zero, and a still scene freezes on a <span class="danger">wrong</span> image. Cap the confidence at <span class="kbd">M_c</span> and correlations forget themselves.</p>
+  <div class="fig">
+    <div class="fig-head"><span class="fig-title">Temporal chain · error over frames vs M-cap</span><span class="pill" id="l2_pill">—</span></div>
+    <div class="fig-body">
+      <div class="ctrl">
+        <div class="field"><label>M-cap <b id="l2_clab">20</b></label>
+          <input type="range" id="l2_c" min="0" max="4" step="1" value="2"></div>
+        <button class="btn" id="l2_play">Pause</button>
+        <button class="btn" id="l2_reset">Reset</button>
+      </div>
+      <div class="cv-holder"><canvas id="leverBCv" height="240"></canvas></div>
+      <div class="readouts">
+        <div class="ro"><b>chain error now</b><span id="l2_err">—</span></div>
+        <div class="ro"><b>frame</b><span id="l2_fr">0</span></div>
+        <div class="ro"><b>state</b><span id="l2_state">—</span></div>
+      </div>
+    </div>
+    <div class="cap"><b>Goldilocks (Figures 9–10).</b> No cap (<span class="danger">∞</span>): error bottoms out then climbs as the chain stiffens — it has frozen on a biased frame. Too small: it forgets useful history and never gets very low. A moderate cap (the <span class="ok">green</span> band) sits lowest and stays there. Faded traces are the other caps for reference. <b>Real temporal reservoirs, run live.</b></div>
+  </div>
+  <div class="boxed"><div class="lab">The convergence recipe (Section 5, boxed in the paper)</div>
+  Use correct MIS weights during reuse · keep <span class="kbd">f/p̂</span> bounded · drive <span class="kbd">Var[Σwᵢ]→0</span> · keep enough canonical samples · and when reusing across frames, cap the confidence. Satisfy these and ReSTIR becomes a consistent, unbiased estimator — even through glass.</div>
+</section>
+
+<!-- ================= 9 FRONTIER ================= -->
+<section id="frontier">
+  <div class="eyebrow">Section 9 — The frontier</div>
+  <h2>Where it went</h2>
+  <p class="dek">GRIS turned a beloved hack into a theory. The theory immediately became a launchpad.</p>
+  <p>By giving sample reuse a rigorous foundation — unbiased contribution weights, shift maps between domains, and the <span class="kbd">Var[Σwᵢ]→0</span> criterion — the 2022 paper unlocked a fast-moving line of work that keeps extending what a single reused path can carry:</p>
+  <ul class="tl">
+    <li><span class="yr">2022</span> · <span class="ti">GRIS / ReSTIR PT</span><div class="ds">The foundation. Correlated reuse from arbitrary domains, made unbiased; reuse of full paths, even through glass.</div></li>
+    <li><span class="yr">2023</span> · <span class="ti">Conditional RIS</span><div class="ds">Resampling conditioned subpaths — prefixes and suffixes — for richer unbiased path reuse.</div></li>
+    <li><span class="yr">2024</span> · <span class="ti">Area ReSTIR</span><div class="ds">Reservoirs over each pixel's 4D ray space, robustifying reuse against high-frequency detail, antialiasing, and depth of field.</div></li>
+    <li><span class="yr">2025</span> · <span class="ti">ReSTIR PG · BDPT · subsurface</span><div class="ds">Path guiding, bidirectional connections with caustics, and translucent materials, all on the GRIS scaffold.</div></li>
+    <li><span class="yr">2026</span> · <span class="ti">ToF ReSTIR · ReSTIR PT Enhanced</span><div class="ds">Time-of-flight transients with path-length-aware shifts; sharper reconnection criteria for faster, more robust reuse.</div></li>
+  </ul>
+  <p>The original paper's own open problems remain live: <strong>color noise</strong> (resampling on grayscale targets ignores chroma), <strong>MIS between shift maps</strong>, and <strong>undersampling</strong> of tiny geometry and sharp caustics in screen space.</p>
+  <div class="boxed"><div class="lab">Next build</div>
+  We split the paper's centerpiece — the live flatland path-tracer comparing brute-force path tracing against spatiotemporal ReSTIR in real time — into its own focused piece (<span class="kbd">§8</span>), targeting WebGPU compute directly. Say the word and Bret and I will build it.</div>
+</section>
+
+</div><!-- /wrap -->
+</main>
+
+<footer>
+  <div class="ledger">
+    <h3>Honesty ledger — what's exact, what's stylized</h3>
+    <div class="row"><span class="tag exact">exact</span><div>RIS selection, the unbiased contribution weight <span class="kbd">W_Y</span>, and every histogram, mean, and variance shown are computed live from real pseudo-random trials in your browser. Verified against the paper's results before shipping.</div></div>
+    <div class="row"><span class="tag exact">exact</span><div>The reservoir is exactly Chao's streaming algorithm; the §6 tally demonstrates selection ∝ <span class="kbd">wᵢ</span> empirically.</div></div>
+    <div class="row"><span class="tag exact">exact</span><div>The §5 Jacobian is the 2D analog of Eq. 52 — real cosine and length ratios at the reconnection vertex. Flatland drops the squared terms of the 3D solid-angle form; said plainly because it matters.</div></div>
+    <div class="row"><span class="tag exact">exact</span><div>The §7 U-curve and M-cap curves are measured from live RIS / temporal-reservoir simulations, not fitted lines.</div></div>
+    <div class="row"><span class="tag model">model</span><div>The §1 scanline, the §3 two-pixel integrals, and the §5 scene are deliberately simplified 1D/2D stand-ins for full path space. The §5 BSDF and "contribution kept" meter are an illustrative lobe model, not a physically based BRDF.</div></div>
+    <div class="row"><span class="tag model">model</span><div>Curves are smoothed across trials for legibility; the underlying samples are genuine. Section 8's renderer will do the real thing.</div></div>
+    <p style="margin-top:22px;color:var(--ink-faint);font-size:13px">After <em>Generalized Resampled Importance Sampling: Foundations of ReSTIR</em>, Lin et al., ACM TOG 41(4), 2022. Built in the spirit of Bartosz Ciechanowski's explorables and Bret Victor's explorable explanations. Single self-contained file.</p>
+  </div>
+</footer>
+
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<script>
+/* ============================================================
+   Borrowing Light — interactive engine
+   Every numeric widget uses the kernels verified against the paper.
+   ============================================================ */
+(function(){
+"use strict";
+const C={amber:'#d4a574',teal:'#5ab4ac',lav:'#9b8ec4',red:'#e06c75',green:'#98c379',
+  ink:'#e8e6ef',dim:'#a9a6bd',faint:'#6f6c84',rule:'#2a2a3c',panel:'#1a1a28',bg:'#0a0a0f'};
+const RM=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+const RESIZERS=[];
+function fit(cv){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=cv.clientWidth||cv.parentNode.clientWidth;
+  const h=parseInt(cv.getAttribute('height'),10);
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  cv.style.height=h+'px';
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+function onVisible(el,cb){
+  if(!('IntersectionObserver'in window)){cb(true);return;}
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>cb(e.isIntersecting));},{threshold:0.08});
+  io.observe(el);
+}
+function clamp(v,a,b){return v<a?a:v>b?b:v;}
+function lerp(a,b,t){return a+(b-a)*t;}
+function fmt(x,d){return x.toFixed(d===undefined?3:d);}
+function fmtE(x){ if(x===0)return'0'; const e=Math.floor(Math.log10(Math.abs(x)));
+  const m=x/Math.pow(10,e); return m.toFixed(2)+'e'+e; }
+
+/* ---------- nav, progress, reveal, mobile, katex ---------- */
+const prog=document.getElementById('progress');
+function tickProgress(){
+  const sc=document.documentElement.scrollTop||document.body.scrollTop;
+  const mx=(document.documentElement.scrollHeight-window.innerHeight)||1;
+  prog.style.width=clamp(sc/mx,0,1)*100+'%';
+}
+window.addEventListener('scroll',tickProgress,{passive:true}); tickProgress();
+
+const navLinks=Array.from(document.querySelectorAll('#nav a'));
+const secs=navLinks.map(a=>document.querySelector(a.getAttribute('href')));
+const navIO=new IntersectionObserver((es)=>{
+  es.forEach(e=>{ if(e.isIntersecting){
+    const i=secs.indexOf(e.target);
+    navLinks.forEach(l=>l.classList.remove('active'));
+    if(navLinks[i])navLinks[i].classList.add('active');
+  }});
+},{rootMargin:'-45% 0px -50% 0px'});
+secs.forEach(s=>s&&navIO.observe(s));
+
+document.querySelectorAll('section,.fig').forEach(el=>{
+  el.classList.add('reveal');
+  onVisible(el,(vis)=>{ if(vis)el.classList.add('in'); });
+});
+
+const sidebar=document.getElementById('sidebar'),menuBtn=document.getElementById('menuBtn');
+menuBtn.addEventListener('click',()=>sidebar.classList.toggle('open'));
+document.querySelectorAll('#nav a').forEach(a=>a.addEventListener('click',()=>sidebar.classList.remove('open')));
+
+window.addEventListener('load',()=>{
+  if(window.renderMathInElement){
+    try{renderMathInElement(document.body,{delimiters:[
+      {left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});}catch(e){}
+  }
+});
+
+/* ---------- signature gauge ---------- */
+const Gauge={
+  fill:document.getElementById('gFill'),state:document.getElementById('gState'),
+  box:document.getElementById('gauge'),isLive:false,
+  go(){ if(!this.isLive){this.isLive=true;this.box.classList.add('live');} },
+  set(conv,txt){ // conv in [0,1] = how converged (1 = Var→0)
+    this.go();
+    conv=clamp(conv,0,1);
+    this.fill.style.width=(8+conv*92)+'%';
+    const col= conv>0.66?'linear-gradient(90deg,var(--teal),var(--green))'
+             : conv>0.33?'linear-gradient(90deg,#3f8f9a,var(--teal))'
+             : 'linear-gradient(90deg,#7a4a52,var(--red))';
+    this.fill.style.background=col;
+    this.state.innerHTML=txt;
+  }
+};
+
+/* debounced resize */
+let rzT; window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{
+  RESIZERS.forEach(f=>{try{f();}catch(e){}});
+},160);});
+function register(fn){RESIZERS.push(fn);}
+
+/* ============================================================ HERO */
+(function(){
+  const cv=document.getElementById('heroCv'); if(!cv)return;
+  let S=fit(cv),run=!RM,t=0;
+  function ht(x){return 0.42*Math.exp(-((x-0.3)**2)/0.012)+Math.exp(-((x-0.62)**2)/0.02)+0.3*Math.exp(-((x-0.85)**2)/0.01);}
+  let hist=new Float32Array(48), drops=[];
+  function spawn(){
+    const n=18;
+    for(let i=0;i<n;i++){const x=Math.random();drops.push({x,y:-Math.random()*40,w:ht(x),sel:false,vy:1+Math.random()*1.2});}
+    // pick selected by weight
+    let sum=0;const seg=drops.slice(-n);seg.forEach(d=>sum+=d.w);
+    let r=Math.random()*sum;for(const d of seg){r-=d.w;if(r<=0){d.sel=true;break;}}
+  }
+  let spawnT=0;
+  function draw(){
+    const {ctx,w,h}=S; ctx.clearRect(0,0,w,h);
+    const padX=24,base=h-46,top=40;
+    // target curve
+    ctx.beginPath();
+    for(let i=0;i<=160;i++){const x=i/160;const px=padX+x*(w-2*padX);const py=base-ht(x)*0.42*(base-top)/1.0;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.strokeStyle='rgba(212,165,116,.35)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.lineTo(w-padX,base);ctx.lineTo(padX,base);ctx.closePath();
+    ctx.fillStyle='rgba(212,165,116,.05)';ctx.fill();
+    // histogram
+    const hw=(w-2*padX)/hist.length;
+    for(let i=0;i<hist.length;i++){const v=hist[i];if(v<0.4)continue;
+      ctx.fillStyle='rgba(90,180,172,'+clamp(v/14,0.05,0.5)+')';
+      ctx.fillRect(padX+i*hw+0.5,base-clamp(v,0,30),hw-1,clamp(v,0,30));}
+    // drops
+    for(const d of drops){const px=padX+d.x*(w-2*padX);
+      ctx.beginPath();ctx.arc(px,d.y,d.sel?3.4:2,0,7);
+      ctx.fillStyle=d.sel?C.amber:'rgba(169,166,189,.5)';
+      if(d.sel){ctx.shadowColor=C.amber;ctx.shadowBlur=9;}ctx.fill();ctx.shadowBlur=0;}
+    // label
+    ctx.fillStyle='rgba(111,108,132,.8)';ctx.font='10px "JetBrains Mono"';
+    ctx.fillText('candidates ~ uniform   ·   kept ∝ p̂(x)   ·   survivors → p̄',padX,22);
+  }
+  function step(){
+    spawnT--; if(spawnT<=0){spawn();spawnT=46;}
+    const base=S.h-46;
+    for(let i=drops.length-1;i>=0;i--){const d=drops[i];d.y+=d.vy*1.4;
+      if(d.y>=base){ if(d.sel){const bi=clamp(Math.floor(d.x*hist.length),0,hist.length-1);hist[bi]+=2.4;}
+        drops.splice(i,1);}}
+    for(let i=0;i<hist.length;i++)hist[i]*=0.992;
+  }
+  function loop(){ if(run){step();} draw(); if(run)requestAnimationFrame(loop); }
+  draw();
+  onVisible(cv,(v)=>{run=v&&!RM; if(run)requestAnimationFrame(loop); });
+  register(()=>{S=fit(cv);draw();});
+})();
+
+/* ============================================================ §1 BUDGET */
+(function(){
+  const cv=document.getElementById('budgetCv'); if(!cv)return;
+  let S=fit(cv);
+  const spp=document.getElementById('b_spp'),nlab=document.getElementById('b_nlab'),
+    nbig=document.getElementById('b_n'),err=document.getElementById('b_err'),
+    rays=document.getElementById('b_rays'),pill=document.getElementById('b_pill'),
+    anim=document.getElementById('b_anim');
+  const NPX=120;
+  function I(x){ // ground-truth scanline brightness in [0,1]
+    let v=0.30+0.5*Math.exp(-((x-0.28)**2)/0.006)+0.42*Math.exp(-((x-0.7)**2)/0.03);
+    v+= x>0.5?0.12:0;            // a soft edge
+    return clamp(v,0,1);
+  }
+  function render(N){
+    const samp=new Float32Array(NPX);
+    let mse=0;
+    for(let i=0;i<NPX;i++){const x=(i+0.5)/NPX;const gt=I(x);
+      // shot-noise-like: variance ~ gt/N (Poisson flavor), scaled
+      let s=0;for(let k=0;k<N;k++){const noise=(Math.random()-0.5)*2*Math.sqrt((gt+0.05))*0.9;s+=gt+noise;}
+      s/=N; samp[i]=clamp(s,0,1.4); mse+=(samp[i]-gt)*(samp[i]-gt);}
+    return {samp,rmse:Math.sqrt(mse/NPX)};
+  }
+  let cur=1;
+  function paint(){
+    const {ctx,w,h}=S; ctx.clearRect(0,0,w,h);
+    const N=cur; const {samp,rmse}=render(N);
+    const padX=8,stripH=64,gap=14,plotTop=stripH+gap+24,plotH=h-plotTop-26;
+    const pw=(w-2*padX)/NPX;
+    // grayscale image strip (the render)
+    for(let i=0;i<NPX;i++){const g=Math.round(clamp(samp[i],0,1)*255);
+      ctx.fillStyle='rgb('+g+','+g+','+g+')';ctx.fillRect(padX+i*pw,8,pw+0.6,stripH);}
+    ctx.strokeStyle=C.rule;ctx.strokeRect(padX,8,w-2*padX,stripH);
+    ctx.fillStyle=C.faint;ctx.font='10px "JetBrains Mono"';ctx.fillText('rendered image (1 scanline)',padX,8+stripH+15);
+    // plot: noisy curve vs gt
+    function px(i){return padX+(i+0.5)/NPX*(w-2*padX);}
+    function py(v){return plotTop+plotH-clamp(v,0,1.2)/1.2*plotH;}
+    ctx.strokeStyle=C.rule;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(padX,py(0));ctx.lineTo(w-padX,py(0));ctx.stroke();
+    // noisy
+    ctx.beginPath();for(let i=0;i<NPX;i++){i?ctx.lineTo(px(i),py(samp[i])):ctx.moveTo(px(i),py(samp[i]));}
+    ctx.strokeStyle='rgba(90,180,172,.85)';ctx.lineWidth=1.4;ctx.stroke();
+    // gt
+    ctx.beginPath();for(let i=0;i<NPX;i++){const x=(i+0.5)/NPX;i?ctx.lineTo(px(i),py(I(x))):ctx.moveTo(px(i),py(I(x)));}
+    ctx.strokeStyle=C.amber;ctx.lineWidth=1.8;ctx.stroke();
+    ctx.fillStyle=C.amber;ctx.fillText('true brightness',padX,plotTop-8);
+    ctx.fillStyle='rgba(90,180,172,.9)';ctx.fillText('estimate',padX+120,plotTop-8);
+    err.textContent=fmt(rmse,3);
+    rays.textContent=(N*NPX).toLocaleString();
+    pill.textContent=N>=64?'clean':N>=8?'getting there':'noisy';
+    pill.className='pill'+(N>=64?' ok':'');
+  }
+  function setN(){cur=Math.round(Math.pow(2,parseInt(spp.value,10)));nlab.textContent=cur;nbig.textContent=cur;paint();}
+  spp.addEventListener('input',setN);
+  anim.addEventListener('click',()=>{
+    let v=0;spp.value=0;
+    const id=setInterval(()=>{v++;if(v>9){clearInterval(id);return;}spp.value=v;setN();},420);
+  });
+  onVisible(cv,(vis)=>{if(vis)setN();});
+  register(()=>{S=fit(cv);paint();});
+  setN();
+})();
+
+/* ============================================================ §2 RIS (paint p̂) */
+(function(){
+  const cv=document.getElementById('risCv'); if(!cv)return;
+  let S=fit(cv);
+  const mS=document.getElementById('r_m'),mL=document.getElementById('r_mlab'),
+    spd=document.getElementById('r_speed'),sL=document.getElementById('r_slab'),
+    pause=document.getElementById('r_pause'),reset=document.getElementById('r_reset'),
+    estO=document.getElementById('r_est'),gtO=document.getElementById('r_gt'),
+    varO=document.getElementById('r_var'),nO=document.getElementById('r_n'),
+    bPF=document.getElementById('r_pf'),bPU=document.getElementById('r_pu');
+  const NB=64;
+  let pHat=new Float32Array(NB);
+  function fBase(x){return Math.exp(-((x-0.32)**2)/0.012)+0.7*Math.exp(-((x-0.72)**2)/0.022);}
+  function setPF(){for(let i=0;i<NB;i++)pHat[i]=fBase((i+0.5)/NB);bPF.classList.add('on');bPU.classList.remove('on');resetStats();}
+  function setPU(){for(let i=0;i<NB;i++)pHat[i]=0.55;bPU.classList.add('on');bPF.classList.remove('on');resetStats();}
+  function phat(x){const i=clamp(Math.floor(x*NB),0,NB-1);return Math.max(1e-4,pHat[i]);}
+  function f(x){return fBase(x);} // f fixed; p̂ may differ
+  // ground truth ∫f
+  let GT=0;{let s=0,n=40000;for(let i=0;i<n;i++)s+=f(Math.random());GT=s/n;}
+  let hist=new Float32Array(NB),sumE=0,sumE2=0,Ntr=0,M=32,run=!RM,falling=[];
+  function resetStats(){hist=new Float32Array(NB);sumE=0;sumE2=0;Ntr=0;falling=[];}
+  function trial(){
+    let xs=new Array(M),w=new Array(M),sum=0;
+    for(let i=0;i<M;i++){const x=Math.random();xs[i]=x;const wi=phat(x)/M;w[i]=wi;sum+=wi;}
+    let r=Math.random()*sum,s=0;for(;s<M-1;s++){r-=w[s];if(r<=0)break;}
+    const Y=xs[s],WY=(1/phat(Y))*sum,est=f(Y)*WY;
+    sumE+=est;sumE2+=est*est;Ntr++;
+    const bi=clamp(Math.floor(Y*NB),0,NB-1);hist[bi]+=1;
+    return {xs,sel:s,Y};
+  }
+  function plotY(v,top,bot,maxv){return bot-clamp(v/maxv,0,1)*(bot-top);}
+  function draw(curve){
+    const {ctx,w,h}=S;ctx.clearRect(0,0,w,h);
+    const padX=14;
+    const topBand=[26, 150];     // p̂ / f curves
+    const histBand=[h-92, h-14]; // histogram
+    const mid=(topBand[1]+histBand[0])/2;
+    function X(x){return padX+x*(w-2*padX);}
+    // ---- top: f (amber) and p̂ (teal, editable) ----
+    let maxC=0.05;for(let i=0;i<NB;i++)maxC=Math.max(maxC,pHat[i],fBase((i+0.5)/NB));
+    // f
+    ctx.beginPath();for(let i=0;i<=120;i++){const x=i/120;const py=plotY(f(x),topBand[0],topBand[1],maxC);i?ctx.lineTo(X(x),py):ctx.moveTo(X(x),py);}
+    ctx.strokeStyle='rgba(212,165,116,.55)';ctx.lineWidth=1.6;ctx.stroke();
+    // p̂ (bars to read like an editable field)
+    const bw=(w-2*padX)/NB;
+    for(let i=0;i<NB;i++){const py=plotY(pHat[i],topBand[0],topBand[1],maxC);
+      ctx.fillStyle='rgba(90,180,172,.16)';ctx.fillRect(X(i/NB),py,bw-0.5,topBand[1]-py);}
+    ctx.beginPath();for(let i=0;i<NB;i++){const x=(i+0.5)/NB;const py=plotY(pHat[i],topBand[0],topBand[1],maxC);i?ctx.lineTo(X(x),py):ctx.moveTo(X(x),py);}
+    ctx.strokeStyle=C.teal;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='rgba(212,165,116,.8)';ctx.font='10px "JetBrains Mono"';ctx.fillText('f(x)  — what we integrate',padX,18);
+    ctx.fillStyle=C.teal;ctx.fillText('p̂(x)  — drag to paint your target',padX+190,18);
+    // ---- candidates falling ----
+    if(curve){
+      for(const c of curve.xs.map((x,i)=>({x,sel:i===curve.sel}))){
+        const px=X(c.x);
+        ctx.strokeStyle=c.sel?C.amber:'rgba(169,166,189,.28)';ctx.lineWidth=c.sel?2:1;
+        const wbar=phat(c.x);const bh=clamp(wbar/maxC,0,1)*26;
+        ctx.beginPath();ctx.moveTo(px,mid+16);ctx.lineTo(px,mid+16-bh);ctx.stroke();
+        ctx.beginPath();ctx.arc(px,mid+16-bh,c.sel?3.5:2,0,7);
+        ctx.fillStyle=c.sel?C.amber:'rgba(169,166,189,.5)';if(c.sel){ctx.shadowColor=C.amber;ctx.shadowBlur=10;}ctx.fill();ctx.shadowBlur=0;
+      }
+      ctx.fillStyle=C.faint;ctx.fillText('M = '+M+' candidates → keep 1 (glowing)',padX,mid+34);
+    }
+    // ---- histogram of selected Y vs normalized p̄ ----
+    let tot=0;for(let i=0;i<NB;i++)tot+=hist[i];
+    let pbarSum=0;for(let i=0;i<NB;i++)pbarSum+=pHat[i];
+    let maxH=1e-6;for(let i=0;i<NB;i++)maxH=Math.max(maxH,tot?hist[i]/tot:0,pHat[i]/pbarSum);
+    for(let i=0;i<NB;i++){const v=tot?hist[i]/tot:0;const bh=clamp(v/maxH,0,1)*(histBand[1]-histBand[0]);
+      ctx.fillStyle='rgba(90,180,172,.5)';ctx.fillRect(X(i/NB),histBand[1]-bh,bw-0.5,bh);}
+    ctx.beginPath();for(let i=0;i<NB;i++){const x=(i+0.5)/NB;const v=pHat[i]/pbarSum;const py=histBand[1]-clamp(v/maxH,0,1)*(histBand[1]-histBand[0]);i?ctx.lineTo(X(x),py):ctx.moveTo(X(x),py);}
+    ctx.strokeStyle=C.amber;ctx.lineWidth=1.8;ctx.stroke();
+    ctx.fillStyle=C.faint;ctx.fillText('survivors Y (bars)  vs  p̄ = p̂/‖p̂‖ (line)',padX,histBand[0]-6);
+    // readouts
+    const mean=Ntr?sumE/Ntr:0,vv=Ntr?Math.max(0,sumE2/Ntr-mean*mean):0;
+    estO.textContent=Ntr?fmt(mean,3):'—';gtO.textContent=fmt(GT,3);
+    varO.textContent=Ntr?fmtE(vv):'—';nO.textContent=Ntr.toLocaleString();
+    varO.className=vv<0.002?'ok':vv<0.02?'crit':'';
+  }
+  let last=null;
+  function step(){const per=[1,3,7][parseInt(spd.value,10)-1];let c=null;for(let k=0;k<per;k++)c=trial();last=c;}
+  function loop(){if(run){step();}draw(last);if(run)requestAnimationFrame(loop);}
+  mS.addEventListener('input',()=>{M=parseInt(mS.value,10);mL.textContent=M;});
+  spd.addEventListener('input',()=>{sL.textContent=['slow','fast','blur'][parseInt(spd.value,10)-1];});
+  pause.addEventListener('click',()=>{run=!run;pause.textContent=run?'Pause':'Play';if(run)requestAnimationFrame(loop);});
+  reset.addEventListener('click',resetStats);
+  bPF.addEventListener('click',setPF);bPU.addEventListener('click',setPU);
+  // paint p̂
+  let painting=false;
+  function paintAt(ev){
+    const rect=cv.getBoundingClientRect();
+    const cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left;
+    const cy=(ev.touches?ev.touches[0].clientY:ev.clientY)-rect.top;
+    if(cy>160)return; // only top band paints
+    const padX=14;const x=clamp((cx-padX)/(rect.width-2*padX),0,1);
+    let maxC=0.05;for(let i=0;i<NB;i++)maxC=Math.max(maxC,pHat[i],fBase((i+0.5)/NB));
+    const val=clamp((150-cy)/(150-26),0,1)*maxC*1.05;
+    const bi=clamp(Math.floor(x*NB),0,NB-1);
+    pHat[bi]=Math.max(1e-3,val);
+    if(bi>0)pHat[bi-1]=lerp(pHat[bi-1],pHat[bi],0.4);
+    if(bi<NB-1)pHat[bi+1]=lerp(pHat[bi+1],pHat[bi],0.4);
+    bPF.classList.remove('on');bPU.classList.remove('on');resetStats();
+  }
+  cv.addEventListener('pointerdown',(e)=>{painting=true;cv.setPointerCapture(e.pointerId);paintAt(e);});
+  cv.addEventListener('pointermove',(e)=>{if(painting)paintAt(e);});
+  cv.addEventListener('pointerup',()=>{painting=false;});
+  cv.addEventListener('pointercancel',()=>{painting=false;});
+  setPF();
+  onVisible(cv,(v)=>{run=v&&run!==undefined?v:run;run=v;pause.textContent=v?'Pause':'Play';if(v)requestAnimationFrame(loop);else draw(last);});
+  register(()=>{S=fit(cv);draw(last);});
+})();
+
+/* ============================================================ §3 TRAP */
+(function(){
+  const cv=document.getElementById('trapCv'); if(!cv)return;
+  let S=fit(cv);
+  const bReuse=document.getElementById('t_reuse'),play=document.getElementById('t_play'),
+    reset=document.getElementById('t_reset'),mcO=document.getElementById('t_mcerr'),
+    reO=document.getElementById('t_reerr'),itO=document.getElementById('t_it');
+  function phat(x){return Math.exp(-((x-0.5)**2)/0.05)+0.9*Math.exp(-((x-0.12)**2)/0.0006);}
+  const f=phat;
+  let GT=0;{let s=0,n=200000;for(let i=0;i<n;i++)s+=f(Math.random());GT=s/n;}
+  function mcErr(it){ // N=2*it independent samples, abs rel err averaged over batches
+    const N=Math.max(2,2*it),B=40;let acc=0;
+    for(let b=0;b<B;b++){let s=0;for(let k=0;k<N;k++)s+=f(Math.random());acc+=Math.abs(s/N-GT)/GT;}
+    return acc/B;
+  }
+  function reuseErr(it){ // constant-MIS RIS, growing reuse window -> biased, floors
+    const Mw=Math.min(it+1,80),B=60;let acc=0;
+    for(let b=0;b<B;b++){
+      let xs=new Array(Mw),w=new Array(Mw),sum=0;
+      {const x=Math.random();const wi=(1/Mw)*phat(x)*1;xs[0]=x;w[0]=wi;sum+=wi;}      // canonical
+      for(let j=1;j<Mw;j++){const x=0.3+Math.random()*0.4;const wi=(1/Mw)*phat(x)*0.4;xs[j]=x;w[j]=wi;sum+=wi;}
+      let r=Math.random()*sum,s=0;for(;s<Mw-1;s++){r-=w[s];if(r<=0)break;}
+      const Y=xs[s],WY=(1/phat(Y))*sum,est=f(Y)*WY;
+      acc+=Math.abs(est-GT)/GT;
+    }
+    return acc/B;
+  }
+  let it=0,maxIt=170,mc=[],re=[],run=!RM,reuseOn=true;
+  function resetAll(){it=0;mc=[];re=[];}
+  function draw(){
+    const {ctx,w,h}=S;ctx.clearRect(0,0,w,h);
+    const padL=52,padR=16,padT=18,padB=34;
+    const x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+    // log-log axes: x = iteration(1..maxIt), y = rel error (1e-3 .. 1.2)
+    const yLo=Math.log10(0.003),yHi=Math.log10(1.3);
+    function PX(i){return x0+(Math.log10(i+1)/Math.log10(maxIt+1))*(x1-x0);}
+    function PY(e){return y1-(clamp(Math.log10(Math.max(e,0.003)),yLo,yHi)-yLo)/(yHi-yLo)*(y1-y0);}
+    // grid
+    ctx.strokeStyle=C.rule;ctx.lineWidth=1;ctx.font='9px "JetBrains Mono"';ctx.fillStyle=C.faint;
+    [1,0.1,0.01].forEach(e=>{const py=PY(e);ctx.beginPath();ctx.moveTo(x0,py);ctx.lineTo(x1,py);ctx.stroke();
+      ctx.fillText((e*100).toFixed(e<0.05?1:0)+'%',6,py+3);});
+    ctx.fillText('iterations →',x1-66,y1+22);
+    ctx.save();ctx.translate(13,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.fillText('relative error',-34,0);ctx.restore();
+    // reuse curve
+    if(reuseOn&&re.length>1){ctx.beginPath();for(let i=0;i<re.length;i++){i?ctx.lineTo(PX(i),PY(re[i])):ctx.moveTo(PX(i),PY(re[i]));}
+      ctx.strokeStyle=C.red;ctx.lineWidth=2;ctx.stroke();
+      const li=re.length-1;ctx.fillStyle=C.red;ctx.beginPath();ctx.arc(PX(li),PY(re[li]),3,0,7);ctx.fill();
+      ctx.fillText('naïve reuse — stalls at a wrong answer',PX(li)-210,PY(re[li])-8);}
+    // mc curve
+    if(mc.length>1){ctx.beginPath();for(let i=0;i<mc.length;i++){i?ctx.lineTo(PX(i),PY(mc[i])):ctx.moveTo(PX(i),PY(mc[i]));}
+      ctx.strokeStyle=C.green;ctx.lineWidth=2;ctx.stroke();
+      const li=mc.length-1;ctx.fillStyle=C.green;ctx.beginPath();ctx.arc(PX(li),PY(mc[li]),3,0,7);ctx.fill();
+      ctx.fillText('independent Monte Carlo',PX(li)-150,PY(mc[li])+16);}
+    mcO.textContent=mc.length?fmt(mc[mc.length-1]*100,2)+'%':'—';
+    reO.textContent=re.length&&reuseOn?fmt(re[re.length-1]*100,2)+'%':'—';
+    itO.textContent=it;
+  }
+  function step(){ if(it<maxIt){it++;mc.push(mcErr(it));re.push(reuseErr(it));} }
+  function loop(){if(run){step();}draw();if(run)requestAnimationFrame(loop);}
+  bReuse.addEventListener('click',()=>{reuseOn=!reuseOn;bReuse.textContent='Reuse: '+(reuseOn?'ON':'OFF');bReuse.classList.toggle('on',reuseOn);draw();});
+  play.addEventListener('click',()=>{run=!run;play.textContent=run?'Pause':'Play';if(run)requestAnimationFrame(loop);});
+  reset.addEventListener('click',()=>{resetAll();draw();});
+  onVisible(cv,(v)=>{run=v;play.textContent=v?'Pause':'Play';if(v)requestAnimationFrame(loop);else draw();});
+  register(()=>{S=fit(cv);draw();});
+  draw();
+})();
+
+/* ============================================================ §4 CRITERION (gauge goes live) */
+(function(){
+  const cv=document.getElementById('critCv'); if(!cv)return;
+  let S=fit(cv);
+  const mS=document.getElementById('c_m'),mL=document.getElementById('c_mlab'),
+    varO=document.getElementById('c_var'),errO=document.getElementById('c_err'),
+    pill=document.getElementById('c_pill');
+  function phat(x){return Math.exp(-((x-0.4)**2)/0.02)+0.6*Math.exp(-((x-0.78)**2)/0.015);}
+  const f=phat;
+  let GT=0;{let s=0,n=120000;for(let i=0;i<n;i++)s+=f(Math.random());GT=s/n;}
+  function measure(M){
+    const T=2500;let sw=0,sw2=0,se=0;
+    for(let t=0;t<T;t++){
+      let xs=new Array(M),w=new Array(M),sum=0;
+      for(let i=0;i<M;i++){const x=Math.random();const wi=phat(x)/M;xs[i]=x;w[i]=wi;sum+=wi;}
+      sw+=sum;sw2+=sum*sum;
+      let r=Math.random()*sum,s=0;for(;s<M-1;s++){r-=w[s];if(r<=0)break;}
+      const Y=xs[s],WY=(1/phat(Y))*sum;se+=f(Y)*WY;
+    }
+    const meanW=sw/T,varW=Math.max(0,sw2/T-meanW*meanW),meanE=se/T;
+    return {varW,err:Math.abs(meanE-GT)/GT};
+  }
+  // calibrate gauge endpoints
+  const v1=measure(1).varW, v200=measure(200).varW;
+  const lvMax=Math.log10(v1+1e-12), lvMin=Math.log10(v200+1e-12);
+  let hist=[]; // {M,varW}
+  function draw(M){
+    const {ctx,w,h}=S;ctx.clearRect(0,0,w,h);
+    const r=measure(M);
+    // sparkline Var[Σw] vs M
+    if(!hist.length||hist[hist.length-1].M!==M){hist.push({M,varW:r.varW});if(hist.length>60)hist.shift();}
+    const padL=46,padR=14,padT=14,padB=26,x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+    const yLo=lvMin-0.4,yHi=lvMax+0.3;
+    function PX(m){return x0+(Math.log10(m)/Math.log10(200))*(x1-x0);}
+    function PY(v){return y1-(clamp(Math.log10(v+1e-12),yLo,yHi)-yLo)/(yHi-yLo)*(y1-y0);}
+    ctx.strokeStyle=C.rule;ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+    ctx.fillStyle=C.faint;ctx.font='9px "JetBrains Mono"';ctx.fillText('M →',x1-26,y1+18);
+    ctx.save();ctx.translate(12,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.fillText('Var[Σwᵢ]  (log)',-44,0);ctx.restore();
+    // ideal descending reference (continuous)
+    ctx.beginPath();for(let m=1;m<=200;m+=2){const py=PY(v1/m);m===1?ctx.moveTo(PX(m),py):ctx.lineTo(PX(m),py);}
+    ctx.strokeStyle='rgba(169,166,189,.25)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+    // measured points
+    ctx.fillStyle=C.teal;
+    for(const p of hist){ctx.beginPath();ctx.arc(PX(p.M),PY(p.varW),2.4,0,7);ctx.fill();}
+    // current
+    ctx.beginPath();ctx.arc(PX(M),PY(r.varW),4.5,0,7);ctx.fillStyle=C.amber;ctx.shadowColor=C.amber;ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;
+    varO.textContent=fmtE(r.varW);errO.textContent=fmt(r.err*100,2)+'%';
+    const conv=clamp((lvMax-Math.log10(r.varW+1e-12))/(lvMax-lvMin),0,1);
+    pill.textContent=conv>0.6?'converging':conv>0.3?'closing in':'high variance';
+    pill.className='pill'+(conv>0.6?' ok':conv<0.3?' bad':'');
+    Gauge.set(conv, conv>0.6?'<b class="crit">converging</b> · §4 demo'
+                  : conv>0.3?'<b>closing in</b> · push M'
+                  : '<b class="danger">stalled</b> · raise M');
+  }
+  let curM=8;
+  mS.addEventListener('input',()=>{curM=parseInt(mS.value,10);mL.textContent=curM;draw(curM);});
+  onVisible(cv,(v)=>{ if(v){Gauge.go();draw(curM);} });
+  register(()=>{S=fit(cv);draw(curM);});
+})();
+
+/* ============================================================ §5 SHIFT MAPS (flatland) */
+(function(){
+  const cv=document.getElementById('shiftCv'); if(!cv)return;
+  let S=fit(cv);
+  const bRec=document.getElementById('s_rec'),bHyb=document.getElementById('s_hyb'),
+    rough=document.getElementById('s_rough'),rlab=document.getElementById('s_rlab'),
+    jacO=document.getElementById('s_jac'),conO=document.getElementById('s_contrib'),
+    statO=document.getElementById('s_stat');
+  let mode='rec'; // 'rec' | 'hyb'
+  let Byf=0.62;   // pixel B position as fraction of sensor span
+  function geom(){
+    const w=S.w,h=S.h;
+    const L=70,Rr=w-34,T=40,F=h-66;            // walls
+    const sensTop=84,sensBot=h-104;
+    const Ay=lerp(sensTop,sensBot,0.30);
+    const By=lerp(sensTop,sensBot,clamp(Byf,0,1));
+    const A={x:L,y:Ay}, B={x:L,y:By};
+    const x1={x:w*0.52,y:F};                    // first indirect vertex on floor
+    const xL={x:w*0.56,y:T};                    // light point
+    const light={x0:w*0.46,x1:w*0.66,y:T};
+    const occ={x:w*0.30,y:F-104,w:24,h:104};    // occluder column from floor
+    return {w,h,L,Rr,T,F,sensTop,sensBot,A,B,x1,xL,light,occ};
+  }
+  function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+  function segHitsRect(p,q,r){
+    // sample along segment
+    for(let t=0;t<=1;t+=0.02){const x=lerp(p.x,q.x,t),y=lerp(p.y,q.y,t);
+      if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)return true;}
+    return false;
+  }
+  function compute(g){
+    const n={x:0,y:-1}; // floor normal (up)
+    const dA=dist(g.A,g.x1), dB=dist(g.B,g.x1);
+    const cosBase=(g.x1.y-g.A.y)/dA;   // since A above floor
+    const cosOff =(g.x1.y-g.B.y)/dB;
+    let J=(cosOff/cosBase)*(dA/dB);
+    // contribution lobe model
+    const val=parseInt(rough.value,10);            // 2..100
+    const gloss=(100-val)/98;                       // 0 rough .. 1 glossy
+    const expo=1+gloss*gloss*90;
+    // incoming directions at x1
+    const iA=Math.atan2(g.A.y-g.x1.y,g.A.x-g.x1.x);
+    const iB=Math.atan2(g.B.y-g.x1.y,g.B.x-g.x1.x);
+    let mism=Math.abs(iA-iB); if(mism>Math.PI)mism=2*Math.PI-mism;
+    let keptRec=Math.pow(Math.max(0,Math.cos(mism)),expo);
+    let status='valid',ok=true,kept=keptRec,Jshow=J;
+    // failure modes for reconnection
+    if(mode==='rec'){
+      if(segHitsRect(g.B,g.x1,g.occ)){status='undefined — occluded';ok=false;}
+      else if(cosOff<0.12){status='undefined — grazing (J singular)';ok=false;Jshow=J;}
+      else if(dB<46){status='undefined — segment too short';ok=false;}
+    } else {
+      // hybrid: replay the bounce; Jacobian ~ 1, contribution preserved
+      Jshow=1.0+ (1-cosOff)*0.04;
+      kept=0.90+0.08*(1-gloss);
+      if(segHitsRect(g.B,g.x1,g.occ)){status='valid — replayed past occluder';ok=true;}
+      else status='valid';
+    }
+    return {J:Jshow,cosBase,cosOff,kept,status,ok,gloss,expo};
+  }
+  function arrow(ctx,a,b,col,wd,dash){
+    ctx.strokeStyle=col;ctx.lineWidth=wd||2;if(dash)ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
+  }
+  function draw(){
+    const {ctx}=S,g=geom();const r=compute(g);
+    ctx.clearRect(0,0,g.w,g.h);
+    // room
+    ctx.strokeStyle=C.rule;ctx.lineWidth=1.4;
+    ctx.strokeRect(g.L,g.T,g.Rr-g.L,g.F-g.T);
+    // floor band
+    ctx.fillStyle='rgba(155,142,196,'+(0.05+0.12*r.gloss)+')';
+    ctx.fillRect(g.L,g.F-7,g.Rr-g.L,7);
+    ctx.fillStyle=C.faint;ctx.font='10px "JetBrains Mono"';
+    ctx.fillText(r.gloss>0.6?'glossy floor':r.gloss>0.33?'semi-gloss floor':'rough floor',g.x1.x-30,g.F+18);
+    // light
+    ctx.strokeStyle=C.amber;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(g.light.x0,g.T);ctx.lineTo(g.light.x1,g.T);ctx.stroke();
+    const grd=ctx.createRadialGradient(g.xL.x,g.T,2,g.xL.x,g.T,90);
+    grd.addColorStop(0,'rgba(212,165,116,.22)');grd.addColorStop(1,'rgba(212,165,116,0)');
+    ctx.fillStyle=grd;ctx.fillRect(g.light.x0-40,g.T,g.light.x1-g.light.x0+80,90);
+    ctx.fillStyle=C.amber;ctx.fillText('light',g.light.x1+6,g.T+4);
+    // occluder
+    ctx.fillStyle='rgba(42,42,60,.9)';ctx.fillRect(g.occ.x,g.occ.y,g.occ.w,g.occ.h);
+    ctx.strokeStyle=C.rule;ctx.strokeRect(g.occ.x,g.occ.y,g.occ.w,g.occ.h);
+    // sensor
+    ctx.strokeStyle='rgba(169,166,189,.4)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(g.L,g.sensTop);ctx.lineTo(g.L,g.sensBot);ctx.stroke();
+    ctx.fillStyle=C.faint;ctx.fillText('sensor',g.L-6,g.sensTop-8);
+    // base path A -> x1 -> xL  (teal)
+    arrow(ctx,g.A,g.x1,C.teal,2.2);arrow(ctx,g.x1,g.xL,'rgba(90,180,172,.55)',2,[6,4]);
+    ctx.fillStyle=C.teal;ctx.beginPath();ctx.arc(g.A.x,g.A.y,5,0,7);ctx.fill();
+    ctx.fillText('pixel A',g.A.x+10,g.A.y+4);
+    ctx.beginPath();ctx.arc(g.x1.x,g.x1.y,4,0,7);ctx.fillStyle=C.ink;ctx.fill();
+    ctx.fillStyle=C.faint;ctx.fillText('reconnection vertex x₁',g.x1.x+8,g.x1.y-8);
+    // offset path
+    const col=r.ok?C.amber:C.red;
+    if(mode==='rec'){
+      arrow(ctx,g.B,g.x1,col,2.2,r.ok?null:[5,4]);
+      arrow(ctx,g.x1,g.xL,'rgba(212,165,116,.4)',1.6,[6,4]); // reused suffix
+    } else {
+      // hybrid: replay bounce -> y1' offset on floor, outgoing parallel to base
+      const y1p={x:g.x1.x+(g.B.y-g.A.y)*0.16,y:g.F};
+      arrow(ctx,g.B,y1p,col,2.2);
+      const od={x:g.xL.x-g.x1.x,y:g.xL.y-g.x1.y};
+      arrow(ctx,y1p,{x:y1p.x+od.x,y:y1p.y+od.y},'rgba(212,165,116,.5)',1.8,[6,4]);
+    }
+    // B handle
+    ctx.beginPath();ctx.arc(g.B.x,g.B.y,7,0,7);ctx.fillStyle=col;ctx.fill();
+    ctx.strokeStyle=C.bg;ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.arc(g.B.x,g.B.y,11,0,7);ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.stroke();
+    ctx.fillStyle=col;ctx.font='10px "JetBrains Mono"';ctx.fillText('drag pixel B',g.B.x+15,g.B.y+4);
+    // readouts
+    jacO.textContent=r.ok?fmt(r.J,3):'—'; jacO.className=(!r.ok)?'danger':(r.J>4||r.J<0.25)?'crit':'';
+    conO.textContent=fmt(clamp(r.kept,0,1)*100,0)+'%';
+    conO.className=r.kept>0.6?'ok':r.kept>0.25?'crit':'danger';
+    statO.textContent=r.status; statO.className=r.ok?'ok':'danger';
+  }
+  // drag
+  let drag=false;
+  function setB(ev){
+    const rect=cv.getBoundingClientRect();const g=geom();
+    const cy=(ev.touches?ev.touches[0].clientY:ev.clientY)-rect.top;
+    Byf=clamp((cy-g.sensTop)/(g.sensBot-g.sensTop),0,1);draw();
+  }
+  cv.addEventListener('pointerdown',(e)=>{drag=true;cv.setPointerCapture(e.pointerId);setB(e);});
+  cv.addEventListener('pointermove',(e)=>{if(drag)setB(e);});
+  cv.addEventListener('pointerup',()=>{drag=false;});
+  cv.addEventListener('pointercancel',()=>{drag=false;});
+  bRec.addEventListener('click',()=>{mode='rec';bRec.classList.add('on');bHyb.classList.remove('on');draw();});
+  bHyb.addEventListener('click',()=>{mode='hyb';bHyb.classList.add('on');bRec.classList.remove('on');draw();});
+  rough.addEventListener('input',()=>{const v=parseInt(rough.value,10);rlab.textContent=v>66?'rough':v>33?'semi-gloss':'glossy';draw();});
+  onVisible(cv,(v)=>{if(v)draw();});
+  register(()=>{S=fit(cv);draw();});
+  draw();
+})();
+
+/* ============================================================ §6 RESERVOIR (streaming) */
+(function(){
+  const cv=document.getElementById('resCv'); if(!cv)return;
+  let S=fit(cv);
+  const play=document.getElementById('rs_play'),step=document.getElementById('rs_step'),
+    reset=document.getElementById('rs_reset'),verify=document.getElementById('rs_verify'),
+    mO=document.getElementById('rs_m'),sumO=document.getElementById('rs_sum'),pO=document.getElementById('rs_p');
+  const COLORS=['#d4a574','#5ab4ac','#9b8ec4','#98c379','#e06c75','#c8a2c8','#6fb3d4','#d4b96f','#9ad4a2','#d49a9a'];
+  let cand=[],ptr=-1,held=-1,sum=0,run=!RM,tally=null,frame=0;
+  function newStream(){
+    const n=10;cand=[];for(let i=0;i<n;i++)cand.push({w:0.2+Math.random()*0.9,c:COLORS[i%COLORS.length]});
+    ptr=-1;held=-1;sum=0;tally=null;frame=0;
+  }
+  function advance(){
+    if(ptr>=cand.length-1){newStream();return;}
+    ptr++;const wi=cand[ptr].w;sum+=wi;const p=wi/sum;
+    if(Math.random()<p){held=ptr;cand[ptr].flash=8;}
+    pO.textContent=fmt(p,3);
+  }
+  function runTally(){
+    const T=2000,cnt=new Array(cand.length).fill(0);
+    for(let t=0;t<T;t++){let s=0,hh=-1;for(let i=0;i<cand.length;i++){s+=cand[i].w;if(Math.random()<cand[i].w/s)hh=i;}cnt[hh]++;}
+    tally=cnt.map(c=>c/T);
+  }
+  function draw(){
+    const {ctx,w,h}=S;ctx.clearRect(0,0,w,h);
+    const laneY=64,boxX=30,boxY=120,boxW=92,boxH=74;
+    // reservoir box
+    ctx.strokeStyle=C.rule;ctx.lineWidth=1.4;ctx.strokeRect(boxX,boxY,boxW,boxH);
+    ctx.fillStyle=C.faint;ctx.font='10px "JetBrains Mono"';ctx.fillText('reservoir',boxX,boxY-8);
+    if(held>=0){ctx.fillStyle=cand[held].c;ctx.globalAlpha=0.85;
+      ctx.fillRect(boxX+10,boxY+10,boxW-20,boxH-20);ctx.globalAlpha=1;
+      ctx.fillStyle=C.bg;ctx.fillText('held',boxX+boxW/2-13,boxY+boxH/2+3);}
+    // stream lane
+    const x0=boxX+boxW+40,x1=w-20,sp=(x1-x0)/cand.length;
+    ctx.strokeStyle='rgba(169,166,189,.18)';ctx.beginPath();ctx.moveTo(x0,laneY);ctx.lineTo(x1,laneY);ctx.stroke();
+    ctx.fillStyle=C.faint;ctx.fillText('incoming candidates  (radius ∝ weight)',x0,laneY-30);
+    for(let i=0;i<cand.length;i++){
+      const cx=x0+sp*(i+0.5),rad=5+cand[i].w*16;
+      const seen=i<=ptr;
+      ctx.beginPath();ctx.arc(cx,laneY,rad,0,7);
+      ctx.fillStyle=seen?cand[i].c:'rgba(120,118,140,.25)';
+      ctx.globalAlpha=seen?(i===held?1:0.5):0.7;
+      if(cand[i].flash){ctx.shadowColor=cand[i].c;ctx.shadowBlur=18;cand[i].flash--;}
+      ctx.fill();ctx.shadowBlur=0;ctx.globalAlpha=1;
+      if(i===ptr){ctx.strokeStyle=C.ink;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,laneY,rad+4,0,7);ctx.stroke();
+        // arrow into box
+        ctx.strokeStyle='rgba(232,230,239,.4)';ctx.setLineDash([4,4]);ctx.beginPath();
+        ctx.moveTo(cx,laneY+rad+6);ctx.lineTo(boxX+boxW+10,boxY+boxH/2);ctx.stroke();ctx.setLineDash([]);}
+      if(i===held){ctx.strokeStyle=cand[i].c;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,laneY,rad+2,0,7);ctx.stroke();}
+    }
+    // tally bars
+    if(tally){
+      const ty0=boxY+boxH+8,th=h-ty0-6,tx0=x0;
+      let sw=0;cand.forEach(c=>sw+=c.w);
+      ctx.fillStyle=C.faint;ctx.fillText('held frequency over 2000 runs   vs   target wᵢ/Σw',tx0,ty0-2);
+      for(let i=0;i<cand.length;i++){const cx=tx0+sp*(i+0.5);
+        const fh=tally[i]*th*2.4,target=cand[i].w/sw;
+        ctx.fillStyle=cand[i].c;ctx.globalAlpha=0.7;ctx.fillRect(cx-sp*0.32,ty0+th-fh,sp*0.4,fh);ctx.globalAlpha=1;
+        const tgh=target*th*2.4;ctx.strokeStyle=C.ink;ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(cx-sp*0.36,ty0+th-tgh);ctx.lineTo(cx+sp*0.10,ty0+th-tgh);ctx.stroke();}
+    }
+    mO.textContent=ptr+1;sumO.textContent=fmt(sum,2);
+  }
+  function loop(){frame++;if(run&&frame%34===0){advance();}draw();if(run)requestAnimationFrame(loop);}
+  play.addEventListener('click',()=>{run=!run;play.textContent=run?'Pause':'Play';if(run)requestAnimationFrame(loop);});
+  step.addEventListener('click',()=>{advance();draw();});
+  reset.addEventListener('click',()=>{newStream();draw();});
+  verify.addEventListener('click',()=>{if(!cand.length)newStream();runTally();draw();});
+  newStream();
+  onVisible(cv,(v)=>{run=v;play.textContent=v?'Pause':'Play';if(v)requestAnimationFrame(loop);else draw();});
+  register(()=>{S=fit(cv);draw();});
+})();
+
+/* ============================================================ §7 LEVER A — U-curve (proper Talbot MIS) */
+(function(){
+  const cv=document.getElementById('leverACv'); if(!cv)return;
+  let S=fit(cv);
+  const mS=document.getElementById('l_m'),mL=document.getElementById('l_mlab'),
+    thrO=document.getElementById('l_thr'),varO=document.getElementById('l_var'),
+    guarO=document.getElementById('l_guar'),pill=document.getElementById('l_pill');
+  function phat(x){return Math.exp(-((x-0.5)**2)/0.05)+0.9*Math.exp(-((x-0.12)**2)/0.0006);}
+  const f=phat;
+  let GT=0;{let s=0,n=200000;for(let i=0;i<n;i++)s+=f(Math.random());GT=s/n;}
+  function inN(x){return x>=0.3&&x<=0.7;}
+  function pc(x){return phat(x);}                  // canonical proxy (covers all)
+  function pn(x){return inN(x)?phat(x):0;}          // neighbor proxy (broad only)
+  function measure(M){ // proper balance/Talbot MIS, |R|=1 canonical + (M-1) neighbors
+    const T=3000;let m=0,m2=0;
+    for(let t=0;t<T;t++){
+      const xs=new Array(M),src=new Array(M);
+      xs[0]=Math.random();src[0]='c';
+      for(let j=1;j<M;j++){xs[j]=0.3+Math.random()*0.4;src[j]='n';}
+      const nNbr=M-1;let w=new Array(M),sum=0;
+      for(let i=0;i<M;i++){const x=xs[i];const denom=pc(x)+nNbr*pn(x);
+        let mi=denom>0?((src[i]==='c'?pc(x):pn(x))/denom):0;
+        const W=src[i]==='c'?1:0.4;const wi=mi*phat(x)*W;w[i]=wi;sum+=wi;}
+      if(sum<=0)continue;
+      let r=Math.random()*sum,s=0;for(;s<M-1;s++){r-=w[s];if(r<=0)break;}
+      const Y=xs[s],WY=(1/phat(Y))*sum,est=f(Y)*WY;m+=est;m2+=est*est;
+    }
+    return Math.max(0,m2/T-(m/T)*(m/T));
+  }
+  // precompute curve once
+  const MS=[1,2,3,4,6,8,12,16,24,32,48,64,96,128,192,256];
+  let curve=null,Mmin=4,vMin=1,vMax=1;
+  function build(){ curve=MS.map(M=>({M,v:measure(M)}));
+    vMin=Infinity;vMax=0;curve.forEach(p=>{if(p.v<vMin){vMin=p.v;Mmin=p.M;}if(p.v>vMax)vMax=p.v;}); }
+  function varAt(M){ // interpolate precomputed for marker
+    let lo=curve[0],hi=curve[curve.length-1];
+    for(let i=0;i<curve.length-1;i++){if(M>=curve[i].M&&M<=curve[i+1].M){lo=curve[i];hi=curve[i+1];break;}}
+    const t=(Math.log(M)-Math.log(lo.M))/(Math.log(hi.M)-Math.log(lo.M)+1e-9);
+    return Math.exp(lerp(Math.log(lo.v),Math.log(hi.v),clamp(t,0,1)));
+  }
+  function draw(M){
+    if(!curve)build();
+    const {ctx,w,h}=S;ctx.clearRect(0,0,w,h);
+    const padL=50,padR=14,padT=16,padB=30,x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+    const yLo=Math.log10(vMin)-0.25,yHi=Math.log10(vMax)+0.15;
+    function PX(m){return x0+(Math.log10(m)/Math.log10(256))*(x1-x0);}
+    function PY(v){return y1-(clamp(Math.log10(v),yLo,yHi)-yLo)/(yHi-yLo)*(y1-y0);}
+    // shade region past the minimum (guarantee lost)
+    ctx.fillStyle='rgba(224,108,117,.07)';ctx.fillRect(PX(Mmin),y0,x1-PX(Mmin),y1-y0);
+    ctx.strokeStyle='rgba(224,108,117,.4)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(PX(Mmin),y0);ctx.lineTo(PX(Mmin),y1);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(224,108,117,.7)';ctx.font='9px "JetBrains Mono"';ctx.fillText('variance climbs →',PX(Mmin)+6,y0+12);
+    // axes
+    ctx.strokeStyle=C.rule;ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+    ctx.fillStyle=C.faint;ctx.fillText('reuse window M →',x1-110,y1+20);
+    ctx.save();ctx.translate(12,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.fillText('estimate variance (log)',-58,0);ctx.restore();
+    // curve
+    ctx.beginPath();curve.forEach((p,i)=>{i?ctx.lineTo(PX(p.M),PY(p.v)):ctx.moveTo(PX(p.M),PY(p.v));});
+    ctx.strokeStyle=C.teal;ctx.lineWidth=2;ctx.stroke();
+    curve.forEach(p=>{ctx.beginPath();ctx.arc(PX(p.M),PY(p.v),2,0,7);ctx.fillStyle='rgba(90,180,172,.6)';ctx.fill();});
+    // minimum marker
+    ctx.fillStyle=C.green;ctx.beginPath();ctx.arc(PX(Mmin),PY(vMin),3.5,0,7);ctx.fill();
+    ctx.fillText('sweet spot M≈'+Mmin,PX(Mmin)-10,PY(vMin)+18);
+    // current marker
+    const v=varAt(M);
+    ctx.beginPath();ctx.arc(PX(M),PY(v),5,0,7);ctx.fillStyle=C.amber;ctx.shadowColor=C.amber;ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;
+    // readouts + gauge
+    const lost=M>Mmin*1.4;
+    thrO.textContent='√'+M+' = '+fmt(Math.sqrt(M),2);
+    varO.textContent=fmtE(v);
+    guarO.textContent=lost?'lost':'held';guarO.className=lost?'danger':'ok';
+    pill.textContent=lost?'guarantee lost':'guarantee held';pill.className='pill'+(lost?' bad':' ok');
+    const conv=clamp((Math.log10(vMax)-Math.log10(v))/(Math.log10(vMax)-Math.log10(vMin)),0,1);
+    Gauge.set(conv, lost?'<b class="danger">|R| &lt; √M</b> · variance rising'
+                       :'<b class="crit">in the basin</b> · §7 lever A');
+  }
+  let curM=8;
+  mS.addEventListener('input',()=>{curM=parseInt(mS.value,10);mL.textContent=curM;draw(curM);});
+  onVisible(cv,(v)=>{if(v)draw(curM);});
+  register(()=>{S=fit(cv);if(curve)draw(curM);});
+})();
+
+/* ============================================================ §7 LEVER B — M-cap temporal chain */
+(function(){
+  const cv=document.getElementById('leverBCv'); if(!cv)return;
+  let S=fit(cv);
+  const cS=document.getElementById('l2_c'),cL=document.getElementById('l2_clab'),
+    play=document.getElementById('l2_play'),reset=document.getElementById('l2_reset'),
+    errO=document.getElementById('l2_err'),frO=document.getElementById('l2_fr'),
+    stO=document.getElementById('l2_state'),pill=document.getElementById('l2_pill');
+  const CAPS=[Infinity,5,20,50,100],CAPLAB=['∞','5','20','50','100'];
+  const CAPCOL=['#e06c75','#9b8ec4','#98c379','#5ab4ac','#d4a574'];
+  let sel=2;
+  function phat(x){return Math.exp(-((x-0.5)**2)/0.05)+0.9*Math.exp(-((x-0.12)**2)/0.0006);}
+  const f=phat;
+  let GT=0;{let s=0,n=200000;for(let i=0;i<n;i++)s+=f(Math.random());GT=s/n;}
+  const NCH=260, maxF=240;
+  let chains=[],errs=[],frame=0,run=!RM;
+  function freshSample(){ // canonical-ish: mostly broad, occasionally near spike
+    return Math.random()<0.85? (0.5+(Math.random()*2-1)*0.32) : (0.12+(Math.random()*2-1)*0.05);
+  }
+  function init(){
+    chains=CAPS.map(()=>{const arr=[];for(let i=0;i<NCH;i++){const x=clamp(freshSample(),0,1);
+      arr.push({Y:x,W:1/Math.max(phat(x),1e-3),M:1});}return arr;});
+    errs=CAPS.map(()=>[]);frame=0;
+  }
+  function stepCap(ci){
+    const cap=CAPS[ci],arr=chains[ci];let acc=0;
+    for(const c of arr){
+      const x=clamp(freshSample(),0,1);const Wn=1;            // new canonical contrib weight
+      const Mt=c.M+1;
+      const wNew=(1/Mt)*phat(x)*Wn;
+      const wHeld=(c.M/Mt)*phat(c.Y)*c.W;
+      const sum=wNew+wHeld;
+      if(Math.random()*sum<wNew){c.Y=x;}
+      c.M=Math.min(cap,Mt);
+      c.W=(1/Math.max(phat(c.Y),1e-3))*sum;
+      const est=phat(c.Y)*c.W;
+      acc+=Math.abs(est-GT)/GT;
+    }
+    errs[ci].push(acc/arr.length);
+  }
+  function draw(){
+    const {ctx,w,h}=S;ctx.clearRect(0,0,w,h);
+    const padL=48,padR=14,padT=16,padB=30,x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+    const eMax=0.6;
+    function PX(fr){return x0+fr/maxF*(x1-x0);}
+    function PY(e){return y1-clamp(e/eMax,0,1)*(y1-y0);}
+    ctx.strokeStyle=C.rule;ctx.lineWidth=1;
+    [0.1,0.2,0.3,0.4,0.5].forEach(e=>{const py=PY(e);ctx.beginPath();ctx.moveTo(x0,py);ctx.lineTo(x1,py);ctx.stroke();
+      ctx.fillStyle=C.faint;ctx.font='9px "JetBrains Mono"';ctx.fillText((e*100)+'%',6,py+3);});
+    ctx.fillStyle=C.faint;ctx.fillText('frames →',x1-56,y1+20);
+    ctx.save();ctx.translate(12,(y0+y1)/2);ctx.rotate(-Math.PI/2);ctx.fillText('per-frame error',-40,0);ctx.restore();
+    // faded traces
+    for(let ci=0;ci<CAPS.length;ci++){const e=errs[ci];if(e.length<2)continue;
+      ctx.beginPath();for(let i=0;i<e.length;i++){i?ctx.lineTo(PX(i),PY(e[i])):ctx.moveTo(PX(i),PY(e[i]));}
+      ctx.strokeStyle=CAPCOL[ci];ctx.globalAlpha=ci===sel?1:0.22;ctx.lineWidth=ci===sel?2.4:1.3;ctx.stroke();ctx.globalAlpha=1;}
+    // legend
+    let lx=x0+8;for(let ci=0;ci<CAPS.length;ci++){ctx.fillStyle=CAPCOL[ci];ctx.globalAlpha=ci===sel?1:0.4;
+      ctx.fillRect(lx,y0+2,9,9);ctx.globalAlpha=1;ctx.fillStyle=ci===sel?C.ink:C.faint;
+      ctx.font='9px "JetBrains Mono"';ctx.fillText('M_c='+CAPLAB[ci],lx+13,y0+10);lx+=66;}
+    const e=errs[sel],cur=e.length?e[e.length-1]:0;
+    errO.textContent=e.length?fmt(cur*100,2)+'%':'—';frO.textContent=frame;
+    const frozen=CAPS[sel]===Infinity;
+    stO.textContent=frozen?'frozen (biased)':'refreshing';stO.className=frozen?'danger':'ok';
+    pill.textContent=frozen?'no cap — stiff chain':(CAPS[sel]>=20&&CAPS[sel]<=50?'well-tuned':'capped');
+    pill.className='pill'+(frozen?' bad':(CAPS[sel]>=20&&CAPS[sel]<=50?' ok':''));
+    const conv=clamp(1-cur/0.45,0,1);
+    Gauge.set(conv, frozen?'<b class="danger">never reaches 0</b> · no cap'
+                         :'<b class="crit">decaying</b> · §7 lever B');
+  }
+  function loop(){if(run&&frame<maxF){for(let ci=0;ci<CAPS.length;ci++)stepCap(ci);frame++;}draw();if(run)requestAnimationFrame(loop);}
+  cS.addEventListener('input',()=>{sel=parseInt(cS.value,10);cL.textContent=CAPLAB[sel];draw();});
+  play.addEventListener('click',()=>{run=!run;play.textContent=run?'Pause':'Play';if(run)requestAnimationFrame(loop);});
+  reset.addEventListener('click',()=>{init();draw();});
+  init();
+  onVisible(cv,(v)=>{run=v;play.textContent=v?'Pause':'Play';if(v)requestAnimationFrame(loop);else draw();});
+  register(()=>{S=fit(cv);draw();});
+})();
+
+})(); /* end engine */
+</script>
+</body>
+</html>

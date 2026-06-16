@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proving It Correct — Foundations of ReSTIR, Part II</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+    --amber:#d4a574; --teal:#5ab4ac; --lav:#9b8ec4; --red:#e06c75; --green:#98c379;
+    --ink:#e6e4df; --ink-dim:#a7a39b; --ink-faint:#6c6962;
+    --rule:#2a2a38;
+    --head:'Cormorant Garamond',serif;
+    --body:'Source Sans 3',system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sidebar:280px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+  body{margin:0;background:linear-gradient(180deg,var(--bg0),var(--bg1) 60%,var(--bg0));color:var(--ink);font-family:var(--body);font-weight:300;font-size:18px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  #progress{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--teal));width:0;z-index:100}
+  nav#toc{position:fixed;top:0;left:0;width:var(--sidebar);height:100vh;overflow-y:auto;padding:2.4rem 1.4rem;border-right:1px solid var(--rule);background:rgba(10,10,15,.6);backdrop-filter:blur(6px);z-index:50}
+  nav#toc .brand{font-family:var(--head);font-size:1.05rem;color:var(--ink-dim);letter-spacing:.02em;margin-bottom:.2rem}
+  nav#toc .ptitle{font-family:var(--head);font-style:italic;font-size:1.5rem;color:var(--amber);line-height:1.2;margin-bottom:1.6rem}
+  nav#toc ol{list-style:none;margin:0;padding:0;counter-reset:s}
+  nav#toc li{counter-increment:s;margin:.1rem 0}
+  nav#toc a{display:flex;gap:.6rem;align-items:baseline;text-decoration:none;color:var(--ink-faint);font-family:var(--mono);font-size:.74rem;line-height:1.35;padding:.42rem .5rem;border-radius:5px;transition:color .25s,background .25s}
+  nav#toc a::before{content:counter(s,decimal-leading-zero);color:var(--rule);font-size:.68rem;flex:none}
+  nav#toc a:hover{color:var(--ink-dim);background:var(--bg2)}
+  nav#toc a.active{color:var(--amber)}
+  nav#toc a.active::before{color:var(--amber)}
+  nav#toc .foot{margin-top:2rem;padding-top:1rem;border-top:1px solid var(--rule);font-family:var(--mono);font-size:.66rem;color:var(--ink-faint);line-height:1.6}
+  main{margin-left:var(--sidebar)}
+  .wrap{max-width:760px;margin:0 auto;padding:0 2rem}
+  header.hero{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding:6rem 0 4rem}
+  .eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-bottom:1.5rem}
+  h1{font-family:var(--head);font-weight:500;font-size:clamp(2.8rem,7vw,5.2rem);line-height:1.02;margin:0 0 1.1rem;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--amber)}
+  .standfirst{font-size:1.3rem;color:var(--ink-dim);max-width:48ch;font-weight:300}
+  .standfirst .mono{font-family:var(--mono);font-size:1rem;color:var(--lav)}
+  .scrollcue{margin-top:3rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-faint);letter-spacing:.1em}
+  section{padding:3.4rem 0;border-top:1px solid var(--rule)}
+  .sec-no{font-family:var(--mono);font-size:.74rem;color:var(--teal);letter-spacing:.14em;text-transform:uppercase;margin-bottom:.8rem}
+  h2{font-family:var(--head);font-weight:500;font-size:clamp(2rem,4vw,2.9rem);line-height:1.08;margin:0 0 1.2rem;letter-spacing:-.01em}
+  h3{font-family:var(--head);font-weight:600;font-size:1.5rem;color:var(--ink);margin:2.2rem 0 .6rem}
+  p{margin:0 0 1.15rem}
+  .lead{font-size:1.18rem;color:var(--ink-dim)}
+  strong{font-weight:600;color:var(--ink)}
+  em.term{font-style:normal;color:var(--amber);font-weight:400}
+  .lav{color:var(--lav)}
+  code{font-family:var(--mono);font-size:.86em;color:var(--lav);background:var(--bg2);padding:.08em .35em;border-radius:4px}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .8s ease,transform .8s ease}
+  .reveal.in{opacity:1;transform:none}
+  .aside{border-left:2px solid var(--rule);padding:.2rem 0 .2rem 1.3rem;margin:1.8rem 0;color:var(--ink-dim);font-size:.98rem}
+  .aside .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);display:block;margin-bottom:.35rem}
+  figure.widget{margin:2.4rem 0;background:var(--bg1);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+  figure.widget .wtop{padding:1rem 1.3rem .2rem;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:.4rem}
+  figure.widget .wlabel{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal)}
+  figure.widget .wname{font-family:var(--head);font-style:italic;font-size:1.15rem;color:var(--amber)}
+  figure.widget .body{padding:1rem 1.3rem 1.4rem}
+  figure.widget figcaption{padding:0 1.3rem 1.2rem;font-size:.86rem;color:var(--ink-faint);line-height:1.55}
+  figure.widget figcaption b{color:var(--ink-dim);font-weight:500}
+  .controls{display:flex;flex-wrap:wrap;gap:1rem 1.6rem;align-items:center;margin:.4rem 0 1rem}
+  .ctrl{display:flex;flex-direction:column;gap:.3rem;min-width:140px}
+  .ctrl label{font-family:var(--mono);font-size:.7rem;color:var(--ink-dim);letter-spacing:.05em;display:flex;justify-content:space-between;gap:.6rem}
+  .ctrl label .val{color:var(--amber)}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:3px;background:var(--rule);border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid var(--bg1)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid var(--bg1)}
+  input[type=range]:focus-visible{box-shadow:0 0 0 2px var(--teal)}
+  canvas{display:block;width:100%;border-radius:8px}
+  button.btn{font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;color:var(--ink);background:var(--bg2);border:1px solid var(--rule);padding:.5rem .9rem;border-radius:6px;cursor:pointer;transition:background .2s,border-color .2s}
+  button.btn:hover{background:var(--bg3);border-color:var(--amber)}
+  button.btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  button.btn.primary{border-color:var(--amber);color:var(--amber)}
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+  .seg button{font-family:var(--mono);font-size:.72rem;background:var(--bg1);color:var(--ink-dim);border:none;padding:.5rem .85rem;cursor:pointer}
+  .seg button.on{background:var(--amber);color:#1a1108}
+  .readout{font-family:var(--mono);font-size:.82rem;color:var(--ink-dim)}
+  .readout b{color:var(--green);font-weight:500}
+  .pill{font-family:var(--mono);font-size:.7rem;padding:.12em .55em;border-radius:20px;border:1px solid currentColor}
+  .katex{font-size:1.04em}
+  .eqn{margin:1.4rem 0;overflow-x:auto;overflow-y:hidden}
+  footer.colophon{margin-left:var(--sidebar);border-top:1px solid var(--rule);padding:3rem 0 5rem;background:var(--bg0)}
+  .verify{background:var(--bg1);border:1px solid var(--rule);border-left:3px solid var(--green);border-radius:10px;padding:1.3rem 1.5rem;font-size:.92rem}
+  .verify h4{font-family:var(--mono);font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:var(--green);margin:0 0 .8rem}
+  .verify table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.78rem}
+  .verify td{padding:.32rem .4rem;border-bottom:1px solid var(--rule);color:var(--ink-dim);vertical-align:top}
+  .verify td:last-child{color:var(--green);text-align:right;white-space:nowrap}
+  .nextcard{margin-top:2rem;padding:1.4rem 1.6rem;border:1px solid var(--rule);border-radius:12px;background:linear-gradient(135deg,var(--bg2),var(--bg1))}
+  .nextcard .k{font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal)}
+  .nextcard .t{font-family:var(--head);font-style:italic;font-size:1.5rem;color:var(--amber);margin:.3rem 0}
+  .modes{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-top:1rem}
+  .mode{border:1px solid var(--rule);border-radius:8px;padding:.6rem .8rem;font-family:var(--mono);font-size:.72rem;color:var(--ink-faint)}
+  .mode b{display:block;color:var(--lav);font-weight:500;margin-bottom:.2rem;font-size:.78rem}
+  @media (max-width:900px){
+    :root{--sidebar:0px}
+    nav#toc{position:relative;width:100%;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:1.4rem 1.2rem}
+    nav#toc ol{display:flex;flex-wrap:wrap;gap:.2rem}
+    nav#toc .foot{display:none}
+    main,footer.colophon{margin-left:0}
+    header.hero{min-height:auto;padding:3rem 0}
+    body{font-size:17px}
+    .modes{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav id="toc" aria-label="Contents">
+  <div class="brand">The Foundations of ReSTIR · A reading of the supplement</div>
+  <div class="ptitle">II · Proving<br>It Correct</div>
+  <ol>
+    <li><a href="#question">What "correct" must mean</a></li>
+    <li><a href="#ucw">The weight that isn't a density</a></li>
+    <li><a href="#support">Where the integral lives</a></li>
+    <li><a href="#dist">Where the survivor lands</a></li>
+    <li><a href="#variance">How noisy it stays</a></li>
+    <li><a href="#finite">The finite truth</a></li>
+    <li><a href="#colophon">Verification &amp; what follows</a></li>
+  </ol>
+  <div class="foot">Movement II &mdash; supplement §S.5, §S.7.1<br>Theorems A.1, A.2, A.3, &amp; 1</div>
+</nav>
+
+<main>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Generalized Resampled Importance Sampling · Part II of III</div>
+    <h1>Proving<br>It <em>Correct</em></h1>
+    <p class="standfirst">Movement I built weights that are bounded and sum to one. But a tidy weight is not a correct estimator. Here the supplement proves four things: the estimator is <em>unbiased</em>, the survivor's distribution converges to the target, its variance converges to that of <em>perfect</em> importance sampling, and even at finite <span class="mono">M</span> the error is provably penned in.</p>
+    <div class="scrollcue">↓ &nbsp; scroll to begin the proofs</div>
+  </header>
+
+  <!-- 1 -->
+  <section id="question">
+    <div class="sec-no reveal">§ 1 · The standard</div>
+    <h2 class="reveal">What "correct" must mean</h2>
+    <p class="lead reveal">An estimator earns trust on two counts. <strong>Unbiased:</strong> on average it returns the true integral, at every sample count, with no systematic error. <strong>Consistent:</strong> as we feed it more candidates, its answer concentrates &mdash; the distribution it samples from sharpens toward the target, and its variance falls toward the best any importance sampler could achieve.</p>
+    <p class="reveal">The obstacle is the object Movement I leaned on without justifying: the <em class="term">unbiased contribution weight</em> \(W\). It replaced \(1/p\), yet it is not a reciprocal density &mdash; it is a random variable, and the density \(p_Y\) of the resampled survivor is, in general, impossible to write down. How can an estimator built on an uncomputable density possibly be correct? §S.5 answers, theorem by theorem. We take them in the order they earn their keep.</p>
+  </section>
+
+  <!-- 2 -->
+  <section id="ucw">
+    <div class="sec-no reveal">§ 2 · Theorem A.1</div>
+    <h2 class="reveal">The weight that isn't a density</h2>
+    <p class="lead reveal">A random variable \(W\) is an <em class="term">unbiased contribution weight</em> for \(X\) when, for every integrable \(f\),</p>
+    <div class="eqn reveal">\[ \mathbb{E}\bigl[f(X)\,W\bigr]=\int_{\operatorname{supp}X} f(x)\,\mathrm dx. \]</div>
+    <p class="reveal">Theorem A.1 proves this is <em>equivalent</em> to the pointwise condition \(\mathbb{E}[W\mid X=x]=1/p_X(x)\). The proof (§S.5.1) runs through an indicator \(\mathbf 1_A\) and the law of total expectation: integrating the condition over any measurable set forces \(p_X(x)=p_X(x)^2\,\mathbb{E}[W\mid X{=}x]\), and dividing by \(p_X\) gives the reciprocal. So \(W\) need not <em>be</em> \(1/p\); it need only <em>average</em> to it, conditionally. That single relaxation is what lets resampling chain across passes whose densities no one can evaluate.</p>
+    <p class="reveal">The demonstration below runs honest RIS: draw \(M\) candidates, resample one survivor \(Y\), hand it the weight \(W_Y = \tfrac{1}{\hat p(Y)}\sum_i w_i\). That \(W_Y\) is visibly a random variable &mdash; its histogram is broad &mdash; yet the running average of \(f(Y)\,W_Y\) converges to the exact integral. Change the test integrand: it converges every time, because \(W_Y\) is a contribution weight for \(Y\), not for one chosen \(f\).</p>
+
+    <figure class="widget reveal" id="w-ucw">
+      <div class="wtop"><span class="wlabel">Interactive A</span><span class="wname">A random weight, an exact integral</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl"><label>candidates M <span class="val" id="u-M">8</span></label><input type="range" id="u-M-s" min="1" max="64" step="1" value="8"></div>
+          <div class="ctrl"><label>test integrand <span class="val" id="u-g">f</span></label>
+            <div class="seg" id="u-gseg"><button data-g="f" class="on">f</button><button data-g="one">1</button><button data-g="x">x</button></div></div>
+          <div class="ctrl" style="justify-content:flex-end"><button class="btn primary" id="u-run">▶ run</button> <button class="btn" id="u-reset">reset</button></div>
+        </div>
+        <canvas id="u-canvas" height="240" aria-label="Running estimate converging to the true integral, with the weight histogram"></canvas>
+        <div class="controls" style="margin-top:.8rem">
+          <div class="readout">trials <b id="u-n" style="color:var(--ink-dim)">0</b></div>
+          <div class="readout">estimate <b id="u-est">—</b></div>
+          <div class="readout">true ∫g = <span style="color:var(--green)" id="u-true">—</span></div>
+          <div class="readout">|error| <b id="u-err" style="color:var(--amber)">—</b></div>
+          <div class="readout">spread σ(W)/μ(W) <b id="u-spread" style="color:var(--lav)">—</b></div>
+        </div>
+      </div>
+      <figcaption><b>Left:</b> the running mean of g(Y)·W<sub>Y</sub> (amber) settling onto the true integral (green). <b>Right:</b> the histogram of W<sub>Y</sub> — a wide random spread, never a single value. The estimate is unbiased for any g you pick; raising M only tightens the spread, never shifts the mean.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 3 -->
+  <section id="support">
+    <div class="sec-no reveal">§ 3 · §S.7.1</div>
+    <h2 class="reveal">Where the integral lives</h2>
+    <p class="lead reveal">Unbiasedness is a claim about a <em>domain</em>: the estimator integrates \(f\) over \(\operatorname{supp}Y\), the set of outputs the resampler can actually produce. §S.7.1 pins that set exactly.</p>
+    <div class="eqn reveal">\[ \operatorname{supp}Y \;=\; \operatorname{supp}\hat p \;\cap\; \bigcup_{i=1}^{M} T_i\!\bigl(\operatorname{supp}X_i\bigr)\qquad\text{(Eq. 15 / S.108)} \]</div>
+    <p class="reveal">A point survives only if the target gives it positive density <em>and</em> some shifted candidate can reach it. The proof splits into an <strong>easy case</strong> &mdash; a weight is positive exactly when its candidate is in-domain and its shifted image is in \(\operatorname{supp}\hat p\) &mdash; and a <strong>general case</strong>, which additionally permits \(w_i=0\) where the contribution \(c_i\) or the weight \(W_i\) vanishes, without disturbing the support identity. Drag the regions; the integral is collected only over their overlap.</p>
+
+    <figure class="widget reveal" id="w-support">
+      <div class="wtop"><span class="wlabel">Interactive B</span><span class="wname">The reachable support is an intersection</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl" style="min-width:200px"><label>supp p̂ &nbsp;left edge <span class="val" id="sp-a">0.10</span></label><input type="range" id="sp-a-s" min="0" max="0.6" step="0.01" value="0.10"></div>
+          <div class="ctrl" style="min-width:200px"><label>reachable ∪Tᵢ(supp Xᵢ) right edge <span class="val" id="sp-b">0.85</span></label><input type="range" id="sp-b-s" min="0.4" max="1" step="0.01" value="0.85"></div>
+          <div class="ctrl" style="justify-content:flex-end"><button class="btn" id="sp-case">case: easy</button></div>
+        </div>
+        <canvas id="sp-canvas" height="180" aria-label="Support of target, reachable set, and their intersection"></canvas>
+      </div>
+      <figcaption><b>Top band:</b> supp p̂, the target's reach. <b>Middle band:</b> the union of shifted candidate supports, what resampling can produce. <b>Bottom band (amber):</b> their intersection — exactly the set over which f is integrated. Outside it, the estimator is silent, by design and without bias. The general case lets weights vanish on extra null regions; the intersection is unchanged.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4 -->
+  <section id="dist">
+    <div class="sec-no reveal">§ 4 · Theorem A.2</div>
+    <h2 class="reveal">Where the survivor lands</h2>
+    <p class="lead reveal">As candidates accumulate, the survivor \(Y\) stops being a rough draft and becomes a faithful draw from the normalized target \(\bar p = \hat p/\lVert\hat p\rVert\). Theorem A.2 proves this in <em>four</em> senses at once &mdash; the same convergence, witnessed four ways.</p>
+    <p class="reveal">The engine is a single assumption (Eq. 58): the variance of \(\hat p(Y)\,W_Y\) tends to zero. From it, §S.5.2 derives convergence in probability (via Chebyshev), in mean square, in mean, and &mdash; through an \(L^1\) subsequence argument leaning on Bartle &mdash; almost everywhere. The unifying witness is the \(L^1\) distance \(\lVert p_Y-\bar p\rVert_1\): drive it to zero and all four modes follow. Slide \(M\) upward and watch the survivor's histogram collapse onto \(\bar p\).</p>
+
+    <figure class="widget reveal" id="w-dist">
+      <div class="wtop"><span class="wlabel">Interactive C</span><span class="wname">The survivor's law converges to p̄</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl" style="min-width:220px"><label>candidates M <span class="val" id="d-M">4</span></label><input type="range" id="d-M-s" min="1" max="200" step="1" value="4"></div>
+          <div class="ctrl" style="justify-content:flex-end"><button class="btn" id="d-sweep">▶ sweep M</button></div>
+        </div>
+        <canvas id="d-canvas" height="240" aria-label="Histogram of survivor approaching the normalized target curve"></canvas>
+        <div class="modes">
+          <div class="mode"><b>in probability</b>Pr[|p̄−p_Y|&gt;ε] → 0</div>
+          <div class="mode"><b>in mean / L¹</b>‖p_Y − p̄‖₁ = <span id="d-l1" style="color:var(--green)">—</span></div>
+          <div class="mode"><b>in mean square</b>E[(p̄/p_Y − 1)²] → 0</div>
+          <div class="mode"><b>almost everywhere</b>p_Y(y) → p̄(y) a.e.</div>
+        </div>
+      </div>
+      <figcaption><b>Amber bars:</b> the empirical law of the resampled survivor Y. <b>Teal curve:</b> the normalized target p̄ ∝ p̂. As M climbs, the bars fold onto the curve and the L¹ distance — the common thread of all four convergence modes — falls toward zero.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 5 -->
+  <section id="variance">
+    <div class="sec-no reveal">§ 5 · Theorem A.3</div>
+    <h2 class="reveal">How noisy it stays</h2>
+    <p class="lead reveal">Sampling from the right distribution is not enough; the estimator must also be <em>quiet</em>. Theorem A.3 proves that the variance of \(f(Y)\,W_Y\) converges to the variance of an estimator that drew \(X\) directly from \(\bar p\) and weighted by \(f/\bar p\) &mdash; the variance of <strong>perfect importance sampling against this target</strong>.</p>
+    <div class="eqn reveal">\[ \operatorname{Var}\bigl[f(Y)\,W_Y\bigr]\;\xrightarrow{M\to\infty}\;\operatorname{Var}_{X\sim\bar p}\!\Bigl[\tfrac{f(X)}{\bar p(X)}\Bigr]. \]</div>
+    <p class="reveal">The proof is a three-step law-of-total-variance argument: the conditional variance given \(Y\) is squeezed by \(C_f^2\,\operatorname{Var}[\sum w_i]\to0\), then the gap between importance sampling against \(p_Y\) and against \(\bar p\) closes by A.2. The corollary (Item 3) is the dream: when the target is shaped like the integrand, \(\hat p\propto f\), that limiting variance is <strong>zero</strong>. Resampling toward a perfect target gives a noiseless estimate in the limit. The floor below is set by how well \(\hat p\) matches \(f\) &mdash; close the gap and watch it sink.</p>
+
+    <figure class="widget reveal" id="w-var">
+      <div class="wtop"><span class="wlabel">Interactive D</span><span class="wname">The variance floor, and how to lower it</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl" style="min-width:260px"><label>target match &nbsp;p̂ → f <span class="val" id="v-t">0.00</span></label><input type="range" id="v-t-s" min="0" max="1" step="0.01" value="0"></div>
+        </div>
+        <canvas id="v-canvas" height="250" aria-label="Finite-M variance approaching the ideal importance-sampling floor"></canvas>
+        <div class="controls" style="margin-top:.8rem">
+          <div class="readout">ideal IS variance (floor) <b id="v-floor">—</b></div>
+          <div class="readout">at M=256 <b id="v-m256" style="color:var(--amber)">—</b></div>
+          <div class="readout" id="v-perf" style="color:var(--green);display:none">perfect target: floor → 0</div>
+        </div>
+      </div>
+      <figcaption><b>Dots:</b> the measured Var[f·W] at growing M, descending toward the dashed <b>floor</b> — the variance perfect importance sampling against p̂ would achieve. <b>Slider:</b> morph p̂ toward f. As the match improves the floor drops; at a perfect match it reaches zero — the zero-variance limit of Item 3.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 6 -->
+  <section id="finite">
+    <div class="sec-no reveal">§ 6 · Theorem 1</div>
+    <h2 class="reveal">The finite truth</h2>
+    <p class="lead reveal">Asymptotics reassure; practice runs at finite \(M\). Theorem 1 gives the guarantee that matters on real hardware: a closed-form envelope around the gap between the achieved variance and the ideal, in terms of one measurable quantity \(V=\operatorname{Var}\bigl[\sum_i w_i\bigr]\).</p>
+    <div class="eqn reveal">\[ \Bigl|\operatorname{Var}[f(Y)W_Y]-\operatorname{Var}_{\bar p}\!\bigl[\tfrac{f}{\bar p}\bigr]\Bigr|\;\le\;C_f^2\sqrt{V}\,\bigl(\lVert\hat p\rVert+2\sqrt{V}\bigr)\qquad\text{(S.105)} \]</div>
+    <p class="reveal">The envelope is built from the same pieces as the proof of A.3: the \(\sqrt V\) factor descends from Equation S.101, the \(2\sqrt V\) from the conditional-variance bound. Its message is operational &mdash; the only thing standing between a finite run and the ideal is \(V\), the variance of the summed resampling weights, and that is something an implementation can measure and shrink. Increase \(M\); \(V\) falls, and the guaranteed band closes around the floor.</p>
+
+    <figure class="widget reveal" id="w-finite">
+      <div class="wtop"><span class="wlabel">Interactive E</span><span class="wname">A provable band, closing as M grows</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="ctrl" style="min-width:240px"><label>candidates M <span class="val" id="f-M">8</span></label><input type="range" id="f-M-s" min="2" max="256" step="1" value="8"></div>
+        </div>
+        <canvas id="f-canvas" height="200" aria-label="Theorem 1 envelope band around the ideal variance, with the measured point inside"></canvas>
+        <div class="controls" style="margin-top:.8rem">
+          <div class="readout">V = Var[∑wᵢ] <b id="f-V" style="color:var(--lav)">—</b></div>
+          <div class="readout">measured gap <b id="f-gap" style="color:var(--amber)">—</b></div>
+          <div class="readout">envelope <b id="f-env">—</b></div>
+          <div class="readout">inside band <b id="f-ok">✓</b></div>
+        </div>
+      </div>
+      <figcaption><b>Green line:</b> the ideal variance. <b>Shaded band:</b> Theorem 1's guaranteed envelope ±C<sub>f</sub>²√V(‖p̂‖+2√V). <b>Amber dot:</b> the actually measured finite-M variance — always within the band. As M rises, V shrinks and the band squeezes onto the ideal, a finite-sample promise, not just a limit.</figcaption>
+    </figure>
+  </section>
+
+</div>
+</main>
+
+<footer class="colophon" id="colophon">
+  <div class="wrap">
+    <div class="sec-no reveal">§ 7 · Colophon</div>
+    <h2 class="reveal" style="font-size:2.2rem">Verification &amp; what follows</h2>
+    <p class="reveal">Each theorem was reproduced by Monte Carlo before being animated &mdash; honest RIS from a uniform source against a bump target \(\hat p\), millions of trials per estimate:</p>
+    <div class="verify reveal">
+      <h4>Computational checks · Movement II</h4>
+      <table>
+        <tr><td>A.1 unbiasedness &nbsp;E[g(Y)·W] vs ∫g &nbsp;(g = f, 1, x, x²)</td><td>err ≤ 3 × 10⁻⁴</td></tr>
+        <tr><td>A.1 &nbsp;W is a genuine random variable &nbsp;σ/μ</td><td>0.57</td></tr>
+        <tr><td>A.2 &nbsp;‖p_Y − p̄‖₁ &nbsp;at M = 1 → 64</td><td>0.49 → 0.008</td></tr>
+        <tr><td>A.3 &nbsp;Var[f·W] → ideal IS variance 0.2385</td><td>0.2386 at M=1024</td></tr>
+        <tr><td>A.3 item 3 &nbsp;p̂ ∝ f ⟹ Var[f·W] → 0</td><td>4.8 × 10⁻⁵</td></tr>
+        <tr><td>Thm 1 &nbsp;gap ≤ envelope &nbsp;(M = 2 … 256)</td><td>holds; band closes</td></tr>
+      </table>
+    </div>
+    <p class="reveal" style="margin-top:1.5rem">The estimator is unbiased, lands on the target, and is as quiet as perfect importance sampling &mdash; with a finite-sample guarantee. But every theorem here assumed <em>independent</em> samples. ReSTIR's whole trick is to reuse neighbors and previous frames, which makes samples <strong>correlated</strong>. Does any of this survive? That is the foundation the title promises.</p>
+    <div class="nextcard reveal">
+      <div class="k">Part III of III · Movement III</div>
+      <div class="t">Convergence Under Correlation</div>
+      <p style="margin:.3rem 0 0;color:var(--ink-dim);font-size:.98rem">§S.2's dependent-sample analysis &mdash; the variance of \(\sum w_i\) split into variances and covariances, Popoviciu's bound, and the correlation-decay condition \(b_k\to0\) that drives it to zero &mdash; followed by the systems epilogue: primary sample space (§S.3), the reservoir struct (§S.4), and the empirical parameter sweep (§S.6).</p>
+    </div>
+    <p class="reveal" style="margin-top:1.5rem;font-size:.86rem;color:var(--ink-faint)">Source: <i>Generalized Resampled Importance Sampling: Foundations of ReSTIR</i> — supplementary document, §S.5 and §S.7.1. Part II of a three-part reading. Live simulations use seeded Monte Carlo; readouts will fluctuate slightly between runs, as honest sampling should.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  function dpr(){ return window.devicePixelRatio||1; }
+  function fitCanvas(c){
+    var r=dpr(), rect=c.getBoundingClientRect();
+    var w=rect.width||(c.parentElement?c.parentElement.getBoundingClientRect().width:600)||600;
+    var h=parseInt(c.getAttribute('height'))||150;
+    c.width=w*r; c.height=h*r;
+    var ctx=c.getContext('2d'); ctx.setTransform(r,0,0,r,0,0);
+    return {ctx:ctx,w:w,h:h};
+  }
+  var css=getComputedStyle(document.documentElement);
+  function C(n){ return css.getPropertyValue(n).trim(); }
+  var COL={amber:C('--amber'),teal:C('--teal'),lav:C('--lav'),red:C('--red'),green:C('--green'),
+           ink:C('--ink'),dim:C('--ink-dim'),faint:C('--ink-faint'),rule:C('--rule'),bg0:C('--bg0'),bg2:C('--bg2')};
+  var MONO="13px 'JetBrains Mono', monospace";
+
+  /* progress + reveal + spy */
+  var prog=document.getElementById('progress');
+  function onScroll(){ var h=document.documentElement.scrollHeight-window.innerHeight; prog.style.width=(h>0?(window.scrollY/h*100):0)+'%'; }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+  var links=[].slice.call(document.querySelectorAll('#toc a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'));});
+  var spy=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){var i=secs.indexOf(e.target);links.forEach(function(l){l.classList.remove('active');});if(i>=0)links[i].classList.add('active');}});},{rootMargin:'-30% 0px -60% 0px'});
+  secs.forEach(function(s){if(s)spy.observe(s);});
+
+  /* ---------- shared RIS math ---------- */
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function fF(x){ return 0.5 + 0.4*Math.sin(5*x) + 0.3*x; }                 // integrand f>0
+  function bump(x){ return Math.exp(-((x-0.6)*(x-0.6))/0.05) + 0.25; }      // mismatched target
+  function target(x,t){ t=t||0; return (1-t)*bump(x) + t*fF(x); }           // blend toward f
+
+  // numeric quadrature on a grid
+  var GX=[],GN=801; for(var gi=0;gi<GN;gi++) GX.push(gi/(GN-1));
+  function integ(fn){ var s=0,dx=1/(GN-1); for(var i=0;i<GN;i++){ var w=(i===0||i===GN-1)?0.5:1; s+=w*fn(GX[i]); } return s*dx; }
+  var TRUE_F=integ(fF);
+  function normOf(t){ return integ(function(x){return target(x,t);}); }
+  function idealVar(t){ // Var_{p̄}[f/p̄] = ∫ f²/p̄ − TRUE²  with p̄ = target/||target||
+    var N=normOf(t);
+    var I=integ(function(x){ var pb=target(x,t)/N; return (fF(x)*fF(x))/pb; });
+    return I - TRUE_F*TRUE_F;
+  }
+  function CfOf(t){ var m=0; for(var i=0;i<GN;i++){ var r=fF(GX[i])/target(GX[i],t); if(r>m)m=r; } return m; }
+
+  // one batch of RIS trials; returns accumulators
+  function risRun(M, trials, t, gfn, rnd){
+    var N=0,s1=0,s2=0, sw1=0,sw2=0, w1=0,w2=0; // estimate sums, sumw sums, W sums
+    var wbuf=new Float64Array(M), xbuf=new Float64Array(M);
+    for(var n=0;n<trials;n++){
+      var sw=0;
+      for(var i=0;i<M;i++){ var x=rnd(); xbuf[i]=x; var w=target(x,t)/M; wbuf[i]=w; sw+=w; }
+      var r=rnd()*sw, acc=0, sidx=M-1;
+      for(var i=0;i<M;i++){ acc+=wbuf[i]; if(acc>=r){ sidx=i; break; } }
+      var Y=xbuf[sidx], WY=sw/target(Y,t), val=gfn(Y)*WY;
+      N++; s1+=val; s2+=val*val; sw1+=sw; sw2+=sw*sw; w1+=WY; w2+=WY*WY;
+    }
+    return {N:N,s1:s1,s2:s2,sw1:sw1,sw2:sw2,w1:w1,w2:w2};
+  }
+
+  /* ============ Interactive A — UCW verifier ============ */
+  (function(){
+    var c=document.getElementById('u-canvas'); if(!c) return;
+    var M=8, gname='f', running=false, rnd=mulberry32(12345);
+    var acc={N:0,s1:0,w1:0,w2:0}, trace=[], whist=new Float64Array(40), wmax=4;
+    var gmap={ f:fF, one:function(){return 1;}, x:function(x){return x;} };
+    var gtrue={ f:TRUE_F, one:1.0, x:0.5 };
+    function reset(){ acc={N:0,s1:0,w1:0,w2:0}; trace=[]; whist=new Float64Array(40); rnd=mulberry32((Math.random()*1e9)|0); draw(); upd(); }
+    function step(){
+      if(!running) return;
+      var batch=2500, M2=M, t=0, g=gmap[gname];
+      var wbuf=new Float64Array(M2), xbuf=new Float64Array(M2);
+      for(var n=0;n<batch;n++){
+        var sw=0;
+        for(var i=0;i<M2;i++){ var x=rnd(); xbuf[i]=x; var w=bump(x)/M2; wbuf[i]=w; sw+=w; }
+        var r=rnd()*sw, a=0, si=M2-1;
+        for(var i=0;i<M2;i++){ a+=wbuf[i]; if(a>=r){si=i;break;} }
+        var Y=xbuf[si], WY=sw/bump(Y), val=g(Y)*WY;
+        acc.N++; acc.s1+=val; acc.w1+=WY; acc.w2+=WY*WY;
+        var hb=Math.min(39,(WY/wmax*40)|0); whist[hb]++;
+      }
+      var est=acc.s1/acc.N;
+      trace.push({n:acc.N,e:est}); if(trace.length>600) trace.shift();
+      draw(); upd();
+      requestAnimationFrame(step);
+    }
+    function upd(){
+      var est=acc.N?acc.s1/acc.N:NaN, tru=gtrue[gname];
+      document.getElementById('u-n').textContent=acc.N.toLocaleString();
+      document.getElementById('u-est').textContent=acc.N?est.toFixed(4):'—';
+      document.getElementById('u-true').textContent=tru.toFixed(4);
+      document.getElementById('u-err').textContent=acc.N?Math.abs(est-tru).toFixed(4):'—';
+      var mu=acc.N?acc.w1/acc.N:0, varW=acc.N?(acc.w2/acc.N-mu*mu):0;
+      document.getElementById('u-spread').textContent=(acc.N&&mu>0)?(Math.sqrt(Math.max(0,varW))/mu).toFixed(2):'—';
+    }
+    function draw(){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var splitX=W*0.66, padT=16, padB=28;
+      // left: convergence trace
+      var tru=gtrue[gname];
+      var loY=Math.min(tru*0.4, tru-0.4), hiY=tru+0.6; if(loY<-0.2)loY=-0.2;
+      function px(n){ return 8 + (splitX-24)*(Math.log10(Math.max(n,1))/Math.log10(600*2500)); }
+      function py(v){ return padT + (H-padT-padB)*(1-(v-loY)/(hiY-loY)); }
+      // true line
+      ctx.strokeStyle=COL.green; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(8,py(tru)); ctx.lineTo(splitX-16,py(tru)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=COL.green; ctx.font=MONO; ctx.textAlign='left'; ctx.fillText('∫g='+tru.toFixed(3), 12, py(tru)-6);
+      // trace
+      if(trace.length>1){
+        ctx.strokeStyle=COL.amber; ctx.lineWidth=1.6; ctx.beginPath();
+        for(var i=0;i<trace.length;i++){ var X=px(trace[i].n),Yp=py(trace[i].e); if(i===0)ctx.moveTo(X,Yp); else ctx.lineTo(X,Yp); }
+        ctx.stroke();
+        var last=trace[trace.length-1]; ctx.fillStyle=COL.amber; ctx.beginPath(); ctx.arc(px(last.n),py(last.e),3,0,7); ctx.fill();
+      }
+      ctx.fillStyle=COL.faint; ctx.font="10px 'JetBrains Mono',monospace"; ctx.textAlign='center';
+      ctx.fillText('trials (log) →', (splitX-16)/2, H-8);
+      ctx.fillStyle=COL.dim; ctx.textAlign='left'; ctx.fillText('running estimate', 8, 12);
+      // divider
+      ctx.strokeStyle=COL.rule; ctx.beginPath(); ctx.moveTo(splitX,8); ctx.lineTo(splitX,H-8); ctx.stroke();
+      // right: W histogram
+      var hx0=splitX+14, hw=W-hx0-10, mx=1;
+      for(var i=0;i<40;i++) if(whist[i]>mx)mx=whist[i];
+      ctx.fillStyle=COL.dim; ctx.font=MONO; ctx.textAlign='left'; ctx.fillText('weight W spread', hx0, 12);
+      var bw=hw/40;
+      for(var i=0;i<40;i++){ var bh=(whist[i]/mx)*(H-padT-padB); ctx.fillStyle=COL.lav;
+        ctx.fillRect(hx0+i*bw, padT+(H-padT-padB-bh), bw-1, bh); }
+      ctx.fillStyle=COL.faint; ctx.font="10px 'JetBrains Mono',monospace"; ctx.textAlign='center';
+      ctx.fillText('0', hx0, H-8); ctx.fillText('W →', hx0+hw/2, H-8); ctx.fillText(wmax+'', hx0+hw, H-8);
+    }
+    document.getElementById('u-M-s').addEventListener('input',function(){ M=parseInt(this.value); document.getElementById('u-M').textContent=M; reset(); });
+    document.getElementById('u-gseg').addEventListener('click',function(e){ if(e.target.dataset.g){ gname=e.target.dataset.g;
+      [].forEach.call(this.children,function(b){b.classList.toggle('on',b.dataset.g===gname);});
+      document.getElementById('u-g').textContent=({f:'f',one:'1',x:'x'})[gname]; reset(); } });
+    document.getElementById('u-run').addEventListener('click',function(){ running=!running; this.textContent=running?'❚❚ pause':'▶ run'; if(running) step(); });
+    document.getElementById('u-reset').addEventListener('click',reset);
+    window.addEventListener('resize',draw); draw(); upd();
+  })();
+
+  /* ============ Interactive B — support intersection ============ */
+  (function(){
+    var c=document.getElementById('sp-canvas'); if(!c) return;
+    var a=0.10,b=0.85, easy=true;
+    function draw(){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var padL=12, w=W-padL*2, rowH=34, gap=14, y0=14;
+      function band(y,x0,x1,col,lab){
+        ctx.fillStyle=COL.bg2; ctx.fillRect(padL,y,w,rowH);
+        ctx.fillStyle=col; ctx.globalAlpha=0.85; ctx.fillRect(padL+w*x0,y,w*(x1-x0),rowH); ctx.globalAlpha=1;
+        ctx.fillStyle=COL.faint; ctx.font="11px 'JetBrains Mono',monospace"; ctx.textAlign='left'; ctx.fillText(lab,padL+2,y-3);
+      }
+      band(y0, a, 1, COL.teal, 'supp p̂');
+      band(y0+rowH+gap, 0, b, COL.lav, '∪ Tᵢ(supp Xᵢ)  — reachable');
+      var lo=Math.max(a,0), hi=Math.min(b,1);
+      var y2=y0+2*(rowH+gap);
+      ctx.fillStyle=COL.bg2; ctx.fillRect(padL,y2,w,rowH);
+      if(hi>lo){ ctx.fillStyle=COL.amber; ctx.fillRect(padL+w*lo,y2,w*(hi-lo),rowH);
+        ctx.fillStyle=COL.bg0; ctx.font="600 11px 'JetBrains Mono',monospace"; ctx.textAlign='center';
+        ctx.fillText('supp Y = ∫f collected here', padL+w*(lo+hi)/2, y2+21);
+      } else {
+        ctx.fillStyle=COL.red; ctx.font="11px 'JetBrains Mono',monospace"; ctx.textAlign='center';
+        ctx.fillText('empty intersection — nothing sampled', padL+w/2, y2+21);
+      }
+      ctx.fillStyle=COL.faint; ctx.font="11px 'JetBrains Mono',monospace"; ctx.textAlign='left'; ctx.fillText('supp Y  (intersection)',padL+2,y2-3);
+    }
+    document.getElementById('sp-a-s').addEventListener('input',function(){ a=parseFloat(this.value); document.getElementById('sp-a').textContent=a.toFixed(2); draw(); });
+    document.getElementById('sp-b-s').addEventListener('input',function(){ b=parseFloat(this.value); document.getElementById('sp-b').textContent=b.toFixed(2); draw(); });
+    document.getElementById('sp-case').addEventListener('click',function(){ easy=!easy; this.textContent='case: '+(easy?'easy':'general'); draw(); });
+    window.addEventListener('resize',draw); draw();
+  })();
+
+  /* ============ Interactive C — distribution convergence ============ */
+  (function(){
+    var c=document.getElementById('d-canvas'); if(!c) return;
+    var M=4, NB=40, hist=new Float64Array(NB), target_h=new Float64Array(NB), sweep=false, sweepT=0;
+    var rnd=mulberry32(777);
+    var Nbar=normOf(0);
+    for(var i=0;i<NB;i++){ var x=(i+0.5)/NB; target_h[i]=bump(x)/Nbar; }
+    function compute(){
+      hist=new Float64Array(NB); var trials=120000;
+      var wbuf=new Float64Array(M), xbuf=new Float64Array(M);
+      for(var n=0;n<trials;n++){ var sw=0;
+        for(var i=0;i<M;i++){ var x=rnd(); xbuf[i]=x; var w=bump(x)/M; wbuf[i]=w; sw+=w; }
+        var r=rnd()*sw,acc=0,si=M-1; for(var i=0;i<M;i++){acc+=wbuf[i];if(acc>=r){si=i;break;}}
+        var Y=xbuf[si]; var b=Math.min(NB-1,(Y*NB)|0); hist[b]++;
+      }
+      // normalize to density
+      var tot=0; for(var i=0;i<NB;i++) tot+=hist[i]; for(var i=0;i<NB;i++) hist[i]=hist[i]/tot*NB;
+      var l1=0; for(var i=0;i<NB;i++) l1+=Math.abs(hist[i]-target_h[i]); l1/=NB;
+      document.getElementById('d-l1').textContent=l1.toFixed(4);
+      draw();
+    }
+    function draw(){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var padL=12,padB=26,padT=12, w=W-padL*2, hh=H-padB-padT, mx=0;
+      for(var i=0;i<NB;i++){ if(hist[i]>mx)mx=hist[i]; if(target_h[i]>mx)mx=target_h[i]; } mx*=1.1;
+      var bw=w/NB;
+      for(var i=0;i<NB;i++){ var bh=(hist[i]/mx)*hh; ctx.fillStyle="rgba(212,165,116,0.8)"; ctx.fillRect(padL+i*bw,padT+hh-bh,bw-1,bh); }
+      ctx.strokeStyle=COL.teal; ctx.lineWidth=2; ctx.beginPath();
+      for(var i=0;i<NB;i++){ var X=padL+(i+0.5)*bw, Y=padT+hh-(target_h[i]/mx)*hh; if(i===0)ctx.moveTo(X,Y); else ctx.lineTo(X,Y); } ctx.stroke();
+      ctx.fillStyle=COL.dim; ctx.font=MONO; ctx.textAlign='left'; ctx.fillText('p_Y (bars)  vs  p̄ (curve)', padL, 11);
+      ctx.fillStyle=COL.faint; ctx.font="10px 'JetBrains Mono',monospace"; ctx.textAlign='center'; ctx.fillText('y ∈ [0,1] →', padL+w/2, H-7);
+      ctx.fillStyle=COL.amber; ctx.textAlign='right'; ctx.fillText('M = '+M, padL+w, 11);
+    }
+    document.getElementById('d-M-s').addEventListener('input',function(){ M=parseInt(this.value); document.getElementById('d-M').textContent=M; compute(); });
+    document.getElementById('d-sweep').addEventListener('click',function(){ if(sweep)return; sweep=true; var seq=[1,2,3,5,8,13,21,34,55,89,144,200],k=0;
+      var self=this; self.textContent='sweeping…';
+      var iv=setInterval(function(){ M=seq[k]; document.getElementById('d-M-s').value=M; document.getElementById('d-M').textContent=M; compute(); k++;
+        if(k>=seq.length){ clearInterval(iv); sweep=false; self.textContent='▶ sweep M'; } }, 420);
+    });
+    window.addEventListener('resize',draw); compute();
+  })();
+
+  /* ============ Interactive D — variance floor ============ */
+  (function(){
+    var c=document.getElementById('v-canvas'); if(!c) return;
+    var t=0, rnd=mulberry32(2024);
+    var Ms=[1,2,4,8,16,32,64,128,256], pts=[];
+    function recompute(){
+      var floor=idealVar(t);
+      pts=[];
+      for(var k=0;k<Ms.length;k++){
+        var M=Ms[k], r=risRun(M, 30000, t, fF, rnd);
+        var mean=r.s1/r.N, v=r.s2/r.N-mean*mean; pts.push({M:M,v:Math.max(v,1e-9)});
+      }
+      document.getElementById('v-floor').textContent=floor.toFixed(4);
+      document.getElementById('v-m256').textContent=pts[pts.length-1].v.toFixed(4);
+      document.getElementById('v-perf').style.display = (t>0.985)?'block':'none';
+      draw(floor);
+    }
+    function draw(floor){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var padL=46,padR=14,padT=14,padB=28, w=W-padL-padR, hh=H-padT-padB;
+      var vmax=0.32, vmin=0; // fixed scale for comparability
+      function px(M){ return padL + w*(Math.log2(M)/Math.log2(256)); }
+      function py(v){ v=Math.max(vmin,Math.min(vmax,v)); return padT + hh*(1-(v-vmin)/(vmax-vmin)); }
+      // axes
+      ctx.strokeStyle=COL.rule; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,padT); ctx.lineTo(padL,padT+hh); ctx.lineTo(padL+w,padT+hh); ctx.stroke();
+      ctx.fillStyle=COL.faint; ctx.font="10px 'JetBrains Mono',monospace"; ctx.textAlign='right';
+      for(var gy=0;gy<=0.3;gy+=0.1){ var Y=py(gy); ctx.fillText(gy.toFixed(1),padL-6,Y+3); ctx.strokeStyle=COL.rule; ctx.globalAlpha=0.5; ctx.beginPath(); ctx.moveTo(padL,Y); ctx.lineTo(padL+w,Y); ctx.stroke(); ctx.globalAlpha=1; }
+      ctx.textAlign='center'; [1,4,16,64,256].forEach(function(M){ ctx.fillText(M+'', px(M), padT+hh+16); });
+      ctx.fillText('M (log) →', padL+w/2, H-3);
+      // floor line
+      ctx.strokeStyle=COL.green; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.moveTo(padL,py(floor)); ctx.lineTo(padL+w,py(floor)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=COL.green; ctx.textAlign='left'; ctx.font=MONO; ctx.fillText('ideal IS floor', padL+6, py(floor)+(floor>0.04?-6:14));
+      // points
+      ctx.strokeStyle=COL.amber; ctx.lineWidth=1.4; ctx.beginPath();
+      for(var i=0;i<pts.length;i++){ var X=px(pts[i].M),Y=py(pts[i].v); if(i===0)ctx.moveTo(X,Y);else ctx.lineTo(X,Y); } ctx.stroke();
+      for(var i=0;i<pts.length;i++){ ctx.fillStyle=COL.amber; ctx.beginPath(); ctx.arc(px(pts[i].M),py(pts[i].v),3,0,7); ctx.fill(); }
+      ctx.fillStyle=COL.dim; ctx.font=MONO; ctx.textAlign='left'; ctx.fillText('Var[f·W]', padL+4, padT+4+8);
+    }
+    document.getElementById('v-t-s').addEventListener('input',function(){ t=parseFloat(this.value); document.getElementById('v-t').textContent=t.toFixed(2); recompute(); });
+    window.addEventListener('resize',function(){ draw(idealVar(t)); }); recompute();
+  })();
+
+  /* ============ Interactive E — finite envelope ============ */
+  (function(){
+    var c=document.getElementById('f-canvas'); if(!c) return;
+    var M=8, t=0, rnd=mulberry32(99), Cf=CfOf(0), NORM=normOf(0), ideal=idealVar(0);
+    function recompute(){
+      var r=risRun(M, 200000, t, fF, rnd);
+      var mean=r.s1/r.N, v=r.s2/r.N-mean*mean;
+      var swm=r.sw1/r.N, V=r.sw2/r.N-swm*swm;
+      var env=Cf*Cf*Math.sqrt(V)*(NORM+2*Math.sqrt(V));
+      var gap=Math.abs(v-ideal);
+      document.getElementById('f-V').textContent=V.toFixed(4);
+      document.getElementById('f-gap').textContent=gap.toFixed(4);
+      document.getElementById('f-env').textContent=env.toFixed(4);
+      var ok=gap<=env*1.05; var el=document.getElementById('f-ok'); el.textContent=ok?'✓':'✗'; el.style.color=ok?COL.green:COL.red;
+      draw(v,V,env,gap);
+    }
+    function draw(v,V,env,gap){
+      var f=fitCanvas(c), ctx=f.ctx, W=f.w, H=f.h; ctx.clearRect(0,0,W,H);
+      var padL=50,padR=16,padT=18,padB=24, w=W-padL-padR, hh=H-padT-padB;
+      var lo=Math.max(0, ideal-Math.min(env,ideal+0.05)*1.2-0.02), hi=ideal+Math.min(env,0.25)*1.2+0.02;
+      if(hi-lo<0.02){ hi=ideal+0.02; lo=Math.max(0,ideal-0.02); }
+      function py(val){ val=Math.max(lo,Math.min(hi,val)); return padT+hh*(1-(val-lo)/(hi-lo)); }
+      // band
+      var topB=py(ideal+env), botB=py(ideal-env);
+      ctx.fillStyle="rgba(152,195,121,0.12)"; ctx.fillRect(padL,topB,w,botB-topB);
+      ctx.strokeStyle="rgba(152,195,121,0.4)"; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(padL,topB); ctx.lineTo(padL+w,topB); ctx.moveTo(padL,botB); ctx.lineTo(padL+w,botB); ctx.stroke(); ctx.setLineDash([]);
+      // ideal
+      ctx.strokeStyle=COL.green; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(padL,py(ideal)); ctx.lineTo(padL+w,py(ideal)); ctx.stroke();
+      ctx.fillStyle=COL.green; ctx.font=MONO; ctx.textAlign='left'; ctx.fillText('ideal variance', padL+6, py(ideal)-6);
+      // measured point
+      var mx=padL+w*0.62;
+      ctx.fillStyle=COL.amber; ctx.beginPath(); ctx.arc(mx,py(v),5,0,7); ctx.fill();
+      ctx.strokeStyle=COL.amber; ctx.lineWidth=1; ctx.setLineDash([2,3]); ctx.beginPath(); ctx.moveTo(mx,py(v)); ctx.lineTo(mx,py(ideal)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle=COL.amber; ctx.textAlign='center'; ctx.fillText('measured Var (M='+M+')', mx, py(v)+(v>ideal?-12:18));
+      // labels
+      ctx.fillStyle=COL.faint; ctx.font="10px 'JetBrains Mono',monospace"; ctx.textAlign='right';
+      ctx.fillText('±envelope', padL+w-4, topB+12);
+    }
+    document.getElementById('f-M-s').addEventListener('input',function(){ M=parseInt(this.value); document.getElementById('f-M').textContent=M; recompute(); });
+    window.addEventListener('resize',recompute); recompute();
+  })();
+
+  /* KaTeX */
+  function renderAll(){ if(window.renderMathInElement){ renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}],throwOnError:false}); } else setTimeout(renderAll,120); }
+  renderAll();
+})();
+</script>
+</body>
+</html>

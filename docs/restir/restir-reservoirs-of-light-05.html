@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservoirs of Light · V — The Price of Borrowing</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+<style>
+:root{
+  --bg0:#0a0a0f; --bg1:#12121a; --bg2:#1a1a28; --bg3:#22222f;
+  --ink:#e7e4dd; --ink-dim:#a7a39a; --ink-faint:#6d6a64;
+  --amber:#d4a574;   /* emitted light / candidate samples            */
+  --teal:#5ab4ac;    /* the selected sample                          */
+  --lav:#9b8ec4;     /* PDFs (p, p̂)                                  */
+  --red:#e06c75;     /* discarded / occluded / bias                  */
+  --green:#98c379;   /* converged / unbiased                         */
+  --rule:rgba(231,228,221,0.10);
+  --rule-strong:rgba(231,228,221,0.18);
+  --sans:'Source Sans 3',system-ui,sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:
+    radial-gradient(1200px 800px at 78% -8%, rgba(212,165,116,0.05), transparent 60%),
+    radial-gradient(1000px 700px at -5% 110%, rgba(90,180,172,0.045), transparent 60%),
+    linear-gradient(180deg,var(--bg0),var(--bg1) 55%, var(--bg0));
+  background-attachment:fixed;
+  color:var(--ink); font-family:var(--sans); font-weight:300;
+  line-height:1.68; font-size:18px; -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(212,165,116,0.28); color:#fff}
+
+/* progress + layout ----------------------------------------------------- */
+#progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--amber),var(--teal));box-shadow:0 0 12px rgba(212,165,116,0.5)}
+.shell{display:grid;grid-template-columns:266px minmax(0,1fr);gap:0;max-width:1280px;margin:0 auto}
+
+nav.side{position:sticky;top:0;height:100vh;padding:38px 26px 38px 34px;
+  border-right:1px solid var(--rule);align-self:start;overflow-y:auto}
+nav.side .series{font-family:var(--mono);font-size:11px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--amber);opacity:.85}
+nav.side .partno{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--ink-faint);margin-top:18px}
+nav.side h1{font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.08;margin:.18em 0 1.5em;letter-spacing:.01em}
+nav.side ol{list-style:none;margin:0;padding:0;counter-reset:s}
+nav.side li{counter-increment:s;margin:0 0 2px}
+nav.side a{display:flex;gap:11px;align-items:baseline;text-decoration:none;color:var(--ink-faint);
+  font-size:13.5px;line-height:1.32;padding:7px 9px;border-radius:7px;border-left:2px solid transparent;
+  transition:color .25s,background .25s,border-color .25s}
+nav.side a::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:10.5px;
+  color:var(--ink-faint);opacity:.6;flex:none;padding-top:1px}
+nav.side a:hover{color:var(--ink-dim);background:rgba(231,228,221,0.03)}
+nav.side a.active{color:var(--ink);background:rgba(212,165,116,0.07);border-left-color:var(--amber)}
+nav.side a.active::before{color:var(--amber);opacity:1}
+nav.side .foot{margin-top:30px;padding-top:18px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);line-height:1.7}
+
+main{padding:0 clamp(20px,4vw,72px) 140px;min-width:0}
+section{padding:62px 0;border-bottom:1px solid var(--rule);scroll-margin-top:18px}
+section:last-of-type{border-bottom:none}
+
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(31px,4.4vw,46px);line-height:1.05;margin:.05em 0 .55em;letter-spacing:.01em}
+h3{font-family:var(--serif);font-weight:600;font-size:25px;margin:2em 0 .5em;color:var(--ink)}
+p{margin:1.05em 0;max-width:67ch;color:var(--ink-dim)}
+p strong,li strong{color:var(--ink);font-weight:600}
+em{color:var(--ink)}
+a.ref{color:var(--teal);text-decoration:none;border-bottom:1px solid rgba(90,180,172,.3)}
+a.ref:hover{border-color:var(--teal)}
+.lead{font-size:21px;color:var(--ink);font-weight:300;max-width:64ch}
+.lead .drop{float:left;font-family:var(--serif);font-weight:600;font-size:74px;line-height:.74;
+  padding:8px 14px 0 0;color:var(--amber)}
+
+code{font-family:var(--mono);font-size:.86em;background:rgba(231,228,221,0.06);
+  padding:.1em .42em;border-radius:4px;color:var(--amber)}
+.katex{font-size:1.06em}
+.eqwrap{margin:1.6em 0;padding:6px 4px;overflow-x:auto}
+
+/* hero ------------------------------------------------------------------ */
+.hero{padding-top:54px}
+.hero .title{font-family:var(--serif);font-weight:500;font-size:clamp(46px,7.5vw,86px);
+  line-height:.98;letter-spacing:.005em;margin:.06em 0 .12em}
+.hero .title .imp{font-style:italic;color:var(--amber)}
+.hero .sub{font-family:var(--serif);font-style:italic;font-size:clamp(20px,2.8vw,27px);color:var(--ink-dim);margin-bottom:1.5em}
+
+/* figure / widget chrome ------------------------------------------------ */
+.fig{margin:2.1em 0;background:linear-gradient(180deg,rgba(26,26,40,.62),rgba(18,18,26,.62));
+  border:1px solid var(--rule-strong);border-radius:14px;overflow:hidden;
+  box-shadow:0 14px 44px rgba(0,0,0,.36)}
+.fig .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:13px 18px;border-bottom:1px solid var(--rule);background:rgba(10,10,15,.4)}
+.fig .bar .lab{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+.fig .body{padding:18px}
+.fig .cap{padding:0 18px 16px;font-size:13.5px;color:var(--ink-faint);max-width:none;font-style:italic;font-family:var(--serif)}
+.fig .cap b{font-style:normal;font-family:var(--sans);color:var(--ink-dim);font-weight:500}
+
+canvas{display:block;width:100%;border-radius:9px;background:#070709;touch-action:none}
+
+.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:14px}
+.seg{display:inline-flex;background:rgba(10,10,15,.55);border:1px solid var(--rule-strong);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:var(--ink-dim);
+  background:transparent;border:0;padding:8px 13px;border-radius:6px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:rgba(212,165,116,.16);color:var(--amber)}
+.seg.teal button.on{background:rgba(90,180,172,.16);color:var(--teal)}
+
+.btn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);cursor:pointer;
+  background:rgba(90,180,172,.12);border:1px solid rgba(90,180,172,.32);padding:9px 16px;border-radius:8px;transition:all .18s}
+.btn:hover{background:rgba(90,180,172,.2)}
+.btn.amber{background:rgba(212,165,116,.12);border-color:rgba(212,165,116,.32)}
+.btn.amber:hover{background:rgba(212,165,116,.2)}
+
+.chk{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);cursor:pointer;user-select:none;
+  padding:7px 12px;border:1px solid var(--rule-strong);border-radius:8px;background:rgba(10,10,15,.4);transition:all .18s}
+.chk:hover{color:var(--ink)}
+.chk input{accent-color:var(--teal);width:14px;height:14px}
+.chk[data-tone="rho"]{--c:var(--lav)} .chk[data-tone="le"]{--c:var(--amber)}
+.chk[data-tone="g"]{--c:var(--teal)} .chk[data-tone="v"]{--c:var(--red)}
+.chk .dot{width:9px;height:9px;border-radius:2px;background:var(--c,var(--ink-dim))}
+
+label.slide{display:flex;flex-direction:column;gap:5px;font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);min-width:190px}
+label.slide .v{color:var(--amber);font-size:13px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--amber),var(--teal));outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--ink);border:2px solid var(--bg0);box-shadow:0 0 0 1px var(--amber)}
+
+/* readout panel --------------------------------------------------------- */
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-top:14px}
+.readout .cell{background:var(--bg1);padding:13px 15px}
+.readout .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.readout .val{font-family:var(--mono);font-size:23px;color:var(--ink);margin-top:5px;line-height:1}
+.readout .val.amber{color:var(--amber)} .readout .val.teal{color:var(--teal)}
+.readout .val.green{color:var(--green)} .readout .val.red{color:var(--red)} .readout .val.lav{color:var(--lav)}
+.readout .sub{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:3px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+
+.tile-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+@media(max-width:680px){.tile-row{grid-template-columns:1fr 1fr}}
+.tile-c{text-align:center}
+.tile-c canvas{aspect-ratio:1/1;image-rendering:pixelated}
+.tile-c .nm{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:8px;line-height:1.3}
+.tile-c .nm b{display:block;font-size:18px;margin-top:3px}
+.tile-c.win .nm b{color:var(--green)}
+
+.callout{margin:1.8em 0;padding:18px 22px;border-left:3px solid var(--amber);
+  background:rgba(212,165,116,.05);border-radius:0 10px 10px 0}
+.callout .h{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+.callout p{margin:.4em 0;color:var(--ink-dim)}
+.callout.teal{border-color:var(--teal);background:rgba(90,180,172,.05)}
+.callout.teal .h{color:var(--teal)}
+
+details.aside{margin:1.6em 0;border:1px solid var(--rule-strong);border-radius:10px;background:rgba(155,142,196,.045)}
+details.aside summary{cursor:pointer;padding:14px 18px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+  color:var(--lav);list-style:none;display:flex;align-items:center;gap:10px}
+details.aside summary::-webkit-details-marker{display:none}
+details.aside summary::before{content:'›';font-size:18px;transition:transform .2s;color:var(--lav)}
+details.aside[open] summary::before{transform:rotate(90deg)}
+details.aside .inner{padding:0 18px 18px;font-size:15.5px;color:var(--ink-dim)}
+details.aside .inner p{font-size:15.5px;max-width:none}
+
+ul.clean{max-width:67ch;color:var(--ink-dim)}
+ul.clean li{margin:.5em 0}
+ul.clean li::marker{color:var(--amber)}
+
+.exercise{display:flex;gap:16px;padding:17px 0;border-bottom:1px solid var(--rule)}
+.exercise:last-child{border-bottom:none}
+.exercise .n{font-family:var(--serif);font-style:italic;font-size:34px;color:var(--amber);line-height:1;flex:none;width:46px}
+.exercise .t{font-size:16px;color:var(--ink-dim)}
+.exercise .t b{color:var(--ink);font-weight:600}
+
+.reveal{opacity:0;transform:translateY(22px)}
+
+footer.colophon{padding:48px clamp(20px,4vw,72px) 90px;border-top:1px solid var(--rule-strong);color:var(--ink-faint);font-size:13.5px}
+footer.colophon h4{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 14px}
+footer.colophon code{font-size:12px}
+footer.colophon .v{color:var(--green)}
+.nextlink{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:30px;padding:22px 26px;
+  border:1px solid var(--rule-strong);border-radius:12px;background:rgba(90,180,172,.05);flex-wrap:wrap}
+.nextlink .l{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal)}
+.nextlink .t{font-family:var(--serif);font-size:24px;color:var(--ink);margin-top:4px}
+
+@media(max-width:980px){
+  .shell{grid-template-columns:1fr}
+  nav.side{position:fixed;inset:0 auto 0 0;width:262px;transform:translateX(-100%);transition:transform .3s;z-index:55;background:var(--bg1)}
+  nav.side.open{transform:translateX(0)}
+  #navtog{position:fixed;top:14px;left:14px;z-index:56;background:var(--bg2);border:1px solid var(--rule-strong);
+    color:var(--ink);border-radius:9px;padding:10px 13px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  main{padding-top:58px}
+}
+@media(min-width:981px){#navtog{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="navtog">≡ sections</button>
+
+<div class="shell">
+<nav class="side" id="side">
+  <div class="series">Reservoirs of Light</div>
+  <div class="partno">Part V of V — an interactive derivation of ReSTIR</div>
+  <h1>The Price of Borrowing</h1>
+  <ol>
+    <li><a href="#darken" class="active">The image goes dark</a></li>
+    <li><a href="#origin">Where the bias comes from</a></li>
+    <li><a href="#partition">A partition of unity</a></li>
+    <li><a href="#explode">Why naïve is not enough</a></li>
+    <li><a href="#balance">The balance heuristic</a></li>
+    <li><a href="#price">The price: O(M) vs O(M²)</a></li>
+    <li><a href="#close">The whole arc</a></li>
+  </ol>
+  <div class="foot">
+    after Bitterli et&nbsp;al. 2020<br>§4 &amp; Appendix · bias of<br>multi-distribution RIS<br><br>
+    built with Claude&nbsp;Opus&nbsp;4.8<br>numbers verified, not asserted
+  </div>
+</nav>
+
+<main>
+
+<!-- ============================================================ HERO -->
+<section id="darken" class="hero">
+  <div class="eyebrow">Reservoirs of Light · V</div>
+  <div class="title">The Price of<br><span class="imp">Borrowing</span></div>
+  <div class="sub">Reuse let a pixel inherit its neighbors' work. But a neighbor's sample<br>was chosen for a different target — and counting it naïvely darkens the image.</div>
+
+  <p class="lead"><span class="drop">T</span>he sandbox from Part II returns, one knob heavier. We are combining two sources with <em>different reach</em>: <span class="katex-inline" data-tex="p_1"></span> covers all of <span class="katex-inline" data-tex="[0,1]"></span>, but <span class="katex-inline" data-tex="p_2"></span> — the half-blind neighbor from Part II — only ever produces samples in <span class="katex-inline" data-tex="[0,\tfrac12]"></span>. When we resample one survivor from the pool and weight it the obvious way, the right half of the reconstruction comes out at <em>exactly half</em> brightness. The estimator is biased, and the bias is visible. Toggle the weighting and watch the right half snap back to the truth.</p>
+
+  <div class="fig" id="fig-hero">
+    <div class="bar">
+      <span class="lab">Figure 7, reborn · reconstructing p̂ by combining two sources</span>
+      <div class="seg" id="hero-scheme">
+        <button data-s="biased" class="on">biased &nbsp;m=1/M</button>
+        <button data-s="naive">naïve &nbsp;m=1/|Z|</button>
+        <button data-s="mis">MIS &nbsp;m=pᵢ/Σp</button>
+      </div>
+    </div>
+    <div class="body">
+      <canvas id="cv-hero" height="360"></canvas>
+      <div class="controls">
+        <label class="chk" style="--c:var(--red)"><span class="dot" style="background:var(--red)"></span><input type="checkbox" id="hero-near"> p₂ near-zero past ½ (not exactly 0)</label>
+        <label class="slide" style="flex:1;min-width:200px">samples &nbsp;<span class="v" id="hero-T-v">20,000</span>
+          <input type="range" id="hero-T" min="2" max="80" value="20"></label>
+      </div>
+      <div class="readout">
+        <div class="cell"><div class="k">true integral I</div><div class="val teal">1.0000</div><div class="sub">∫ p̂ dx</div></div>
+        <div class="cell"><div class="k">estimate E[Î]</div><div class="val amber" id="h-mean">—</div></div>
+        <div class="cell"><div class="k">bias</div><div class="val" id="h-bias">—</div><div class="sub">E[Î] − I</div></div>
+        <div class="cell"><div class="k">variance</div><div class="val lav" id="h-var">—</div><div class="sub">per estimate</div></div>
+      </div>
+    </div>
+    <div class="cap">The <b style="color:var(--lav)">lavender curve</b> is the target p̂(x)=2−2x; the <b style="color:var(--teal)">teal</b> filled curve is the estimator's reconstruction, binned by where the survivor landed. Below, the same reconstruction as a brightness strip — the "image." Under <b style="color:var(--red)">biased</b> weighting the right half is visibly dark and the strip has a seam at ½; switch to MIS and it heals.</div>
+  </div>
+
+  <p>That seam at <em>x</em> = ½ is the whole story of this essay. It appears precisely where the two sources stop overlapping — where a region can be reached by fewer candidates than we are dividing by. Everything below is an account of that one number, and the single reweighting that erases the seam without darkening, exploding, or costing too much.</p>
+</section>
+
+<!-- ============================================================ ORIGIN -->
+<section id="origin">
+  <div class="eyebrow">§1 · One expectation</div>
+  <h2>Where the bias comes from</h2>
+
+  <p>When we combine <em>M</em> candidates and resample a survivor <em>y</em>, the contribution weight we attach has a precise expected value. Writing <span class="katex-inline" data-tex="Z(y)"></span> for the set of sources that <em>could</em> have produced <em>y</em> — those whose density is nonzero there — the expectation is</p>
+
+  <div class="eqwrap" id="eq-EW"></div>
+
+  <p>Read it slowly. If every source could reach <em>y</em>, then <span class="katex-inline" data-tex="|Z(y)|=M"></span> and the factor is 1: the estimator is unbiased. But where only some sources can reach — at the edge of a neighbor's view, across a shadow boundary — <span class="katex-inline" data-tex="|Z(y)|<M"></span>, the factor drops below one, and the estimate is scaled <em>down</em>. The image darkens by exactly the fraction of candidates that were never in the running.</p>
+
+  <div class="fig" id="fig-coverage">
+    <div class="bar"><span class="lab">Coverage · |Z(x)| and the darkening factor |Z|/M</span></div>
+    <div class="body"><canvas id="cv-coverage" height="220"></canvas></div>
+    <div class="cap">Source <b style="color:var(--amber)">p₁</b> covers all of [0,1]; source <b style="color:var(--teal)">p₂</b> only [0,½]. So <span class="katex-inline" data-tex="|Z|=2"></span> on the left, <span class="katex-inline" data-tex="|Z|=1"></span> on the right. Dividing by <em>M</em>=2 everywhere multiplies the right half by <span class="katex-inline" data-tex="|Z|/M=\tfrac12"></span> — the darkening you saw above.</div>
+  </div>
+</section>
+
+<!-- ============================================================ PARTITION -->
+<section id="partition">
+  <div class="eyebrow">§2 · The shape of the cure</div>
+  <h2>A partition of unity</h2>
+
+  <p>The fix is to replace the blunt <span class="katex-inline" data-tex="1/M"></span> with a per-source weight <span class="katex-inline" data-tex="m_i(y)"></span> that, summed over only the sources that could produce <em>y</em>, equals one:</p>
+
+  <div class="eqwrap" id="eq-partition"></div>
+
+  <p>This is the same partition-of-unity condition that made multiple importance sampling unbiased back in Part I — now defending against the coverage failure of Part II. The simplest choice that satisfies it is to split the weight equally among the sources present: <span class="katex-inline" data-tex="m_i(y)=1/|Z(y)|"></span>. On the right half, where only <span class="katex-inline" data-tex="p_1"></span> survives, that means <span class="katex-inline" data-tex="m_1=1"></span> — full credit — and the darkening vanishes. Watch the weights rebalance:</p>
+
+  <div class="fig" id="fig-pou">
+    <div class="bar">
+      <span class="lab">Per-source weights mᵢ(x) — do they sum to 1 where samples land?</span>
+      <div class="seg" id="pou-scheme">
+        <button data-s="biased" class="on">biased</button>
+        <button data-s="naive">naïve</button>
+        <button data-s="mis">MIS</button>
+      </div>
+    </div>
+    <div class="body"><canvas id="cv-pou" height="220"></canvas></div>
+    <div class="cap">Stacked weights for <b style="color:var(--amber)">p₁</b> and <b style="color:var(--teal)">p₂</b>. The <b style="color:var(--lav)">dashed line</b> is the target sum of 1. Biased leaves a <b style="color:var(--red)">deficit</b> on the right (the sum is only ½ there); naïve and MIS both reach 1 — they are unbiased.</div>
+  </div>
+</section>
+
+<!-- ============================================================ EXPLODE -->
+<section id="explode">
+  <div class="eyebrow">§3 · Unbiased is not the same as good</div>
+  <h2>Why naïve is not enough</h2>
+
+  <p>Equal splitting removes the bias, but it ignores <em>how likely</em> each source was to produce the sample. Suppose <span class="katex-inline" data-tex="p_2"></span> is not exactly zero past ½ but merely <em>tiny</em> — the neighbor can, very rarely, produce a sample out there. Now <span class="katex-inline" data-tex="|Z|=2"></span> on the right, so naïve weighting hands that rare sample <span class="katex-inline" data-tex="m_2=\tfrac12"></span>, and its resampling weight <span class="katex-inline" data-tex="w_2=m_2\,\hat p/p_2"></span> divides by a vanishing <span class="katex-inline" data-tex="p_2"></span>. The weight detonates. Flip the near-zero switch in the hero and watch the variance — the mean stays correct, but the estimate becomes a minefield of spikes.</p>
+
+  <div class="fig" id="fig-var">
+    <div class="bar"><span class="lab">Variance of each estimator · sharp cutoff vs. near-zero tail</span></div>
+    <div class="body">
+      <canvas id="cv-var" height="240"></canvas>
+      <div class="readout" style="grid-template-columns:1fr 1fr">
+        <div class="cell"><div class="k">max single weight w₂ · naïve (near-0)</div><div class="val red" id="var-naive">—</div><div class="sub">rare, enormous</div></div>
+        <div class="cell"><div class="k">max single weight w₂ · MIS (near-0)</div><div class="val green" id="var-mis">—</div><div class="sub">bounded</div></div>
+      </div>
+    </div>
+    <div class="cap">All three unbiased estimators agree in the mean, but naïve weighting's variance <em>explodes</em> when a source's density nears zero — a rare sample carries a weight tens of times too large. The biased estimator is quiet but wrong; naïve is right but loud.</div>
+  </div>
+</section>
+
+<!-- ============================================================ BALANCE -->
+<section id="balance">
+  <div class="eyebrow">§4 · The weight that cancels</div>
+  <h2>The balance heuristic</h2>
+
+  <p>The cure is the balance heuristic — weight each source by its <em>share</em> of the total density at the sample:</p>
+
+  <div class="eqwrap" id="eq-balance"></div>
+
+  <p>Substitute it into the resampling weight and something quietly perfect happens. The offending <span class="katex-inline" data-tex="1/p_i"></span> that blew up the naïve estimator <em>cancels</em>:</p>
+
+  <div class="eqwrap" id="eq-cancel"></div>
+
+  <p>The weight no longer divides by the source's own density — it divides by the <em>sum</em> of all densities, which is never small where any source is present. A rare sample from a near-zero source is now weighted by how plausible it was under <em>every</em> source, so it can never detonate. Unbiased, like naïve; bounded, unlike naïve; and — as you saw — lower variance than either. This is why ReSTIR's reuse is built on the balance heuristic and nothing else.</p>
+
+  <div class="callout teal">
+    <div class="h">Full circle</div>
+    <p>This is the exact weight from Part I's MIS paragraph — <span class="katex-inline" data-tex="w_s(x)=p_s(x)/\sum_j p_j(x)"></span>. The series opened by combining two sampling strategies with the balance heuristic to beat either alone; it closes by using the same heuristic to make reservoir reuse unbiased. The partition of unity is the spine of the whole method.</p>
+  </div>
+</section>
+
+<!-- ============================================================ PRICE -->
+<section id="price">
+  <div class="eyebrow">§5 · What it costs</div>
+  <h2>The price: O(M) vs O(M²)</h2>
+
+  <p>Nothing is free. To compute the balance weight for the survivor <em>y</em>, we need <span class="katex-inline" data-tex="\sum_j p_j(y)"></span> — every source's density evaluated at <em>y</em>. And in a renderer, evaluating a source's target at a point means asking whether that point's light is visible from there: <strong>a pdf evaluation is a shadow ray.</strong> For one survivor against <em>M</em> sources, that is <em>M</em> rays — <span class="katex-inline" data-tex="O(M)"></span> per pixel.</p>
+
+  <div class="fig" id="fig-cost">
+    <div class="bar"><span class="lab">Why the balance heuristic is the only affordable MIS here</span></div>
+    <div class="body" style="padding:24px 18px"><div id="svg-cost"></div></div>
+    <div class="cap">Talbot-style MIS weights <em>every</em> candidate against <em>every</em> technique — <span class="katex-inline" data-tex="O(M^2)"></span> shadow rays, infeasible at ReSTIR's sample counts. Evaluating the balance weight for only the <em>selected</em> survivor is <span class="katex-inline" data-tex="O(M)"></span>. That single asymmetry — weight the survivor, not every candidate — is what keeps unbiased reuse within budget.</div>
+  </div>
+
+  <p>So the final algorithm is exactly the reuse of Part IV with one substitution: when a reservoir absorbs a neighbor, the merge weight is scaled by the balance term, and the survivor's contribution weight divides by <span class="katex-inline" data-tex="\sum_j p_j(y)"></span> rather than by <em>M</em>. A handful of extra shadow rays per pixel buys an unbiased image. The seam is gone, the shadows are crisp, the noise is low — at sixty frames a second.</p>
+</section>
+
+<!-- ============================================================ CLOSE -->
+<section id="close">
+  <div class="eyebrow">Coda</div>
+  <h2>The whole arc</h2>
+
+  <p>Five steps, each forced by the failure of the last. We wanted to sample proportional to the integrand and <em>couldn't</em> — visibility made the optimum unbuildable. So we generated cheap candidates and <strong>resampled</strong> toward a target we could only evaluate. To do that per-pixel in real time we streamed the candidates through a single <strong>reservoir</strong>, which turned out to <strong>merge</strong> in constant time — so a pixel could <strong>borrow</strong> from its neighbors and its past, inheriting thousands of effective candidates for a few rays. And because those neighbors aimed at different targets, the borrowing introduced a bias, which a single <strong>partition-of-unity weight</strong> — the same one we started with — removed.</p>
+
+  <div class="fig" id="fig-arc">
+    <div class="bar"><span class="lab">Reservoirs of Light · the five rungs</span></div>
+    <div class="body" style="padding:24px 18px"><div id="svg-arc"></div></div>
+    <div class="cap">Importance sampling → resampling → the reservoir and its merge → spatiotemporal reuse → the unbiasing weight. Each rung earns the next; the balance heuristic bookends the climb.</div>
+  </div>
+
+  <div style="max-width:72ch;margin-top:1.5em">
+    <div class="exercise"><div class="n">i</div><div class="t"><b>Measure the seam.</b> In the hero, biased mode, read the reconstruction on the right half against the target. Confirm it is halved — the <span class="katex-inline" data-tex="|Z|/M=\tfrac12"></span> you derived in §1.</div></div>
+    <div class="exercise"><div class="n">ii</div><div class="t"><b>Watch naïve detonate.</b> Flip near-zero on with naïve weighting and crank samples down. The variance readout jumps; the strip turns to grain on the right. Now switch to MIS — same near-zero source, quiet image. Explain the cancellation in one line.</div></div>
+    <div class="exercise"><div class="n">iii</div><div class="t"><b>Find MIS beating naïve even when both are unbiased.</b> Compare the variance readouts under the sharp cutoff. MIS is already lower. Why does weighting by density share help even with no near-zero tail?</div></div>
+    <div class="exercise"><div class="n">iv</div><div class="t"><b>Count the rays.</b> For M = 16 reused neighbors, how many shadow rays does the balance weight cost per pixel? How many would Talbot's MIS cost? That ratio is why ReSTIR exists.</div></div>
+  </div>
+
+  <p style="max-width:67ch;margin-top:2em;font-style:italic;font-family:var(--serif);font-size:20px;color:var(--ink)">From an integral no one can sample to a clean frame in fifteen milliseconds — by never solving the problem, only resampling it, remembering one sample, sharing it, and paying an honest toll to keep the sharing fair.</p>
+</section>
+
+</main>
+</div>
+
+<footer class="colophon">
+  <h4>Colophon &amp; honesty footer</h4>
+  <p style="max-width:82ch;color:var(--ink-faint)">
+    Every number here is computed live from the exact Figure-7 setup: target <code style="color:var(--lav)">p&#770;(x)=2&minus;2x</code> on [0,1], sources <code>p&#8321;=U[0,1]</code> and <code>p&#8322;=U[0,&frac12;]</code> (density 2), combining one sample from each (M=2) with weight scheme <em>m</em>. The estimator is <code>&Icirc;=f(y)&middot;W</code>, <code>W=(1/p&#770;(y))&middot;&Sigma;w&#7522;</code>, <code>w&#7522;=m&#7522;&middot;p&#770;/p&#7522;</code>, and we estimate <code>I=&int;p&#770;=1</code>. The "near-zero" toggle gives <code>p&#8322;</code> a tiny tail past &frac12; instead of a hard cutoff.
+  </p>
+  <p style="max-width:82ch;color:var(--ink-faint)">
+    <span class="v">Verified against an offline reference (400k trials):</span>
+    biased <code class="v">E[&Icirc;]=0.875</code> (bias &minus;12.5%), right half reconstructed at exactly half &mdash; the <code>|Z|/M=&frac12;</code> darkening;
+    naïve and MIS both unbiased (<code>E[&Icirc;]=1.000</code>), with MIS variance lower even under the sharp cutoff (<code>0.056</code> vs <code>0.073</code>);
+    under the near-zero tail, naïve variance <em>explodes</em> to <code class="v">2.13</code> while MIS stays <code>0.055</code>;
+    the largest single resampling weight is <code>&asymp;25&times;</code> for naïve vs <code>&asymp;1&times;</code> for MIS &mdash; the cancellation of <code>1/p&#7522;</code>.
+    What is <em>exact</em>: the entire 1-D reconstruction. In 2-D the same darkening appears at depth, normal, and occlusion discontinuities, where neighbors' targets diverge.
+  </p>
+  <p style="color:var(--ink-faint)">Reservoirs of Light · Part V — The Price of Borrowing · after Bitterli, Wyman, Pharr, Shirley, Lefohn &amp; Jarosz, <a class="ref" href="https://doi.org/10.1145/3386569.3392481" target="_blank" rel="noopener">SIGGRAPH 2020</a>. &nbsp;Series complete.</p>
+</footer>
+
+<script>
+/* ============================================================ FIGURE-7 ENGINE
+   Verified in verify_part5.js. Combine one sample from p1 and one from p2 (M=2),
+   resample a survivor, weight scheme m ∈ {biased, naive, mis}. f = p̂, so I = ∫p̂ = 1.
+   ====================================================================== */
+function pHat(x){ return 2-2*x; }
+const p1=x=>1, P1=()=>Math.random();
+function makeP2(eps){ const c=1/(1+eps*0.5);
+  return { dens:x=>(x<0.5?2:eps)*c, samp:()=>{ if(Math.random()<c) return Math.random()*0.5; return 0.5+Math.random()*0.5; } }; }
+function mWeight(scheme,x,src,p2){ const d1=p1(x), d2=p2.dens(x);
+  if(scheme==='biased') return 0.5;
+  if(scheme==='naive'){ const Z=(d1>0?1:0)+(d2>0?1:0); return Z>0?1/Z:0; }
+  const s=d1+d2; return s>0?(src===1?d1:d2)/s:0; }
+function trial(scheme,p2){ const x1=P1(), x2=p2.samp();
+  const w1=mWeight(scheme,x1,1,p2)*pHat(x1)/p1(x1);
+  const w2=mWeight(scheme,x2,2,p2)*pHat(x2)/p2.dens(x2);
+  const ws=w1+w2; const y=(Math.random()*ws<w1)?x1:x2;
+  const W=pHat(y)>0?(1/pHat(y))*ws:0; return {Ihat:pHat(y)*W,y,w1,w2,x1,x2}; }
+function runRecon(scheme,p2,T,B){ const acc=new Float64Array(B); let s=0,s2=0;
+  for(let t=0;t<T;t++){ const r=trial(scheme,p2); const b=Math.min(B-1,Math.max(0,Math.floor(r.y*B)));
+    acc[b]+=r.Ihat; s+=r.Ihat; s2+=r.Ihat*r.Ihat; }
+  const dens=new Float64Array(B); for(let b=0;b<B;b++)dens[b]=acc[b]/T*B;
+  const m=s/T; return {dens,mean:m,var:Math.max(0,s2/T-m*m)}; }
+function variance(scheme,p2,T){ let s=0,s2=0; for(let t=0;t<T;t++){const e=trial(scheme,p2).Ihat;s+=e;s2+=e*e;} const m=s/T; return Math.max(0,s2/T-m*m); }
+function maxW2(scheme,p2,T){ let mx=0; for(let t=0;t<T;t++){const x2=p2.samp(); if(x2>0.5){const w=mWeight(scheme,x2,2,p2)*pHat(x2)/p2.dens(x2); if(w>mx)mx=w;}} return mx; }
+
+/* ============================================================ RENDER UTIL */
+const COL={amber:'#d4a574',teal:'#5ab4ac',lav:'#9b8ec4',red:'#e06c75',green:'#98c379',ink:'#e7e4dd',dim:'#a7a39a',faint:'#6d6a64',bg2:'#1a1a28',bg3:'#22222f'};
+function setup(cv,h){const dpr=Math.min(window.devicePixelRatio||1,2);const w=cv.clientWidth||cv.parentElement.clientWidth;cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.height=h+'px';const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return {ctx,w,h};}
+function tex(id,s,d){const el=document.getElementById(id);if(el){try{katex.render(s,el,{displayMode:d,throwOnError:false});}catch(e){}}}
+function renderInline(){document.querySelectorAll('[data-tex]').forEach(el=>{try{katex.render(el.getAttribute('data-tex'),el,{throwOnError:false});}catch(e){}});}
+function warm(v){const g=Math.max(0,Math.min(255,Math.round(255*v)));return 'rgb('+Math.min(255,g+16)+','+Math.round(g*0.92)+','+Math.round(g*0.74)+')';}
+
+/* ============================================================ HERO */
+let heroScheme='biased';
+function heroP2(){return makeP2(document.getElementById('hero-near').checked?0.02:0);}
+function heroT(){return (+document.getElementById('hero-T').value)*1000;}
+function drawHero(){
+  const cv=document.getElementById('cv-hero');const {ctx,w,h}=setup(cv,360);ctx.clearRect(0,0,w,h);
+  const B=48, T=heroT(); const R=runRecon(heroScheme,heroP2(),T,B);
+  const padL=46,padR=20,padT=14; const curveH=210, x0=padL,x1=w-padR,y0=padT,y1=padT+curveH;
+  const X=x=>x0+x*(x1-x0), Y=v=>y1-(Math.min(v,2)/2)*(y1-y0);
+  // axes
+  ctx.strokeStyle='rgba(231,228,221,0.10)';ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='right';
+  ctx.fillText('2',x0-6,y0+8);ctx.fillText('0',x0-6,y1);ctx.textAlign='center';
+  ctx.fillText('x = 0',x0,y1+15);ctx.fillText('½',X(0.5),y1+15);ctx.fillText('1',x1,y1+15);
+  // seam at x=0.5
+  ctx.strokeStyle='rgba(155,142,196,0.30)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(X(0.5),y0);ctx.lineTo(X(0.5),y1);ctx.stroke();ctx.setLineDash([]);
+  // reconstruction (teal filled bars)
+  for(let b=0;b<B;b++){const xa=X(b/B),xb=X((b+1)/B);ctx.fillStyle='rgba(90,180,172,0.32)';ctx.fillRect(xa,Y(R.dens[b]),xb-xa,y1-Y(R.dens[b]));}
+  ctx.strokeStyle=COL.teal;ctx.lineWidth=1.5;ctx.beginPath();
+  for(let b=0;b<B;b++){const x=X((b+0.5)/B),y=Y(R.dens[b]);b?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
+  // target p̂ (lavender line)
+  ctx.strokeStyle=COL.lav;ctx.lineWidth=2;ctx.setLineDash([6,3]);ctx.beginPath();
+  ctx.moveTo(X(0),Y(pHat(0)));ctx.lineTo(X(1),Y(pHat(1)));ctx.stroke();ctx.setLineDash([]);
+  ctx.textAlign='left';ctx.fillStyle=COL.lav;ctx.fillText('p̂(x)=2−2x',X(0.62),Y(pHat(0.62))-6);
+  ctx.fillStyle=COL.teal;ctx.fillText('reconstruction',X(0.05),Y(1.95));
+  // brightness strip
+  const sy=y1+30, sh=44;
+  ctx.fillStyle=COL.faint;ctx.textAlign='left';ctx.fillText('the "image" — reconstruction as brightness',x0,sy-6);
+  for(let b=0;b<B;b++){const xa=X(b/B),xb=X((b+1)/B);ctx.fillStyle=warm(R.dens[b]/2);ctx.fillRect(xa,sy,xb-xa+0.5,sh);}
+  ctx.strokeStyle='rgba(231,228,221,0.15)';ctx.strokeRect(x0,sy,x1-x0,sh);
+  ctx.strokeStyle='rgba(224,108,117,0.55)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(X(0.5),sy);ctx.lineTo(X(0.5),sy+sh);ctx.stroke();ctx.setLineDash([]);
+  // readouts
+  document.getElementById('hero-T-v').textContent=T.toLocaleString();
+  const me=document.getElementById('h-mean');me.textContent=R.mean.toFixed(3);
+  const bi=document.getElementById('h-bias');const bias=R.mean-1;bi.textContent=(bias>=0?'+':'')+bias.toFixed(3);
+  bi.className='val '+(Math.abs(bias)<0.02?'green':'red');
+  document.getElementById('h-var').textContent=R.var.toFixed(3);
+}
+
+/* ============================================================ COVERAGE (§1) */
+function drawCoverage(){
+  const cv=document.getElementById('cv-coverage');const {ctx,w,h}=setup(cv,220);ctx.clearRect(0,0,w,h);
+  const padL=46,padR=20,x0=padL,x1=w-padR; const X=x=>x0+x*(x1-x0);
+  function bar(y,frac,col,lab){ctx.fillStyle='rgba(231,228,221,0.05)';ctx.fillRect(x0,y,x1-x0,22);
+    ctx.fillStyle=col;ctx.fillRect(x0,y,X(frac)-x0,22);ctx.fillStyle=COL.faint;ctx.font='11px JetBrains Mono';ctx.textAlign='right';ctx.fillText(lab,x0-8,y+15);}
+  bar(20,1.0,'rgba(212,165,116,0.55)','p₁');
+  bar(50,0.5,'rgba(90,180,172,0.55)','p₂');
+  // |Z(x)| step
+  const zy0=95,zy1=150; ctx.fillStyle=COL.faint;ctx.textAlign='right';ctx.fillText('|Z(x)|',x0-8,zy0+14);
+  ctx.strokeStyle=COL.ink;ctx.lineWidth=1.8;ctx.beginPath();
+  const lv2=zy1-(2/2)*(zy1-zy0), lv1=zy1-(1/2)*(zy1-zy0);
+  ctx.moveTo(X(0),lv2);ctx.lineTo(X(0.5),lv2);ctx.lineTo(X(0.5),lv1);ctx.lineTo(X(1),lv1);ctx.stroke();
+  ctx.fillStyle=COL.ink;ctx.font='11px JetBrains Mono';ctx.textAlign='center';ctx.fillText('2',X(0.25),lv2-6);ctx.fillText('1',X(0.75),lv1-6);
+  // darkening factor band
+  const fy=170, fh=28; ctx.fillStyle=COL.faint;ctx.textAlign='right';ctx.fillText('|Z|/M',x0-8,fy+18);
+  ctx.fillStyle='rgba(152,195,121,0.35)';ctx.fillRect(x0,fy,X(0.5)-x0,fh);
+  ctx.fillStyle='rgba(224,108,117,0.40)';ctx.fillRect(X(0.5),fy,x1-X(0.5),fh);
+  ctx.fillStyle=COL.ink;ctx.textAlign='center';ctx.fillText('1  (unbiased)',X(0.25),fy+18);ctx.fillText('½  (darkened)',X(0.75),fy+18);
+  ctx.strokeStyle='rgba(155,142,196,0.30)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(X(0.5),12);ctx.lineTo(X(0.5),fy+fh);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='center';ctx.fillText('½',X(0.5),h-4);
+}
+/* ============================================================ PARTITION OF UNITY (§2) */
+let pouScheme='biased'; const p2sharp=makeP2(0);
+function drawPou(){
+  const cv=document.getElementById('cv-pou');const {ctx,w,h}=setup(cv,220);ctx.clearRect(0,0,w,h);
+  const padL=46,padR=20,padT=20,padB=24,x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+  const X=x=>x0+x*(x1-x0), Y=v=>y1-(Math.min(v,1.25)/1.25)*(y1-y0);
+  const B=48;
+  for(let b=0;b<B;b++){const x=(b+0.5)/B, xa=X(b/B), xb=X((b+1)/B);
+    const m1=p1(x)>0?mWeight(pouScheme,x,1,p2sharp):0;
+    const m2=p2sharp.dens(x)>0?mWeight(pouScheme,x,2,p2sharp):0;
+    ctx.fillStyle='rgba(212,165,116,0.55)';ctx.fillRect(xa,Y(m1),xb-xa+0.4,y1-Y(m1));
+    ctx.fillStyle='rgba(90,180,172,0.55)';ctx.fillRect(xa,Y(m1+m2),xb-xa+0.4,Y(m1)-Y(m1+m2));
+    const sum=m1+m2; if(sum<0.985){ctx.fillStyle='rgba(224,108,117,0.22)';ctx.fillRect(xa,Y(1),xb-xa+0.4,Y(sum)-Y(1));}
+  }
+  // target sum = 1
+  ctx.strokeStyle=COL.lav;ctx.setLineDash([6,3]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x0,Y(1));ctx.lineTo(x1,Y(1));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='rgba(231,228,221,0.10)';ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';ctx.textAlign='right';ctx.fillText('1',x0-6,Y(1)+4);ctx.fillText('0',x0-6,y1);
+  ctx.textAlign='center';ctx.fillText('0',x0,y1+15);ctx.fillText('½',X(0.5),y1+15);ctx.fillText('1',x1,y1+15);
+  ctx.fillStyle=COL.lav;ctx.textAlign='left';ctx.fillText('Σ mᵢ = 1',X(0.02),Y(1)-5);
+}
+
+/* ============================================================ VARIANCE (§3) */
+function drawVar(){
+  const cv=document.getElementById('cv-var');const {ctx,w,h}=setup(cv,240);ctx.clearRect(0,0,w,h);
+  const T=40000;
+  const data=[
+    {n:'biased',v:variance('biased',p2sharp,T),c:COL.red,bias:true},
+    {n:'naïve · sharp',v:variance('naive',p2sharp,T),c:COL.amber},
+    {n:'MIS · sharp',v:variance('mis',p2sharp,T),c:COL.green},
+    {n:'naïve · near-0',v:variance('naive',makeP2(0.02),T),c:COL.red},
+    {n:'MIS · near-0',v:variance('mis',makeP2(0.02),T),c:COL.green},
+  ];
+  const padL=20,padR=20,padT=24,padB=46,x0=padL,x1=w-padR,y0=padT,y1=h-padB;
+  const ymax=0.25; const bw=(x1-x0)/data.length;
+  ctx.strokeStyle='rgba(231,228,221,0.10)';ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.stroke();
+  ctx.fillStyle=COL.faint;ctx.font='10px JetBrains Mono';
+  data.forEach((d,i)=>{const cx=x0+(i+0.5)*bw; const clipped=d.v>ymax; const bh=(Math.min(d.v,ymax)/ymax)*(y1-y0);
+    ctx.fillStyle=d.c;ctx.globalAlpha=d.bias?0.4:0.7;ctx.fillRect(cx-bw*0.3,y1-bh,bw*0.6,bh);ctx.globalAlpha=1;
+    if(clipped){ctx.fillStyle=d.c;ctx.textAlign='center';ctx.font='11px JetBrains Mono';ctx.fillText('↑',cx,y1-bh-4);ctx.fillText(d.v.toFixed(2),cx,y1-bh-16);}
+    else {ctx.fillStyle=COL.ink;ctx.textAlign='center';ctx.font='10px JetBrains Mono';ctx.fillText(d.v.toFixed(3),cx,y1-bh-6);}
+    ctx.fillStyle=d.bias?COL.red:COL.dim;ctx.font='10px JetBrains Mono';ctx.textAlign='center';
+    d.n.split(' · ').forEach((ln,k)=>ctx.fillText(ln,cx,y1+16+k*12));
+  });
+  ctx.fillStyle=COL.faint;ctx.textAlign='left';ctx.font='10px JetBrains Mono';ctx.fillText('Var[Î]  (clipped at '+ymax+')',x0,y0-8);
+  document.getElementById('var-naive').textContent='≈'+Math.round(maxW2('naive',makeP2(0.02),200000))+'×';
+  document.getElementById('var-mis').textContent='≈'+maxW2('mis',makeP2(0.02),200000).toFixed(2)+'×';
+}
+
+/* ============================================================ COST + ARC SVGs */
+function costSVG(){ return `<svg viewBox="0 0 720 200" style="width:100%;height:auto" font-family="JetBrains Mono">
+  <g transform="translate(40,20)">
+    <text x="120" y="0" fill="${COL.teal}" font-size="13" text-anchor="middle">balance heuristic · O(M)</text>
+    <circle cx="120" cy="40" r="14" fill="${COL.teal}" opacity="0.8"/><text x="120" y="44" fill="#0a0a0f" font-size="11" text-anchor="middle">y</text>
+    ${[0,1,2,3,4].map(i=>{const ang=-1.0+i*0.5;const ex=120+Math.cos(ang)*70,ey=40+Math.sin(ang)*70;
+      return `<line x1="120" y1="40" x2="${ex}" y2="${ey}" stroke="${COL.amber}" stroke-width="1.4" opacity="0.7"/><circle cx="${ex}" cy="${ey}" r="6" fill="${COL.amber}" opacity="0.6"/>`;}).join('')}
+    <text x="120" y="150" fill="${COL.dim}" font-size="11" text-anchor="middle">1 survivor → M pdf-evals</text>
+    <text x="120" y="166" fill="${COL.faint}" font-size="10" text-anchor="middle">M shadow rays / pixel</text>
+  </g>
+  <line x1="360" y1="20" x2="360" y2="180" stroke="rgba(231,228,221,0.12)"/>
+  <g transform="translate(420,20)">
+    <text x="140" y="0" fill="${COL.red}" font-size="13" text-anchor="middle">Talbot MIS · O(M²)</text>
+    ${[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c2=>`<rect x="${40+c2*44}" y="${24+r*22}" width="14" height="14" fill="${COL.red}" opacity="0.5"/>`).join('')).join('')}
+    <text x="140" y="150" fill="${COL.dim}" font-size="11" text-anchor="middle">M candidates × M techniques</text>
+    <text x="140" y="166" fill="${COL.faint}" font-size="10" text-anchor="middle">M² shadow rays — infeasible</text>
+  </g></svg>`; }
+function arcSVG(){ const rungs=[['I','Importance sampling'],['II','Resampling — RIS'],['III','Reservoir &amp; merge'],['IV','Spatiotemporal reuse'],['V','The unbiasing weight']];
+  const W=720,H=230,n=5; return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto" font-family="JetBrains Mono">
+    ${rungs.map((r,i)=>{const x=40+i*((W-120)/(n-1));const y=H-40-i*((H-80)/(n-1));
+      const col=i===4?COL.green:COL.amber; return (i>0?`<line x1="${40+(i-1)*((W-120)/(n-1))}" y1="${H-40-(i-1)*((H-80)/(n-1))}" x2="${x}" y2="${y}" stroke="rgba(231,228,221,0.18)" stroke-width="1.5"/>`:'')+
+      `<circle cx="${x}" cy="${y}" r="9" fill="${col}" opacity="0.85"/><text x="${x}" y="${y+4}" fill="#0a0a0f" font-size="10" text-anchor="middle">${r[0]}</text>
+       <text x="${x}" y="${y-16}" fill="${COL.ink}" font-size="11" text-anchor="middle">${r[1]}</text>`;}).join('')}
+    <text x="${W-30}" y="${H-12}" fill="${COL.teal}" font-size="11" text-anchor="end">balance heuristic bookends the climb</text></svg>`; }
+
+/* ============================================================ INIT */
+function initAll(){
+  renderInline();
+  tex('eq-EW','\\mathbb{E}[W]=\\frac{1}{p(y)}\\cdot\\frac{|Z(y)|}{M}',true);
+  tex('eq-partition','\\sum_{i\\in Z(y)} m_i(y)=1',true);
+  tex('eq-balance','m_i(y)=\\frac{p_i(y)}{\\sum_j p_j(y)}',true);
+  tex('eq-cancel','w_i=m_i(y)\\,\\frac{\\hat p(y)}{p_i(y)}=\\frac{p_i(y)}{\\sum_j p_j(y)}\\cdot\\frac{\\hat p(y)}{p_i(y)}=\\frac{\\hat p(y)}{\\sum_j p_j(y)}',true);
+  // hero controls
+  document.querySelectorAll('#hero-scheme button').forEach(b=>b.onclick=()=>{
+    heroScheme=b.dataset.s;document.querySelectorAll('#hero-scheme button').forEach(x=>x.classList.toggle('on',x===b));drawHero();});
+  document.getElementById('hero-near').onchange=drawHero;
+  document.getElementById('hero-T').oninput=drawHero;
+  drawHero(); drawCoverage();
+  // pou controls
+  document.querySelectorAll('#pou-scheme button').forEach(b=>b.onclick=()=>{
+    pouScheme=b.dataset.s;document.querySelectorAll('#pou-scheme button').forEach(x=>x.classList.toggle('on',x===b));drawPou();});
+  drawPou(); drawVar();
+  document.getElementById('svg-cost').innerHTML=costSVG();
+  document.getElementById('svg-arc').innerHTML=arcSVG();
+  setupScroll();
+}
+function setupScroll(){
+  const prog=document.getElementById('progress');
+  const links=[...document.querySelectorAll('nav.side a')];
+  const secs=[...document.querySelectorAll('section[id]')];
+  function onScroll(){const st=window.scrollY,dh=document.documentElement.scrollHeight-window.innerHeight;
+    prog.style.width=(100*st/Math.max(dh,1))+'%';let cur=secs[0].id;
+    for(const s of secs){if(s.getBoundingClientRect().top<window.innerHeight*0.35)cur=s.id;}
+    links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+  document.querySelectorAll('section > *').forEach(el=>{if(!el.classList.contains('hero'))el.classList.add('reveal');});
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+    if(window.anime)anime({targets:e.target,opacity:[0,1],translateY:[22,0],easing:'easeOutCubic',duration:600});
+    else{e.target.style.opacity=1;e.target.style.transform='none';}io.unobserve(e.target);}});},{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.getElementById('navtog').onclick=()=>document.getElementById('side').classList.toggle('open');
+  document.querySelectorAll('nav.side a').forEach(a=>a.onclick=()=>document.getElementById('side').classList.remove('open'));
+}
+let _rt;window.addEventListener('resize',()=>{clearTimeout(_rt);_rt=setTimeout(()=>{drawHero();drawCoverage();drawPou();drawVar();},200);});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(window.katex)initAll();else window.addEventListener('load',initAll);});
+else{if(window.katex)initAll();else window.addEventListener('load',initAll);}
+</script>
+</body>
+</html>
