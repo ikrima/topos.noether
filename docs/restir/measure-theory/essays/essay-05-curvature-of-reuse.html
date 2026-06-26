@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Essay 5 — Curvature of Reuse</title>
+<style>
+  :root{
+    --paper:#f8f0df;
+    --paper2:#fff7e8;
+    --ink:#26231d;
+    --muted:#6f6657;
+    --line:#d9c8a8;
+    --accent:#b65b39;
+    --accent2:#2f7892;
+    --accent3:#6d8f45;
+    --danger:#b23b3b;
+    --purple:#6e5aa7;
+    --code:#2b2924;
+    --shadow: rgba(60,42,18,.12);
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(255,255,255,.75), rgba(255,255,255,0) 34rem),
+      linear-gradient(180deg,var(--paper2),var(--paper));
+    color:var(--ink);
+    font: 18px/1.62 ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  }
+  .page{max-width:1120px;margin:0 auto;padding:0 28px 80px}
+  header.hero{padding:86px 0 50px;position:relative}
+  .eyebrow{font:700 13px/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+  h1{font-size:clamp(48px,9vw,104px);line-height:.92;letter-spacing:-.055em;margin:0 0 24px;font-weight:780}
+  .subtitle{max-width:850px;font-size:clamp(22px,2.4vw,34px);line-height:1.22;color:#3a342c;margin:0 0 18px}
+  .lede{max-width:820px;font-size:21px;color:var(--muted)}
+  .formula-card{
+    margin:34px 0 0;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.42);
+    border-radius:var(--radius);
+    box-shadow:0 18px 45px var(--shadow);
+    padding:22px 24px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:clamp(16px,2vw,24px);
+    overflow:auto;
+  }
+  .nav{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:28px 0 70px
+  }
+  .nav a{
+    text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:12px 12px;background:rgba(255,255,255,.42);font:700 13px/1.25 ui-sans-serif, system-ui, sans-serif;
+  }
+  .nav a span{display:block;color:var(--muted);font-weight:600;margin-top:4px;font-size:12px}
+  section{margin:76px 0}
+  h2{font-size:clamp(34px,5vw,58px);line-height:1.02;letter-spacing:-.04em;margin:0 0 18px}
+  h3{font-size:26px;line-height:1.18;margin:28px 0 10px}
+  p{max-width:850px;margin:18px 0}
+  .note{border-left:4px solid var(--accent);padding:5px 0 5px 18px;color:#4a4135;background:linear-gradient(90deg,rgba(182,91,57,.09),rgba(182,91,57,0));max-width:900px}
+  .grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(300px,.92fr);gap:24px;align-items:start;margin:28px 0}
+  .panel{
+    border:1px solid var(--line);border-radius:var(--radius);background:rgba(255,255,255,.5);box-shadow:0 18px 48px var(--shadow);overflow:hidden;
+  }
+  .panel.pad{padding:22px}
+  .canvas-wrap{position:relative;background:linear-gradient(180deg,#fffaf0,#f4e6cc)}
+  canvas{display:block;width:100%;height:auto;max-width:100%}
+  .caption{font:600 13px/1.35 ui-sans-serif, system-ui, sans-serif;color:var(--muted);padding:12px 16px;border-top:1px solid rgba(217,200,168,.65);background:rgba(255,255,255,.36)}
+  .controls{display:grid;gap:16px}
+  .control{padding:14px;border:1px solid rgba(217,200,168,.9);border-radius:16px;background:rgba(255,255,255,.36)}
+  label{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font:700 13px/1.2 ui-sans-serif, system-ui, sans-serif;color:#43392f;margin-bottom:8px}
+  label output{color:var(--accent);font-variant-numeric:tabular-nums}
+  input[type="range"]{width:100%;accent-color:var(--accent)}
+  select,button{
+    width:100%;border:1px solid var(--line);border-radius:14px;background:#fff8e9;color:var(--ink);padding:12px 13px;font:700 14px/1 ui-sans-serif, system-ui, sans-serif;
+  }
+  button{cursor:pointer;background:#2d2921;color:#fff;border-color:#2d2921;box-shadow:0 9px 20px rgba(0,0,0,.13)}
+  button.secondary{background:#fff8e9;color:var(--ink);border-color:var(--line);box-shadow:none}
+  .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}
+  .metric{border:1px solid rgba(217,200,168,.85);background:rgba(255,255,255,.45);border-radius:14px;padding:12px;font:700 12px/1.2 ui-sans-serif, system-ui, sans-serif;color:var(--muted)}
+  .metric strong{display:block;font-size:24px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1;margin-bottom:5px}
+  .equation{display:inline-block;margin:8px 0;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.45);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#322b23;overflow:auto;max-width:100%}
+  pre{margin:18px 0;max-width:930px;overflow:auto;background:#2b2924;color:#fff4dc;border-radius:18px;padding:20px;font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;box-shadow:0 18px 42px rgba(0,0,0,.15)}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+  .pill{font:800 12px/1 ui-sans-serif,system-ui,sans-serif;border:1px solid var(--line);border-radius:999px;padding:9px 11px;background:rgba(255,255,255,.45);color:#4b4238}
+  .callout{border:1px solid var(--line);border-radius:var(--radius);padding:22px;background:linear-gradient(180deg,rgba(255,255,255,.58),rgba(255,255,255,.32));box-shadow:0 18px 48px var(--shadow);margin:24px 0;max-width:940px}
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0;max-width:940px}
+  .compare div{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.44);padding:16px}
+  .compare h4{margin:0 0 8px;font:800 14px/1.2 ui-sans-serif,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+  .footer{margin-top:90px;padding:34px 0 0;border-top:1px solid var(--line);color:var(--muted);font-size:16px}
+  .mini{font:600 13px/1.35 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
+  @media (max-width:850px){.grid{grid-template-columns:1fr}.nav{grid-template-columns:1fr 1fr}.compare{grid-template-columns:1fr}.page{padding:0 18px 60px}.metrics{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <div class="eyebrow">Interactive Visual Essay · ReSTIR Geometry · 5</div>
+    <h1>Curvature of Reuse</h1>
+    <p class="subtitle">A renderer becomes unstable when two reasonable reuse paths produce different reservoirs.</p>
+    <p class="lede">Temporal reuse and spatial reuse are individually useful. Trouble begins when their order matters. In that small disagreement lives a practical signal for ghosting, shimmer, fireflies, stale shadows, disocclusions, and unsafe reservoir reuse.</p>
+    <div class="formula-card">κ<sub>p</sub> = D( T<sub>time</sub> T<sub>space</sub> R , T<sub>space</sub> T<sub>time</sub> R )</div>
+  </header>
+
+  <nav class="nav" aria-label="essay sections">
+    <a href="#square">1. The square <span>Two paths, one target</span></a>
+    <a href="#commutator">2. The commutator <span>When order matters</span></a>
+    <a href="#artifacts">3. Artifact map <span>Where reuse breaks</span></a>
+    <a href="#valve">4. Reuse valve <span>Curvature → trust</span></a>
+    <a href="#passes">5. Renderer pass <span>How to compute it</span></a>
+  </nav>
+
+  <section id="square">
+    <h2>The smallest loop in a renderer</h2>
+    <p>Pick a pixel in the current frame. It can borrow from the previous frame, and it can borrow from a spatial neighbor. Those two operations form a little square in screen-time. If the world were perfectly flat in this transport sense, going around the square in either order would land in the same reservoir.</p>
+    <p class="note">This is the graphics version of curvature: not a bent surface in space, but path dependence in reuse. A flat reuse field commutes. A curved reuse field remembers the route you took.</p>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="canvas-wrap"><canvas id="curvatureSquareCanvas" width="880" height="600" aria-label="temporal spatial reuse square"></canvas></div>
+        <div class="caption">The red cloud follows spatial → temporal. The blue cloud follows temporal → spatial. The gap at the destination is the curvature signal.</div>
+      </div>
+      <div class="panel pad">
+        <div class="controls">
+          <div class="control">
+            <label for="caseSelect">Scene case <output id="caseLabel">stable diffuse</output></label>
+            <select id="caseSelect">
+              <option value="diffuse">stable diffuse wall</option>
+              <option value="motion">fast camera/object motion</option>
+              <option value="edge">shadow / visibility edge</option>
+              <option value="glossy">glossy highlight ridge</option>
+              <option value="disocclusion">disocclusion split</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="curvatureSlider">curvature strength <output id="curvatureValue">0.42</output></label>
+            <input id="curvatureSlider" type="range" min="0" max="1" value="0.42" step="0.01" />
+          </div>
+          <div class="control">
+            <label for="motionSlider">motion mismatch <output id="motionValue">0.36</output></label>
+            <input id="motionSlider" type="range" min="0" max="1" value="0.36" step="0.01" />
+          </div>
+          <div class="control">
+            <label for="visibilitySlider">visibility discontinuity <output id="visibilityValue">0.28</output></label>
+            <input id="visibilitySlider" type="range" min="0" max="1" value="0.28" step="0.01" />
+          </div>
+          <button id="squareAnimateBtn" type="button">replay transport</button>
+        </div>
+        <div class="metrics">
+          <div class="metric"><strong id="metricKappa">0.41</strong>κ curvature</div>
+          <div class="metric"><strong id="metricTrust">0.44</strong>reuse trust</div>
+          <div class="metric"><strong id="metricGap">31 px</strong>path gap</div>
+          <div class="metric"><strong id="metricSamples">5</strong>extra samples</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="commutator">
+    <h2>The commutator is a microscope</h2>
+    <p>Curvature is often introduced as an abstract commutator. Here it has a mundane engineering meaning: apply two reuse operators in both orders and compare the resulting reservoirs.</p>
+    <div class="equation">[T<sub>time</sub>, T<sub>space</sub>]R = T<sub>time</sub>T<sub>space</sub>R − T<sub>space</sub>T<sub>time</sub>R</div>
+    <p>For an implementation, the minus sign does not have to be literal subtraction of samples. It can be any useful disagreement measure: luminance delta, visibility disagreement, entropy change, sample identity mismatch, Fisher-like weight divergence, Wasserstein-like centroid motion, or Jacobian instability.</p>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="canvas-wrap"><canvas id="commutatorCanvas" width="880" height="560" aria-label="reservoir commutator microscope"></canvas></div>
+        <div class="caption">Each tab shows a different cheap proxy for distributional disagreement between the two transported reservoirs.</div>
+      </div>
+      <div class="panel pad">
+        <div class="controls">
+          <div class="control">
+            <label for="distanceMode">distance proxy <output id="distanceModeLabel">centroid</output></label>
+            <select id="distanceMode">
+              <option value="centroid">centroid distance</option>
+              <option value="entropy">entropy delta</option>
+              <option value="visibility">visibility disagreement</option>
+              <option value="jacobian">jacobian instability</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="roughnessSlider">roughness / lobe width <output id="roughnessValue">0.55</output></label>
+            <input id="roughnessSlider" type="range" min="0" max="1" value="0.55" step="0.01" />
+          </div>
+          <div class="control">
+            <label for="sampleDisagreeSlider">sample identity disagreement <output id="sampleDisagreeValue">0.31</output></label>
+            <input id="sampleDisagreeSlider" type="range" min="0" max="1" value="0.31" step="0.01" />
+          </div>
+          <button class="secondary" id="randomizeBtn" type="button">randomize reservoir seeds</button>
+        </div>
+        <div class="callout mini">
+          <strong>Implementation bias:</strong> use the cheapest stable proxy first. A noisy curvature signal is worse than a simple one. Start with visibility mismatch, luminance variance, depth/normal derivative, and sample-ID disagreement; only then try distribution distances.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="artifacts">
+    <h2>Where curvature shows up as artifacts</h2>
+    <p>A high-curvature pixel is saying: “my transported past and borrowed neighborhood disagree about what should be here.” That is exactly the condition that produces many temporal reuse failures.</p>
+    <div class="compare">
+      <div><h4>Flat reuse</h4><p>Diffuse, stable, slowly moving regions. Temporal and spatial paths agree. Reuse should be aggressive.</p></div>
+      <div><h4>Curved reuse</h4><p>Disocclusions, moving shadow edges, thin glossy highlights, caustic folds. Reuse should be gated, refreshed, or split.</p></div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="canvas-wrap"><canvas id="artifactMapCanvas" width="880" height="560" aria-label="curvature artifact heatmap"></canvas></div>
+        <div class="caption">A synthetic frame: curvature concentrates around occlusion boundaries, moving objects, and thin highlight ridges.</div>
+      </div>
+      <div class="panel pad">
+        <div class="controls">
+          <div class="control">
+            <label for="edgeSlider">edge strength <output id="edgeValue">0.62</output></label>
+            <input id="edgeSlider" type="range" min="0" max="1" value="0.62" step="0.01" />
+          </div>
+          <div class="control">
+            <label for="specularSlider">specular risk <output id="specularValue">0.46</output></label>
+            <input id="specularSlider" type="range" min="0" max="1" value="0.46" step="0.01" />
+          </div>
+          <div class="control">
+            <label for="historySlider">history confidence <output id="historyValue">0.72</output></label>
+            <input id="historySlider" type="range" min="0" max="1" value="0.72" step="0.01" />
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><strong id="artifactGhosting">medium</strong>ghosting risk</div>
+          <div class="metric"><strong id="artifactFireflies">low</strong>firefly risk</div>
+          <div class="metric"><strong id="artifactRefresh">23%</strong>refresh mask</div>
+          <div class="metric"><strong id="artifactReuse">61%</strong>safe reuse</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="valve">
+    <h2>Curvature becomes a reuse valve</h2>
+    <p>The curvature number is not useful because it sounds geometric. It is useful because it can directly modulate the two decisions every real-time renderer cares about: how much to trust history and where to spend new samples.</p>
+    <div class="equation">reuseTrust = exp(−λ<sub>κ</sub> κ − λ<sub>ρ</sub>|ρ| − λ<sub>n</sub> novelty)</div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="canvas-wrap"><canvas id="reuseValveCanvas" width="880" height="560" aria-label="curvature reuse valve chart"></canvas></div>
+        <div class="caption">Trust falls exponentially as curvature, residual, and novelty increase. Sample budget rises in the opposite direction.</div>
+      </div>
+      <div class="panel pad">
+        <div class="controls">
+          <div class="control">
+            <label for="lambdaKSlider">λ curvature <output id="lambdaKValue">2.20</output></label>
+            <input id="lambdaKSlider" type="range" min="0" max="6" value="2.20" step="0.05" />
+          </div>
+          <div class="control">
+            <label for="lambdaRSlider">λ residual <output id="lambdaRValue">1.40</output></label>
+            <input id="lambdaRSlider" type="range" min="0" max="6" value="1.40" step="0.05" />
+          </div>
+          <div class="control">
+            <label for="lambdaNSlider">λ novelty <output id="lambdaNValue">3.00</output></label>
+            <input id="lambdaNSlider" type="range" min="0" max="6" value="3.00" step="0.05" />
+          </div>
+        </div>
+        <pre><code>float trust = exp(
+    -lambdaK * curvature
+    -lambdaR * residual
+    -lambdaN * novelty);
+
+reuseConfidence *= trust;
+extraSamples = allocate(1.0 - trust);</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="passes">
+    <h2>A practical curvature pass</h2>
+    <p>The literal commutator does not need to be expensive. For production, compute a proxy field that asks a cheaper question: “do my temporal and spatial predictions agree enough to reuse?”</p>
+    <div class="pill-row">
+      <span class="pill">motion vector mismatch</span>
+      <span class="pill">visibility flip</span>
+      <span class="pill">sample ID disagreement</span>
+      <span class="pill">target PDF ratio</span>
+      <span class="pill">Jacobian spread</span>
+      <span class="pill">entropy delta</span>
+      <span class="pill">luminance residual</span>
+    </div>
+
+<pre><code>struct CurvatureInputs {
+    Reservoir temporalPrediction;     // T_time(R_prev)
+    Reservoir spatialPrediction;      // T_space(R_neighbors)
+    Reservoir temporalThenSpatial;    // T_space(T_time(R_prev))
+    Reservoir spatialThenTemporal;    // T_time(T_space(R_neighbors_prev))
+    GBuffer   gbuffer;
+    float     residual;
+    float     novelty;
+};
+
+float estimateReuseCurvature(CurvatureInputs x)
+{
+    float idMismatch  = sampleIdDisagreement(
+        x.temporalThenSpatial, x.spatialThenTemporal);
+
+    float visMismatch = visibilityDisagreement(
+        x.temporalThenSpatial, x.spatialThenTemporal, x.gbuffer);
+
+    float pdfMismatch = abs(logSafe(
+        targetPdf(x.temporalThenSpatial) /
+        targetPdf(x.spatialThenTemporal)));
+
+    float entropyGap  = abs(
+        entropy(x.temporalThenSpatial) -
+        entropy(x.spatialThenTemporal));
+
+    return saturate(
+        0.35 * visMismatch +
+        0.25 * pdfMismatch +
+        0.20 * idMismatch +
+        0.20 * entropyGap);
+}
+
+void applyCurvatureGate(inout Reservoir r, float curvature, float residual, float novelty)
+{
+    float trust = exp(-2.2 * curvature - 1.4 * residual - 3.0 * novelty);
+    r.confidence *= trust;
+    r.extraSampleHint += sampleBudgetFrom(1.0 - trust);
+}</code></pre>
+
+    <div class="callout">
+      <h3>The sentence to carry forward</h3>
+      <p><strong>Curvature is the local failure of reuse paths to agree.</strong> In a renderer, that failure is not philosophical. It is a measurable instability field that can reduce stale reuse, increase fresh sampling, allocate auxiliary reservoirs, and explain where temporal artifacts are born.</p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Essay 5 in the visual series: Pushforward/Pullback → Residual Measure Transport → Biomimetic Reservoir Intelligence → Shape of a Reservoir → Curvature of Reuse.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  let seed = 19;
+  function rand(){
+    seed = (1664525 * seed + 1013904223) >>> 0;
+    return seed / 4294967296;
+  }
+  function nrand(){
+    let u = Math.max(1e-6, rand());
+    let v = Math.max(1e-6, rand());
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+  }
+  function clamp(x,a=0,b=1){return Math.max(a,Math.min(b,x));}
+  function lerp(a,b,t){return a + (b-a)*t;}
+  function smoothstep(a,b,x){let t=clamp((x-a)/(b-a)); return t*t*(3-2*t);}
+  function fmt(x,n=2){return Number(x).toFixed(n);}
+
+  function el(id){
+    const node = document.getElementById(id);
+    if(!node) throw new Error('Missing DOM element #' + id);
+    return node;
+  }
+  function setupCanvas(id){
+    const canvas = el(id);
+    if(!(canvas instanceof HTMLCanvasElement)){
+      throw new TypeError('#' + id + ' resolved to ' + canvas.tagName + ', not a canvas');
+    }
+    const ctx = canvas.getContext('2d');
+    if(!ctx) throw new Error('Could not acquire 2D context for #' + id);
+    return {canvas, ctx};
+  }
+  function css(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+
+  const colors = {
+    ink: css('--ink'), muted: css('--muted'), line: css('--line'), accent: css('--accent'),
+    blue: css('--accent2'), green: css('--accent3'), danger: css('--danger'), purple: css('--purple')
+  };
+
+  function clear(ctx,w,h){
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,'#fff9ee'); g.addColorStop(1,'#f3e3c7');
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  }
+  function drawGrid(ctx,w,h,step=48){
+    ctx.save(); ctx.strokeStyle='rgba(129,104,70,.16)'; ctx.lineWidth=1;
+    for(let x=0;x<w;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    for(let y=0;y<h;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+    ctx.restore();
+  }
+  function label(ctx,text,x,y,color=colors.ink,align='center'){
+    ctx.save(); ctx.font='700 14px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.fillText(text,x,y); ctx.restore();
+  }
+  function pill(ctx,text,x,y,color){
+    ctx.save(); ctx.font='800 12px ui-sans-serif, system-ui, sans-serif'; const m=ctx.measureText(text); const pad=9;
+    ctx.fillStyle='rgba(255,255,255,.74)'; ctx.strokeStyle='rgba(160,130,90,.42)'; ctx.lineWidth=1;
+    roundRect(ctx,x-m.width/2-pad,y-13,m.width+pad*2,26,13); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=color || colors.ink; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,x,y+1); ctx.restore();
+  }
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+  function arrow(ctx,x1,y1,x2,y2,color,width=3,dash=[]){
+    ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=width; ctx.setLineDash(dash); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
+    const a=Math.atan2(y2-y1,x2-x1); const len=12;
+    ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-len*Math.cos(a-.45),y2-len*Math.sin(a-.45)); ctx.lineTo(x2-len*Math.cos(a+.45),y2-len*Math.sin(a+.45)); ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+
+  function makeReservoir(cx,cy,count,rx,ry,rot,spread=1){
+    const pts=[]; const c=Math.cos(rot), s=Math.sin(rot);
+    for(let i=0;i<count;i++){
+      const gx=nrand()*rx*spread; const gy=nrand()*ry*spread;
+      pts.push({x:cx + gx*c - gy*s, y:cy + gx*s + gy*c, w:clamp(.25 + rand()*.9)});
+    }
+    return pts;
+  }
+  function transformPts(pts, dx, dy, shear, rot, scaleX, scaleY){
+    const c=Math.cos(rot), s=Math.sin(rot);
+    return pts.map(p=>{
+      const x=p.x-150, y=p.y-145;
+      const sx=x*scaleX + y*shear;
+      const sy=y*scaleY;
+      return {x:150 + sx*c - sy*s + dx, y:145 + sx*s + sy*c + dy, w:p.w};
+    });
+  }
+  function centroid(pts){
+    let sx=0,sy=0,sw=0; pts.forEach(p=>{sx+=p.x*p.w;sy+=p.y*p.w;sw+=p.w;}); return {x:sx/(sw||1), y:sy/(sw||1)};
+  }
+  function drawPts(ctx,pts,color,alpha=0.75,r=4){
+    ctx.save();
+    pts.forEach(p=>{ctx.globalAlpha=alpha * (.55 + .45*p.w); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(p.x,p.y,r*(.75+.5*p.w),0,TAU); ctx.fill();});
+    ctx.restore();
+  }
+
+  const basePts = makeReservoir(150,145,56,21,13,.45,1);
+  let replayStart = performance.now();
+
+  function readSquareState(){
+    const scene = el('caseSelect').value;
+    let k=Number(el('curvatureSlider').value), m=Number(el('motionSlider').value), v=Number(el('visibilitySlider').value);
+    if(scene==='diffuse'){k*=.30; m*=.28; v*=.20;}
+    if(scene==='motion'){m=clamp(m+.35); k=clamp(k+.12);}
+    if(scene==='edge'){v=clamp(v+.45); k=clamp(k+.16);}
+    if(scene==='glossy'){k=clamp(k+.28);}
+    if(scene==='disocclusion'){v=clamp(v+.55); k=clamp(k+.34);}
+    const kappa=clamp(.45*k + .28*m + .38*v);
+    return {scene,k,m,v,kappa};
+  }
+
+  function drawSquare(){
+    const {canvas,ctx}=setupCanvas('curvatureSquareCanvas'); const w=canvas.width,h=canvas.height; clear(ctx,w,h); drawGrid(ctx,w,h,44);
+    const state=readSquareState();
+    ['curvatureValue','motionValue','visibilityValue'].forEach((id,i)=>{ const vals=[Number(el('curvatureSlider').value),Number(el('motionSlider').value),Number(el('visibilitySlider').value)]; el(id).textContent=fmt(vals[i]); });
+    el('caseLabel').textContent = el('caseSelect').selectedOptions[0].textContent;
+    const trust = Math.exp(-2.1*state.kappa);
+    const gapPx = Math.round(12 + 90*state.kappa);
+    const extra = Math.round(1 + 10*state.kappa);
+    el('metricKappa').textContent = fmt(state.kappa);
+    el('metricTrust').textContent = fmt(trust);
+    el('metricGap').textContent = gapPx + ' px';
+    el('metricSamples').textContent = String(extra);
+
+    const A={x:150,y:145}, B={x:700,y:145}, C={x:150,y:430}, D={x:700,y:430};
+    ctx.save(); ctx.lineWidth=2.4; ctx.strokeStyle='rgba(80,62,39,.35)'; roundRect(ctx,95,92,660,390,20); ctx.stroke(); ctx.restore();
+    arrow(ctx,A.x+45,A.y,B.x-48,B.y,'rgba(90,90,90,.42)',2,[8,7]);
+    arrow(ctx,A.x,C.y-45,A.x,A.y+48,'rgba(90,90,90,.42)',2,[8,7]);
+    arrow(ctx,C.x+45,C.y,D.x-48,D.y,'rgba(90,90,90,.42)',2,[8,7]);
+    arrow(ctx,B.x,D.y-45,B.x,B.y+48,'rgba(90,90,90,.42)',2,[8,7]);
+    pill(ctx,'source R',A.x,A.y-58,colors.ink); pill(ctx,'spatial',430,116,colors.muted); pill(ctx,'temporal',110,288,colors.muted); pill(ctx,'target pixel',D.x,D.y+58,colors.ink);
+
+    const t=clamp((performance.now()-replayStart)/1800);
+    const ease=t*t*(3-2*t);
+    const redEnd={x:D.x-42-state.kappa*36, y:D.y+state.kappa*30};
+    const blueEnd={x:D.x+40+state.kappa*48, y:D.y-state.kappa*38};
+    const redPath = ease<.5 ? {x:lerp(A.x,C.x,ease*2),y:lerp(A.y,C.y,ease*2)} : {x:lerp(C.x,redEnd.x,(ease-.5)*2),y:lerp(C.y,redEnd.y,(ease-.5)*2)};
+    const bluePath = ease<.5 ? {x:lerp(A.x,B.x,ease*2),y:lerp(A.y,B.y,ease*2)} : {x:lerp(B.x,blueEnd.x,(ease-.5)*2),y:lerp(B.y,blueEnd.y,(ease-.5)*2)};
+    const redPts = basePts.map(p=>({x:p.x + redPath.x - A.x + Math.sin((p.y+state.kappa*80)/37)*state.kappa*16, y:p.y + redPath.y - A.y + state.v*12*Math.sin(p.x/22), w:p.w}));
+    const bluePts = basePts.map(p=>({x:p.x + bluePath.x - A.x - Math.cos((p.y+state.kappa*70)/35)*state.kappa*18, y:p.y + bluePath.y - A.y - state.m*10*Math.cos(p.x/25), w:p.w}));
+    drawPts(ctx,basePts,'rgba(61,56,46,.55)',.55,3.6);
+    drawPts(ctx,redPts,colors.accent,.72,4.2); drawPts(ctx,bluePts,colors.blue,.72,4.2);
+    const redC=centroid(redPts), blueC=centroid(bluePts);
+    ctx.save(); ctx.strokeStyle='rgba(178,59,59,.42)'; ctx.lineWidth=3; ctx.setLineDash([6,5]); ctx.beginPath(); ctx.moveTo(redC.x,redC.y); ctx.lineTo(blueC.x,blueC.y); ctx.stroke(); ctx.restore();
+    pill(ctx,'spatial → temporal',redC.x,redC.y-34,colors.accent); pill(ctx,'temporal → spatial',blueC.x,blueC.y+34,colors.blue);
+    label(ctx,'κ', (redC.x+blueC.x)/2, (redC.y+blueC.y)/2 - 14, colors.danger);
+    if(t<1) requestAnimationFrame(drawSquare);
+  }
+
+  let commSeed = 31;
+  function drawCommutator(){
+    seed = commSeed;
+    const {canvas,ctx}=setupCanvas('commutatorCanvas'); const w=canvas.width,h=canvas.height; clear(ctx,w,h); drawGrid(ctx,w,h,46);
+    const mode=el('distanceMode').value; el('distanceModeLabel').textContent = el('distanceMode').selectedOptions[0].textContent;
+    const rough=Number(el('roughnessSlider').value), disagree=Number(el('sampleDisagreeSlider').value);
+    el('roughnessValue').textContent=fmt(rough); el('sampleDisagreeValue').textContent=fmt(disagree);
+    const s=readSquareState();
+    const base=makeReservoir(260,280,70, 42+rough*62, 16+rough*18, -0.35 + rough*.9, 1);
+    const A=base.map((p,i)=>({x:p.x - 52*s.kappa + Math.sin(i*.8)*disagree*28, y:p.y + 36*s.kappa + Math.cos(i*.4)*disagree*12, w:p.w}));
+    const B=base.map((p,i)=>({x:p.x + 78*s.kappa + Math.cos(i*.7)*disagree*26, y:p.y - 46*s.kappa + Math.sin(i*.55)*disagree*18, w:p.w*(1+(rand()-.5)*disagree)}));
+    const cA=centroid(A), cB=centroid(B);
+    ctx.save(); ctx.fillStyle='rgba(255,255,255,.48)'; ctx.strokeStyle='rgba(160,130,90,.35)'; roundRect(ctx,44,48,792,438,26); ctx.fill(); ctx.stroke(); ctx.restore();
+    drawPts(ctx,A,colors.accent,.62,4.6); drawPts(ctx,B,colors.blue,.62,4.6);
+    ctx.save(); ctx.strokeStyle='rgba(49,42,34,.28)'; ctx.lineWidth=1.5; for(let i=0;i<Math.min(A.length,B.length);i+=3){ctx.beginPath();ctx.moveTo(A[i].x,A[i].y);ctx.lineTo(B[i].x,B[i].y);ctx.stroke();} ctx.restore();
+    ctx.save(); ctx.fillStyle=colors.accent; ctx.beginPath(); ctx.arc(cA.x,cA.y,8,0,TAU); ctx.fill(); ctx.fillStyle=colors.blue; ctx.beginPath(); ctx.arc(cB.x,cB.y,8,0,TAU); ctx.fill(); ctx.strokeStyle=colors.danger; ctx.lineWidth=4; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(cA.x,cA.y); ctx.lineTo(cB.x,cB.y); ctx.stroke(); ctx.restore();
+    pill(ctx,'A = temporal → spatial',cA.x,cA.y-42,colors.accent); pill(ctx,'B = spatial → temporal',cB.x,cB.y+42,colors.blue);
+    const centroidD=Math.hypot(cA.x-cB.x,cA.y-cB.y)/180;
+    const entropyD=Math.abs((rough+.2*s.kappa) - (.45+.25*disagree));
+    const visibilityD=clamp(s.v*.9 + disagree*.25);
+    const jacobianD=clamp(s.k*.72 + rough*.22 + s.m*.25);
+    const scores={centroid:centroidD, entropy:entropyD, visibility:visibilityD, jacobian:jacobianD};
+    const score=clamp(scores[mode]);
+    ctx.save(); ctx.fillStyle='rgba(255,248,233,.88)'; ctx.strokeStyle='rgba(160,130,90,.38)'; roundRect(ctx,570,70,226,140,18); ctx.fill(); ctx.stroke();
+    ctx.font='800 13px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle=colors.muted; ctx.fillText('chosen proxy',590,100);
+    ctx.font='800 54px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle= score>.62 ? colors.danger : score>.34 ? colors.accent : colors.green; ctx.fillText(fmt(score),590,156);
+    ctx.font='700 14px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle=colors.ink; ctx.fillText(mode + ' curvature estimate',590,187);
+    ctx.restore();
+  }
+
+  function heatColor(v){
+    v=clamp(v); const r=Math.round(245*v + 238*(1-v)); const g=Math.round(78*v + 222*(1-v)); const b=Math.round(48*v + 185*(1-v));
+    return `rgb(${r},${g},${b})`;
+  }
+  function drawArtifactMap(){
+    const {canvas,ctx}=setupCanvas('artifactMapCanvas'); const w=canvas.width,h=canvas.height; clear(ctx,w,h); drawGrid(ctx,w,h,44);
+    const edge=Number(el('edgeSlider').value), spec=Number(el('specularSlider').value), hist=Number(el('historySlider').value);
+    el('edgeValue').textContent=fmt(edge); el('specularValue').textContent=fmt(spec); el('historyValue').textContent=fmt(hist);
+    const cols=44, rows=28, cell=16, ox=88, oy=62;
+    let refresh=0, fire=0, maxv=0;
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const nx=x/cols, ny=y/rows;
+        const obj=Math.exp(-((nx-.38)**2/(.038)+((ny-.55)**2/.07)));
+        const edgeBand=Math.exp(-Math.abs(nx-(.38+.08*Math.sin(ny*9)))*32) * edge;
+        const shadow=Math.exp(-Math.abs(ny-(.28+.12*Math.sin(nx*7)))*38) * edge*.7;
+        const highlight=Math.exp(-((ny-(.71+.04*Math.sin(nx*16)))**2)/.0015) * Math.exp(-((nx-.68)**2)/.06) * spec;
+        const motion=Math.exp(-((nx-.38)**2/.11+(ny-.55)**2/.12)) * hist*.35;
+        const v=clamp(.08 + .62*edgeBand + .48*shadow + .72*highlight + .32*motion + .08*Math.sin(x*2.1+y*.9));
+        maxv=Math.max(maxv,v); if(v>.55) refresh++; if(highlight>.38 && hist>.55) fire++;
+        ctx.fillStyle=heatColor(v); ctx.globalAlpha=.22+.66*v; ctx.fillRect(ox+x*cell,oy+y*cell,cell-1,cell-1); ctx.globalAlpha=1;
+      }
+    }
+    ctx.save(); ctx.strokeStyle='rgba(40,34,27,.55)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(ox+cols*cell*.38,oy+rows*cell*.55,72,106,-.2,0,TAU); ctx.stroke();
+    ctx.strokeStyle='rgba(47,120,146,.7)'; ctx.lineWidth=3; ctx.beginPath();
+    for(let x=0;x<cols;x++){ const nx=x/cols; const yy=oy+rows*cell*(.71+.04*Math.sin(nx*16)); if(x===0)ctx.moveTo(ox+x*cell,yy); else ctx.lineTo(ox+x*cell,yy); } ctx.stroke();
+    arrow(ctx,ox+cols*cell*.20,oy+rows*cell*.55,ox+cols*cell*.44,oy+rows*cell*.53,colors.purple,3);
+    pill(ctx,'moving object',ox+cols*cell*.32,oy+rows*cell*.37,colors.purple); pill(ctx,'thin highlight ridge',ox+cols*cell*.70,oy+rows*cell*.82,colors.blue); pill(ctx,'shadow edge',ox+cols*cell*.70,oy+rows*cell*.23,colors.accent);
+    ctx.restore();
+    const pct=Math.round(100*refresh/(cols*rows));
+    el('artifactRefresh').textContent=pct+'%'; el('artifactReuse').textContent=(100-pct)+'%';
+    el('artifactGhosting').textContent = maxv>.72 && hist>.62 ? 'high' : maxv>.52 ? 'medium' : 'low';
+    el('artifactFireflies').textContent = fire>12 ? 'high' : fire>4 ? 'medium' : 'low';
+  }
+
+  function drawReuseValve(){
+    const {canvas,ctx}=setupCanvas('reuseValveCanvas'); const w=canvas.width,h=canvas.height; clear(ctx,w,h); drawGrid(ctx,w,h,44);
+    const lk=Number(el('lambdaKSlider').value), lr=Number(el('lambdaRSlider').value), ln=Number(el('lambdaNSlider').value);
+    el('lambdaKValue').textContent=fmt(lk); el('lambdaRValue').textContent=fmt(lr); el('lambdaNValue').textContent=fmt(ln);
+    const ox=95, oy=440, gw=700, gh=310;
+    ctx.save(); ctx.strokeStyle='rgba(60,48,35,.55)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ox,oy-gh); ctx.lineTo(ox,oy); ctx.lineTo(ox+gw,oy); ctx.stroke();
+    ctx.font='800 13px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle=colors.muted; ctx.fillText('curvature κ',ox+gw-80,oy+34); ctx.save(); ctx.translate(ox-50,oy-gh+80); ctx.rotate(-Math.PI/2); ctx.fillText('reuse trust / sample refresh',0,0); ctx.restore();
+    function curve(color,kind){
+      ctx.beginPath();
+      for(let i=0;i<=180;i++){
+        const x=i/180; const residual=.24+.18*Math.sin(x*TAU); const novelty=smoothstep(.64,.82,x)*.55;
+        const trust=Math.exp(-lk*x - lr*residual - ln*novelty);
+        const yVal=kind==='trust' ? trust : clamp(.14 + .86*(1-trust));
+        const px=ox+x*gw, py=oy-yVal*gh;
+        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.strokeStyle=color; ctx.lineWidth=4; ctx.stroke();
+    }
+    curve(colors.green,'trust'); curve(colors.danger,'sample');
+    pill(ctx,'reuse trust',ox+180,oy-260,colors.green); pill(ctx,'fresh sample pressure',ox+520,oy-255,colors.danger);
+    for(let x of [.2,.5,.8]){ctx.strokeStyle='rgba(70,56,39,.15)'; ctx.beginPath(); ctx.moveTo(ox+x*gw,oy); ctx.lineTo(ox+x*gw,oy-gh); ctx.stroke(); label(ctx,String(x.toFixed(1)),ox+x*gw,oy+18,colors.muted);}
+    ctx.restore();
+  }
+
+  function redrawAll(){ drawSquare(); drawCommutator(); drawArtifactMap(); drawReuseValve(); }
+
+  const inputs = ['caseSelect','curvatureSlider','motionSlider','visibilitySlider','distanceMode','roughnessSlider','sampleDisagreeSlider','edgeSlider','specularSlider','historySlider','lambdaKSlider','lambdaRSlider','lambdaNSlider'];
+  inputs.forEach(id=>el(id).addEventListener('input',()=>{ if(id.includes('curvature')||id.includes('motion')||id.includes('visibility')||id==='caseSelect'){ replayStart=performance.now(); } redrawAll(); }));
+  el('squareAnimateBtn').addEventListener('click',()=>{ replayStart=performance.now(); drawSquare(); });
+  el('randomizeBtn').addEventListener('click',()=>{ commSeed = Math.floor(Math.random()*999999); drawCommutator(); });
+  window.addEventListener('resize',()=>{ drawCommutator(); drawArtifactMap(); drawReuseValve(); });
+  redrawAll();
+})();
+</script>
+</body>
+</html>

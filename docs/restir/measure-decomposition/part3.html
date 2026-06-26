@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Measure of Light · III — Moving Measures Between Pixels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Source+Sans+3:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0a0f; --bg2:#12121a; --panel:#16161f; --panel2:#1a1a28; --line:#26263a;
+    --amber:#d4a574; --teal:#5ab4ac; --lav:#9b8ec4; --red:#e06c75; --green:#98c379;
+    --bound:#6b6b80; --ink:#e8e6e0; --ink2:#cfcdc6; --mut:#8a8a9a; --sidebar:230px;
+  }
+  *{box-sizing:border-box} html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(140% 90% at 50% 0%,var(--bg2),var(--bg));color:var(--ink);
+    font-family:'Source Sans 3',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.65}
+  a{color:var(--teal);text-decoration:none}
+  nav{position:fixed;top:0;left:0;width:var(--sidebar);height:100vh;padding:34px 22px;border-right:1px solid var(--line);background:rgba(10,10,15,.6);backdrop-filter:blur(6px);overflow-y:auto}
+  nav .series{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--mut)}
+  nav .ptitle{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;color:var(--ink2);margin:8px 0 26px;line-height:1.2}
+  nav ol{list-style:none;margin:0;padding:0;counter-reset:s} nav li{counter-increment:s;margin:0 0 4px}
+  nav a{display:block;font-size:13.5px;color:var(--mut);padding:7px 10px;border-radius:6px;border-left:2px solid transparent;transition:.18s}
+  nav a::before{content:counter(s,decimal-leading-zero);font-family:'JetBrains Mono',monospace;font-size:10px;color:#55556a;margin-right:10px}
+  nav a:hover{color:var(--ink2);background:rgba(255,255,255,.03)} nav a.active{color:var(--amber);border-left-color:var(--amber)}
+  main{margin-left:var(--sidebar);max-width:760px;padding:0 clamp(24px,5vw,72px)}
+  header.hero{padding:96px 0 28px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--amber);margin:0 0 18px}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(38px,6.2vw,60px);line-height:1.02;margin:0;letter-spacing:.005em}
+  .dek{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:clamp(20px,3vw,26px);color:var(--mut);margin:14px 0 0;max-width:36ch}
+  section{padding:46px 0}
+  h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(28px,4vw,38px);line-height:1.08;margin:0 0 6px}
+  .kicker{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin:0 0 16px}
+  p{font-size:17px;color:var(--ink2);margin:0 0 20px} p.lead{font-size:19px;color:var(--ink)}
+  em{color:var(--ink);font-style:italic} strong{color:var(--ink);font-weight:600}
+  .hl-amber{color:var(--amber)} .hl-teal{color:var(--teal)} .hl-lav{color:var(--lav)} .hl-red{color:var(--red)} .hl-green{color:var(--green)} .hl-bound{color:#9a9ab0}
+  code{font-family:'JetBrains Mono',monospace;font-size:14.5px;color:var(--lav);background:rgba(155,142,196,.1);padding:1px 6px;border-radius:4px}
+  figure{margin:30px 0}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  canvas{display:block;width:100%;border-radius:7px;background:#07070b;touch-action:none}
+  figcaption{font-size:13.5px;color:var(--mut);margin-top:12px;padding:0 4px;line-height:1.5}
+  .controls{display:flex;flex-wrap:wrap;gap:18px 24px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .ctl{display:flex;flex-direction:column;gap:7px}
+  .ctl > label{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.13em;color:var(--mut);text-transform:uppercase}
+  input[type=range]{width:150px;accent-color:var(--amber);cursor:pointer}
+  .val{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--amber)}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .seg button{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--bg2);color:var(--mut);border:none;padding:8px 14px;cursor:pointer}
+  .seg button.on{background:rgba(90,180,172,.16);color:var(--ink)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:11px;padding:7px 11px;border-radius:7px;border:1px solid var(--line);color:var(--mut);background:var(--bg2);cursor:pointer;transition:.15s}
+  .chip.on{border-color:var(--amber);color:var(--ink);background:rgba(212,165,116,.1)}
+  .opbox{margin-top:14px;padding:14px 16px;border-radius:8px;border:1px solid var(--line);background:var(--bg2);min-height:78px}
+  .opbox .nm{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:var(--amber);text-transform:uppercase}
+  .opbox .ds{font-size:14px;color:var(--ink2);margin:6px 0 8px}
+  .fit{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px}
+  .fit i{width:10px;height:10px;border-radius:50%}
+  .formula{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--lav);border-radius:7px;padding:8px 20px;margin:24px 0;overflow-x:auto}
+  blockquote{margin:26px 0;padding:4px 0 4px 22px;border-left:3px solid var(--amber);font-family:'Cormorant Garamond',serif;font-style:italic;font-size:21px;color:var(--ink);line-height:1.35}
+  .pull{font-family:'Cormorant Garamond',serif;font-size:23px;font-style:italic;color:var(--amber);text-align:center;margin:34px auto;max-width:32ch;line-height:1.3}
+  .exer{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:20px 24px;margin:20px 0}
+  .exer h3{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);margin:0 0 14px}
+  .exer ol{margin:0;padding-left:20px} .exer li{margin:0 0 12px;color:var(--ink2);font-size:16px}
+  footer{border-top:1px solid var(--line);margin-top:40px;padding:34px 0 100px;color:var(--mut);font-size:14px}
+  footer h3{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);margin:0 0 12px}
+  footer p{font-size:14px;color:var(--mut);max-width:70ch}
+  .next{display:flex;justify-content:space-between;align-items:baseline;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:28px;margin-top:14px}
+  .next .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+  .next .t{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:var(--ink)}
+  .reveal{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s ease} .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+  @media (max-width:880px){nav{display:none} main{margin-left:0}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="series">The Measure of Light</div>
+  <div class="ptitle">III · Moving Measures Between Pixels</div>
+  <ol>
+    <li><a href="#weight">The weight is a lens</a></li>
+    <li><a href="#anatomy">Anatomy of a lens</a></li>
+    <li><a href="#watch">The shift, watched</a></li>
+    <li><a href="#enough">One lens isn't enough</a></li>
+    <li><a href="#next">What's coming</a></li>
+    <li><a href="#exercises">Try it yourself</a></li>
+  </ol>
+</nav>
+
+<main>
+  <header class="hero">
+    <p class="eyebrow">The Measure of Light · Part Three</p>
+    <h1>Moving Measures Between Pixels</h1>
+    <p class="dek">Reuse is a lens. Sometimes it's the wrong one.</p>
+  </header>
+
+  <!-- 1. WEIGHT IS A LENS -->
+  <section id="weight">
+    <p class="kicker">The weight is a lens</p>
+    <p class="lead">When you reuse a neighbour's sample, you write a weight that looks like this — and every
+    term in it is one face of a single object.</p>
+    <div class="formula" id="f_w"></div>
+    <p>You read this left to right without thinking: a resampling MIS weight <code>m</code>, the target
+    function <span class="hl-lav">p̂<sub>dst</sub></span> evaluated at the <em>shifted</em> sample, the
+    source's unbiased contribution weight <code>W</code>, and the shift Jacobian <code>|T′|</code>. Four
+    moving parts. But to compute <code>m</code> with a balance heuristic you also need the
+    <em>inverse</em> shift and the source-domain density of the target sample — two more parts you wrote
+    elsewhere and stopped noticing. And the whole thing silently assumes the shift was <em>valid</em>:
+    that the source could have produced this sample at all.</p>
+    <p>Bundle those together and you have what we'll call a <strong>measure lens</strong> — the apparatus
+    that carries a measure from one pixel's domain into another's:</p>
+    <div class="formula" id="f_lens"></div>
+    <p>Forward shift, inverse shift, Jacobian, target pullback, source-density query, a support test, and a
+    tag saying which measure classes this lens is even allowed to serve. You already build six of these
+    seven; this part is about seeing them as one thing — and about the seventh, the part that decides when
+    the lens is lying.</p>
+  </section>
+
+  <!-- 2. ANATOMY -->
+  <section id="anatomy">
+    <p class="kicker">Anatomy of a lens</p>
+    <p>Here is one sample, living at a source pixel, about to be carried to a target pixel. Click through the
+    lens's operations and watch each one act on it.</p>
+    <figure class="reveal">
+      <div class="stage">
+        <canvas id="anatC" height="220"></canvas>
+        <div class="chips" id="anatChips" style="margin-top:14px"></div>
+        <div class="opbox">
+          <div class="nm" id="opNm"></div>
+          <div class="ds" id="opDs"></div>
+          <div id="opFx"></div>
+        </div>
+      </div>
+      <figcaption>Each operation is something a renderer already does. Stacked together and made
+      <em>class-aware</em>, they become a lens you can choose per sample — the move Part 5 will make to quiet
+      the fireflies.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 3. WATCH -->
+  <section id="watch">
+    <p class="kicker">The shift, watched</p>
+    <p>A reconnection shift keeps the far vertex — here the point on the light — and re-aims the connection
+    from the new shading point. The Jacobian is the price of that re-aiming. The question that decides
+    everything downstream: after the carry, does the source's idea of where the light matters still match
+    the <em>target's</em>?</p>
+    <p>The plot under the scene shows two contribution densities over the light: what the
+    <span class="hl-amber">source</span> pixel finds bright, and what the <span class="hl-teal">target</span>
+    pixel finds bright. Drag the target away from the source, then pull roughness down.</p>
+
+    <figure class="reveal">
+      <div class="stage">
+        <canvas id="wbScene" height="200"></canvas>
+        <canvas id="wbPlot" height="150" style="margin-top:10px"></canvas>
+        <div class="controls">
+          <div class="ctl"><label>target pixel</label>
+            <input id="wbT" type="range" min="0.44" max="0.64" step="0.005" value="0.56"><span class="val" id="wbTv"></span></div>
+          <div class="ctl"><label>roughness</label>
+            <input id="wbR" type="range" min="0.05" max="1.0" step="0.01" value="0.30"><span class="val" id="wbRv"></span></div>
+          <div class="ctl"><label>sample on light</label>
+            <input id="wbS" type="range" min="0.02" max="0.98" step="0.005" value="0.25"><span class="val" id="wbSv"></span></div>
+          <div class="ctl"><label>lens</label>
+            <div class="seg" id="wbMode"><button data-m="recon" class="on">reconnection</button><button data-m="replay">replay</button></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span class="fit" id="wbFit"></span>
+          <span class="val" id="wbJac" style="color:var(--mut)"></span>
+        </div>
+      </div>
+      <figcaption>At high roughness the two curves are broad and overlap — the source's bright region
+      <em>is</em> the target's, and the reused sample (the teal marker, carried from the amber one) lands
+      where the target wants it. Drop roughness and each curve sharpens into a spike, and the spikes
+      <em>separate</em>: the source is now proposing a light point the target finds dark. That gap is the
+      firefly, seen at its source.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4. ENOUGH -->
+  <section id="enough">
+    <p class="kicker">One lens isn't enough</p>
+    <p>Reconnection keeps the world-space vertex. For a broad lobe that's exactly right. For a sharp one it's
+    a disaster, because the thing worth preserving was never the vertex — it was the <em>shape of the bounce</em>:
+    the half-angle that put the sample on the peak in the first place. Flip the lens above to
+    <span class="hl-teal">replay</span>. Now the shift preserves that half-angle and re-derives a new light
+    point, dragging the reused sample back onto the target's spike. The curves realign.</p>
+    <p>But replay has a cost the reconnection lens never pays. Preserve the bounce shape and the re-derived
+    direction may simply <em>miss the light entirely</em> — point at empty space beyond its edge. When
+    that happens the lens has no valid sample to offer at all. That is the <strong>support test</strong>
+    failing: not a bad value, but <em>no value</em>, because the shift walked off the edge of where the
+    source could have gone. Drag the target far enough in replay mode and watch the fit indicator turn red
+    for exactly this reason.</p>
+    <p class="pull">A diffuse sample wants its vertex kept.<br>A specular sample wants its bounce kept.<br>No single lens keeps both.</p>
+    <p>This is why the classifier of Part 2 ended each verdict with a shift mode. <span class="hl-amber">Diffuse</span>
+    → reconnection. <span class="hl-teal">Glossy</span> → a hybrid that blends the two. <span class="hl-lav">Near-singular</span>
+    → a conservative hybrid that mostly declines. <span class="hl-red">Delta</span> → pure replay, or nothing.
+    <span class="hl-bound">Boundary</span> → don't reuse at all; trust the current frame. The lens is chosen
+    by the kind of measure it has to carry.</p>
+  </section>
+
+  <!-- 5. NEXT -->
+  <section id="next">
+    <p class="kicker">What's coming</p>
+    <p>We've watched the carried density line up with the target's, and watched it fail — the peaks drifting
+    apart, the support falling away. So far that judgement has been your eye on two curves. Part 4 replaces
+    your eye with a single scalar: the <span class="hl-red">lens residual</span>, the log-gap between what the
+    source proposed and what the target actually wants. It is near zero when the curves agree and it blows up
+    the instant they don't — and we will put it back on the rotating-camera scene and watch it fire, pixel
+    for pixel, exactly where the white sparks are.</p>
+    <div class="next">
+      <div><div class="lbl">Next</div><div class="t">IV · The Lens Residual</div></div>
+      <div style="text-align:right"><div class="lbl">Then</div><div class="t">…the decomposed reservoir.</div></div>
+    </div>
+  </section>
+
+  <!-- EXERCISES -->
+  <section id="exercises">
+    <div class="exer">
+      <h3>Try it yourself</h3>
+      <ol>
+        <li>In reconnection mode, fix roughness at 0.5 and drag the target across its whole range. The curves
+        stay broadly aligned. Now set roughness to 0.1 and repeat — find the smallest target offset at which
+        the reused sample falls completely off the target's spike.</li>
+        <li>Switch to replay and reproduce the support failure: drag the target until the fit turns red. Read
+        the scene — where did the re-derived connection point, and why is "no sample" the honest answer rather
+        than a dim one?</li>
+        <li>In the anatomy stepper, identify which single operation the balance-heuristic MIS weight depends
+        on that the final contribution weight does <em>not</em>. Why does only the MIS weight need it?</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>
+    <h3>What is exact, and what is illustrative</h3>
+    <p>The workbench runs the verified engine's geometry on a wide, low area light chosen so both pixels'
+    highlights fall on it. Both contribution densities are the true integrand over the light in arclength
+    measure, <code>p̂(P,y)·(cosθ_y/d)</code>. The reconnection shift keeps the light vertex and its Jacobian
+    is the exact planar change-of-variables <code>(cosθ_y/d)_dst ÷ (cosθ_y/d)_src</code>. The replay shift
+    preserves the world-space half-vector — correct for a flat surface of constant normal — and re-derives
+    the connection by reflecting the target's view direction about it; its support test is the honest
+    question of whether that re-derived ray meets the light. We display replay's landing point and validity
+    but not a replay Jacobian, which for a true manifold shift is more involved than this 2D cross-section
+    warrants.</p>
+    <p>The anatomy stepper is a faithful labelling of the prompt's lens interface; the operations are real,
+    the on-canvas motions are schematic. As throughout, the six-class decomposition and its per-class shift
+    assignments are a <em>computational</em> design, not a theorem; whether the framing is novel is a
+    question for a literature search.</p>
+    <p style="margin-top:22px;color:#55556a">The Measure of Light — an interactive series on measure-class
+    decomposition for ReSTIR path reuse. Part III of VI.</p>
+  </footer>
+</main>
+
+<script>
+"use strict";
+/* ===== verified engine (canonical scene) ===== */
+const V=(x,y)=>({x,y}),sub=(a,b)=>V(a.x-b.x,a.y-b.y),add=(a,b)=>V(a.x+b.x,a.y+b.y),
+ scl=(a,s)=>V(a.x*s,a.y*s),dot=(a,b)=>a.x*b.x+a.y*b.y,len=a=>Math.hypot(a.x,a.y),
+ nrm=a=>{const l=len(a)||1e-12;return V(a.x/l,a.y/l);};
+const Scene={light:{y:1.0,x0:0.34,x1:0.66,Le:1.0},occluder:{y:0.20,x0:0.43,x1:0.57},
+ nrmFloor:V(0,1),nLight:V(0,-1),kd:0.45,ks:0.55};
+const Larc=()=>Scene.light.x1-Scene.light.x0;
+const lightPoint=u=>V(Scene.light.x0+u*(Scene.light.x1-Scene.light.x0),Scene.light.y);
+const lightU=x=>(x-Scene.light.x0)/(Scene.light.x1-Scene.light.x0);
+function segCross(p,q,a0,a1,ay){const dy=q.y-p.y;if(Math.abs(dy)<1e-12)return false;const t=(ay-p.y)/dy;if(t<=1e-6||t>=1-1e-6)return false;const x=p.x+t*(q.x-p.x);return x>=a0&&x<=a1;}
+const visible=(xv,y)=>segCross(xv,y,Scene.occluder.x0,Scene.occluder.x1,Scene.occluder.y)?0:1;
+const sharp=r=>Math.max(1,2/(Math.max(1e-3,r)**2));
+function pHat(xv,y,s,cam){const wo=nrm(sub(cam,xv)),wl=sub(y,xv),d=len(wl);if(d<1e-9)return 0;
+ const wlN=scl(wl,1/d),cosS=dot(Scene.nrmFloor,wlN);if(cosS<=0)return 0;
+ const h=nrm(add(wo,wlN)),hn=Math.max(0,dot(h,Scene.nrmFloor));
+ return (Scene.kd+Scene.ks*(s+1)*Math.pow(hn,s))*cosS*visible(xv,y)*Scene.light.Le;}
+function dAtoDOmega(xv,y){const wl=sub(y,xv),d=len(wl);if(d<1e-9)return 0;
+ const wlN=scl(wl,1/d),cosY=dot(Scene.nLight,scl(wlN,-1));return cosY<=0?0:cosY/d;}
+const shiftJac=(a,b,y)=>{const ga=dAtoDOmega(a,y),gb=dAtoDOmega(b,y);return ga<1e-12?0:gb/ga;};
+// contribution density over the light, arclength measure (shared vertex -> directly comparable)
+const densOnLight=(P,y,s,cam)=>pHat(P,y,s,cam)*dAtoDOmega(P,y);
+// half-vector-preserving replay: keep world half-vector, reflect target view dir to get light dir
+function replayLightX(S,T,ySample,cam){
+  const woS=nrm(sub(cam,S)),wlS=nrm(sub(ySample,S)),h=nrm(add(woS,wlS));
+  const woT=nrm(sub(cam,T));
+  const wlT=sub(scl(h,2*dot(woT,h)),woT); // reflect woT about h
+  if(wlT.y<=1e-4) return null;            // points away from light plane
+  const t=(Scene.light.y-T.y)/wlT.y, xhit=T.x+t*wlT.x;
+  return xhit;
+}
+const CAM=V(0.5,0.56);
+
+/* ===== util ===== */
+function fitW(c){const w=Math.max(1,c.clientWidth|0);if(c.width!==w)c.width=w;return c.width;}
+function whenVisible(el,on,off){const io=new IntersectionObserver(es=>{for(const e of es)e.isIntersecting?on():off();},{threshold:.05});io.observe(el);}
+function reveal(){const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}},{threshold:.12});document.querySelectorAll('.reveal').forEach(el=>io.observe(el));}
+
+/* ===== WIDGET A — lens anatomy stepper ===== */
+(function anatomy(){
+  const c=document.getElementById('anatC'),x=c.getContext('2d');
+  const chips=document.getElementById('anatChips'),nm=document.getElementById('opNm'),ds=document.getElementById('opDs'),fx=document.getElementById('opFx');
+  const S=V(0.26,0),T=V(0.70,0),yS=lightPoint(0.42);
+  const ops=[
+    {k:'forward', t:'Forward shift T', d:'Carry the source sample into the target domain by keeping the far vertex and re-aiming the connection.', f:String.raw`y_i \;=\; T_{j\to i}(x_j)`},
+    {k:'jac', t:'Jacobian |T′|', d:'The change-of-variables factor: how the measure stretches or shrinks as the connection is re-aimed.', f:String.raw`J \;=\; \bigl|\,T'_{j\to i}(x_j)\,\bigr|`},
+    {k:'pull', t:'Target pullback', d:'Evaluate the target pixel\u2019s own density at the shifted sample. This is the p̂ in the reuse weight.', f:String.raw`(T^{*}\hat p_i)(x_j)\;=\;\hat p_i\!\bigl(T_{j\to i}(x_j)\bigr)`},
+    {k:'inv', t:'Inverse shift T⁻¹', d:'Map a target-domain sample back to the source. Needed to ask what the source would have done.', f:String.raw`x_j \;=\; T_{j\to i}^{-1}(y_i)`},
+    {k:'query', t:'Source-density query', d:'The source\u2019s density of the target\u2019s sample \u2014 the other half of a balance-heuristic MIS weight.', f:String.raw`\hat p^{\leftarrow}_j(y_i)\;=\;\hat p_j\!\bigl(T^{-1}y_i\bigr)\,\bigl|T^{-1\prime}(y_i)\bigr|`},
+    {k:'supp', t:'Support test', d:'Could the source plausibly have produced this sample, or did the shift cross a visibility / specular wall?', f:String.raw`\mathbb{1}\bigl[\,x_j \text{ can generate } y_i\,\bigr]`},
+    {k:'cls', t:'Class tag', d:'Which measure classes this lens is permitted to serve. A diffuse lens has no business carrying a delta.', f:String.raw`\mathrm{class}\in\{\text{Diffuse},\dots,\text{Volume}\}`},
+  ];
+  let cur=0;
+  ops.forEach((o,i)=>{const b=document.createElement('div');b.className='chip'+(i===0?' on':'');b.textContent=o.t;b.onclick=()=>{cur=i;render();};chips.appendChild(b);});
+  function draw(){
+    const W=fitW(c),H=c.height,pad=24,pw=W-2*pad,X=u=>pad+u*pw,Y=u=>H-24-u*(H-48);
+    x.clearRect(0,0,W,H);
+    x.strokeStyle='#3a3a52';x.lineWidth=2;x.beginPath();x.moveTo(X(0),Y(0));x.lineTo(X(1),Y(0));x.stroke();
+    x.strokeStyle='#d4a574';x.lineWidth=4;x.beginPath();x.moveTo(X(Scene.light.x0),Y(Scene.light.y));x.lineTo(X(Scene.light.x1),Y(Scene.light.y));x.stroke();
+    const o=ops[cur].k;
+    const yT=lightPoint(0.42);
+    // source connection
+    x.strokeStyle='#d4a574';x.lineWidth=1.6;x.beginPath();x.moveTo(X(S.x),Y(0));x.lineTo(X(yS.x),Y(yS.y));x.stroke();
+    x.fillStyle='#d4a574';x.beginPath();x.arc(X(S.x),Y(0),4,0,7);x.fill();
+    x.fillStyle='#8a8a9a';x.font='10px JetBrains Mono';x.fillText('source x_j',X(S.x)-14,Y(0)+16);x.fillText('target',X(T.x)-8,Y(0)+16);
+    // target connection (highlight depending on op)
+    const showFwd=(o==='forward'||o==='pull'||o==='jac'||o==='supp'||o==='cls');
+    const showInv=(o==='inv'||o==='query');
+    if(showFwd){x.strokeStyle=(o==='supp')?'#e06c75':'#5ab4ac';x.lineWidth=2;x.beginPath();x.moveTo(X(T.x),Y(0));x.lineTo(X(yT.x),Y(yT.y));x.stroke();}
+    if(showInv){x.strokeStyle='#9b8ec4';x.lineWidth=2;x.setLineDash([4,3]);x.beginPath();x.moveTo(X(yT.x),Y(yT.y));x.lineTo(X(S.x),Y(0));x.stroke();x.setLineDash([]);}
+    x.fillStyle='#5ab4ac';x.beginPath();x.arc(X(T.x),Y(0),4,0,7);x.fill();
+    x.fillStyle='#d4a574';x.beginPath();x.arc(X(yS.x),Y(yS.y),4,0,7);x.fill();
+    // op-specific glyph
+    if(o==='jac'){x.fillStyle='rgba(155,142,196,.5)';x.beginPath();x.arc(X(yT.x),Y(yT.y),12,0,7);x.fill();x.fillStyle='#9b8ec4';x.font='11px JetBrains Mono';x.fillText('×|T′|',X(yT.x)+14,Y(yT.y)-6);}
+    if(o==='supp'){x.fillStyle='#e06c75';x.font='12px JetBrains Mono';x.fillText('valid?',X((T.x+yT.x)/2),Y(0.5));}
+  }
+  function render(){[...chips.children].forEach((b,i)=>b.classList.toggle('on',i===cur));
+    const o=ops[cur];nm.textContent=o.t;ds.textContent=o.d;fx.innerHTML='';
+    if(window.katex)katex.render(o.f,fx,{throwOnError:false,displayMode:true});draw();}
+  whenVisible(c,()=>draw(),()=>{});window.addEventListener('resize',draw);render();
+})();
+
+/* ===== WIDGET B — lens workbench (local illustrative geometry) ===== */
+(function workbench(){
+  const WL={y:0.72,x0:0.20,x1:0.80}, WCAM=V(0.5,0.50), nF=V(0,1), nL=V(0,-1);
+  const wlp=u=>V(WL.x0+u*(WL.x1-WL.x0),WL.y), wlu=x=>(x-WL.x0)/(WL.x1-WL.x0);
+  const wPHat=(xv,y,s)=>{const wo=nrm(sub(WCAM,xv)),wl=sub(y,xv),d=len(wl);if(d<1e-9)return 0;
+    const wlN=scl(wl,1/d),cs=dot(nF,wlN);if(cs<=0)return 0;const h=nrm(add(wo,wlN)),hn=Math.max(0,dot(h,nF));
+    return (Scene.kd+Scene.ks*(s+1)*Math.pow(hn,s))*cs;};
+  const wDA=(xv,y)=>{const wl=sub(y,xv),d=len(wl);if(d<1e-9)return 0;const wlN=scl(wl,1/d),cy=dot(nL,scl(wlN,-1));return cy<=0?0:cy/d;};
+  const wDens=(P,y,s)=>wPHat(P,y,s)*wDA(P,y);
+  const wJac=(a,b,y)=>{const ga=wDA(a,y),gb=wDA(b,y);return ga<1e-12?0:gb/ga;};
+  const wReplayX=(S,T,yS)=>{const woS=nrm(sub(WCAM,S)),wlS=nrm(sub(yS,S)),h=nrm(add(woS,wlS)),woT=nrm(sub(WCAM,T));
+    const wlT=sub(scl(h,2*dot(woT,h)),woT);if(wlT.y<=1e-4)return null;const t=(WL.y-T.y)/wlT.y;return T.x+t*wlT.x;};
+
+  const sc=document.getElementById('wbScene'),sx=sc.getContext('2d');
+  const pl=document.getElementById('wbPlot'),px=pl.getContext('2d');
+  const tEl=document.getElementById('wbT'),tv=document.getElementById('wbTv');
+  const rEl=document.getElementById('wbR'),rv=document.getElementById('wbRv');
+  const sEl=document.getElementById('wbS'),sv=document.getElementById('wbSv');
+  const modeWrap=document.getElementById('wbMode');
+  const fitEl=document.getElementById('wbFit'),jacEl=document.getElementById('wbJac');
+  const S=V(0.40,0); let mode='recon';
+  modeWrap.querySelectorAll('button').forEach(b=>b.onclick=()=>{mode=b.dataset.m;
+    modeWrap.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));draw();});
+  function curves(s,T){const N=160,src=new Float64Array(N),tgt=new Float64Array(N);let mx=1e-9;
+    for(let i=0;i<N;i++){const u=(i+0.5)/N,y=wlp(u);src[i]=wDens(S,y,s);tgt[i]=wDens(T,y,s);mx=Math.max(mx,src[i],tgt[i]);}
+    return {src,tgt,mx,N};}
+  function draw(){
+    const s=sharp(parseFloat(rEl.value)),T=V(parseFloat(tEl.value),0),uSamp=parseFloat(sEl.value),ySamp=wlp(uSamp);
+    const W=fitW(sc),H=sc.height,pad=22,pw=W-2*pad,X=x=>pad+x*pw,Y=y=>H-20-y*(H-40);
+    sx.clearRect(0,0,W,H);
+    sx.fillStyle='rgba(212,165,116,.08)';sx.beginPath();sx.moveTo(X(WL.x0),Y(WL.y));sx.lineTo(X(WL.x1),Y(WL.y));sx.lineTo(X(.97),Y(0));sx.lineTo(X(.03),Y(0));sx.closePath();sx.fill();
+    sx.strokeStyle='#3a3a52';sx.lineWidth=2;sx.beginPath();sx.moveTo(X(0),Y(0));sx.lineTo(X(1),Y(0));sx.stroke();
+    sx.strokeStyle='#d4a574';sx.lineWidth=5;sx.beginPath();sx.moveTo(X(WL.x0),Y(WL.y));sx.lineTo(X(WL.x1),Y(WL.y));sx.stroke();
+    sx.fillStyle='#5ab4ac';sx.beginPath();sx.arc(X(WCAM.x),Y(WCAM.y),3,0,7);sx.fill();
+    sx.fillStyle='#8a8a9a';sx.font='10px JetBrains Mono';sx.fillText('camera',X(WCAM.x)+6,Y(WCAM.y)+3);
+    let uT=uSamp, valid=true, xhit=ySamp.x;
+    if(mode==='replay'){const xr=wReplayX(S,T,ySamp);
+      if(xr===null)valid=false; else{xhit=xr;uT=wlu(xr);if(uT<0||uT>1)valid=false;}}
+    sx.strokeStyle='#d4a574';sx.lineWidth=1.6;sx.beginPath();sx.moveTo(X(S.x),Y(0));sx.lineTo(X(ySamp.x),Y(WL.y));sx.stroke();
+    sx.fillStyle='#d4a574';sx.beginPath();sx.arc(X(S.x),Y(0),5,0,7);sx.fill();
+    sx.strokeStyle=valid?'#5ab4ac':'#e06c75';sx.lineWidth=2;sx.setLineDash(valid?[]:[4,3]);
+    sx.beginPath();sx.moveTo(X(T.x),Y(0));sx.lineTo(X(Math.max(-.05,Math.min(1.05,xhit))),Y(WL.y));sx.stroke();sx.setLineDash([]);
+    sx.fillStyle=valid?'#5ab4ac':'#e06c75';sx.beginPath();sx.arc(X(T.x),Y(0),5,0,7);sx.fill();
+    sx.fillStyle='#8a8a9a';sx.font='10px JetBrains Mono';sx.fillText('source',X(S.x)-16,Y(0)+15);sx.fillText('target',X(T.x)-16,Y(0)+15);
+    // plot
+    const {src,tgt,mx,N}=curves(s,T);
+    const Wp=fitW(pl),Hp=pl.height,p2=22,pw2=Wp-2*p2,baseY=Hp-26,top=14,Xp=u=>p2+u*pw2,Yp=v=>baseY-(v/mx)*(baseY-top);
+    px.clearRect(0,0,Wp,Hp);
+    px.strokeStyle='#26263a';px.beginPath();px.moveTo(p2,baseY);px.lineTo(Wp-p2,baseY);px.stroke();
+    const curve=(arr,col,al)=>{px.strokeStyle=col;px.globalAlpha=al;px.lineWidth=2;px.beginPath();
+      for(let i=0;i<N;i++){const u=(i+0.5)/N;i===0?px.moveTo(Xp(u),Yp(arr[i])):px.lineTo(Xp(u),Yp(arr[i]));}px.stroke();
+      px.globalAlpha=al*0.16;px.lineTo(Xp(1),baseY);px.lineTo(Xp(0),baseY);px.closePath();px.fill();px.globalAlpha=1;};
+    curve(tgt,'#5ab4ac',1);curve(src,'#d4a574',1);
+    const srcDen=wDens(S,ySamp,s);
+    px.strokeStyle='#d4a574';px.setLineDash([3,3]);px.beginPath();px.moveTo(Xp(uSamp),baseY);px.lineTo(Xp(uSamp),Yp(srcDen));px.stroke();px.setLineDash([]);
+    px.fillStyle='#d4a574';px.beginPath();px.arc(Xp(uSamp),Yp(srcDen),4,0,7);px.fill();
+    let tgtDenAtT=0,tgtPeak=Math.max(...tgt);
+    if(valid){tgtDenAtT=wDens(T,wlp(uT),s);
+      px.fillStyle='#5ab4ac';px.beginPath();px.arc(Xp(uT),Yp(tgtDenAtT),5,0,7);px.fill();
+      px.strokeStyle='#5ab4ac';px.globalAlpha=.5;px.beginPath();px.moveTo(Xp(uSamp),Yp(srcDen));px.lineTo(Xp(uT),Yp(tgtDenAtT));px.stroke();px.globalAlpha=1;}
+    px.fillStyle='#8a8a9a';px.font='10px JetBrains Mono';px.fillText('light  →',Wp-p2-54,baseY+18);
+    px.fillStyle='#d4a574';px.fillText('source',p2,baseY+18);px.fillStyle='#5ab4ac';px.fillText('target',p2+52,baseY+18);
+    let label,col;
+    if(!valid){label='support failure — no valid sample';col='#e06c75';}
+    else{const frac=tgtPeak>1e-9?tgtDenAtT/tgtPeak:0;
+      if(frac>0.55){label='lens fit: good — sample lands near the target peak';col='#98c379';}
+      else if(frac>0.18){label='lens fit: weak — sample off the target peak';col='#d4a574';}
+      else{label='lens fit: poor — target finds this sample dark';col='#e06c75';}}
+    fitEl.innerHTML=`<i style="background:${col}"></i><span style="color:${col}">${label}</span>`;
+    if(mode==='recon'){const J=wJac(S,T,ySamp);jacEl.textContent=`|T\u2032| = ${J.toFixed(3)}`;}
+    else jacEl.textContent=valid?'replay: bounce shape preserved':'replay: re-derived ray misses the light';
+  }
+  function sync(){tv.textContent=`x = ${parseFloat(tEl.value).toFixed(2)}`;rv.textContent=`\u03c1 = ${parseFloat(rEl.value).toFixed(2)}`;sv.textContent=`u = ${parseFloat(sEl.value).toFixed(2)}`;draw();}
+  tEl.oninput=sync;rEl.oninput=sync;sEl.oninput=sync;
+  whenVisible(sc,()=>draw(),()=>{});window.addEventListener('resize',draw);sync();
+})();
+
+/* ===== nav, KaTeX headers, reveal ===== */
+(function navState(){const links=[...document.querySelectorAll('nav a')];
+  const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const io=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map.get(e.target.id);if(a)a.classList.add('active');}},{rootMargin:'-45% 0px -50% 0px'});
+  document.querySelectorAll('section').forEach(s=>io.observe(s));})();
+window.addEventListener('load',()=>{reveal();
+  if(window.katex){
+    katex.render(String.raw`w \;=\; \underbrace{m}_{\text{MIS}}\;\cdot\;\underbrace{\hat p_{\text{dst}}\!\bigl(T x\bigr)}_{\text{target}}\;\cdot\;\underbrace{W}_{\text{source weight}}\;\cdot\;\underbrace{\bigl|T'\bigr|}_{\text{Jacobian}}`,document.getElementById('f_w'),{throwOnError:false,displayMode:true});
+    katex.render(String.raw`\mathcal{L}_{j\to i}\;=\;\bigl(\,T,\;T^{-1},\;|T'|,\;T^{*}\hat p,\;\hat p^{\leftarrow},\;\mathrm{support},\;\mathrm{class}\,\bigr)`,document.getElementById('f_lens'),{throwOnError:false,displayMode:true});
+  }
+});
+</script>
+</body>
+</html>

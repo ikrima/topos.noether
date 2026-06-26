@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Residual Measure Transport — A Visual Essay for ReSTIR</title>
+<style>
+:root{
+  --paper:#f7f1e5;
+  --paper2:#fffaf0;
+  --ink:#25221d;
+  --muted:#716a5f;
+  --line:#d9cfbd;
+  --blue:#2e77b8;
+  --blue2:#8cc8ff;
+  --red:#d9483b;
+  --orange:#e58c36;
+  --yellow:#e3b446;
+  --green:#4f9d69;
+  --violet:#725db7;
+  --panel:#fffaf0;
+  --dark:#24221e;
+  --shadow:0 22px 70px rgba(62,45,25,.13);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --serif:Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:19px;
+  line-height:1.58;
+}
+body:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 18% -5%,rgba(255,255,255,.72),transparent 36%),
+    radial-gradient(circle at 80% 14%,rgba(255,237,184,.28),transparent 28%),
+    linear-gradient(rgba(80,60,30,.022) 1px, transparent 1px),
+    linear-gradient(90deg,rgba(80,60,30,.018) 1px, transparent 1px);
+  background-size:auto,auto,22px 22px,22px 22px;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:rgba(247,241,229,.84);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.nav{display:flex;align-items:center;justify-content:space-between;font-family:var(--sans);font-size:13px;color:var(--muted);padding:10px 0}
+.nav a{color:var(--muted);text-decoration:none;margin-left:18px}.nav a:hover{color:var(--ink)}
+header{padding:86px 0 38px;text-align:center}
+.eyebrow{font-family:var(--sans);text-transform:uppercase;letter-spacing:.15em;font-size:12px;color:var(--muted);margin-bottom:18px}
+h1{font-weight:500;font-size:clamp(44px,7.4vw,92px);line-height:.94;letter-spacing:-.052em;margin:0 0 20px}
+.subtitle{font-family:var(--sans);font-size:clamp(18px,2.2vw,25px);line-height:1.42;color:#4c4740;max-width:880px;margin:0 auto}
+.deck{font-family:var(--sans);max-width:780px;margin:26px auto 0;color:var(--muted);font-size:15px}
+.rule{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:34px 0}
+.essay{max-width:780px;margin:0 auto}
+.essay h2{font-size:43px;line-height:1.07;font-weight:500;letter-spacing:-.028em;margin:74px 0 14px}
+.essay h3{font-family:var(--sans);font-size:17px;text-transform:uppercase;letter-spacing:.09em;color:#5e5548;margin:36px 0 8px}
+.essay p{margin:18px 0}.lead{font-size:25px;line-height:1.39}.small{font-size:16px;color:var(--muted);font-family:var(--sans)}
+code{font-family:var(--mono);font-size:.9em;background:#fff7e6;border:1px solid var(--line);border-radius:6px;padding:1px 5px}
+.viz{max-width:1120px;margin:34px auto 52px;background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}
+.vizinner{position:relative}.canvasWrap{position:relative}canvas{display:block;width:100%;height:auto}
+.caption{font-family:var(--sans);font-size:14px;color:var(--muted);padding:14px 18px;border-top:1px solid var(--line);background:rgba(255,255,255,.38)}
+.legend{position:absolute;left:18px;top:18px;background:rgba(255,250,240,.88);border:1px solid var(--line);border-radius:16px;padding:11px 13px;font-family:var(--sans);font-size:12px;color:var(--muted);box-shadow:0 10px 30px rgba(0,0,0,.06);max-width:310px}
+.legend b{color:var(--ink)}
+.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px 18px;border-top:1px solid var(--line);font-family:var(--sans);font-size:13px;background:rgba(255,255,255,.28)}
+.controls.four{grid-template-columns:repeat(4,1fr)}
+label{display:block;color:#5d5549}.control-title{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px}.value{font-family:var(--mono);color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--yellow)}
+.buttonbar{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px 0;font-family:var(--sans)}
+button{border:1px solid var(--line);background:#fffaf2;border-radius:999px;padding:8px 13px;font-family:var(--sans);cursor:pointer;color:var(--ink)}button.active{background:var(--ink);color:white;border-color:var(--ink)}
+.eq{font-family:var(--serif);font-size:30px;line-height:1.35;text-align:center;margin:28px auto;padding:22px;border-radius:20px;background:#fffaf2;border:1px solid var(--line)}
+.eq small{display:block;font-family:var(--sans);font-size:14px;color:var(--muted);margin-top:10px}
+.aside{font-family:var(--sans);font-size:15px;background:#fff7e8;border:1px solid var(--line);border-radius:18px;padding:16px 18px;color:#5e564b;margin:24px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:#fffaf2;border:1px solid var(--line);border-radius:18px;padding:18px;font-family:var(--sans);font-size:15px}.card b{font-size:16px;color:var(--ink)}.card .num{font-family:var(--mono);color:var(--red);font-size:13px}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.pill{font-family:var(--sans);font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fffaf2;color:#5c554b}
+.code{font-family:var(--mono);font-size:13px;line-height:1.55;background:#201f1b;color:#f7ead0;padding:18px;border-radius:18px;overflow:auto}.k{color:#ffd36b}.c{color:#9aa399}.n{color:#88c0ff}.r{color:#ff9085}.g{color:#96d494}.v{color:#c5b6ff}
+.callout{font-family:var(--sans);font-size:18px;line-height:1.48;background:#fff9ed;border:1px solid var(--line);border-left:5px solid var(--red);border-radius:16px;padding:18px 20px;margin:28px 0}
+.footer{font-family:var(--sans);font-size:13px;color:var(--muted);padding:60px 0 80px;text-align:center}
+.table{font-family:var(--sans);font-size:14px;border-collapse:collapse;width:100%;margin:22px 0;background:#fffaf2;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:table}.table th,.table td{border-bottom:1px solid var(--line);padding:12px;text-align:left;vertical-align:top}.table tr:last-child td{border-bottom:0}.table th{color:#5f574b;background:#fff4df;font-weight:600}
+@media(max-width:820px){.controls,.controls.four,.grid2,.grid3{grid-template-columns:1fr}.essay h2{font-size:34px}.eq{font-size:23px}.nav .links{display:none}.legend{position:relative;left:auto;top:auto;margin:12px 14px}.lead{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="wrap nav"><div>Residual Measure Transport</div><div class="links"><a href="#residual">Residual</a><a href="#decomposition">Novelty</a><a href="#attention">Attention</a><a href="#algorithm">Algorithm</a><a href="#series">Series</a></div></div></div>
+<header class="wrap">
+  <div class="eyebrow">Essay 2 · ReSTIR as Predictive Measure Dynamics</div>
+  <h1>The renderer samples<br>what prediction failed to explain</h1>
+  <p class="subtitle">A visual essay on residual-streaming ReSTIR: push a prior reservoir forward, compare it with incoming evidence, then spend samples on the residual measure.</p>
+  <p class="deck">For principal graphics researchers: this essay uses measure language only where it buys something concrete—reuse confidence, sample allocation, novelty detection, and curvature-aware rejection.</p>
+</header>
+
+<div class="viz" id="heroViz">
+  <div class="vizinner canvasWrap">
+    <canvas id="hero" width="1120" height="560"></canvas>
+    <div class="legend"><b>Blue</b>: predicted measure from history. <b>Gold</b>: incoming evidence. <b>Red</b>: residual novelty that deserves fresh samples.</div>
+  </div>
+  <div class="controls">
+    <label><span class="control-title">prediction quality <span class="value" id="hQualityVal">0.68</span></span><input id="hQuality" type="range" min="0" max="1" step="0.01" value="0.68"></label>
+    <label><span class="control-title">incoming novelty <span class="value" id="hNovelVal">0.32</span></span><input id="hNovel" type="range" min="0" max="1" step="0.01" value="0.32"></label>
+    <label><span class="control-title">motion mismatch <span class="value" id="hMotionVal">0.24</span></span><input id="hMotion" type="range" min="0" max="1" step="0.01" value="0.24"></label>
+  </div>
+  <div class="caption">The key object is not the current frame alone. It is the difference between what the renderer predicted and what the frame now demands.</div>
+</div>
+
+<main class="essay">
+<p class="lead">The usual rendering question is “where should I sample?” The residual version is sharper: <b>which parts of the current measure are not already explained by transported history and neighbors?</b></p>
+
+<p>ReSTIR already contains the ingredients of a predictive system. A reservoir at frame <code>t−1</code> is transported forward through motion vectors, surface shifts, or GRIS maps. That transported reservoir is not merely old data. It is a prediction.</p>
+
+<div class="eq">μ<sub>t</sub><sup>−</sup> = (T<sub>t</sub>)<sub>#</sub> μ<sub>t−1</sub><small>push the previous reservoir measure forward to predict the current one</small></div>
+
+<p>Then the current frame provides evidence: direct candidates, visibility tests, shading probes, G-buffer changes, or whatever cheap signal we are willing to treat as an incoming measure.</p>
+
+<div class="eq">ρ<sub>t</sub> = ν<sub>t</sub> − μ<sub>t</sub><sup>−</sup><small>the residual measure: current evidence minus predicted belief</small></div>
+
+<div class="callout">This is the biomimetic ReSTIR principle: <b>reservoirs should carry the stable predictable measure; new samples should target residual novelty.</b></div>
+
+<h2 id="residual">1. Residual is a signed diagnostic, not just an error number</h2>
+<p>If incoming evidence is larger than prediction, the residual is positive: something new needs samples. If prediction is larger than evidence, the residual is negative: history is overconfident, stale, or invalid. Both are useful.</p>
+</main>
+
+<div class="viz">
+  <div class="vizinner canvasWrap"><canvas id="density" width="1120" height="520"></canvas><div class="legend"><b>Path coordinate</b> is deliberately abstract: light choice, direction, path shift parameter, or reservoir hypothesis index.</div></div>
+  <div class="controls">
+    <label><span class="control-title">temporal alignment <span class="value" id="dAlignVal">0.72</span></span><input id="dAlign" type="range" min="0" max="1" step="0.01" value="0.72"></label>
+    <label><span class="control-title">lighting change <span class="value" id="dLightVal">0.28</span></span><input id="dLight" type="range" min="0" max="1" step="0.01" value="0.28"></label>
+    <label><span class="control-title">new visibility lobe <span class="value" id="dOccVal">0.18</span></span><input id="dOcc" type="range" min="0" max="1" step="0.01" value="0.18"></label>
+  </div>
+  <div class="caption">Positive residual means the current frame contains measure mass not predicted by the reservoir. Negative residual means the prior predicts mass the current frame no longer supports.</div>
+</div>
+
+<main class="essay">
+<h2 id="decomposition">2. Expected-but-reweighted versus genuinely novel</h2>
+<p>The residual view becomes stronger when we separate two failure modes.</p>
+
+<div class="eq">ν<sub>t</sub> = f<sub>t</sub> μ<sub>t</sub><sup>−</sup> + ν<sub>t</sub><sup>⊥</sup><small>Lebesgue decomposition: reweighted expectation plus singular novelty</small></div>
+
+<p>The first part, <code>f μ⁻</code>, says: “the old support was basically right, but weights changed.” The second part, <code>ν⊥</code>, says: “the current frame contains mass outside the predicted support.” That is disocclusion, new visibility, a light turning on, a caustic entering the pixel, or any event the transported reservoir cannot represent.</p>
+
+<div class="grid2">
+  <div class="card"><b>Absolutely continuous residual</b><br>Same candidate family, different density. Reweight, downweight history, or request a few corrective samples.</div>
+  <div class="card"><b>Singular residual</b><br>New support. History cannot explain it. Allocate fresh exploration and reduce reuse confidence sharply.</div>
+</div>
+</main>
+
+<div class="viz">
+  <div class="vizinner canvasWrap"><canvas id="decomp" width="1120" height="540"></canvas><div class="legend">The dashed blue support is what history can explain. Red particles outside it are singular novelty.</div></div>
+  <div class="controls">
+    <label><span class="control-title">support overlap <span class="value" id="sOverlapVal">0.64</span></span><input id="sOverlap" type="range" min="0" max="1" step="0.01" value="0.64"></label>
+    <label><span class="control-title">density reweighting <span class="value" id="sReweightVal">0.38</span></span><input id="sReweight" type="range" min="0" max="1" step="0.01" value="0.38"></label>
+    <label><span class="control-title">singular novelty <span class="value" id="sNovelVal">0.26</span></span><input id="sNovel" type="range" min="0" max="1" step="0.01" value="0.26"></label>
+  </div>
+  <div class="caption">A stable region can be handled mostly by density correction. A singular region requires exploration because no amount of reweighting creates samples where the prior has no support.</div>
+</div>
+
+<main class="essay">
+<h2>3. First-order residual is mismatch; second-order residual is alarm</h2>
+<p>A persistent error is bad, but a changing error is worse. It says the failure itself is moving, growing, or failing to transport. That is closer to an attention signal.</p>
+
+<div class="eq">Δe<sub>t</sub> = e<sub>t</sub> − (S<sub>t</sub>)<sub>#</sub> e<sub>t−1</sub><small>second-order residual: where prediction error itself fails to predict</small></div>
+
+<p>In a renderer, this distinguishes a stable under-sampled shadow from an emerging disocclusion, thin-geometry instability, or specular lobe that is moving faster than the reuse operator can track.</p>
+
+<h2 id="attention">4. Attention is sample allocation over residual measure</h2>
+<p>Now the sample-budget field can be expressed as a sum of cheap diagnostics:</p>
+
+<div class="eq">A<sub>p</sub> = α |ρ<sub>p</sub>| + β |Δρ<sub>p</sub>| + γ ν<sub>p</sub><sup>⊥</sup> + η κ<sub>p</sub><small>allocate fresh work where prediction fails, changes, becomes singular, or transport does not commute</small></div>
+
+<p>This is not “sample where bright.” It is “sample where the current evidence is poorly explained by transported belief.”</p>
+</main>
+
+<div class="viz">
+  <div class="vizinner canvasWrap"><canvas id="attentionCanvas" width="1120" height="560"></canvas><div class="legend"><b>Rings</b> show extra samples. <b>Dark cells</b> reuse aggressively. <b>Red cells</b> distrust history.</div></div>
+  <div class="controls four">
+    <label><span class="control-title">first-order α <span class="value" id="aFirstVal">0.48</span></span><input id="aFirst" type="range" min="0" max="1" step="0.01" value="0.48"></label>
+    <label><span class="control-title">second-order β <span class="value" id="aSecondVal">0.40</span></span><input id="aSecond" type="range" min="0" max="1" step="0.01" value="0.40"></label>
+    <label><span class="control-title">singular γ <span class="value" id="aSingVal">0.62</span></span><input id="aSing" type="range" min="0" max="1" step="0.01" value="0.62"></label>
+    <label><span class="control-title">curvature η <span class="value" id="aCurvVal">0.45</span></span><input id="aCurv" type="range" min="0" max="1" step="0.01" value="0.45"></label>
+  </div>
+  <div class="caption">This is the operational version: convert residual diagnostics into sample budget and reuse confidence.</div>
+</div>
+
+<main class="essay">
+<h2>5. Curvature is residual disagreement between reuse paths</h2>
+<p>Temporal prediction and spatial prediction are both pushforwards. The interesting object is where they disagree.</p>
+
+<div class="eq">κ = D((T<sub>time</sub>)<sub>#</sub>(T<sub>space</sub>)<sub>#</sub> μ, (T<sub>space</sub>)<sub>#</sub>(T<sub>time</sub>)<sub>#</sub> μ)<small>if reuse order matters, the local sampling geometry is curved</small></div>
+
+<p>That curvature term belongs in the attention field because it identifies places where the renderer’s transport model is locally inconsistent.</p>
+</main>
+
+<div class="viz">
+  <div class="vizinner canvasWrap"><canvas id="curvature" width="1120" height="540"></canvas><div class="legend">Two paths around the same screen-time square. When the final clouds separate, reuse is path-dependent.</div></div>
+  <div class="controls">
+    <label><span class="control-title">motion shear <span class="value" id="cShearVal">0.52</span></span><input id="cShear" type="range" min="0" max="1" step="0.01" value="0.52"></label>
+    <label><span class="control-title">normal bend <span class="value" id="cBendVal">0.34</span></span><input id="cBend" type="range" min="0" max="1" step="0.01" value="0.34"></label>
+    <label><span class="control-title">occlusion tear <span class="value" id="cTearVal">0.26</span></span><input id="cTear" type="range" min="0" max="1" step="0.01" value="0.26"></label>
+  </div>
+  <div class="caption">High curvature should reduce reuse confidence even if each individual reprojection test looks plausible.</div>
+</div>
+
+<main class="essay">
+<h2 id="algorithm">6. A renderer loop</h2>
+<p>The algorithm is not a replacement for ReSTIR. It is a control layer around it: a residual field that decides where to reuse, where to reweight, and where to explore.</p>
+
+<pre class="code"><span class="k">for</span> each pixel p:
+    <span class="c">// 1. Predict from transported reservoirs.</span>
+    temporal = pushforward(prevReservoir[p'], motionOrPathShift)
+    spatial  = pushforward(neighborReservoirs[p], localReuseMaps)
+    predicted = combine(temporal, spatial)
+
+    <span class="c">// 2. Obtain cheap current evidence.</span>
+    current = estimateIncomingMeasure(p)  <span class="c">// probes, candidates, visibility, G-buffer evidence</span>
+
+    <span class="c">// 3. Compare prediction with evidence.</span>
+    residual       = current - predicted
+    residualChange = residual - pushforward(prevResidual[p'], residualTransport)
+    novelty        = singularComponent(current, predicted.support)
+    curvature      = distance(timeThenSpace(p), spaceThenTime(p))
+
+    <span class="c">// 4. Convert residual diagnostics into policy.</span>
+    attention = a*norm(residual)
+              + b*norm(residualChange)
+              + c*novelty
+              + d*curvature
+
+    reuseConfidence = exp(-lambda * attention)
+    sampleBudget    = baseSamples + allocate(attention)
+
+    <span class="c">// 5. ReSTIR proceeds, but guided by residual measure.</span>
+    reservoir[p] = resample(predicted, freshSamples(sampleBudget), reuseConfidence)</pre>
+
+<h3>Cheap proxies that make this implementable</h3>
+<table class="table">
+<tr><th>Mathematical object</th><th>Production proxy</th><th>Likely signal</th></tr>
+<tr><td><code>|ρ|</code></td><td>difference between predicted and current luminance / candidate contribution moments</td><td>under-explained lighting</td></tr>
+<tr><td><code>|Δρ|</code></td><td>temporal residual mismatch after motion reprojection</td><td>moving error, flicker risk</td></tr>
+<tr><td><code>ν⊥</code></td><td>disocclusion mask, visibility ID change, depth/normal/material support break</td><td>new support</td></tr>
+<tr><td><code>κ</code></td><td>time-space reuse disagreement, or cached curvature from G-buffer transport consistency</td><td>noncommuting reuse</td></tr>
+<tr><td><code>f=dν/dμ⁻</code></td><td>local density / contribution ratio after shift-map correction</td><td>expected-but-reweighted component</td></tr>
+</table>
+
+<h2>7. The compressed formulation</h2>
+<div class="callout">Residual Measure Transport ReSTIR treats the transported reservoir as a predicted measure, compares it against incoming evidence, decomposes the mismatch into reweightable and singular components, and allocates fresh samples according to first-order residual, residual acceleration, singular novelty, and transport curvature.</div>
+
+<p>In this picture, the reservoir is the stable stream. The residual is the learning signal. Reuse becomes confidence-weighted prediction; sampling becomes residual exploration.</p>
+
+<h2 id="series">8. Where this sits in the essay series</h2>
+<div class="grid3">
+  <div class="card"><span class="num">Essay 1</span><br><b>Pushforward / Pullback</b><br>Samples move forward; questions move backward.</div>
+  <div class="card"><span class="num">Essay 2</span><br><b>Residual Measure Transport</b><br>The renderer samples what prediction failed to explain.</div>
+  <div class="card"><span class="num">Essay 3</span><br><b>The Shape of a Reservoir</b><br>Reservoirs as empirical measures with support, density, entropy, and anisotropy.</div>
+  <div class="card"><span class="num">Essay 4</span><br><b>Curvature of Reuse</b><br>Spatial and temporal transports fail to commute near unstable visibility.</div>
+  <div class="card"><span class="num">Essay 5</span><br><b>A Pixel Is Not a Point</b><br>Screen-time as base space; path hypotheses as fibers.</div>
+  <div class="card"><span class="num">Essay 6</span><br><b>Curvature-Guided Sampling</b><br>A practical control layer for ReSTIR/GRIS.</div>
+</div>
+
+<p class="small">This file is self-contained: no external libraries, images, fonts, or network calls.</p>
+</main>
+
+<div class="footer">Residual Measure Transport · single-file interactive visual essay</div>
+
+<script>
+const TAU = Math.PI*2;
+const $ = id => document.getElementById(id);
+function val(id){ return parseFloat($(id).value); }
+function bindVal(id, out){ const el=$(id), o=$(out); const f=()=>{ o.textContent = (+el.value).toFixed(2); drawAll(); }; el.addEventListener('input', f); f(); }
+function clamp(x,a=0,b=1){ return Math.max(a, Math.min(b,x)); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function mixColor(a,b,t){
+  function h(s){ return parseInt(s,16); }
+  a=a.replace('#',''); b=b.replace('#','');
+  const ar=h(a.slice(0,2)), ag=h(a.slice(2,4)), ab=h(a.slice(4,6));
+  const br=h(b.slice(0,2)), bg=h(b.slice(2,4)), bb=h(b.slice(4,6));
+  return `rgb(${Math.round(lerp(ar,br,t))},${Math.round(lerp(ag,bg,t))},${Math.round(lerp(ab,bb,t))})`;
+}
+function setupCanvas(canvas){
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    const label = canvas && canvas.id ? `#${canvas.id}` : String(canvas);
+    throw new TypeError(`setupCanvas expected a <canvas>, got ${label}. Check for duplicate ids or an incorrect selector.`);
+  }
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  const w = parseInt(canvas.getAttribute('width'), 10), h = parseInt(canvas.getAttribute('height'), 10);
+  canvas.style.width = '100%';
+  canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new TypeError(`2D canvas context is unavailable for #${canvas.id}.`);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h};
+}
+function clear(ctx,w,h){ ctx.clearRect(0,0,w,h); ctx.fillStyle = '#fffaf0'; ctx.fillRect(0,0,w,h); }
+function line(ctx,x1,y1,x2,y2,stroke='#d9cfbd',lw=1,dash=[]){ ctx.save(); ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore(); }
+function circle(ctx,x,y,r,fill,stroke=null,lw=1){ ctx.beginPath(); ctx.arc(x,y,r,0,TAU); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();} }
+function text(ctx,s,x,y,size=14,color='#25221d',align='left',font='sans'){
+  ctx.save(); ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.font=`${size}px ${font==='mono'?'ui-monospace, Menlo, Consolas, monospace':'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif'}`; ctx.fillText(s,x,y); ctx.restore();
+}
+function arrow(ctx,x1,y1,x2,y2,color='#716a5f',lw=2){
+  line(ctx,x1,y1,x2,y2,color,lw);
+  const a=Math.atan2(y2-y1,x2-x1); const l=10;
+  ctx.save(); ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-l*Math.cos(a-.45), y2-l*Math.sin(a-.45)); ctx.lineTo(x2-l*Math.cos(a+.45), y2-l*Math.sin(a+.45)); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function rand(i){ return (Math.sin(i*127.1+311.7)*43758.5453)%1; }
+function gaussian(x,m,s){ const z=(x-m)/s; return Math.exp(-0.5*z*z); }
+function drawAxis(ctx,x,y,w,h,label){
+  ctx.strokeStyle='#d9cfbd'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y+h); ctx.lineTo(x+w,y+h); ctx.stroke(); text(ctx,label,x+w/2,y+h+26,13,'#716a5f','center');
+}
+function densityPath(ctx,fn,x,y,w,h,color,alpha=0.5,stroke=null){
+  ctx.save(); ctx.beginPath(); ctx.moveTo(x,y+h);
+  for(let i=0;i<=180;i++){ const t=i/180; const yy=y+h-h*fn(t); ctx.lineTo(x+t*w,yy); }
+  ctx.lineTo(x+w,y+h); ctx.closePath(); ctx.fillStyle=color; ctx.globalAlpha=alpha; ctx.fill();
+  if(stroke){ ctx.globalAlpha=1; ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke(); }
+  ctx.restore();
+}
+function drawMiniParticles(ctx, pts, color, r=4, alpha=0.8){ ctx.save(); ctx.globalAlpha=alpha; pts.forEach(p=>circle(ctx,p[0],p[1],r,color)); ctx.restore(); }
+
+let mode = 'forward';
+function drawHero(){
+  const canvas=$('hero'), {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+  const quality=val('hQuality'), novel=val('hNovel'), motion=val('hMotion');
+  const leftX=230, midX=560, rightX=890, cy=280;
+  text(ctx,'previous reservoir μₜ₋₁',leftX,78,15,'#716a5f','center');
+  text(ctx,'predicted measure μₜ⁻',midX,78,15,'#716a5f','center');
+  text(ctx,'incoming evidence νₜ',rightX,78,15,'#716a5f','center');
+  arrow(ctx,leftX+95,cy,midX-105,cy,'#2e77b8',2.2); text(ctx,'pushforward T#',395,248,13,'#2e77b8','center');
+  arrow(ctx,midX+105,cy,rightX-105,cy,'#d9483b',2.2); text(ctx,'compare',725,248,13,'#d9483b','center');
+  for(let i=0;i<90;i++){
+    const a=TAU*rand(i+1), rr=22+86*Math.sqrt(Math.abs(rand(i+7)));
+    const x=leftX+Math.cos(a)*rr*(.75+0.5*rand(i+3)); const y=cy+Math.sin(a)*rr*(.45+0.9*rand(i+5));
+    circle(ctx,x,y,2.8+2*Math.abs(rand(i+9)),'rgba(46,119,184,.72)');
+  }
+  // predicted cloud
+  for(let i=0;i<110;i++){
+    const a=TAU*rand(i+101), rr=18+78*Math.sqrt(Math.abs(rand(i+107)));
+    const drift=(1-quality)*70; const shear=(motion-.5)*85;
+    const x=midX+Math.cos(a)*rr*(1.0+motion*.45)+drift*Math.sin(a*.7)+shear*(Math.sin(a)*.15);
+    const y=cy+Math.sin(a)*rr*(.58+.55*(1-quality))+(motion-.5)*35*Math.cos(a);
+    circle(ctx,x,y,2.5+1.8*Math.abs(rand(i+109)),'rgba(46,119,184,.58)');
+  }
+  // incoming cloud with overlap and novelty lobe
+  for(let i=0;i<115;i++){
+    const a=TAU*rand(i+201), rr=16+74*Math.sqrt(Math.abs(rand(i+207)));
+    const off=(1-quality)*50 + novel*38;
+    const x=rightX+Math.cos(a)*rr*(.92+novel*.35)-off*.45;
+    const y=cy+Math.sin(a)*rr*(.62+novel*.45)+Math.sin(a*2)*novel*24;
+    circle(ctx,x,y,2.5+1.8*Math.abs(rand(i+209)),'rgba(227,180,70,.64)');
+  }
+  for(let i=0;i<Math.round(novel*55);i++){
+    const a=TAU*rand(i+501), rr=20+48*Math.sqrt(Math.abs(rand(i+507)));
+    circle(ctx,rightX+88+Math.cos(a)*rr, cy-82+Math.sin(a)*rr*.7,3.3,'rgba(217,72,59,.78)');
+  }
+  // residual glyph between predicted and incoming
+  const resX=725, resY=382;
+  ctx.save(); ctx.globalCompositeOperation='multiply';
+  circle(ctx,resX-28,resY,50,'rgba(46,119,184,.22)'); circle(ctx,resX+30,resY,50,'rgba(227,180,70,.25)');
+  circle(ctx,resX+64,resY-44,22+novel*38,'rgba(217,72,59,.35)'); ctx.restore();
+  text(ctx,'ρₜ = νₜ − μₜ⁻',resX,resY+82,28,'#25221d','center');
+  text(ctx,'sample the unexplained part',resX,resY+112,14,'#716a5f','center');
+  ['predict','compare','residual sample','update'].forEach((s,i)=>{ const x=300+i*170; text(ctx,s,x,480,13,'#716a5f','center'); if(i<3) arrow(ctx,x+58,480,x+112,480,'#d9cfbd',1.5); });
+}
+function drawDensity(){
+  const canvas=$('density'), {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+  const align=val('dAlign'), light=val('dLight'), occ=val('dOcc'); const x=95,y=80,ww=930,hh=310;
+  drawAxis(ctx,x,y,ww,hh,'abstract path / hypothesis coordinate');
+  const pred = t => clamp(.12 + .78*(.82*gaussian(t,.37,.12+0.05*(1-align)) + .45*gaussian(t,.68,.09)) );
+  const incoming = t => {
+    const shift=(1-align)*.14; const amp=1+light*.65;
+    return clamp(.10 + .72*(amp*.72*gaussian(t,.37+shift,.11) + (.36+light*.35)*gaussian(t,.66-.05*light,.075) + occ*.72*gaussian(t,.86,.045)));
+  };
+  densityPath(ctx,pred,x,y,ww,hh,'#2e77b8',.23,'#2e77b8');
+  densityPath(ctx,incoming,x,y,ww,hh,'#e3b446',.28,'#e3b446');
+  // residual bands
+  ctx.save();
+  for(let i=0;i<180;i++){
+    const t0=i/180,t1=(i+1)/180; const p=pred((t0+t1)/2), n=incoming((t0+t1)/2); const d=n-p;
+    const xx=x+t0*ww, bw=ww/180+1; const base=y+hh; const mag=Math.min(1,Math.abs(d));
+    ctx.fillStyle=d>=0?`rgba(217,72,59,${0.15+0.55*mag})`:`rgba(114,93,183,${0.12+0.45*mag})`;
+    ctx.fillRect(xx,base-mag*hh*.45,bw,mag*hh*.45);
+  }
+  ctx.restore();
+  text(ctx,'μₜ⁻ predicted',x+120,y+32,15,'#2e77b8','center'); text(ctx,'νₜ incoming',x+315,y+32,15,'#b6811e','center'); text(ctx,'positive residual',x+670,y+32,15,'#d9483b','center'); text(ctx,'negative residual',x+850,y+32,15,'#725db7','center');
+  text(ctx,'ρ = ν − μ⁻',w/2,455,31,'#25221d','center');
+  text(ctx,'red: under-predicted evidence · violet: over-predicted stale history',w/2,488,14,'#716a5f','center');
+}
+function drawDecomp(){
+  const canvas=$('decomp'), {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+  const overlap=val('sOverlap'), rew=val('sReweight'), novel=val('sNovel');
+  const cx=560, cy=280;
+  // predicted support ellipse
+  ctx.save(); ctx.translate(cx-125,cy); ctx.rotate(-0.16); ctx.setLineDash([9,7]); ctx.strokeStyle='#2e77b8'; ctx.lineWidth=2.2; ctx.fillStyle='rgba(46,119,184,.08)'; ctx.beginPath(); ctx.ellipse(0,0,240,110,0,0,TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+  text(ctx,'support of predicted measure μ⁻',cx-145,132,15,'#2e77b8','center');
+  // ac particles inside support
+  for(let i=0;i<150;i++){
+    const a=TAU*rand(i+40), rr=Math.sqrt(Math.abs(rand(i+41))); const stretch=1+rew*.6;
+    const x=cx-125 + Math.cos(a)*rr*210*stretch + Math.sin(a)*rew*28;
+    const y=cy + Math.sin(a)*rr*92*(1+0.15*Math.sin(i)) + Math.cos(a)*rew*14;
+    const insideBlend=overlap;
+    const col = `rgba(227,180,70,${0.18+0.45*insideBlend})`;
+    if(rand(i+44)<0.35+overlap*.55) circle(ctx,x,y,3.1,col);
+  }
+  // reweighted density heat contours
+  for(let k=0;k<5;k++){
+    ctx.save(); ctx.translate(cx-125+rew*45,cy-10); ctx.rotate(-0.16+rew*.16); ctx.strokeStyle=`rgba(227,180,70,${0.14+k*.045})`; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(0,0,55+k*28,27+k*13,0,0,TAU); ctx.stroke(); ctx.restore();
+  }
+  // singular lobe outside
+  const sx=cx+230-overlap*70, sy=cy-60+rew*40;
+  for(let i=0;i<Math.round(30+novel*130);i++){
+    const a=TAU*rand(i+90), rr=Math.sqrt(Math.abs(rand(i+91))); const x=sx+Math.cos(a)*rr*(45+novel*90), y=sy+Math.sin(a)*rr*(24+novel*52);
+    circle(ctx,x,y,3.1,'rgba(217,72,59,.68)');
+  }
+  ctx.save(); ctx.strokeStyle='rgba(217,72,59,.7)'; ctx.setLineDash([5,7]); ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(sx,sy,52+novel*90,30+novel*52,0,0,TAU); ctx.stroke(); ctx.restore();
+  arrow(ctx,cx-20,cy+160,cx+170,cy+100,'#d9483b',2);
+  text(ctx,'ν⊥: new support',sx,sy-82,16,'#d9483b','center');
+  text(ctx,'f μ⁻: expected support, reweighted',cx-160,cy+155,16,'#b6811e','center');
+  text(ctx,'ν = f μ⁻ + ν⊥',w/2,470,31,'#25221d','center');
+  text(ctx,'reweight inside predicted support; explore outside it',w/2,504,14,'#716a5f','center');
+}
+function fieldAt(i,j,t){
+  const x=i/35, y=j/19;
+  const g1=gaussian(x,.28+.06*Math.sin(t*.6),.12)*gaussian(y,.43,.18);
+  const g2=gaussian(x,.68,.08)*gaussian(y,.58+.08*Math.sin(t*.8),.12);
+  const edge=Math.exp(-Math.abs(x-(.50+.06*Math.sin(t*.5)))*38)*(0.45+0.55*y);
+  const stripe=Math.max(0,Math.sin((x*6+y*4+t)*TAU))*0.22;
+  return {first:g1, second:g2, sing:edge, curv:stripe+0.35*g2};
+}
+function drawAttention(){
+  const canvas=$('attentionCanvas'), {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+  const a=val('aFirst'), b=val('aSecond'), c=val('aSing'), d=val('aCurv'); const t=performance.now()/2500;
+  const cols=36, rows=20, gx=86, gy=70, cw=26, ch=20;
+  let maxv=0, vals=[];
+  for(let j=0;j<rows;j++) for(let i=0;i<cols;i++){ const f=fieldAt(i,j,t); const v=a*f.first+b*f.second+c*f.sing+d*f.curv; vals.push(v); maxv=Math.max(maxv,v); }
+  let idx=0;
+  for(let j=0;j<rows;j++) for(let i=0;i<cols;i++,idx++){
+    const v=vals[idx]/(maxv||1); const color=mixColor('fff6df','d9483b',Math.pow(v,.9));
+    ctx.fillStyle=color; ctx.globalAlpha=.35+.6*v; ctx.fillRect(gx+i*cw,gy+j*ch,cw-1,ch-1); ctx.globalAlpha=1;
+    if(v>.46){ const samples=Math.floor(1+v*5); ctx.strokeStyle=`rgba(37,34,29,${.18+.25*v})`; ctx.lineWidth=1; for(let k=0;k<samples;k++){ const px=gx+i*cw+cw*(.22+.56*Math.abs(rand(i*13+j*71+k))); const py=gy+j*ch+ch*(.22+.56*Math.abs(rand(i*19+j*43+k+6))); circle(ctx,px,py,2.5,null,'rgba(37,34,29,.45)',1); } }
+  }
+  // labels
+  text(ctx,'screen-space attention field Aₚ',w/2,34,20,'#25221d','center');
+  text(ctx,'reuse aggressively',gx,500,14,'#716a5f','left'); text(ctx,'fresh samples / distrust history',gx+cols*cw,500,14,'#716a5f','right');
+  // legend gradient
+  for(let i=0;i<220;i++){ const q=i/219; ctx.fillStyle=mixColor('fff6df','d9483b',q); ctx.fillRect(w/2-110+i,472,1,12); }
+  ctx.strokeStyle='#d9cfbd'; ctx.strokeRect(w/2-110,472,220,12);
+}
+function transformPoint(p, type, params){
+  let [x,y]=p; const {shear,bend,tear}=params;
+  if(type==='space'){
+    x = x + (y-0.5)*(0.16*shear) + 0.02*Math.sin(y*TAU);
+    y = y + bend*0.05*Math.sin(x*TAU);
+  } else {
+    y = y + (x-0.5)*(0.13*bend) + 0.03*Math.cos(x*TAU);
+    x = x + shear*0.06*Math.sin(y*TAU);
+  }
+  if(tear>0.05 && x>.55 && y<.55){ x += tear*.10; y -= tear*.06; }
+  return [x,y];
+}
+function drawCloudAt(ctx, pts, x,y,scale,color){ pts.forEach((p,i)=>circle(ctx,x+(p[0]-.5)*scale,y+(p[1]-.5)*scale,2.8,color)); }
+function drawCurvature(){
+  const canvas=$('curvature'), {ctx,w,h}=setupCanvas(canvas); clear(ctx,w,h);
+  const params={shear:val('cShear'), bend:val('cBend'), tear:val('cTear')};
+  const pts=[]; for(let i=0;i<85;i++){ const a=TAU*rand(i+600), r=.06+.24*Math.sqrt(Math.abs(rand(i+601))); pts.push([.5+Math.cos(a)*r,.5+Math.sin(a)*r*.65]); }
+  const st=pts.map(p=>transformPoint(transformPoint(p,'space',params),'time',params));
+  const ts=pts.map(p=>transformPoint(transformPoint(p,'time',params),'space',params));
+  const nodes=[[270,180,'(t−1,q)'],[520,180,'space'],[270,360,'time'],[520,360,'(t,p)']];
+  line(ctx,270,180,520,180,'#d9cfbd',2); line(ctx,270,180,270,360,'#d9cfbd',2); line(ctx,520,180,520,360,'#d9cfbd',2); line(ctx,270,360,520,360,'#d9cfbd',2);
+  arrow(ctx,292,180,498,180,'#4f9d69',2); arrow(ctx,520,202,520,338,'#2e77b8',2); arrow(ctx,270,202,270,338,'#2e77b8',2); arrow(ctx,292,360,498,360,'#4f9d69',2);
+  nodes.forEach(n=>{ circle(ctx,n[0],n[1],7,'#25221d'); if(n[2].includes('(')) text(ctx,n[2],n[0],n[1]-24,13,'#716a5f','center'); });
+  text(ctx,'space then time',700,190,15,'#4f9d69','center'); text(ctx,'time then space',880,190,15,'#2e77b8','center');
+  drawCloudAt(ctx,st,700,310,250,'rgba(79,157,105,.58)'); drawCloudAt(ctx,ts,880,310,250,'rgba(46,119,184,.58)');
+  // distance lines for subset
+  for(let i=0;i<16;i++){ const p=st[i*4], q=ts[i*4]; line(ctx,700+(p[0]-.5)*250,310+(p[1]-.5)*250,880+(q[0]-.5)*250,310+(q[1]-.5)*250,'rgba(217,72,59,.18)',1); }
+  let dist=0; for(let i=0;i<pts.length;i++){ const dx=st[i][0]-ts[i][0], dy=st[i][1]-ts[i][1]; dist += Math.sqrt(dx*dx+dy*dy); } dist/=pts.length;
+  text(ctx,'κ ≈ '+dist.toFixed(3),790,454,30,'#d9483b','center');
+  text(ctx,'commutator residual between two transported measures',790,488,14,'#716a5f','center');
+}
+let raf;
+function drawAll(){
+  drawHero(); drawDensity(); drawDecomp(); drawAttention(); drawCurvature();
+}
+['hQuality','hNovel','hMotion','dAlign','dLight','dOcc','sOverlap','sReweight','sNovel','aFirst','aSecond','aSing','aCurv','cShear','cBend','cTear'].forEach(id=>{
+  const out=id+'Val'; if($(out)) bindVal(id,out);
+});
+function animate(){ drawAttention(); raf=requestAnimationFrame(animate); }
+window.addEventListener('resize', drawAll);
+drawAll(); animate();
+</script>
+</body>
+</html>

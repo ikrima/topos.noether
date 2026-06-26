@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Essay 6 — A Pixel Is Not a Point</title>
+<style>
+  :root {
+    --paper: #f8f1e3;
+    --paper-2: #fffaf0;
+    --ink: #1f2528;
+    --muted: #697078;
+    --line: rgba(31, 37, 40, 0.16);
+    --line-strong: rgba(31, 37, 40, 0.34);
+    --blue: #3076b8;
+    --blue-2: #d7e8f6;
+    --red: #ce4b3f;
+    --red-2: #f6d9d5;
+    --green: #357f5b;
+    --green-2: #d9ecdf;
+    --gold: #c28a2a;
+    --gold-2: #f2e3bf;
+    --violet: #7d5ab5;
+    --violet-2: #e8ddf6;
+    --shadow: 0 18px 42px rgba(40, 28, 8, 0.10), 0 2px 8px rgba(40, 28, 8, 0.06);
+    --radius: 22px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 18% 4%, rgba(255,255,255,.85), rgba(255,255,255,0) 32rem),
+      linear-gradient(180deg, var(--paper-2), var(--paper));
+    font: 18px/1.62 var(--serif);
+  }
+  body:before {
+    content:"";
+    position: fixed;
+    inset:0;
+    pointer-events:none;
+    opacity:.28;
+    background-image:
+      linear-gradient(rgba(31,37,40,.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(31,37,40,.028) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(180deg, black 0%, transparent 90%);
+  }
+  a { color: var(--blue); text-decoration-thickness: .08em; text-underline-offset: .18em; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+  header.hero {
+    padding: 76px 0 48px;
+    display:grid;
+    grid-template-columns: 1.15fr .85fr;
+    gap: 34px;
+    align-items:center;
+  }
+  .eyebrow { font: 700 13px/1 var(--sans); text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 18px; }
+  h1, h2, h3 { font-family: var(--sans); line-height: 1.06; letter-spacing: -.04em; margin:0; }
+  h1 { font-size: clamp(48px, 7vw, 92px); }
+  h2 { font-size: clamp(34px, 4.7vw, 58px); margin-bottom: 20px; }
+  h3 { font-size: 24px; margin: 28px 0 12px; }
+  p { margin: 0 0 18px; }
+  .lede { font-size: clamp(21px, 2.7vw, 31px); line-height:1.34; margin-top:24px; color:#36322b; }
+  .callout {
+    border:1px solid var(--line);
+    background: rgba(255,255,255,.46);
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    padding: 22px;
+  }
+  .formula {
+    font: 500 18px/1.48 var(--mono);
+    background: #27251f;
+    color: #fff8e8;
+    border-radius: 18px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+  }
+  .formula .dim { color: #c9bfa9; }
+  .mini { font: 14px/1.45 var(--sans); color: var(--muted); }
+  .nav {
+    position: sticky;
+    top:0;
+    z-index:10;
+    backdrop-filter: blur(16px);
+    background: rgba(255,250,240,.78);
+    border-bottom:1px solid var(--line);
+    margin: 0 -24px 42px;
+    padding: 10px 24px;
+    display:flex;
+    gap:12px;
+    overflow:auto;
+    font: 700 13px/1 var(--sans);
+  }
+  .nav a { color: var(--muted); text-decoration:none; white-space:nowrap; padding:8px 10px; border-radius:999px; }
+  .nav a:hover { color: var(--ink); background:rgba(48,118,184,.1); }
+  section { margin: 68px 0 96px; }
+  .section-grid { display:grid; grid-template-columns: .88fr 1.12fr; gap: 28px; align-items:start; }
+  .essay-text { padding-top: 6px; }
+  .panel {
+    background: rgba(255,255,255,.55);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    font: 700 13px/1.25 var(--sans);
+    color: var(--muted);
+    background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.18));
+  }
+  canvas { display:block; width:100%; height:auto; background: #fff9ed; }
+  .controls { padding: 16px 18px 18px; border-top: 1px solid var(--line); background: rgba(255,255,255,.35); }
+  .control-row { display:grid; grid-template-columns: 150px 1fr 46px; gap:12px; align-items:center; margin: 12px 0; }
+  label { font: 700 13px/1.25 var(--sans); color: #3a3935; }
+  input[type=range] { width:100%; accent-color: var(--blue); }
+  select, button {
+    font: 700 14px/1 var(--sans);
+    border:1px solid var(--line-strong);
+    border-radius: 999px;
+    background: #fffaf0;
+    padding: 10px 12px;
+    color: var(--ink);
+  }
+  button { cursor:pointer; }
+  button:hover, select:hover { background:#fff; }
+  .value { font: 700 13px/1 var(--mono); color: var(--muted); text-align:right; }
+  .two-cols { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .cards { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top:20px; }
+  .card {
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.44);
+    border-radius:18px;
+    padding:16px;
+  }
+  .card strong { display:block; font: 800 14px/1.15 var(--sans); margin-bottom:8px; }
+  .code {
+    font: 14px/1.45 var(--mono);
+    white-space: pre-wrap;
+    background:#27251f;
+    color:#fff7e8;
+    padding:18px;
+    border-radius:18px;
+    overflow:auto;
+  }
+  .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin: 16px 0; }
+  .pill { font: 700 12px/1 var(--sans); padding: 8px 10px; border-radius:999px; background:rgba(48,118,184,.12); color:#285e8f; border:1px solid rgba(48,118,184,.22); }
+  .red { color: var(--red); }
+  .blue { color: var(--blue); }
+  .green { color: var(--green); }
+  .gold { color: var(--gold); }
+  .violet { color: var(--violet); }
+  .note { border-left: 4px solid var(--blue); padding-left:16px; color:#3d3931; }
+  footer { border-top:1px solid var(--line); padding-top:38px; color: var(--muted); }
+  @media (max-width: 920px) {
+    header.hero, .section-grid, .two-cols { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; }
+    .control-row { grid-template-columns: 1fr; gap:6px; }
+    .value { text-align:left; }
+    .page { padding-left: 16px; padding-right:16px; }
+    .nav { margin-left:-16px; margin-right:-16px; padding-left:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <div>
+    <div class="eyebrow">Essay 6 · Path-Space Bundle</div>
+    <h1>A Pixel Is Not a Point</h1>
+    <p class="lede">A pixel is a coordinate on the screen, but a renderer does not estimate a coordinate. It estimates an integral over a hidden space of paths, hypotheses, shifts, visibility states, and proposal histories attached to that coordinate.</p>
+  </div>
+  <div class="callout">
+    <p><strong>The useful lie:</strong> a pixel is a small square of color.</p>
+    <p><strong>The useful truth:</strong> a pixel is a query into a fiber.</p>
+    <div class="formula">p ∈ B = screen × time<br><span class="dim">above p lives</span> Ω<sub>p</sub> = local path / hypothesis space<br><span class="dim">a reservoir is</span> μ<sub>p</sub> ∈ P(Ω<sub>p</sub>)</div>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Essay navigation">
+  <a href="#point">Pixel vs point</a>
+  <a href="#fiber">The fiber</a>
+  <a href="#transport">Transport</a>
+  <a href="#bundle">The bundle</a>
+  <a href="#connection">Connection</a>
+  <a href="#renderer">Renderer map</a>
+</nav>
+
+<section id="point">
+  <div class="section-grid">
+    <div class="essay-text">
+      <h2>The square on the screen is not the object</h2>
+      <p>In a rasterizer, treating a pixel as a little screen square is often enough. In a path tracer with reuse, it becomes dangerously incomplete. The pixel is merely the <em>base location</em>.</p>
+      <p>What we actually reuse is not a color stored at that location. We reuse a compressed distribution of candidate explanations: light samples, BSDF choices, visibility outcomes, path-shifted samples, and the history of how they arrived.</p>
+      <p>Click a pixel. The grid point is simple; the fiber above it is not.</p>
+      <div class="pill-row">
+        <span class="pill">base point: p = (i,j,t)</span>
+        <span class="pill">fiber: Ω<sub>p</sub></span>
+        <span class="pill">reservoir: μ<sub>p</sub></span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span>Interactive 1 · select a pixel, reveal its fiber</span><span id="pixelReadout">p = (5,4,t)</span></div>
+      <canvas id="pixelFiberCanvas" width="760" height="520" aria-label="Pixel grid and fiber visualization"></canvas>
+      <div class="controls">
+        <div class="control-row">
+          <label for="fiberComplexity">fiber complexity</label>
+          <input id="fiberComplexity" type="range" min="0" max="100" value="58" />
+          <span class="value" id="fiberComplexityVal">58</span>
+        </div>
+        <div class="control-row">
+          <label for="fiberMode">scene condition</label>
+          <select id="fiberMode">
+            <option value="diffuse">stable diffuse wall</option>
+            <option value="glossy">glossy highlight ridge</option>
+            <option value="edge">shadow / visibility edge</option>
+            <option value="motion">moving object</option>
+          </select>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fiber">
+  <div class="section-grid">
+    <div class="essay-text">
+      <h2>The fiber is where the integral lives</h2>
+      <p>The rendered value at a pixel is not stored in the screen coordinate. It is assembled by integrating an observable over the fiber above that coordinate.</p>
+      <div class="formula">I<sub>p</sub> = ∫<sub>Ω<sub>p</sub></sub> f<sub>p</sub>(x) dμ<sub>p</sub>(x)</div>
+      <p>In ordinary renderer language: the pixel owns a target function, a proposal history, and a reservoir of weighted representatives. In geometric language: the pixel owns a probability measure on a local path-space fiber.</p>
+      <p>This distinction matters because neighboring pixels need not share the same fiber. A neighboring pixel can see a different surface, a different light visibility event, or a different path-shift domain.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span>Interactive 2 · what lives inside Ω<sub>p</sub>?</span><span id="fiberStats">entropy 0.56</span></div>
+      <canvas id="fiberContentsCanvas" width="760" height="520" aria-label="Path-space fiber contents"></canvas>
+      <div class="controls">
+        <div class="control-row">
+          <label for="pathCount">candidate count</label>
+          <input id="pathCount" type="range" min="16" max="180" value="88" />
+          <span class="value" id="pathCountVal">88</span>
+        </div>
+        <div class="control-row">
+          <label for="fiberEntropy">entropy</label>
+          <input id="fiberEntropy" type="range" min="0" max="100" value="52" />
+          <span class="value" id="fiberEntropyVal">52</span>
+        </div>
+        <div class="control-row">
+          <label for="fiberAnisotropy">anisotropy</label>
+          <input id="fiberAnisotropy" type="range" min="0" max="100" value="38" />
+          <span class="value" id="fiberAnisotropyVal">38</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="transport">
+  <div class="section-grid">
+    <div class="essay-text">
+      <h2>Reuse is transport between fibers</h2>
+      <p>Spatial reuse is not “copy a neighbor.” Temporal reuse is not “copy the previous pixel.” Both are attempts to map representatives from one fiber to another.</p>
+      <div class="formula">T<sub>q→p</sub>: Ω<sub>q</sub> → Ω<sub>p</sub><br>(T<sub>q→p</sub>)<sub>#</sub> μ<sub>q</sub> = predicted measure in Ω<sub>p</sub></div>
+      <p>When the map stretches, compresses, folds, or partially misses the target fiber, the weights must change. This is the geometric intuition behind GRIS-style shift mappings and Jacobian corrections.</p>
+      <p>Use the transport type. Notice that the sample cloud itself can remain plausible while the <em>density</em> becomes wrong.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span>Interactive 3 · push a reservoir through T<sub>q→p</sub></span><span id="transportStats">J ≈ 1.00</span></div>
+      <canvas id="transportCanvas" width="760" height="520" aria-label="Transport between fibers"></canvas>
+      <div class="controls">
+        <div class="control-row">
+          <label for="transportKind">transport kind</label>
+          <select id="transportKind">
+            <option value="rigid">rigid motion vector</option>
+            <option value="stretch">surface stretch</option>
+            <option value="fold">caustic fold</option>
+            <option value="split">disocclusion split</option>
+          </select>
+          <span></span>
+        </div>
+        <div class="control-row">
+          <label for="transportStrength">strength</label>
+          <input id="transportStrength" type="range" min="0" max="100" value="56" />
+          <span class="value" id="transportStrengthVal">56</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bundle">
+  <div class="section-grid">
+    <div class="essay-text">
+      <h2>Screen × time is the base; path space is above it</h2>
+      <p>Now assemble the pieces. The visible image sequence is the base space. Above each pixel-time coordinate lives a local fiber of path hypotheses. A reservoir is a tiny empirical measure sitting inside one fiber.</p>
+      <div class="formula">π: Ω → B<br>B = screen × time<br>π<sup>−1</sup>(p) = Ω<sub>p</sub></div>
+      <p>This is why a pixel is not a point. The point is just an address. The renderer’s statistical state lives above the address.</p>
+      <p>On a flat, stable part of the scene the fibers line up almost trivially. Near visibility changes, specular folds, and motion boundaries, the fibers twist and stop matching.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span>Interactive 4 · the screen-time bundle</span><span id="bundleStats">twist 0.42</span></div>
+      <canvas id="bundleCanvas" width="760" height="560" aria-label="Screen-time bundle visualization"></canvas>
+      <div class="controls">
+        <div class="control-row">
+          <label for="bundleTwist">fiber twist</label>
+          <input id="bundleTwist" type="range" min="0" max="100" value="42" />
+          <span class="value" id="bundleTwistVal">42</span>
+        </div>
+        <div class="control-row">
+          <label for="bundleCurvature">curvature</label>
+          <input id="bundleCurvature" type="range" min="0" max="100" value="34" />
+          <span class="value" id="bundleCurvatureVal">34</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="connection">
+  <div class="section-grid">
+    <div class="essay-text">
+      <h2>A transport rule is a connection</h2>
+      <p>A connection tells us how to compare fibers over nearby base points. In renderer terms, it is the rule that says: “this old sample corresponds to this current sample.”</p>
+      <p>Motion-vector reprojection, object-space transforms, surface-space shifts, and GRIS path shifts are all partial connection rules. They let us lift movement in screen-time into movement inside path space.</p>
+      <div class="formula">base movement: q → p<br>fiber movement: x<sub>q</sub> → T<sub>q→p</sub>(x<sub>q</sub>)</div>
+      <p>If the connection is good, transported reservoirs stay coherent. If it is bad, the transported sample can land in the wrong fiber region with high confidence. That is the geometric origin of ghosting, stale reuse, and many firefly bursts.</p>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span>Interactive 5 · choose a connection rule</span><span id="connectionStats">reuse trust 0.71</span></div>
+      <canvas id="connectionCanvas" width="760" height="520" aria-label="Connection rules and transported paths"></canvas>
+      <div class="controls">
+        <div class="control-row">
+          <label for="connectionRule">connection rule</label>
+          <select id="connectionRule">
+            <option value="motion">motion vector</option>
+            <option value="object">object transform</option>
+            <option value="surface">surface-space shift</option>
+            <option value="path">GRIS path shift</option>
+            <option value="learned">learned Jacobian head</option>
+          </select>
+          <span></span>
+        </div>
+        <div class="control-row">
+          <label for="connectionError">model error</label>
+          <input id="connectionError" type="range" min="0" max="100" value="29" />
+          <span class="value" id="connectionErrorVal">29</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="renderer">
+  <h2>What this becomes in a renderer</h2>
+  <div class="two-cols">
+    <div>
+      <p>The bundle view is useful because it turns reuse into a typed operation. You no longer ask whether two pixels are close. You ask whether their fibers can be compared safely.</p>
+      <p class="note">A reuse candidate should carry both a sample and a claim about transport validity: which fiber it came from, which map carried it, how much density correction it incurred, and how much residual/curvature evidence says to distrust it.</p>
+      <div class="cards">
+        <div class="card"><strong>Base coordinate</strong>screen position, time, object ID, material ID, motion state</div>
+        <div class="card"><strong>Fiber state</strong>candidate paths, visibility bits, proposal histories, target values</div>
+        <div class="card"><strong>Connection</strong>motion vector, path shift, surface shift, learned Jacobian</div>
+      </div>
+    </div>
+    <div class="code">struct FiberReservoir {
+    Sample sample;
+    float  weightSum;
+    float  targetPdf;
+    float  proposalPdf;
+
+    uint   basePixel;
+    uint   frameIndex;
+    uint   objectId;
+    uint   materialId;
+
+    uint   sourceFiber;
+    uint   transportKind;
+    float  jacobian;
+    float  fiberDistance;
+    float  residual;
+    float  curvature;
+    float  confidence;
+};
+
+FiberReservoir reuseAcrossFibers(Pixel p, Pixel q) {
+    FiberReservoir Rq = loadReservoir(q);
+    Transport T = chooseConnection(q, p);
+
+    Sample xp = T.map(Rq.sample);
+    float J  = T.jacobian(Rq.sample);
+
+    float target   = evaluateTarget(p, xp);
+    float proposal = evaluateSourceProposal(q, Rq.sample) / max(J, EPS);
+
+    float mismatch = fiberDistance(q, p, T);
+    float trust = exp(-a*mismatch - b*residual(p) - c*curvature(p));
+
+    return reservoirUpdate(xp, target / max(proposal, EPS) * trust);
+}</div>
+  </div>
+</section>
+
+<section>
+  <div class="callout">
+    <h2>The compressed formulation</h2>
+    <p>ReSTIR/GRIS can be read as a calculus over a screen-time bundle of path-space fibers. Pixels are base points. Reservoirs are empirical measures on fibers. Reuse maps are connection-like transports between fibers. Pushforward moves sample measures into the current fiber; pullback moves current tests backward into source fibers. Curvature is the failure of these transports to agree around small screen-time loops.</p>
+    <div class="formula">pixel ≠ point<br>pixel = base address + hidden fiber + transported empirical measure</div>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Series position.</strong> Essay 1 introduced pushforward and pullback. Essay 2 made residuals the sampling target. Essay 3 connected the idea to biomimetic bounded perception. Essay 4 gave reservoirs shape. Essay 5 made reuse curvature visible. This essay supplies the geometric home: a renderer as a bundle of path-space measures over screen-time.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const TAU = Math.PI * 2;
+  const canvases = new Map();
+  const state = {
+    pixel: { gx: 5, gy: 4, complexity: 58, mode: 'diffuse' },
+    fiber: { count: 88, entropy: 52, anisotropy: 38 },
+    transport: { kind: 'rigid', strength: 56 },
+    bundle: { twist: 42, curvature: 34 },
+    connection: { rule: 'motion', error: 29 },
+    time: 0
+  };
+
+  function $(id){ return document.getElementById(id); }
+
+  function setupCanvas(id) {
+    const el = $(id);
+    if (!el) throw new Error('Missing canvas #' + id);
+    if (!(el instanceof HTMLCanvasElement)) {
+      throw new TypeError('Element #' + id + ' is a ' + el.tagName + ', not a canvas. Check duplicate IDs.');
+    }
+    const ctx = el.getContext('2d');
+    if (!ctx) throw new Error('Could not create 2D context for #' + id);
+    canvases.set(id, { el, ctx, w: el.width, h: el.height });
+    return canvases.get(id);
+  }
+
+  function bindRange(id, target, key, formatter) {
+    const input = $(id);
+    const out = $(id + 'Val');
+    if (!input) return;
+    const update = () => {
+      target[key] = Number(input.value);
+      if (out) out.textContent = formatter ? formatter(target[key]) : String(target[key]);
+      drawAll();
+    };
+    input.addEventListener('input', update);
+    update();
+  }
+
+  function bindSelect(id, target, key) {
+    const input = $(id);
+    if (!input) return;
+    const update = () => { target[key] = input.value; drawAll(); };
+    input.addEventListener('change', update);
+    update();
+  }
+
+  function clear(c, color) {
+    c.ctx.clearRect(0,0,c.w,c.h);
+    c.ctx.fillStyle = color || '#fff9ed';
+    c.ctx.fillRect(0,0,c.w,c.h);
+  }
+
+  function line(ctx, x1, y1, x2, y2, color, width, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width || 1;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function circle(ctx, x, y, r, fill, stroke, lw) {
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,TAU);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+  }
+
+  function ellipse(ctx, x, y, rx, ry, rot, fill, stroke, lw, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.translate(x,y); ctx.rotate(rot);
+    ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,TAU);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function arrow(ctx, x1, y1, x2, y2, color, width, alpha) {
+    line(ctx,x1,y1,x2,y2,color,width,alpha);
+    const a = Math.atan2(y2-y1,x2-x1);
+    const s = 9 + (width||1);
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - Math.cos(a-.45)*s, y2 - Math.sin(a-.45)*s);
+    ctx.lineTo(x2 - Math.cos(a+.45)*s, y2 - Math.sin(a+.45)*s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function text(ctx, str, x, y, size, color, align, weight) {
+    ctx.save();
+    ctx.fillStyle = color || '#1f2528';
+    ctx.font = (weight || '700') + ' ' + (size || 14) + 'px ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(str, x, y);
+    ctx.restore();
+  }
+
+  function mulberry(seed) {
+    let t = seed >>> 0;
+    return function() {
+      t += 0x6D2B79F5;
+      let r = Math.imul(t ^ t >>> 15, 1 | t);
+      r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
+      return ((r ^ r >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function drawGridBase(ctx, ox, oy, cols, rows, cell, selected) {
+    ctx.strokeStyle = 'rgba(31,37,40,.16)';
+    ctx.lineWidth = 1;
+    for (let i=0;i<=cols;i++) line(ctx, ox+i*cell, oy, ox+i*cell, oy+rows*cell, 'rgba(31,37,40,.14)', 1);
+    for (let j=0;j<=rows;j++) line(ctx, ox, oy+j*cell, ox+cols*cell, oy+j*cell, 'rgba(31,37,40,.14)', 1);
+    for (let i=0;i<cols;i++) for (let j=0;j<rows;j++) {
+      const dx = i-selected.gx, dy = j-selected.gy;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      const alpha = Math.max(0, .22 - d*.035);
+      if (alpha>0) {
+        ctx.fillStyle = 'rgba(48,118,184,'+alpha+')';
+        ctx.fillRect(ox+i*cell+1, oy+j*cell+1, cell-2, cell-2);
+      }
+    }
+    const x = ox + selected.gx*cell + cell/2, y = oy + selected.gy*cell + cell/2;
+    circle(ctx,x,y,9,'#ce4b3f','#fff9ed',3);
+    text(ctx,'p',x+15,y-13,14,'#ce4b3f');
+  }
+
+  function fiberPoints(cx, cy, count, entropy, anisotropy, mode, seed) {
+    const rand = mulberry(seed || 7);
+    const pts = [];
+    const ent = entropy / 100;
+    const an = anisotropy / 100;
+    const modes = mode === 'edge' ? 2 : mode === 'motion' ? 3 : mode === 'glossy' ? 1 : 1;
+    for (let i=0;i<count;i++) {
+      const m = i % modes;
+      let baseA = (m/modes)*TAU + (mode === 'glossy' ? -.4 : .2);
+      let r1 = 26 + ent*92 + rand()*28;
+      let r2 = 12 + ent*38 + rand()*12;
+      let u = (rand()*2-1), v = (rand()*2-1);
+      if (mode === 'glossy') { r1 *= 1.55; r2 *= .36 + .44*(1-an); baseA = -.25; }
+      if (mode === 'edge') { r1 *= .9; r2 *= .8; baseA = m ? .62 : Math.PI+.62; }
+      if (mode === 'motion') { r1 *= .72; r2 *= .55; baseA = m*.8 - .9; }
+      const x = cx + Math.cos(baseA)*u*r1 - Math.sin(baseA)*v*r2 + (m-((modes-1)/2))*42;
+      const y = cy + Math.sin(baseA)*u*r1 + Math.cos(baseA)*v*r2 + Math.sin(m*2.1)*20;
+      const w = .45 + rand()*.55;
+      pts.push({x,y,w,m});
+    }
+    return pts;
+  }
+
+  function drawPixelFiber() {
+    const c = canvases.get('pixelFiberCanvas'), ctx = c.ctx; clear(c);
+    const cols=9, rows=7, cell=38, ox=55, oy=76;
+    drawGridBase(ctx, ox, oy, cols, rows, cell, state.pixel);
+    const px = ox + state.pixel.gx*cell + cell/2;
+    const py = oy + state.pixel.gy*cell + cell/2;
+    const cx=535, cy=260;
+    const comp = state.pixel.complexity;
+    arrow(ctx, px+16, py-22, cx-95, cy-130, '#697078', 1.8, .55);
+    arrow(ctx, px+18, py, cx-105, cy, '#697078', 1.8, .55);
+    arrow(ctx, px+16, py+22, cx-95, cy+130, '#697078', 1.8, .55);
+    ellipse(ctx,cx,cy,142,166,0,'rgba(48,118,184,.06)','#3076b8',2,.9);
+    text(ctx,'Ωp',cx,cy-190,24,'#3076b8','center','800');
+    text(ctx,'hidden path / hypothesis fiber',cx,cy+191,13,'#697078','center','700');
+    const pts = fiberPoints(cx,cy,36+Math.floor(comp*.9),comp,50,state.pixel.mode,101 + state.pixel.gx*13 + state.pixel.gy*31);
+    for (const p of pts) {
+      const col = p.m===0 ? 'rgba(48,118,184,.58)' : p.m===1 ? 'rgba(206,75,63,.52)' : 'rgba(53,127,91,.52)';
+      circle(ctx,p.x,p.y,2.5+p.w*2,col,null);
+    }
+    const chosen = pts[Math.floor((state.time*7)%pts.length)];
+    if (chosen) circle(ctx,chosen.x,chosen.y,8,'#ce4b3f','#fff9ed',2);
+    text(ctx,'screen base B',ox+cols*cell/2,oy+rows*cell+35,14,'#697078','center');
+    text(ctx,'pixel coordinate',px,py+30,12,'#ce4b3f','center');
+    $('pixelReadout').textContent = 'p = (' + state.pixel.gx + ',' + state.pixel.gy + ',t)';
+  }
+
+  function drawFiberContents() {
+    const c = canvases.get('fiberContentsCanvas'), ctx = c.ctx; clear(c);
+    const cx=380, cy=263;
+    ellipse(ctx,cx,cy,280,185,0,'rgba(255,255,255,.32)','#d6c7a8',1.4,.9);
+    text(ctx,'Ωp : local path-space fiber',cx,58,22,'#1f2528','center','800');
+    text(ctx,'each point = a candidate path / visibility hypothesis / proposal history',cx,88,13,'#697078','center');
+    const pts = fiberPoints(cx,cy,state.fiber.count,state.fiber.entropy,state.fiber.anisotropy,'glossy',313);
+    let total=0, maxW=0, maxP=null;
+    for (let i=0;i<pts.length;i++) {
+      const p = pts[i];
+      const dx=(p.x-cx)/260, dy=(p.y-cy)/170;
+      p.w = Math.exp(-(dx*dx*1.8 + dy*dy*.8)) * (.5 + .5*Math.sin(i*5.17+1.2));
+      p.w = Math.max(.05,p.w);
+      total += p.w;
+      if (p.w > maxW) { maxW=p.w; maxP=p; }
+    }
+    for (const p of pts) {
+      const a = .18 + .58*(p.w/maxW);
+      circle(ctx,p.x,p.y,2.4+4*(p.w/maxW),'rgba(48,118,184,'+a+')',null);
+    }
+    if (maxP) {
+      circle(ctx,maxP.x,maxP.y,11,'rgba(206,75,63,.88)','#fff9ed',3);
+      text(ctx,'selected representative',maxP.x+18,maxP.y-15,13,'#ce4b3f','left','800');
+    }
+    const ent = state.fiber.entropy/100;
+    const an = state.fiber.anisotropy/100;
+    const statsX = 64;
+    text(ctx,'reservoir metadata',statsX,432,16,'#1f2528','left','800');
+    drawBar(ctx, statsX, 456, 170, 'entropy', ent, '#3076b8');
+    drawBar(ctx, statsX, 482, 170, 'anisotropy', an, '#7d5ab5');
+    drawBar(ctx, 308, 456, 170, 'support', Math.min(1, state.fiber.count/180), '#357f5b');
+    drawBar(ctx, 308, 482, 170, 'compression', 1 - Math.min(1, state.fiber.count/180)*.72, '#c28a2a');
+    $('fiberStats').textContent = 'entropy ' + ent.toFixed(2) + ' · anisotropy ' + an.toFixed(2);
+  }
+
+  function drawBar(ctx,x,y,w,label,val,color) {
+    ctx.fillStyle='rgba(31,37,40,.08)'; ctx.fillRect(x,y,w,10);
+    ctx.fillStyle=color; ctx.fillRect(x,y,w*val,10);
+    text(ctx,label,x,y-10,11,'#697078','left','800');
+    text(ctx,val.toFixed(2),x+w+8,y+5,11,'#697078','left','800');
+  }
+
+  function transformPoint(x,y,kind,str) {
+    const s = str/100;
+    let nx=x, ny=y;
+    if (kind === 'rigid') { nx = x + 182*s; ny = y - 16*s; }
+    if (kind === 'stretch') { nx = 520 + (x-220)*(1+.85*s); ny = 260 + (y-260)*(1-.42*s); }
+    if (kind === 'fold') { nx = 520 + Math.sin((x-220)/88)*90*s + (x-220)*(.45+.2*s); ny = 260 + (y-260)*(1.1-.25*s) + Math.cos((x-220)/65)*28*s; }
+    if (kind === 'split') { const side = y < 260 ? -1 : 1; nx = 520 + (x-220)*(.62+.2*s) + side*42*s; ny = 260 + (y-260)*(.7+.1*s) + side*58*s; }
+    return {x:nx,y:ny};
+  }
+
+  function drawTransport() {
+    const c = canvases.get('transportCanvas'), ctx = c.ctx; clear(c);
+    const sx=220, sy=260, tx=540, ty=260;
+    ellipse(ctx,sx,sy,146,168,0,'rgba(48,118,184,.06)','#3076b8',2,.9);
+    ellipse(ctx,tx,ty,146,168,0,'rgba(53,127,91,.06)','#357f5b',2,.9);
+    text(ctx,'Ωq',sx,62,23,'#3076b8','center','800');
+    text(ctx,'Ωp',tx,62,23,'#357f5b','center','800');
+    arrow(ctx,340,108,420,108,'#697078',2,.7);
+    text(ctx,'Tq→p',380,83,15,'#697078','center','800');
+    const pts = fiberPoints(sx,sy,70,48,42,'glossy',701);
+    let moved=[];
+    for (let i=0;i<pts.length;i++) {
+      const p=pts[i];
+      circle(ctx,p.x,p.y,3.3,'rgba(48,118,184,.45)',null);
+      const m=transformPoint(p.x,p.y,state.transport.kind,state.transport.strength);
+      moved.push(m);
+      if (i%8===0) arrow(ctx,p.x,p.y,m.x,m.y,'rgba(105,112,120,.42)',1,.8);
+    }
+    for (const p of moved) circle(ctx,p.x,p.y,3.6,'rgba(53,127,91,.50)',null);
+    let j=1;
+    if (state.transport.kind==='stretch') j = 1 + state.transport.strength/100*.8;
+    if (state.transport.kind==='fold') j = .55 + Math.abs(Math.sin(state.time*.7))*1.8*state.transport.strength/100;
+    if (state.transport.kind==='split') j = 0.4 + state.transport.strength/100*1.9;
+    if (state.transport.kind==='rigid') j = 1;
+    drawBar(ctx, 270, 462, 220, 'density correction / Jacobian pressure', Math.min(1, Math.abs(j-1)/1.8), '#c28a2a');
+    $('transportStats').textContent = 'J pressure ≈ ' + Math.abs(j-1).toFixed(2);
+  }
+
+  function project3(x,y,z) {
+    return { x: 380 + x*1.0 + z*.62, y: 350 + y*.75 - z*.40 };
+  }
+
+  function drawBundle() {
+    const c = canvases.get('bundleCanvas'), ctx = c.ctx; clear(c);
+    const twist=state.bundle.twist/100, curv=state.bundle.curvature/100;
+    const grid=[];
+    for (let i=0;i<7;i++) for (let j=0;j<5;j++) {
+      const x=(i-3)*74, z=(j-2)*64, y=0;
+      grid.push({i,j,x,z,y});
+    }
+    for (let i=0;i<7;i++) for (let j=0;j<5;j++) {
+      const p=project3((i-3)*74,0,(j-2)*64);
+      if (i<6) { const q=project3((i-2)*74,0,(j-2)*64); line(ctx,p.x,p.y,q.x,q.y,'rgba(31,37,40,.16)',1); }
+      if (j<4) { const q=project3((i-3)*74,0,(j-1)*64); line(ctx,p.x,p.y,q.x,q.y,'rgba(31,37,40,.16)',1); }
+    }
+    text(ctx,'B = screen × time',108,470,16,'#697078','left','800');
+    for (const g of grid) {
+      const p=project3(g.x,0,g.z);
+      circle(ctx,p.x,p.y,3,'#697078',null);
+      const h=50+twist*62+curv*24*Math.sin(g.i*.9+g.j*.7+state.time);
+      const top={x:p.x + Math.sin(g.i*.6+g.j*.8)*twist*24, y:p.y-h};
+      line(ctx,p.x,p.y,top.x,top.y,'rgba(48,118,184,.35)',1.4);
+      const rot = twist*(g.i-g.j)*.2 + curv*Math.sin((g.i+g.j)*.8+state.time)*.6;
+      ellipse(ctx,top.x,top.y,18+curv*12,8+twist*7,rot,'rgba(48,118,184,.08)','#3076b8',1,.55);
+      if ((g.i===3&&g.j===2)||(g.i===4&&g.j===2)||(g.i===3&&g.j===3)) {
+        circle(ctx,top.x+Math.cos(state.time+g.i)*8,top.y+Math.sin(state.time*1.3+g.j)*4,4,'#ce4b3f',null);
+      }
+    }
+    const a=project3(-74,0,-64), b=project3(0,0,-64), d=project3(0,0,0), e=project3(-74,0,0);
+    arrow(ctx,a.x,a.y-110,b.x,b.y-110,'#ce4b3f',2,.8);
+    arrow(ctx,b.x,b.y-110,d.x,d.y-110,'#ce4b3f',2,.8);
+    arrow(ctx,a.x,a.y-132,e.x,e.y-132,'#7d5ab5',2,.8);
+    arrow(ctx,e.x,e.y-132,d.x,d.y-132,'#7d5ab5',2,.8);
+    text(ctx,'two lifted transport paths',380,70,15,'#1f2528','center','800');
+    $('bundleStats').textContent = 'twist ' + twist.toFixed(2) + ' · curvature ' + curv.toFixed(2);
+  }
+
+  function drawConnection() {
+    const c = canvases.get('connectionCanvas'), ctx = c.ctx; clear(c);
+    const err=state.connection.error/100;
+    const rule=state.connection.rule;
+    const colors={motion:'#3076b8',object:'#357f5b',surface:'#c28a2a',path:'#7d5ab5',learned:'#ce4b3f'};
+    const color=colors[rule] || '#3076b8';
+    text(ctx,'base movement',170,72,16,'#697078','center','800');
+    text(ctx,'fiber movement',590,72,16,'#697078','center','800');
+    const baseY=350;
+    for (let i=0;i<5;i++) {
+      const x=82+i*54;
+      circle(ctx,x,baseY,4,'#697078',null);
+      if (i<4) line(ctx,x,baseY,x+54,baseY,'rgba(31,37,40,.18)',1);
+    }
+    const p1={x:136,y:baseY}, p2={x:244,y:baseY-60};
+    arrow(ctx,p1.x,p1.y,p2.x,p2.y,color,3,.8);
+    text(ctx,'q → p',190,baseY-42,14,color,'center','800');
+    ellipse(ctx,505,278,92,120,0,'rgba(48,118,184,.06)','#3076b8',2,.65);
+    ellipse(ctx,648,232,94,122,0,'rgba(53,127,91,.06)','#357f5b',2,.65);
+    text(ctx,'Ωq',505,132,18,'#3076b8','center','800');
+    text(ctx,'Ωp',648,86,18,'#357f5b','center','800');
+    const pts=fiberPoints(505,278,28,42,30,'diffuse',909);
+    let spread = { motion: 1.15, object: .75, surface: .95, path: .55, learned: .42 }[rule] || 1;
+    for (let i=0;i<pts.length;i++) {
+      const p=pts[i];
+      const targetX = 648 + (p.x-505)*(.48+spread*.28) + Math.sin(i*.7)*err*60;
+      const targetY = 232 + (p.y-278)*(.54+spread*.18) + Math.cos(i*.6)*err*46;
+      circle(ctx,p.x,p.y,3,'rgba(48,118,184,.42)',null);
+      if (i%5===0) arrow(ctx,p.x,p.y,targetX,targetY,color,1,.44);
+      circle(ctx,targetX,targetY,3.6,'rgba(53,127,91,.48)',null);
+    }
+    const trust=Math.exp(-2.4*err*({motion:1.15,object:.82,surface:.95,path:.62,learned:.48}[rule]||1));
+    drawBar(ctx,90,455,220,'reuse trust',trust,color);
+    drawBar(ctx,380,455,220,'fiber mismatch',1-trust,'#ce4b3f');
+    $('connectionStats').textContent = 'reuse trust ' + trust.toFixed(2);
+  }
+
+  function drawAll() {
+    if (!canvases.size) return;
+    drawPixelFiber();
+    drawFiberContents();
+    drawTransport();
+    drawBundle();
+    drawConnection();
+  }
+
+  function animate(t) {
+    state.time = t * 0.001;
+    drawAll();
+    requestAnimationFrame(animate);
+  }
+
+  function init() {
+    setupCanvas('pixelFiberCanvas');
+    setupCanvas('fiberContentsCanvas');
+    setupCanvas('transportCanvas');
+    setupCanvas('bundleCanvas');
+    setupCanvas('connectionCanvas');
+
+    bindRange('fiberComplexity', state.pixel, 'complexity');
+    bindSelect('fiberMode', state.pixel, 'mode');
+    bindRange('pathCount', state.fiber, 'count');
+    bindRange('fiberEntropy', state.fiber, 'entropy');
+    bindRange('fiberAnisotropy', state.fiber, 'anisotropy');
+    bindSelect('transportKind', state.transport, 'kind');
+    bindRange('transportStrength', state.transport, 'strength');
+    bindRange('bundleTwist', state.bundle, 'twist');
+    bindRange('bundleCurvature', state.bundle, 'curvature');
+    bindSelect('connectionRule', state.connection, 'rule');
+    bindRange('connectionError', state.connection, 'error');
+
+    const pf = canvases.get('pixelFiberCanvas').el;
+    pf.addEventListener('click', function(ev){
+      const rect = pf.getBoundingClientRect();
+      const x = (ev.clientX - rect.left) * pf.width / rect.width;
+      const y = (ev.clientY - rect.top) * pf.height / rect.height;
+      const ox=55, oy=76, cell=38, cols=9, rows=7;
+      const gx = Math.floor((x-ox)/cell);
+      const gy = Math.floor((y-oy)/cell);
+      if (gx>=0 && gx<cols && gy>=0 && gy<rows) {
+        state.pixel.gx=gx; state.pixel.gy=gy; drawAll();
+      }
+    });
+
+    requestAnimationFrame(animate);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>
+</body>
+</html>

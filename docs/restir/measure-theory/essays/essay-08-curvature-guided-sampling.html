@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Curvature-Guided Sampling — Residual Measure Transport ReSTIR</title>
+<style>
+  :root{
+    --paper:#f7f1e6;
+    --paper-2:#fffaf0;
+    --ink:#17202a;
+    --muted:#65707f;
+    --line:#d9cdbb;
+    --red:#c44b3b;
+    --blue:#2d6cdf;
+    --green:#2f8f6b;
+    --amber:#d99a2b;
+    --purple:#7559c7;
+    --shadow:0 18px 45px rgba(57,43,27,.12);
+    --radius:22px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;background:var(--paper)}
+  body{margin:0;color:var(--ink);font-family:var(--sans);line-height:1.58;background:
+      radial-gradient(circle at 20% 0%, rgba(255,255,255,.75), transparent 38rem),
+      linear-gradient(180deg,var(--paper-2),var(--paper));}
+  body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.08;background-image:
+      linear-gradient(90deg,#8d6c4b 1px,transparent 1px),
+      linear-gradient(#8d6c4b 1px,transparent 1px);background-size:36px 36px;mask-image:linear-gradient(#000,transparent 72%)}
+  a{color:var(--blue)}
+  main{max-width:1180px;margin:0 auto;padding:0 22px 90px}
+  .hero{padding:86px 0 42px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:34px;align-items:center}
+  .eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:18px}
+  h1{font-family:var(--serif);font-weight:500;font-size:clamp(44px,7vw,92px);line-height:.98;margin:0 0 22px;letter-spacing:-.045em}
+  h2{font-family:var(--serif);font-weight:500;font-size:clamp(32px,4vw,54px);line-height:1.05;margin:72px 0 18px;letter-spacing:-.025em}
+  h3{font-size:22px;margin:24px 0 10px}
+  p{font-size:18px;margin:0 0 18px;color:#26323f}
+  .lede{font-size:clamp(20px,2.6vw,30px);line-height:1.35;color:#243140;max-width:760px}
+  .card{background:rgba(255,250,240,.82);border:1px solid rgba(122,91,54,.2);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .hero-card{padding:20px;position:relative}
+  .caption{font-size:14px;color:var(--muted);margin:10px 4px 0;line-height:1.45}
+  .canvas-wrap{position:relative;background:linear-gradient(180deg,#fffdf8,#f3eadc);border-radius:18px;overflow:hidden;border:1px solid rgba(122,91,54,.18)}
+  canvas{display:block;width:100%;height:auto;min-height:260px}
+  .panel{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;margin:28px 0 46px;align-items:stretch}
+  .panel .canvas-wrap canvas{height:480px}
+  .controls{padding:18px;background:rgba(255,250,240,.88);border-left:1px solid rgba(122,91,54,.18)}
+  .control{margin:0 0 16px}
+  label{display:flex;justify-content:space-between;gap:12px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#495464;margin-bottom:8px}
+  .value{font-family:var(--mono);font-weight:700;color:var(--ink)}
+  input[type="range"]{width:100%;accent-color:#2d6cdf}
+  select,button{width:100%;border:1px solid rgba(122,91,54,.28);background:#fffdf8;border-radius:12px;padding:10px 12px;font:inherit;color:var(--ink)}
+  button{cursor:pointer;font-weight:800;box-shadow:0 5px 12px rgba(0,0,0,.06)}
+  button:hover{transform:translateY(-1px)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .note{padding:18px 20px;border-left:5px solid var(--blue);background:rgba(45,108,223,.07);border-radius:16px;margin:24px 0;color:#203044}
+  .note strong{color:#10213c}
+  .equation{font-family:var(--serif);font-size:26px;line-height:1.25;text-align:center;margin:24px 0;padding:20px;border-radius:18px;background:#fffdf8;border:1px solid rgba(122,91,54,.18);box-shadow:0 9px 20px rgba(57,43,27,.06)}
+  .mono-block{font-family:var(--mono);font-size:13px;line-height:1.55;white-space:pre;overflow:auto;background:#17202a;color:#e8f0f7;border-radius:18px;padding:18px 20px;border:1px solid rgba(255,255,255,.1);box-shadow:var(--shadow)}
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+  .pill{font-size:13px;font-weight:800;color:#2e3844;background:#fffaf0;border:1px solid rgba(122,91,54,.24);border-radius:999px;padding:7px 11px}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}
+  .metric{background:#fffdf8;border:1px solid rgba(122,91,54,.2);border-radius:16px;padding:14px 14px 12px}
+  .metric .num{font-family:var(--mono);font-size:26px;font-weight:900;letter-spacing:-.03em}
+  .metric .name{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900}
+  .toc{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0 0}
+  .toc a{text-decoration:none;color:#233040;background:#fffaf0;border:1px solid rgba(122,91,54,.22);border-radius:999px;padding:8px 12px;font-size:14px;font-weight:800}
+  .section{padding-top:1px}
+  .callout{background:linear-gradient(135deg,rgba(196,75,59,.08),rgba(217,154,43,.08));border:1px solid rgba(196,75,59,.24);border-radius:22px;padding:22px;margin:28px 0}
+  .small{font-size:14px;color:var(--muted)}
+  .footer{margin-top:72px;padding:26px;border-top:1px solid rgba(122,91,54,.22);color:var(--muted)}
+  @media (max-width:900px){.hero,.panel,.grid2{grid-template-columns:1fr}.controls{border-left:0;border-top:1px solid rgba(122,91,54,.18)}.summary-grid{grid-template-columns:1fr 1fr}.panel .canvas-wrap canvas{height:390px}}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Essay 7 · Residual Measure Transport ReSTIR</div>
+      <h1>Curvature-Guided Sampling</h1>
+      <p class="lede">A renderer should not spend its next samples where the image is bright. It should spend them where transported belief fails.</p>
+      <p>In the previous essays we made reservoirs visible, transported them between fibers, and measured reuse curvature. Here those concepts become a control loop: <strong>predict</strong>, <strong>compare</strong>, <strong>gate reuse</strong>, and <strong>allocate fresh samples</strong>.</p>
+      <div class="toc">
+        <a href="#loop">control loop</a>
+        <a href="#field">attention field</a>
+        <a href="#valve">reuse valve</a>
+        <a href="#passes">renderer passes</a>
+        <a href="#diagnostics">diagnostics</a>
+      </div>
+    </div>
+    <div class="card hero-card">
+      <div class="canvas-wrap"><canvas id="heroCanvas" width="860" height="640"></canvas></div>
+      <div class="caption">A single pixel becomes a small controller: transported prior measure comes in, evidence arrives, residual and curvature decide how much to trust reuse.</div>
+    </div>
+  </section>
+
+  <section id="loop" class="section">
+    <h2>The renderer as a residual controller</h2>
+    <p>Start with the most boring-looking expression in the whole series. It is also the most practical:</p>
+    <div class="equation">freshSamplePressure = residual + curvature + novelty + entropy + salience</div>
+    <p>Those terms should not be decorations. Each one answers a different engineering question.</p>
+    <div class="summary-grid">
+      <div class="metric"><div class="num">ρ</div><div class="name">prediction failed</div></div>
+      <div class="metric"><div class="num">κ</div><div class="name">reuse path disagrees</div></div>
+      <div class="metric"><div class="num">ν⊥</div><div class="name">new event</div></div>
+      <div class="metric"><div class="num">K</div><div class="name">extra representatives</div></div>
+    </div>
+    <div class="panel card">
+      <div class="canvas-wrap"><canvas id="loopCanvas" width="1100" height="650"></canvas></div>
+      <div class="controls">
+        <div class="control"><label for="loopResidual">residual mismatch <span class="value" id="loopResidualValue"></span></label><input id="loopResidual" type="range" min="0" max="1" step="0.01" value="0.42"></div>
+        <div class="control"><label for="loopCurvature">transport curvature <span class="value" id="loopCurvatureValue"></span></label><input id="loopCurvature" type="range" min="0" max="1" step="0.01" value="0.34"></div>
+        <div class="control"><label for="loopNovelty">singular novelty <span class="value" id="loopNoveltyValue"></span></label><input id="loopNovelty" type="range" min="0" max="1" step="0.01" value="0.26"></div>
+        <div class="control"><label for="loopEntropy">reservoir entropy <span class="value" id="loopEntropyValue"></span></label><input id="loopEntropy" type="range" min="0" max="1" step="0.01" value="0.46"></div>
+        <div class="control"><label for="loopSalience">task / gaze salience <span class="value" id="loopSalienceValue"></span></label><input id="loopSalience" type="range" min="0" max="1" step="0.01" value="0.55"></div>
+        <div class="control"><label for="loopLambda">reuse sharpness λ <span class="value" id="loopLambdaValue"></span></label><input id="loopLambda" type="range" min="0.5" max="5" step="0.1" value="2.2"></div>
+        <div class="pill-row"><span class="pill" id="loopTrustPill">reuse trust</span><span class="pill" id="loopBudgetPill">sample budget</span><span class="pill" id="loopKPill">K</span></div>
+      </div>
+    </div>
+    <div class="note"><strong>The practical rule:</strong> reuse aggressively where transported prediction still explains the evidence; spend new samples where the residual accelerates, curvature rises, or singular novelty appears.</div>
+  </section>
+
+  <section id="field" class="section">
+    <h2>A field of attention, not a scalar heuristic</h2>
+    <p>The quantities above are per-pixel fields. They form a sampling pressure map. A flat wall should cool down. A disocclusion, a shadow boundary, or a glossy fold should heat up.</p>
+    <div class="panel card">
+      <div class="canvas-wrap"><canvas id="fieldCanvas" width="1100" height="650"></canvas></div>
+      <div class="controls">
+        <div class="control"><label for="fieldMode">visualized field</label><select id="fieldMode"><option value="attention">attention / sample pressure</option><option value="trust">reuse trust</option><option value="residual">residual ρ</option><option value="curvature">curvature κ</option><option value="novelty">singular novelty ν⊥</option><option value="budget">allocated samples</option></select></div>
+        <div class="control"><label for="wResidual">weight residual <span class="value" id="wResidualValue"></span></label><input id="wResidual" type="range" min="0" max="3" step="0.05" value="1.0"></div>
+        <div class="control"><label for="wCurvature">weight curvature <span class="value" id="wCurvatureValue"></span></label><input id="wCurvature" type="range" min="0" max="3" step="0.05" value="1.25"></div>
+        <div class="control"><label for="wNovelty">weight novelty <span class="value" id="wNoveltyValue"></span></label><input id="wNovelty" type="range" min="0" max="3" step="0.05" value="1.45"></div>
+        <div class="control"><label for="wEntropy">weight entropy <span class="value" id="wEntropyValue"></span></label><input id="wEntropy" type="range" min="0" max="3" step="0.05" value="0.55"></div>
+        <div class="control"><label for="fieldSamples">sample pool <span class="value" id="fieldSamplesValue"></span></label><input id="fieldSamples" type="range" min="1" max="16" step="1" value="8"></div>
+        <button id="fieldPulse">advance scene event</button>
+        <div class="pill-row"><span class="pill">disocclusion</span><span class="pill">shadow edge</span><span class="pill">glossy ridge</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="valve" class="section">
+    <h2>The reuse valve</h2>
+    <p>Every candidate carries a contribution estimate, but it also carries provenance. The reuse valve converts provenance failure into downweighting, refresh, or extra reservoir cardinality.</p>
+    <div class="equation">reuseTrust = exp(−λ · (aρ + bκ + cν⊥))</div>
+    <div class="panel card">
+      <div class="canvas-wrap"><canvas id="valveCanvas" width="1100" height="650"></canvas></div>
+      <div class="controls">
+        <div class="control"><label for="valveCase">failure mode</label><select id="valveCase"><option value="flat">flat diffuse wall</option><option value="motion">moving object</option><option value="disocclusion">disocclusion</option><option value="glossy">glossy caustic fold</option><option value="hallucination">overconfident stale reservoir</option></select></div>
+        <div class="control"><label for="rnGate">RN gate strength <span class="value" id="rnGateValue"></span></label><input id="rnGate" type="range" min="0" max="2" step="0.05" value="1.0"></div>
+        <div class="control"><label for="curvGate">curvature gate strength <span class="value" id="curvGateValue"></span></label><input id="curvGate" type="range" min="0" max="2" step="0.05" value="1.1"></div>
+        <div class="control"><label for="novelGate">novelty refresh strength <span class="value" id="novelGateValue"></span></label><input id="novelGate" type="range" min="0" max="2" step="0.05" value="1.2"></div>
+        <div class="control"><label for="maxK">max auxiliary K <span class="value" id="maxKValue"></span></label><input id="maxK" type="range" min="1" max="12" step="1" value="8"></div>
+      </div>
+    </div>
+    <div class="callout"><p><strong>Confidence is a contract.</strong> A reservoir is allowed to keep an old sample only while the current evidence remains absolutely continuous enough with the transported prior. When the event is singular—a new surface, light toggle, hard visibility flip—the right behavior is not clever weighting. It is refresh.</p></div>
+  </section>
+
+  <section id="passes" class="section">
+    <h2>The pass architecture</h2>
+    <p>The algorithm is intentionally conservative. It does not replace ReSTIR. It inserts a small decision layer around reuse: estimate stability, estimate curvature, gate stale reservoirs, and spend fresh candidates where needed.</p>
+    <div class="panel card">
+      <div class="canvas-wrap"><canvas id="pipelineCanvas" width="1100" height="650"></canvas></div>
+      <div class="controls">
+        <div class="control"><label for="pipelineFocus">focused pass <span class="value" id="pipelineFocusValue"></span></label><input id="pipelineFocus" type="range" min="0" max="7" step="1" value="4"></div>
+        <div class="control"><label for="pipelineData">overlay</label><select id="pipelineData"><option value="buffers">buffers</option><option value="risks">failure risks</option><option value="cost">GPU cost intuition</option><option value="outputs">debug outputs</option></select></div>
+        <div class="pill-row"><span class="pill">low risk</span><span class="pill">incremental</span><span class="pill">diagnostic first</span></div>
+      </div>
+    </div>
+    <div class="mono-block">struct CurvatureGuidedReservoir {
+    Sample sample;
+    float  weightSum;
+    float  targetPdf;
+    float  confidence;
+    float  entropy;
+    float  residual;
+    float  curvature;
+    float  novelty;
+    uint   age;
+    uint   objectId;
+    uint   materialId;
+};
+
+void updatePixel(Pixel p) {
+    Geometry g = loadGBuffer(p);
+
+    Reservoir predicted = pushforward(loadPrevReservoir(p), g.motion);
+    Evidence  evidence  = estimateCurrentEvidence(p, g);
+
+    float rho = residualNorm(evidence, predicted);
+    float rn  = estimateRNRatio(evidence, predicted);
+    float nuP = estimateSingularNovelty(evidence, predicted, g);
+
+    Reservoir A = temporalThenSpatial(p);
+    Reservoir B = spatialThenTemporal(p);
+    float kappa = reservoirDistance(A, B);
+
+    float trust = exp(-lambda * (a*rho + b*kappa + c*nuP + abs(log(rn))));
+    int   K     = chooseK(baseK, rho, kappa, nuP, entropy(predicted), salience(p));
+
+    CandidateSet C = gatherProposals(p, predicted, K);
+    Reservoir R = grisMerge(C, trust, kappa);
+    storeReservoir(p, R);
+}</div>
+  </section>
+
+  <section id="diagnostics" class="section">
+    <h2>What would make this falsifiable?</h2>
+    <p>The best part of the curvature/residual formulation is that it does not have to be believed. It can be instrumented.</p>
+    <div class="grid2">
+      <div class="card hero-card"><div class="canvas-wrap"><canvas id="diagnosticsCanvas" width="860" height="560"></canvas></div><div class="caption">A synthetic diagnostic matrix: if the theory is useful, artifact maps should correlate with curvature and singular novelty maps.</div></div>
+      <div>
+        <h3>Predictions to test</h3>
+        <p><strong>Curvature heatmaps</strong> should correlate with ghosting, shimmer, stale shadows, and fireflies.</p>
+        <p><strong>RN-style reuse gates</strong> should outperform binary depth/normal rejection near disocclusions.</p>
+        <p><strong>Object-space reservoirs</strong> should beat screen-space reuse under camera motion and animated objects.</p>
+        <p><strong>Entropy-aware K</strong> should reduce fireflies more efficiently than uniform extra samples.</p>
+        <p><strong>Semantic proposal channels</strong> should help in scenes with structured light/object relationships more than in random geometry.</p>
+      </div>
+    </div>
+    <div class="note"><strong>The final formulation:</strong> modern reservoir rendering can be treated as a feedback controller over empirical measures. Prediction is pushforward. Evaluation is pullback. Residual detects error. Curvature detects invalid reuse geometry. Novelty detects singular events. Sampling pressure is where the controller chooses to spend reality checks.</div>
+  </section>
+
+  <section class="footer">
+    Essay 7 in the series: Pushforward/Pullback → Residual Measure Transport → Biomimetic Reservoir Intelligence → Shape of a Reservoir → Curvature of Reuse → Pixel as Fiber → Curvature-Guided Sampling.
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const TAU = Math.PI * 2;
+  const canvases = new Map();
+  function setupCanvas(id) {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLCanvasElement)) {
+      throw new Error(`Expected #${id} to be a canvas, got ${el ? el.tagName : 'null'}`);
+    }
+    const ctx = el.getContext('2d');
+    if (!ctx) throw new Error(`Could not acquire 2D context for #${id}`);
+    const record = { el, ctx, w: el.width, h: el.height, dpr: 1 };
+    canvases.set(id, record);
+    return record;
+  }
+  ['heroCanvas','loopCanvas','fieldCanvas','valveCanvas','pipelineCanvas','diagnosticsCanvas'].forEach(setupCanvas);
+
+  function fitCanvas(c) {
+    const rect = c.el.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(320, Math.round(rect.width * dpr));
+    const cssH = c.el.id === 'heroCanvas' || c.el.id === 'diagnosticsCanvas' ? rect.width * 0.65 : Math.min(650, Math.max(390, rect.height || 520));
+    const h = Math.max(260, Math.round(cssH * dpr));
+    if (c.el.width !== w || c.el.height !== h) { c.el.width = w; c.el.height = h; }
+    c.w = w; c.h = h; c.dpr = dpr;
+  }
+  function resizeAll(){ for (const c of canvases.values()) fitCanvas(c); }
+  window.addEventListener('resize', resizeAll, {passive:true});
+  resizeAll();
+
+  const $ = id => document.getElementById(id);
+  const state = { t: 0, eventPhase: 0 };
+  const inputs = [
+    'loopResidual','loopCurvature','loopNovelty','loopEntropy','loopSalience','loopLambda',
+    'fieldMode','wResidual','wCurvature','wNovelty','wEntropy','fieldSamples',
+    'valveCase','rnGate','curvGate','novelGate','maxK','pipelineFocus','pipelineData'
+  ];
+  inputs.forEach(id => $(id).addEventListener('input', drawAll));
+  $('fieldPulse').addEventListener('click', () => { state.eventPhase = (state.eventPhase + 1) % 4; drawAll(); });
+
+  function val(id){ const el=$(id); return el.type === 'range' ? parseFloat(el.value) : el.value; }
+  function clamp(x,a=0,b=1){ return Math.max(a, Math.min(b, x)); }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function mixColor(a,b,t){
+    const ah=parseInt(a.slice(1),16), bh=parseInt(b.slice(1),16);
+    const ar=ah>>16&255, ag=ah>>8&255, ab=ah&255;
+    const br=bh>>16&255, bg=bh>>8&255, bb=bh&255;
+    return `rgb(${Math.round(lerp(ar,br,t))},${Math.round(lerp(ag,bg,t))},${Math.round(lerp(ab,bb,t))})`;
+  }
+  function bg(ctx,w,h){
+    ctx.clearRect(0,0,w,h);
+    const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#fffdf8'); g.addColorStop(1,'#f2e6d5');
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  }
+  function text(ctx, s, x, y, size=22, color='#17202a', weight='500', align='left'){
+    ctx.font = `${weight} ${size}px Inter, system-ui, sans-serif`; ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.fillText(s,x,y);
+  }
+  function mono(ctx, s, x, y, size=16, color='#17202a', align='left'){
+    ctx.font = `700 ${size}px ui-monospace, SFMono-Regular, Menlo, monospace`; ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.fillText(s,x,y);
+  }
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}
+  }
+  function arrow(ctx,x1,y1,x2,y2,color='#65707f',lw=3){
+    const a=Math.atan2(y2-y1,x2-x1); ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-12*Math.cos(a-.45),y2-12*Math.sin(a-.45)); ctx.lineTo(x2-12*Math.cos(a+.45),y2-12*Math.sin(a+.45)); ctx.closePath(); ctx.fillStyle=color; ctx.fill();
+  }
+  function gaussian(x,y,cx,cy,sx,sy){ const dx=(x-cx)/sx, dy=(y-cy)/sy; return Math.exp(-(dx*dx+dy*dy)*0.5); }
+
+  function drawHero(){
+    const c=canvases.get('heroCanvas'), ctx=c.ctx, w=c.w, h=c.h; bg(ctx,w,h);
+    const cx=w*0.5, cy=h*0.49, R=Math.min(w,h)*0.28;
+    ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle='rgba(23,32,42,.12)'; ctx.lineWidth=2;
+    for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(0,0,R*(.35+i*.16),0,TAU);ctx.stroke();}
+    const labels=[['ρ','residual','#c44b3b',-0.52,-0.2],['κ','curvature','#7559c7',0.5,-0.16],['ν⊥','novelty','#d99a2b',0.16,0.55],['H','entropy','#2f8f6b',-0.42,0.42]];
+    labels.forEach(([sym,name,col,dx,dy],i)=>{
+      const x=dx*R*1.75, y=dy*R*1.75;
+      ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,R*.20,0,TAU); ctx.fill();
+      mono(ctx,sym,x,y-6,R*.16,'white','center'); text(ctx,name,x,y+R*.15,R*.055,'white','800','center');
+      arrow(ctx,x*.78,y*.78,x*.26,y*.26,col,3);
+    });
+    ctx.fillStyle='#17202a'; ctx.beginPath(); ctx.arc(0,0,R*.30,0,TAU); ctx.fill();
+    text(ctx,'reuse',0,-R*.06,R*.08,'white','900','center'); text(ctx,'controller',0,R*.08,R*.07,'white','700','center');
+    ctx.restore();
+    text(ctx,'predict → compare → gate → sample',w/2,h-42,Math.max(18,w*.03),'#243140','800','center');
+  }
+
+  function drawLoop(){
+    const c=canvases.get('loopCanvas'), ctx=c.ctx, w=c.w, h=c.h; bg(ctx,w,h);
+    const residual=val('loopResidual'), curvature=val('loopCurvature'), novelty=val('loopNovelty'), entropy=val('loopEntropy'), salience=val('loopSalience'), lambda=val('loopLambda');
+    [['loopResidualValue',residual],['loopCurvatureValue',curvature],['loopNoveltyValue',novelty],['loopEntropyValue',entropy],['loopSalienceValue',salience],['loopLambdaValue',lambda]].forEach(([id,v])=>$(id).textContent=v.toFixed(2));
+    const pressure = clamp(.30*residual+.25*curvature+.23*novelty+.11*entropy+.11*salience,0,1);
+    const trust = Math.exp(-lambda*(.55*residual+.65*curvature+.75*novelty));
+    const budget = Math.round(1 + pressure*15);
+    const K = Math.max(1, Math.round(1 + 7*(.35*entropy+.35*curvature+.30*novelty)));
+    $('loopTrustPill').textContent = `reuse trust ${(trust*100).toFixed(0)}%`;
+    $('loopBudgetPill').textContent = `fresh samples ${budget}`;
+    $('loopKPill').textContent = `K=${K}`;
+
+    const y=h*.20, bw=w*.18, bh=h*.16, gap=w*.055, x0=w*.07;
+    const boxes=[['Transported prior','μ⁻','#2d6cdf'],['Incoming evidence','ν','#2f8f6b'],['Residual','ρ = ν − μ⁻','#c44b3b'],['Curvature','κ = [Tt,Ts]','#7559c7'],['Decision','trust / K / samples','#17202a']];
+    boxes.forEach((b,i)=>{
+      const x=x0+i*(bw+gap*.48), yy=y+(i%2)*h*.08;
+      roundRect(ctx,x,yy,bw,bh,18,'rgba(255,253,248,.9)','rgba(122,91,54,.24)');
+      text(ctx,b[0],x+bw/2,yy+bh*.33,Math.max(14,w*.018),'#26323f','900','center');
+      mono(ctx,b[1],x+bw/2,yy+bh*.66,Math.max(18,w*.026),b[2],'center');
+      if(i<boxes.length-1) arrow(ctx,x+bw,yy+bh/2,x+bw+gap*.34,y+(i%2?0:1)*h*.08+bh/2,'rgba(101,112,127,.55)',3);
+    });
+    const gx=w*.10, gy=h*.56, gw=w*.80, gh=h*.25;
+    roundRect(ctx,gx,gy,gw,gh,20,'#fffdf8','rgba(122,91,54,.22)');
+    text(ctx,'output controls',gx+24,gy+34,20,'#243140','900');
+    function gauge(name,valNorm,x,col,sub){
+      const gy2=gy+76, gw2=gw*.25, gh2=24;
+      text(ctx,name,x,gy2-24,16,'#65707f','900');
+      roundRect(ctx,x,gy2,gw2,gh2,12,'rgba(23,32,42,.08)',null);
+      roundRect(ctx,x,gy2,gw2*clamp(valNorm),gh2,12,col,null);
+      mono(ctx,sub,x+gw2/2,gy2+gh2+26,18,'#17202a','center');
+    }
+    gauge('reuse trust',trust,gx+34,'#2f8f6b',`${(trust*100).toFixed(0)}%`);
+    gauge('sample pressure',pressure,gx+gw*.38,'#c44b3b',`${budget} spp`);
+    gauge('auxiliary K',K/8,gx+gw*.70,'#7559c7',`K=${K}`);
+  }
+
+  function syntheticFields(nx,ny){
+    const phase=state.eventPhase;
+    const arr=[];
+    for(let j=0;j<ny;j++){
+      for(let i=0;i<nx;i++){
+        const x=i/(nx-1), y=j/(ny-1);
+        const moving = gaussian(x,y,.24+.10*phase,.56,.08,.22);
+        const dis = Math.exp(-Math.abs(x-(.58+.03*Math.sin(phase)))*28) * (y>.18 && y<.82 ? 1:0);
+        const shadow = Math.exp(-Math.abs(y-(.34+.10*Math.sin(x*8+phase)))*24) * .75;
+        const glossy = gaussian(x,y,.78,.42,.11,.045)*.95;
+        const residual = clamp(.55*moving+.75*dis+.35*shadow+.45*glossy);
+        const curvature = clamp(.25*moving+.82*dis+.28*shadow+.88*glossy);
+        const novelty = clamp(.20*moving+.95*gaussian(x,y,.58+.03*phase,.68,.06,.08)+.15*glossy);
+        const entropy = clamp(.10+.35*shadow+.55*glossy+.25*moving);
+        arr.push({x,y,residual,curvature,novelty,entropy});
+      }
+    }
+    return arr;
+  }
+  function heatColor(v,mode){
+    v=clamp(v);
+    if(mode==='trust') return mixColor('#c44b3b','#2f8f6b',v);
+    if(mode==='budget') return mixColor('#f3eadc','#7559c7',v);
+    return v<.5 ? mixColor('#f1e7d7','#d99a2b',v*2) : mixColor('#d99a2b','#c44b3b',(v-.5)*2);
+  }
+  function drawField(){
+    const c=canvases.get('fieldCanvas'), ctx=c.ctx, w=c.w, h=c.h; bg(ctx,w,h);
+    const mode=val('fieldMode');
+    const wr=val('wResidual'), wc=val('wCurvature'), wn=val('wNovelty'), wh=val('wEntropy'), pool=val('fieldSamples');
+    [['wResidualValue',wr],['wCurvatureValue',wc],['wNoveltyValue',wn],['wEntropyValue',wh],['fieldSamplesValue',pool]].forEach(([id,v])=>$(id).textContent=(id==='fieldSamplesValue'?String(v):v.toFixed(2)));
+    const nx=110, ny=62, margin=48, gx=margin, gy=margin, gw=w-margin*2, gh=h-margin*2.2;
+    const fields=syntheticFields(nx,ny); const cellw=gw/nx, cellh=gh/ny;
+    fields.forEach(f=>{
+      const pressure=clamp((wr*f.residual+wc*f.curvature+wn*f.novelty+wh*f.entropy)/(wr+wc+wn+wh+1e-6));
+      const trust=Math.exp(-2.6*(.45*f.residual+.45*f.curvature+.55*f.novelty));
+      const budget=clamp(Math.round(1+pressure*(pool-1))/(pool));
+      let v=pressure;
+      if(mode==='trust') v=trust; else if(mode==='residual') v=f.residual; else if(mode==='curvature') v=f.curvature; else if(mode==='novelty') v=f.novelty; else if(mode==='budget') v=budget;
+      ctx.fillStyle=heatColor(v,mode); ctx.fillRect(gx+f.x*gw,gy+f.y*gh,cellw+1,cellh+1);
+    });
+    ctx.strokeStyle='rgba(23,32,42,.16)'; ctx.lineWidth=2; ctx.strokeRect(gx,gy,gw,gh);
+    text(ctx,mode.replace(/^[a-z]/,m=>m.toUpperCase()),gx+18,gy+28,22,'#17202a','900');
+    // overlay simple scene silhouettes
+    ctx.globalAlpha=.55;
+    ctx.fillStyle='rgba(23,32,42,.18)'; ctx.fillRect(gx+gw*.14,gy+gh*.43,gw*.18,gh*.25);
+    ctx.beginPath(); ctx.arc(gx+gw*.78,gy+gh*.42,gh*.07,0,TAU); ctx.fill();
+    ctx.globalAlpha=1;
+    text(ctx,'moving object',gx+gw*.14,gy+gh*.76,15,'#26323f','800');
+    text(ctx,'glossy fold',gx+gw*.70,gy+gh*.56,15,'#26323f','800');
+    text(ctx,'disocclusion seam',gx+gw*.50,gy+gh*.12,15,'#26323f','800');
+  }
+
+  function caseVals(name){
+    const cases={
+      flat:{r:.08,k:.05,n:.02,e:.12,conf:.78,rn:.97,label:'safe reuse'},
+      motion:{r:.34,k:.28,n:.13,e:.35,conf:.62,rn:.82,label:'reproject carefully'},
+      disocclusion:{r:.74,k:.68,n:.92,e:.51,conf:.18,rn:.24,label:'refresh'},
+      glossy:{r:.48,k:.86,n:.38,e:.82,conf:.36,rn:.65,label:'split / raise K'},
+      hallucination:{r:.79,k:.42,n:.21,e:.28,conf:.91,rn:.31,label:'force refresh'}
+    };
+    return cases[name] || cases.flat;
+  }
+  function drawValve(){
+    const c=canvases.get('valveCanvas'), ctx=c.ctx, w=c.w, h=c.h; bg(ctx,w,h);
+    const cv=caseVals(val('valveCase')); const rg=val('rnGate'), cg=val('curvGate'), ng=val('novelGate'), maxK=val('maxK');
+    [['rnGateValue',rg],['curvGateValue',cg],['novelGateValue',ng],['maxKValue',maxK]].forEach(([id,v])=>$(id).textContent=(id==='maxKValue'?String(v):v.toFixed(2)));
+    const rnPenalty=Math.abs(Math.log(Math.max(.05,cv.rn)))*rg*.35;
+    const pressure=clamp(.45*cv.r+.50*cv.k*cg+.65*cv.n*ng+rnPenalty);
+    const trust=Math.exp(-2.2*pressure)*cv.conf;
+    const K=Math.max(1,Math.round(1+(maxK-1)*clamp(.35*cv.e+.35*cv.k+.30*cv.n)));
+    const cx=w*.28, cy=h*.49, R=Math.min(w,h)*.25;
+    // candidates
+    for(let i=0;i<54;i++){
+      const a=(i*2.399+state.t*.2)%TAU, rr=R*(.25+.74*((i*37)%100)/100);
+      const x=cx+Math.cos(a)*rr*(1+.7*cv.k), y=cy+Math.sin(a)*rr*(1+.5*cv.e);
+      const stale = i%5===0 && cv.conf>.7;
+      ctx.fillStyle=stale?'rgba(196,75,59,.55)':'rgba(45,108,223,.45)';
+      ctx.beginPath(); ctx.arc(x,y,stale?7:5,0,TAU); ctx.fill();
+    }
+    ctx.strokeStyle='rgba(23,32,42,.22)'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(cx,cy,R,0,TAU); ctx.stroke();
+    text(ctx,'candidate measure',cx,cy-R-32,20,'#243140','900','center');
+    // valve
+    const vx=w*.63, vy=h*.24, vw=w*.26, vh=h*.50;
+    roundRect(ctx,vx,vy,vw,vh,26,'#fffdf8','rgba(122,91,54,.26)');
+    text(ctx,'reuse valve',vx+vw/2,vy+38,24,'#17202a','900','center');
+    function bar(name,v,y,col){
+      text(ctx,name,vx+30,y-14,15,'#65707f','900'); roundRect(ctx,vx+30,y,vw-60,18,9,'rgba(23,32,42,.08)',null); roundRect(ctx,vx+30,y,(vw-60)*clamp(v),18,9,col,null); mono(ctx,v.toFixed(2),vx+vw-34,y+9,14,'#17202a','right');
+    }
+    bar('residual ρ',cv.r,vy+92,'#c44b3b');
+    bar('curvature κ',cv.k,vy+142,'#7559c7');
+    bar('novelty ν⊥',cv.n,vy+192,'#d99a2b');
+    bar('confidence',cv.conf,vy+242,'#2f8f6b');
+    text(ctx,cv.label,vx+vw/2,vy+vh-78,28, trust<.2?'#c44b3b':'#2f8f6b','900','center');
+    mono(ctx,`trust ${(trust*100).toFixed(0)}%   K=${K}`,vx+vw/2,vy+vh-38,19,'#17202a','center');
+    arrow(ctx,cx+R*1.25,cy,vx-16,vy+vh*.48, trust<.25?'#c44b3b':'#2f8f6b',5);
+  }
+
+  function drawPipeline(){
+    const c=canvases.get('pipelineCanvas'), ctx=c.ctx, w=c.w, h=c.h; bg(ctx,w,h);
+    const focus=val('pipelineFocus'), overlay=val('pipelineData'); $('pipelineFocusValue').textContent=String(focus);
+    const passes=['GBuffer','Stability','Predict','Novelty','Propose','GRIS Merge','Shade','Diagnostics'];
+    const details={
+      buffers:['depth normal material','edge/motion/residual','predicted reservoir','RN + singular split','multi-channel candidates','weighted selected sample','radiance output','heatmaps'],
+      risks:['missing IDs','false salience','stale motion','over-reject','proposal bias','MIS imbalance','noise leak','bad correlation'],
+      cost:['free-ish','cheap full-screen','one reprojection','cheap tests','medium gather','main cost','existing','debug only'],
+      outputs:['GBuffer','salience field','μ⁻','ν⊥, f̂','candidate set','Rₜ','Lₒ','ρ κ novelty stale']
+    }[overlay];
+    const x0=w*.07, y0=h*.18, bw=w*.19, bh=h*.115, cols=4, gapx=w*.055, gapy=h*.17;
+    passes.forEach((p,i)=>{
+      const col=i%cols, row=Math.floor(i/cols), x=x0+col*(bw+gapx), y=y0+row*(bh+gapy);
+      const hot=i===focus;
+      roundRect(ctx,x,y,bw,bh,18,hot?'#17202a':'#fffdf8',hot?'#17202a':'rgba(122,91,54,.25)');
+      text(ctx,`${i}. ${p}`,x+bw/2,y+bh*.38,18,hot?'#fffdf8':'#17202a','900','center');
+      text(ctx,details[i],x+bw/2,y+bh*.70,13,hot?'#dfe8f0':'#65707f','800','center');
+      if(i<passes.length-1){
+        let x2,y2; if(col<cols-1){x2=x+bw+gapx*.45;y2=y+bh/2;} else {x2=x0+gapx*.2;y2=y+bh+gapy*.56;}
+        if(col<cols-1) arrow(ctx,x+bw,y+bh/2,x+bw+gapx*.28,y+bh/2,'rgba(101,112,127,.5)',3);
+      }
+    });
+    const fx=x0+(focus%cols)*(bw+gapx), fy=y0+Math.floor(focus/cols)*(bh+gapy);
+    roundRect(ctx,w*.12,h*.74,w*.76,h*.15,20,'rgba(45,108,223,.08)','rgba(45,108,223,.18)');
+    const desc=[
+      'Load ordinary renderer facts: depth, normals, motion, object/material identity.',
+      'Estimate where the current frame is stable, discontinuous, or likely to invalidate reuse.',
+      'Push previous reservoirs into the current fiber before spending fresh work.',
+      'Separate reweightable evidence from singular novelty: disocclusion, light flip, visibility break.',
+      'Gather candidates from light, BSDF, temporal, spatial, object, material, and salience channels.',
+      'Merge candidates with GRIS weights modulated by trust, curvature, entropy, and novelty.',
+      'Shade selected representatives; optional decoupled shading for auxiliary reservoirs.',
+      'Visualize entropy, residual, curvature, novelty, stale confidence, and object-space reuse.'
+    ][focus];
+    text(ctx,desc,w*.50,h*.815,18,'#243140','800','center');
+  }
+
+  function drawDiagnostics(){
+    const c=canvases.get('diagnosticsCanvas'), ctx=c.ctx, w=c.w, h=c.h; bg(ctx,w,h);
+    const labels=['artifact','residual ρ','curvature κ','novelty ν⊥'];
+    const nx=44, ny=30, margin=w*.06, gap=w*.025, pw=(w-margin*2-gap*3)/4, ph=h*.58, y=h*.18;
+    labels.forEach((lab,k)=>{
+      const x=margin+k*(pw+gap);
+      for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+        const xx=i/(nx-1), yy=j/(ny-1);
+        const base=syntheticFields(nx,ny)[j*nx+i];
+        let v=base.residual*.35+base.curvature*.45+base.novelty*.35;
+        if(k===1)v=base.residual; if(k===2)v=base.curvature; if(k===3)v=base.novelty;
+        ctx.fillStyle=heatColor(v,'attention'); ctx.fillRect(x+xx*pw,y+yy*ph,pw/nx+1,ph/ny+1);
+      }
+      ctx.strokeStyle='rgba(23,32,42,.16)'; ctx.lineWidth=2; ctx.strokeRect(x,y,pw,ph);
+      text(ctx,lab,x+pw/2,y+ph+28,15,'#26323f','900','center');
+    });
+    text(ctx,'diagnostic correlation matrix',w/2,h*.08,24,'#17202a','900','center');
+  }
+
+  function drawAll(){ drawHero(); drawLoop(); drawField(); drawValve(); drawPipeline(); drawDiagnostics(); }
+  function animate(ts){ state.t=ts/1000; drawHero(); if(document.visibilityState==='visible') requestAnimationFrame(animate); }
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') requestAnimationFrame(animate); });
+  drawAll(); requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
