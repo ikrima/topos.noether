@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<!--
+  Part 2 — Groups
+  Companion to Alexander Paulin's Introduction to Abstract Algebra (Math 113), Ch. 3.
+
+  Figures in this part:
+    1. The Cayley Table, Alive — detectors for identity, inverses, commutativity, associativity
+    2. The Dihedral Playground — draggable m-gon; τσ = σ⁻¹τ made physical
+    3. The Rotating Cube — three.js 3D; Rot(□) ≅ Sym₄ via body-diagonal permutations
+    4. Cosets Tile the Group — Lagrange, seen as a colored partition
+    5. Orbit–Stabiliser as Conservation — |G| = |Orbit|·|Stab|; conjugacy classes
+    6. Homomorphism as Collapsing the Table — kernel, quotient, First Isomorphism Theorem
+    7. Atoms & Molecules Coda — composition series, Jordan–Hölder, A₅ seed
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Part 2 — Groups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --bg: #FAF8F3;
+  --text: #2A2A2A;
+  --text-light: #6A6A6A;
+  --blue: #2052BB;
+  --amber: #D97706;
+  --green: #16A34A;
+  --red: #DC2626;
+  --grey: #8A8A8A;
+  --grey-light: #D0D0D0;
+  --grey-bg: #F2EFE8;
+  --border: #E0DCD0;
+  --card-bg: #FFFFFF;
+  --max-width: 680px;
+  --serif: Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.article {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 6rem;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--sans);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+  scroll-margin-top: 1rem;
+}
+
+h1 { font-size: 1.75rem; margin: 0.5rem 0 0.5rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.3rem; margin: 2.75rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.08rem; margin: 1.5rem 0 0.6rem; }
+
+p { margin: 0.7rem 0; }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.lead { font-size: 1.08rem; color: var(--text-light); font-style: italic; margin: 0.75rem 0 2rem; line-height: 1.55; }
+strong { font-weight: 600; color: var(--text); }
+
+code {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.88em; background: var(--grey-bg);
+  padding: 0.1em 0.35em; border-radius: 3px;
+}
+
+ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+li { margin: 0.2rem 0; }
+
+/* ---- Callouts ---- */
+.callout {
+  border-left: 3px solid; padding: 0.8rem 1rem; margin: 1.25rem 0;
+  background: var(--grey-bg); border-radius: 0 5px 5px 0;
+  font-size: 0.93rem; line-height: 1.55;
+}
+.callout p { margin: 0.4rem 0; }
+.callout p:first-child { margin-top: 0; }
+.callout p:last-child { margin-bottom: 0; }
+.callout-def { border-color: var(--green); background: #F0F7F0; }
+.callout-lies { border-color: var(--amber); background: #FDF6EC; }
+.callout-notice { border-color: var(--blue); background: #EFF3FC; }
+.callout-label {
+  font-family: var(--sans); font-weight: 700; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.35rem;
+}
+.callout-def .callout-label { color: var(--green); }
+.callout-lies .callout-label { color: var(--amber); }
+.callout-notice .callout-label { color: var(--blue); }
+
+/* ---- Figures ---- */
+.figure {
+  margin: 1.75rem 0; background: var(--card-bg);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.figure-canvas-wrap { position: relative; width: 100%; border-radius: 5px; overflow: hidden; }
+.figure canvas { display: block; width: 100%; height: auto; touch-action: none; }
+.figure-controls {
+  display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; align-items: center;
+  margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid var(--border);
+  font-family: var(--sans); font-size: 0.88rem;
+}
+.figure-caption {
+  margin-top: 0.8rem; font-size: 0.84rem; color: var(--text-light);
+  font-style: italic; line-height: 1.5;
+}
+
+/* ---- Controls ---- */
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 110px; height: 4px;
+  background: var(--grey-light); border-radius: 2px; outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--blue); cursor: pointer;
+  border: 2px solid #fff; box-shadow: 0 0 0 1px var(--grey-light);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px; border-radius: 50%; background: var(--blue);
+  cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--grey-light);
+}
+button.ctrl {
+  font-family: var(--sans); font-size: 0.84rem; font-weight: 500;
+  padding: 0.35rem 0.8rem; border: 1px solid var(--grey-light); background: #fff;
+  color: var(--text); border-radius: 4px; cursor: pointer;
+  transition: all 0.12s ease; user-select: none;
+}
+button.ctrl:hover { background: var(--grey-bg); border-color: var(--grey); }
+button.ctrl:active { background: var(--grey-light); }
+button.ctrl.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+button.ctrl:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+select.ctrl {
+  font-family: var(--sans); font-size: 0.84rem; padding: 0.3rem 0.5rem;
+  border: 1px solid var(--grey-light); border-radius: 4px; background: #fff; color: var(--text);
+  cursor: pointer;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-family: var(--sans); font-size: 0.78rem; font-weight: 500;
+  padding: 0.22rem 0.6rem; border-radius: 12px;
+  background: var(--grey-bg); color: var(--text-light); transition: all 0.2s ease;
+}
+.badge.on { background: var(--green); color: #fff; }
+.badge.off { background: var(--grey-bg); color: var(--grey); }
+.badge.warn { background: var(--red); color: #fff; }
+.badge.amber { background: var(--amber); color: #fff; }
+
+.control-group { display: flex; align-items: center; gap: 0.45rem; }
+.control-label { font-family: var(--sans); font-size: 0.83rem; color: var(--text-light); font-weight: 500; }
+.control-value { font-family: var(--sans); font-size: 0.83rem; font-weight: 600; color: var(--text); min-width: 1.5em; text-align: center; }
+
+.toggle-group { display: inline-flex; border: 1px solid var(--grey-light); border-radius: 4px; overflow: hidden; }
+.toggle-group button { border: none; border-right: 1px solid var(--grey-light); border-radius: 0; }
+.toggle-group button:last-child { border-right: none; }
+
+/* ---- Cayley table ---- */
+.cayley-table {
+  font-family: var(--sans); font-size: 0.7rem; border-collapse: collapse; margin: 0;
+}
+.cayley-table td, .cayley-table th {
+  width: 1.6rem; height: 1.6rem; text-align: center;
+  border: 1px solid var(--grey-light); vertical-align: middle; transition: background 0.15s, color 0.15s;
+}
+.cayley-table th { font-weight: 600; background: var(--grey-bg); color: var(--text-light); cursor: pointer; }
+.cayley-table th:hover { background: var(--grey-light); }
+.cayley-table th.header-hover { background: var(--amber); color: #fff; }
+.cayley-table th.identity-h { background: var(--green); color: #fff; }
+.cayley-table td.cell { background: #fff; color: var(--text); cursor: pointer; }
+.cayley-table td.cell:hover { background: var(--amber); color: #fff; }
+.cayley-table td.cell.identity-cell { background: var(--green); color: #fff; font-weight: 700; }
+.cayley-table td.cell.inverse-cell { background: #FDE68A; color: var(--text); font-weight: 700; }
+.cayley-table td.cell.diag-cell { background: #DBEAFE; }
+.cayley-table td.cell.kernel-cell { background: #FEE2E2; color: var(--red); font-weight: 600; }
+.cayley-table td.cell.nonkernel-cell { background: #FEF3C7; color: var(--amber); font-weight: 600; }
+.cayley-table td.cell.product-cell { background: var(--blue); color: #fff; font-weight: 700; }
+
+/* ---- 3D cube ---- */
+.cube-container { position: relative; width: 100%; max-width: 360px; margin: 0 auto; }
+.cube-canvas-wrap { width: 100%; aspect-ratio: 1; border-radius: 5px; overflow: hidden; background: #1a1a2e; }
+.cube-canvas-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+.token-row { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.6rem; }
+.token {
+  width: 2rem; height: 2rem; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-family: var(--sans);
+  font-size: 0.7rem; font-weight: 700; color: #fff;
+  border: 2px solid rgba(255,255,255,0.3); transition: transform 0.4s ease;
+}
+.token-pos { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.token-pos-label { font-family: var(--sans); font-size: 0.65rem; color: var(--text-light); }
+
+/* ---- Tower (Fig 7) ---- */
+.tower-wrap { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; }
+
+.nav { font-family: var(--sans); font-size: 0.82rem; color: var(--text-light); margin-bottom: 2rem; }
+.nav a { color: var(--text-light); }
+.nav span { margin: 0 0.4rem; }
+
+.katex { font-size: 1.04em; }
+.katex-display { margin: 0.8rem 0; }
+
+@media (max-width: 420px) {
+  body { font-size: 16px; }
+  .article { padding: 1.5rem 0.75rem 4rem; }
+  .figure { padding: 0.6rem; }
+  input[type="range"] { width: 90px; }
+  .figure-controls { gap: 0.5rem 0.7rem; }
+  .cayley-table { font-size: 0.62rem; }
+  .cayley-table td, .cayley-table th { width: 1.3rem; height: 1.3rem; }
+}
+</style>
+</head>
+<body>
+<article class="article">
+
+<div class="nav"><a href="#">Abstract Algebra Visual Essays</a> <span>›</span> Part 2</div>
+
+<h1>Groups</h1>
+<p class="lead">In Part 1 we met composition — two things in, one thing out — and saw it instantiated as addition and multiplication on $\mathbb{Z}$. Now we ask the algebraist's question: what is the <em>minimal</em> set of rules that makes composition behave well, and what structure do those rules force upon the things being composed? The answer is a <em>group</em>, and the surprising fact is how much follows from how little.</p>
+
+<p>This is Part 2 of the series companion to Paulin's <em>Introduction to Abstract Algebra</em>, covering Chapter 3. Every object you touched in Part 1 — the clock, the operation table, the coloring-by-partition — returns here with new structure layered on. The clock becomes the cyclic group $\mathbb{Z}/m\mathbb{Z}$. The operation table becomes the Cayley table, the central object of the theory. And the atoms from prime factorization reappear as <em>simple groups</em>, the indecomposable building blocks from which all finite groups are assembled.</p>
+
+<!-- ============================================================ -->
+<h2 id="axioms">1. The three axioms</h2>
+
+<p>A group is a set $G$ equipped with a binary operation $\star : G \times G \to G$ satisfying three axioms. You have already met all three in Part 1 as properties of $+$ on $\mathbb{Z}$; the act of abstraction is to <em>demand</em> them and see what follows.</p>
+
+<div class="callout callout-def">
+<span class="callout-label">Definition — Group</span>
+<p>A <strong>group</strong> is a pair $(G, \star)$ where $\star : G \times G \to G$ is a binary operation satisfying:</p>
+<p><strong>Associativity:</strong> $(a \star b) \star c = a \star (b \star c)$ for all $a, b, c \in G$.<br>
+<strong>Identity:</strong> there exists $e \in G$ such that $e \star a = a \star e = a$ for all $a \in G$.<br>
+<strong>Inverse:</strong> for each $a \in G$ there exists $a^{-1} \in G$ such that $a \star a^{-1} = a^{-1} \star a = e$.</p>
+<p>If additionally $a \star b = b \star a$ for all $a, b$, the group is <strong>Abelian</strong>.</p>
+</div>
+
+<p>Three remarks are in order before we go further. First, <strong>closure</strong> — that $a \star b \in G$ — is built into the definition of a binary operation ($\star$ maps $G \times G \to G$), so it is not listed as a separate axiom. Second, the identity and inverses are <em>unique</em>: if $e$ and $e'$ both satisfy the identity axiom, then $e = e \star e' = e'$; similarly, if $b$ and $b'$ are both inverses of $a$, then $b = b \star e = b \star (a \star b') = (b \star a) \star b' = e \star b' = b'$. This uniqueness is what lets us speak of <em>the</em> identity and <em>the</em> inverse. Third, the cancellation law holds: $a \star b = a \star c$ implies $b = c$ (multiply on the left by $a^{-1}$), and similarly on the right. This is the group-theoretic shadow of "you can divide both sides of an equation."</p>
+
+<p>You already know many groups. The integers $(\mathbb{Z}, +)$ form a group (identity $0$, inverse $-n$). The integers under multiplication do <em>not</em> — $2$ has no multiplicative inverse in $\mathbb{Z}$. But $(\mathbb{Q} \setminus \{0\}, \times)$ is a group. From linear algebra: every vector space under addition is an Abelian group, and $GL_n(\mathbb{R})$ — the invertible $n \times n$ matrices — is a (non-Abelian) group under matrix multiplication. The operation can be function composition, matrix multiplication, or addition; the axioms don't care.</p>
+
+<!-- ============================================================ -->
+<h2 id="cayley-table">2. The Cayley table</h2>
+
+<p>The entire structure of a finite group can be displayed in a single grid: the <strong>Cayley table</strong>. Rows and columns are indexed by the group elements; the cell at row $a$, column $b$ contains the product $a \star b$. Every axiom becomes a visible geometric property of this grid. Play with the table below — switch between groups, toggle the detectors, and watch the texture of the grid change.</p>
+
+<div class="figure" id="fig1">
+  <div style="overflow-x:auto;">
+    <table class="cayley-table" id="fig1-table"></table>
+  </div>
+  <div class="figure-controls">
+    <div class="control-group">
+      <span class="control-label">group:</span>
+      <select class="ctrl" id="fig1-group" aria-label="select group">
+        <option value="z4">ℤ/4 (cyclic)</option>
+        <option value="z6">ℤ/6 (cyclic)</option>
+        <option value="v4">V₄ (Klein four)</option>
+        <option value="s3" selected>Sym₃ (non-Abelian)</option>
+        <option value="d4">D₄ (dihedral, square)</option>
+        <option value="q8">Q₈ (quaternions)</option>
+      </select>
+    </div>
+    <span class="badge" id="fig1-abelian">Abelian ✗</span>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0;">
+    <button class="ctrl" id="fig1-d-identity">○ Identity row/col</button>
+    <button class="ctrl" id="fig1-d-inverse">↔ Inverse pairs</button>
+    <button class="ctrl" id="fig1-d-commute">◇ Commutativity (diagonal)</button>
+    <button class="ctrl" id="fig1-d-assoc">≋ Associativity check</button>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0;">
+    <span class="control-label" id="fig1-readout">Hover a cell to trace a⋆b.</span>
+  </div>
+  <p class="figure-caption">Figure 1 — The Cayley table, alive. Hover any cell to trace $a \star b$. Toggle detectors: <strong>identity</strong> lights up the row and column that copy the headers; <strong>inverse pairs</strong> mark where the identity appears in each row; <strong>commutativity</strong> checks diagonal symmetry (Abelian $\Leftrightarrow$ symmetric); <strong>associativity</strong> tests $(a{\star}b){\star}c$ vs $a{\star}(b{\star}c)$ for random triples.</p>
+</div>
+
+<div class="callout callout-notice">
+<span class="callout-label">Notice that…</span>
+<p>Load <strong>Sym₃</strong> and toggle <strong>commutativity</strong>: the blue diagonal highlight reveals that the table is <em>not</em> symmetric across the diagonal — there exist $a, b$ with $a \star b \neq b \star a$. Now load <strong>ℤ/4</strong> or <strong>V₄</strong>: the table <em>is</em> symmetric. Abelian groups have symmetric Cayley tables; non-Abelian groups do not. This is the simplest visual diagnostic for commutativity, and it is exact.</p>
+</div>
+
+<div class="callout callout-lies">
+<span class="callout-label">Where the picture lies</span>
+<p>The Cayley table is an <strong>exact</strong> encoding of a finite group: it lists every product, and the axioms are checkable by inspection (identity = a row matching the header; inverses = identity appearing in each row; associativity = a finite but tedious check). What the table does <em>not</em> reveal at a glance is the group's <em>internal structure</em> — subgroups, normal subgroups, composition factors — those require analysis beyond the raw grid. The associativity detector tests only random triples, not all of them; for the small groups here the check is exhaustive, but in general verifying associativity from a table is $O(|G|^3)$.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="dihedral">3. Cyclic and dihedral groups</h2>
+
+<p>Two families of groups will recur throughout the series, and they are best met through direct manipulation. The first is the <strong>cyclic group</strong> $\mathbb{Z}/n\mathbb{Z}$ — the clock from Part 1, now recognised as a group under addition. It is generated by a single element: pressing $+1$ repeatedly cycles through every element. Cyclic groups are always Abelian, and every group of prime order is cyclic (we will prove this with Lagrange's theorem below).</p>
+
+<p>The second family is richer. The <strong>dihedral group</strong> $D_m$ is the group of symmetries of a regular $m$-gon: $m$ rotations and $m$ reflections, totalling $2m$ elements. It is generated by a rotation $\sigma$ (order $m$) and a reflection $\tau$ (order $2$), subject to the relation $\tau \sigma = \sigma^{-1}\tau$. This single relation is what makes $D_m$ non-Abelian for $m \geq 3$, and it is the source of essentially all the interesting structure in this part. Drag the polygon below to feel it.</p>
+
+<div class="figure" id="fig2">
+  <div class="figure-canvas-wrap">
+    <canvas id="fig2-canvas" style="width:100%;max-width:340px;"></canvas>
+  </div>
+  <div class="figure-controls">
+    <div class="control-group">
+      <span class="control-label">m =</span>
+      <input type="range" id="fig2-m" min="3" max="8" value="5" step="1" aria-label="number of sides">
+      <span class="control-value" id="fig2-m-val">5</span>
+    </div>
+    <button class="ctrl" id="fig2-rotate">↻ Rotate (σ)</button>
+    <button class="ctrl" id="fig2-reflect">↔ Reflect (τ)</button>
+    <button class="ctrl" id="fig2-reset">Reset</button>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0;">
+    <span class="control-label">word: <span class="control-value" id="fig2-word" style="color:var(--blue);font-size:1rem;">e</span></span>
+    <span class="control-label">|G| = <span class="control-value" id="fig2-order">10</span></span>
+  </div>
+  <p class="figure-caption">Figure 2 — The dihedral playground. Drag the polygon to rotate freely; press <strong>Rotate (σ)</strong> to step by one notch, <strong>Reflect (τ)</strong> to flip. The <strong>word</strong> shows the current element as $\sigma^k$ or $\tau\sigma^k$. The mini table below lights up the current cell. Try: rotate, then reflect, then rotate again — and compare with reflect, rotate, reflect. The order matters; that is non-commutativity made physical.</p>
+  <div style="overflow-x:auto; margin-top:0.6rem;">
+    <table class="cayley-table" id="fig2-table"></table>
+  </div>
+</div>
+
+<div class="callout callout-notice">
+<span class="callout-label">Notice that…</span>
+<p>Press <strong>Rotate</strong> three times, then <strong>Reflect</strong>, then <strong>Rotate</strong> once more. The word reads $\tau\sigma^4$ (for $m=5$). Now reset and do <strong>Reflect</strong> first, then <strong>Rotate</strong> three times, then <strong>Reflect</strong> again. You get $\sigma^3$ — a completely different element. The relation $\tau\sigma = \sigma^{-1}\tau$ means that every time a reflection passes through a rotation, it <em>inverts</em> the rotation's direction. This is why $\tau\sigma \neq \sigma\tau$: reflecting after rotating is not the same as rotating after reflecting.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="cube">4. The rotating cube: Rot(□) ≅ Sym₄</h2>
+
+<p>Not every group is easy to draw as a polygon. The <strong>cube</strong> has $24$ rotational symmetries — rotations that map the cube to itself without flipping it inside-out. These rotations permute the cube's four <strong>body diagonals</strong> (the lines through the centre connecting opposite vertices), and this permutation is faithful: different rotations give different permutations. Since there are $4! = 24$ permutations of four objects and $24$ rotations, the correspondence is a bijection. The rotation group of the cube is isomorphic to $\mathrm{Sym}_4$, the symmetric group on four letters.</p>
+
+<p>This is our first example of an <em>isomorphism</em> — a structure-preserving bijection between two groups that look superficially different. It is also a preview of <strong>Cayley's theorem</strong>: every group embeds into some symmetric group $\mathrm{Sym}_n$. Manipulate the cube below to see the isomorphism in action.</p>
+
+<div class="figure" id="fig3">
+  <div class="cube-container">
+    <div class="cube-canvas-wrap" id="fig3-canvas-wrap"></div>
+  </div>
+  <div class="figure-controls" style="justify-content:center;">
+    <button class="ctrl" id="fig3-rx">Rotate X (90°)</button>
+    <button class="ctrl" id="fig3-ry">Rotate Y (90°)</button>
+    <button class="ctrl" id="fig3-rz">Rotate Z (90°)</button>
+    <button class="ctrl" id="fig3-reset">Reset</button>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0; justify-content:center;">
+    <span class="control-label">diagonal permutation:</span>
+  </div>
+  <div class="token-row" id="fig3-tokens"></div>
+  <div class="figure-controls" style="border-top:none; padding-top:0.5rem; justify-content:center;">
+    <span class="control-label">|rotations applied| = <span class="control-value" id="fig3-count">0</span></span>
+    <span class="badge" id="fig3-sym4">Rot(□) ≅ Sym₄, |G| = 24</span>
+  </div>
+  <p class="figure-caption">Figure 3 — The rotating cube (three.js). Drag to orbit the view. Press <strong>Rotate X/Y/Z</strong> to apply a $90°$ rotation of the cube around that axis. Each rotation permutes the four body diagonals — shown as four colored tokens rearranging below. The four 3-cycles and 4-cycles you can build generate all $24$ elements of $\mathrm{Sym}_4$.</p>
+</div>
+
+<div class="callout callout-lies">
+<span class="callout-label">Where the picture lies</span>
+<p>The isomorphism $\mathrm{Rot}(\square) \cong \mathrm{Sym}_4$ is <strong>exact</strong> — it is a genuine group isomorphism, verified by counting ($24 = 4!$) and checking that the permutation action is faithful. What the figure <em>omits</em> is the full symmetry group of the cube, which includes reflections and has $48$ elements ($\cong \mathrm{Sym}_4 \times \mathbb{Z}/2$). We show only the <em>orientation-preserving</em> symmetries (rotations), because those are what form a group under composition in three dimensions. The drag-orbit rotates the <em>camera</em>, not the cube — only the X/Y/Z buttons apply group elements.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="lagrange">5. Subgroups, cosets, and Lagrange</h2>
+
+<p>A <strong>subgroup</strong> $H$ of $G$ is a subset closed under the operation and inverses — a group in its own right, sitting inside $G$. The clock $\mathbb{Z}/m\mathbb{Z}$ lives inside $\mathbb{Z}$ as the multiples of $m$; $\mathrm{Alt}_n$ (the even permutations) lives inside $\mathrm{Sym}_n$. Subgroups are the first tool for understanding a group's internal architecture.</p>
+
+<p>Given a subgroup $H \leq G$ and an element $g \in G$, the <strong>left coset</strong> $gH = \{gh : h \in H\}$ is a translate of $H$ inside $G$. The cosets partition $G$ into equal-sized blocks — and this single observation, that $|G|$ equals the number of cosets times the size of each coset, is <strong>Lagrange's theorem</strong>. It is the most consequential counting principle in finite group theory.</p>
+
+<div class="callout callout-def">
+<span class="callout-label">Theorem — Lagrange</span>
+<p>Let $G$ be a finite group and $H \leq G$ a subgroup. Then $|G| = [G : H] \cdot |H|$, where $[G:H] = |G|/|H|$ is the number of left cosets of $H$ in $G$. In particular, $|H|$ divides $|G|$, and the order of every element $g \in G$ (the smallest $k$ with $g^k = e$) divides $|G|$.</p>
+</div>
+
+<div class="figure" id="fig4">
+  <div class="figure-canvas-wrap">
+    <canvas id="fig4-canvas" style="width:100%;max-width:420px;"></canvas>
+  </div>
+  <div class="figure-controls">
+    <div class="control-group">
+      <span class="control-label">group:</span>
+      <select class="ctrl" id="fig4-group" aria-label="select group for cosets">
+        <option value="z12" selected>ℤ/12 (clock)</option>
+        <option value="s3">Sym₃</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <span class="control-label">subgroup H:</span>
+      <select class="ctrl" id="fig4-subgroup" aria-label="select subgroup"></select>
+    </div>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0;">
+    <span class="badge on">|G| = <span id="fig4-gorder">12</span></span>
+    <span class="badge amber">|H| = <span id="fig4-horder">4</span></span>
+    <span class="badge on">[G:H] = <span id="fig4-index">3</span></span>
+    <span class="badge" id="fig4-lagrange">|G| = [G:H]·|H| ✓</span>
+  </div>
+  <p class="figure-caption">Figure 4 — Cosets tile the group. The elements of $G$ are arranged on a circle (the clock returns!). Pick a subgroup $H$ (highlighted green); each left coset $gH$ gets its own color. The tiles are equal-sized and partition $G$. Watch $|G| = [G:H] \cdot |H|$ hold as you change $H$.</p>
+</div>
+
+<div class="callout callout-notice">
+<span class="callout-label">Notice that…</span>
+<p>In $\mathbb{Z}/12$, the subgroup $\langle 3 \rangle = \{0, 3, 6, 9\}$ has order $4$ and index $3$. The three cosets — green, purple, cyan — tile the clock perfectly. Switch to $\langle 4 \rangle = \{0, 4, 8\}$: now $|H| = 3$, $[G:H] = 4$, and four colors tile the clock. Every divisor of $12$ gives a subgroup, and every subgroup gives a tiling. In $\mathrm{Sym}_3$, try the subgroup $\{e, (12)\}$: its three cosets tile the six elements, but the <em>left</em> and <em>right</em> cosets differ — a sign that this subgroup is not <em>normal</em>, a concept we develop in Section 8.</p>
+</div>
+
+<div class="callout callout-lies">
+<span class="callout-label">Where the picture lies</span>
+<p>The coset tiling is <strong>exact</strong> — cosets genuinely partition $G$ into equal-sized disjoint blocks, and the counting is a theorem. What the circular arrangement <em>suggests</em> but does not literally mean is a geometric translation: for $\mathbb{R}^n$ with a subspace $V$, the cosets $v + V$ are literally parallel planes in $\mathbb{R}^n$ (exact). For a general finite group, cosets are algebraic translates, not geometric ones — the circle is just a convenient way to draw a finite set, not a claim about metric distance.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="cyclic-order">6. Cyclic groups, generators, and order</h2>
+
+<p>Lagrange's theorem has an immediate corollary that closes the loop on Part 1's clock. If $g \in G$ has order $k$ (meaning $g^k = e$ and $k$ is minimal), then $\langle g \rangle = \{e, g, g^2, \dots, g^{k-1}\}$ is a subgroup of order $k$, so $k \mid |G|$ by Lagrange. In particular, $g^{|G|} = e$ for every element of a finite group. This generalises Fermat's little theorem ($a^{p} \equiv a \pmod{p}$) and Euler's theorem ($a^{\varphi(m)} \equiv 1 \pmod{m}$ when $\gcd(a,m)=1$) — both are group-theoretic statements about the order of an element in $\mathbb{Z}/m\mathbb{Z}$.</p>
+
+<p>A group is <strong>cyclic</strong> if it equals $\langle g \rangle$ for some generator $g$. Every cyclic group is Abelian, and the classification is complete: the cyclic group of order $n$ is isomorphic to $\mathbb{Z}/n\mathbb{Z}$, and the infinite cyclic group is $\mathbb{Z}$. The subgroup lattice of $\mathbb{Z}/n\mathbb{Z}$ mirrors the divisor lattice of $n$: for each $d \mid n$ there is exactly one subgroup of order $d$, namely $\langle n/d \rangle$. This is the same "atoms and molecules" structure you saw with prime factorisation in Part 1 — divisors correspond to subgroups, and the FTA controls the lattice.</p>
+
+<!-- ============================================================ -->
+<h2 id="actions">7. Group actions: orbit–stabiliser and conjugacy</h2>
+
+<p>A <strong>group action</strong> of $G$ on a set $X$ is a homomorphism $G \to \mathrm{Sym}(X)$ — each group element permutes $X$, and composition is respected. Actions are how groups "do" things: rotate a polygon, permute roots, shuffle a deck. The fundamental counting principle for actions is the <strong>orbit–stabiliser theorem</strong>, and it is best understood as a conservation law.</p>
+
+<div class="callout callout-def">
+<span class="callout-label">Definition — Orbit and Stabiliser</span>
+<p>For an action of $G$ on $X$ and a point $x \in X$:</p>
+<p><strong>Orbit:</strong> $\mathrm{Orb}(x) = \{g \cdot x : g \in G\}$ — the set of points reachable from $x$.</p>
+<p><strong>Stabiliser:</strong> $\mathrm{Stab}(x) = \{g \in G : g \cdot x = x\}$ — the subgroup fixing $x$.</p>
+<p><strong>Orbit–Stabiliser Theorem:</strong> $|G| = |\mathrm{Orb}(x)| \cdot |\mathrm{Stab}(x)|$.</p>
+</div>
+
+<div class="figure" id="fig5">
+  <div class="figure-canvas-wrap">
+    <canvas id="fig5-canvas" style="width:100%;max-width:500px;"></canvas>
+  </div>
+  <div class="figure-controls">
+    <div class="control-group">
+      <span class="control-label">mode:</span>
+      <div class="toggle-group">
+        <button class="ctrl active" id="fig5-action" aria-pressed="true">Action on points</button>
+        <button class="ctrl" id="fig5-conj" aria-pressed="false">Conjugation</button>
+      </div>
+    </div>
+    <button class="ctrl" id="fig5-step">▶ Step through G</button>
+    <button class="ctrl" id="fig5-reset">Reset</button>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0;">
+    <span class="badge on">|G| = <span id="fig5-gorder">6</span></span>
+    <span class="badge amber">|Orbit| = <span id="fig5-orbsize">3</span></span>
+    <span class="badge on">|Stab| = <span id="fig5-stabsize">2</span></span>
+    <span class="badge" id="fig5-balance">|G| = |Orb|·|Stab| ✓</span>
+  </div>
+  <p class="figure-caption">Figure 5 — Orbit–stabiliser as conservation. <strong>Left:</strong> $\mathrm{Sym}_3$ acts on three points (the vertices of a triangle). Stepping through the group fills the <strong>orbit</strong> (reachable points, amber) while the <strong>stabiliser</strong> (elements fixing the chosen point, green) stays balanced. The bar shows $|G| = |\mathrm{Orb}| \cdot |\mathrm{Stab}|$ holding throughout. Switch to <strong>conjugation</strong> to see the class equation: orbits become conjugacy classes, and $|G| = |Z(G)| + \sum [\text{class sizes}]$.</p>
+</div>
+
+<div class="callout callout-notice">
+<span class="callout-label">Notice that…</span>
+<p>In <strong>action on points</strong> mode, pick vertex $1$. The orbit is all three vertices (size $3$); the stabiliser is $\{e, (23)\}$ (size $2$). The product is $6 = |\mathrm{Sym}_3|$. Switch to <strong>conjugation</strong>: now $G$ acts on itself by $g \cdot x = gxg^{-1}$. The orbits are conjugacy classes — $\{e\}$, $\{(12),(13),(23)\}$, $\{(123),(132)\}$ — and the "stabiliser" of $x$ is its <em>centraliser</em> $C_G(x)$. The class equation reads $6 = 1 + 3 + 2$, and the identity sits alone because it commutes with everything.</p>
+</div>
+
+<p>The class equation is a powerful structural tool. It states that $|G| = |Z(G)| + \sum [G : C_G(x_i)]$, where $Z(G)$ is the <strong>centre</strong> (elements commuting with everything) and the sum runs over representatives of non-central conjugacy classes. One consequence: every group of prime-power order has a non-trivial centre (the centre's size is divisible by $p$), which is the key to proving that such groups are <em>solvable</em> — a property we develop in Section 10. Another is the <strong>Sylow theorems</strong> (stated, not proved here): for each prime $p$ dividing $|G|$, there exists a subgroup of order $p^k$ (where $p^k \| |G|$), and all such subgroups are conjugate. Sylow subgroups are the "prime-factor atoms" of a group's order, and their interactions control much of finite group theory.</p>
+
+<!-- ============================================================ -->
+<h2 id="homomorphisms">8. Homomorphisms, normal subgroups, and quotients</h2>
+
+<p>A <strong>homomorphism</strong> $\varphi : G \to H$ is a function that respects the group structure: $\varphi(a \star_G b) = \varphi(a) \star_H \varphi(b)$. It is the group-theoretic instance of the categorical spine — a structure-preserving map. If $\varphi$ is bijective, it is an <strong>isomorphism</strong>, and $G \cong H$; if $G = H$, it is an <strong>endomorphism</strong>; if it is a bijective endomorphism, an <strong>automorphism</strong>. The <strong>kernel</strong> $\ker\varphi = \{g \in G : \varphi(g) = e_H\}$ and the <strong>image</strong> $\mathrm{im}\varphi = \{\varphi(g) : g \in G\}$ measure what $\varphi$ collapses and what it reaches.</p>
+
+<p>The kernel is always a subgroup, but more: it is a <strong>normal subgroup</strong>, meaning $g \cdot \ker\varphi \cdot g^{-1} = \ker\varphi$ for all $g$. Equivalently, the left and right cosets of a normal subgroup $N$ coincide ($gN = Ng$), and this is exactly what makes the <strong>quotient group</strong> $G/N$ well-defined: the operation on cosets $[g] \cdot [g'] = [g \star g']$ does not depend on the chosen representatives. Normal subgroups are the group-theoretic analogue of Part 1's equivalence relations — they are the subgroups you can "divide by."</p>
+
+<div class="callout callout-def">
+<span class="callout-label">Theorem — First Isomorphism Theorem</span>
+<p>Let $\varphi : G \to H$ be a homomorphism. Then $G / \ker\varphi \cong \mathrm{im}\varphi$. The map $\bar{\varphi}([g]) = \varphi(g)$ is a well-defined isomorphism from the quotient $G/\ker\varphi$ to the image $\mathrm{im}\varphi \leq H$.</p>
+</div>
+
+<div class="figure" id="fig6">
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;">
+    <div style="text-align:center;">
+      <div class="control-label" style="margin-bottom:0.3rem;">G = Sym₃ (source)</div>
+      <div style="overflow-x:auto;"><table class="cayley-table" id="fig6-table-g"></table></div>
+    </div>
+    <div style="text-align:center;">
+      <div class="control-label" style="margin-bottom:0.3rem;">H = ℤ/2 (target)</div>
+      <div style="overflow-x:auto;"><table class="cayley-table" id="fig6-table-h"></table></div>
+    </div>
+  </div>
+  <div class="figure-controls">
+    <button class="ctrl" id="fig6-collapse">Collapse G → G/ker(φ)</button>
+    <button class="ctrl" id="fig6-reset">Reset</button>
+    <span class="badge warn">ker(φ) = Alt₃ (red, → e)</span>
+    <span class="badge amber">im(φ) = ℤ/2</span>
+  </div>
+  <div class="figure-controls" style="border-top:none; padding-top:0;">
+    <span class="control-label" id="fig6-readout">φ = sign: Sym₃ → ℤ/2. Hover a cell in G to see φ preserve the product.</span>
+  </div>
+  <p class="figure-caption">Figure 6 — Homomorphism as collapsing the table. The sign map $\varphi : \mathrm{Sym}_3 \to \mathbb{Z}/2$ sends even permutations to $0$ and odd to $1$. Kernel elements (Alt₃) glow red; non-kernel elements glow amber. Hover a cell $(a, b)$ in $G$ — the corresponding cell $(\varphi(a), \varphi(b))$ lights up in $H$, and $\varphi(a \star b) = \varphi(a) + \varphi(b)$ is verified. Press <strong>Collapse</strong> to reorder $G$'s table by cosets of the kernel: the $6 \times 6$ grid collapses into a $2 \times 2$ block structure isomorphic to $\mathbb{Z}/2$ — the First Isomorphism Theorem, visualised.</p>
+</div>
+
+<div class="callout callout-notice">
+<span class="callout-label">Notice that…</span>
+<p>After collapsing, the $6 \times 6$ table of $\mathrm{Sym}_3$ reorganises into four $3 \times 3$ blocks. Each block is a solid color — either all-kernel (red, mapping to $0+0=0$) or all-non-kernel (amber, mapping to $1$). The $2 \times 2$ pattern of block colors <em>is</em> the Cayley table of $\mathbb{Z}/2$. The kernel $\mathrm{Alt}_3$ is normal precisely because this collapse works: the cosets $e \cdot \mathrm{Alt}_3$ and $(12) \cdot \mathrm{Alt}_3$ behave like the two elements of $\mathbb{Z}/2$, and the group operation descends to the quotient without ambiguity.</p>
+</div>
+
+<p>The <strong>Third Isomorphism Theorem</strong> complements this: if $N \trianglelefteq G$ and $H \leq G$ with $N \leq H$, then $H/N \trianglelefteq G/N$ and $(G/N)/(H/N) \cong G/H$. It says that quotienting in stages is the same as quotienting once — the "cancellation" of quotients, analogous to how $(a/b)/c = a/(bc)$ for integers. Together, the isomorphism theorems are the computational engine of group theory: they let you relate a group to its quotients and subgroups without ever leaving the category of groups.</p>
+
+<!-- ============================================================ -->
+<h2 id="products">9. Direct products and finite abelian classification</h2>
+
+<p>Given two groups $G$ and $H$, their <strong>direct product</strong> $G \times H$ has elements $(g, h)$ and operation $(g_1, h_1) \star (g_2, h_2) = (g_1 \star_G g_2, h_1 \star_H h_2)$. It is the categorical product — the group that projects onto both factors. The order is $|G| \cdot |H|$, and $(g, e_H)$ and $(e_G, h)$ form commuting subgroups isomorphic to $G$ and $H$ respectively.</p>
+
+<p>For finite Abelian groups, the direct product gives a <strong>complete classification</strong> that echoes the Fundamental Theorem of Arithmetic from Part 1. The <strong>primary decomposition theorem</strong> states that every finite Abelian group is a direct product of cyclic groups of prime-power order, and this decomposition is unique up to reordering. The primes are the "atoms"; the cyclic $p$-power factors are the "prime powers"; the direct product is the "multiplication." Just as $60 = 2^2 \cdot 3 \cdot 5$, the group $\mathbb{Z}/60 \cong \mathbb{Z}/4 \times \mathbb{Z}/3 \times \mathbb{Z}/5$. The analogy with FTA is not metaphorical — it is the same theorem, restated in the language of groups.</p>
+
+<!-- ============================================================ -->
+<h2 id="simple">10. Simple groups, composition series, and solvability</h2>
+
+<p>If normal subgroups are what you can "divide by," then the groups with <em>no</em> non-trivial normal subgroups are the primes of group theory. A group $G$ is <strong>simple</strong> if its only normal subgroups are $\{e\}$ and $G$ itself. The cyclic groups $\mathbb{Z}/p$ (for $p$ prime) are simple and Abelian. But there also exist <em>non-Abelian</em> simple groups — and their existence is what makes the theory of solvability, and ultimately the unsolvability of the quintic, possible.</p>
+
+<p>A <strong>composition series</strong> for $G$ is a chain $G = G_0 \triangleright G_1 \triangleright \cdots \triangleright G_k = \{e\}$ where each $G_{i+1}$ is normal in $G_i$ and each quotient $G_i / G_{i+1}$ is simple. The quotients are the <strong>composition factors</strong> — the "atoms" of $G$. The <strong>Jordan–Hölder theorem</strong> states that these factors are unique up to isomorphism and reordering, regardless of the chosen series. This is the direct analogue of the Fundamental Theorem of Arithmetic: a group factors into simple "atoms" in an essentially unique way.</p>
+
+<div class="figure" id="fig7">
+  <div class="figure-canvas-wrap">
+    <canvas id="fig7-canvas" style="width:100%;max-width:620px;"></canvas>
+  </div>
+  <div class="figure-controls" style="justify-content:center;">
+    <span class="control-label">Two groups, same atoms, different molecules:</span>
+  </div>
+  <p class="figure-caption">Figure 7 — Atoms & molecules coda. Left: $\mathrm{Sym}_3$ factors as $\{e\} \triangleleft \mathrm{Alt}_3 \triangleleft \mathrm{Sym}_3$, with composition factors $\mathbb{Z}/3$ and $\mathbb{Z}/2$. Right: $\mathbb{Z}/6$ factors as $\{0\} \triangleleft \langle 2 \rangle \triangleleft \mathbb{Z}/6$, with the <em>same</em> factors $\mathbb{Z}/3$ and $\mathbb{Z}/2$. Same atoms, different molecules — $\mathrm{Sym}_3$ is non-Abelian; $\mathbb{Z}/6$ is Abelian. Jordan–Hölder guarantees the atoms match; it does <em>not</em> guarantee the molecule is determined. The red block is $A_5$ — the first non-Abelian simple group, planted here as a seed for Part 4.</p>
+</div>
+
+<div class="callout callout-notice">
+<span class="callout-label">Notice that…</span>
+<p>$\mathrm{Sym}_3$ and $\mathbb{Z}/6$ both have order $6$ and both decompose into the same composition factors $\{\mathbb{Z}/2, \mathbb{Z}/3\}$, yet they are not isomorphic — one is non-Abelian, the other Abelian. This is the group-theoretic analogue of <em>isomers</em> in chemistry: same atoms, different molecule. Jordan–Hölder says the factors are an invariant; it does <em>not</em> say they determine the group. The missing ingredient is <em>how</em> the factors are "glued" together — and for the quintic, the gluing involves $A_5$, which is simple and non-Abelian.</p>
+</div>
+
+<p>A group is <strong>solvable</strong> if it has a composition series in which every factor is Abelian (hence cyclic of prime order). The name comes from Galois theory: a polynomial is solvable by radicals if and only if its Galois group is solvable. All groups of order $\leq 4$ are solvable. $\mathrm{Sym}_3$ is solvable (factors $\mathbb{Z}/3, \mathbb{Z}/2$, both Abelian). $\mathrm{Sym}_4$ is solvable (factors $\mathbb{Z}/2, \mathbb{Z}/3, \mathbb{Z}/2, \mathbb{Z}/2$). But $\mathrm{Sym}_5$ is <em>not</em> solvable, because it contains $A_5$ as a normal subgroup, and $A_5$ is simple and non-Abelian — an atom that cannot be broken further into Abelian pieces. This is the obstruction that makes the general quintic unsolvable, and it is where Part 4 will pick up the thread.</p>
+
+<div class="callout callout-def">
+<span class="callout-label">Theorem — Jordan–Hölder</span>
+<p>Any two composition series of a finite group $G$ have the same length and the same composition factors up to isomorphism and reordering. The factors are an invariant of $G$, written $\mathrm{Comp}(G)$. However, $G$ is <em>not</em> determined by its composition factors alone — non-isomorphic groups can share the same factors (isomers).</p>
+</div>
+
+<div class="callout callout-lies">
+<span class="callout-label">Where the picture lies</span>
+<p>The composition series and Jordan–Hölder theorem are <strong>exact</strong> — the factors are a genuine group invariant, and the towers in the figure depict real normal chains. The "atoms and molecules" metaphor is precise: simple groups are the atoms, direct/semi-direct products are the bonds, and Jordan–Hölder is the uniqueness of the atomic decomposition. What the figure <em>does not</em> capture is the <em>extension problem</em> — how the factors are assembled into the group, which is not classified by Jordan–Hölder and is in general much harder. The $A_5$ block is flagged red because it is the first non-Abelian atom, and non-Abelian atoms are the obstruction to solvability.</p>
+</div>
+
+<p>The recurring threads are now fully woven. The <strong>clock</strong> from Part 1 returned as $\mathbb{Z}/m\mathbb{Z}$, first as a cyclic group, then as the coset tiling of Lagrange's theorem. The <strong>Cayley table</strong> — introduced beside the dial in Part 1 — became the central object, its geometry encoding every axiom. The <strong>coloring by partition</strong> became coset-coloring and conjugacy-class-coloring. The <strong>atoms</strong> from prime factorisation became simple groups and composition factors. And the <strong>structure-preserving maps</strong> — functions and bijections in Part 1 — became homomorphisms, kernels, and the isomorphism theorems. In Part 3, the same five threads will carry us into rings and fields, where a <em>second</em> operation enters and the clock acquires multiplication as a first-class citizen.</p>
+
+<p>When you are ready, say <strong>Build Part 3</strong> to watch the clock grow its multiplication table and the atoms become irreducible polynomials.</p>
+
+</article>
+
+<script>
+(function() {
+  'use strict';
+
+  var C = { blue:'#2052BB', amber:'#D97706', green:'#16A34A', red:'#DC2626',
+            grey:'#8A8A8A', greyLight:'#D0D0D0', greyBg:'#F2EFE8', text:'#2A2A2A', textLight:'#6A6A6A' };
+  var PAL = ['#2052BB','#D97706','#16A34A','#9333EA','#0891B2','#E11D48','#CA8A04','#7C3AED','#0D9488','#BE185D'];
+  var CUBE_COLORS = ['#9333EA','#0891B2','#E11D48','#CA8A04'];
+  var SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif';
+
+  function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=b;b=a%b;a=t;}return a;}
+  function prepCanvas(canvas, ar) {
+    var dpr = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width; if (w < 10) w = 300;
+    var h = w / ar;
+    canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+    canvas.style.height = h+'px';
+    var ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function easeIO(t){return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+  function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+  function drawArrow(ctx,x1,y1,x2,y2,col){
+    var dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);if(len<2)return;
+    var ux=dx/len,uy=dy/len,hl=7,be=len-hl;
+    ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2.2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1+ux*be,y1+uy*be);ctx.stroke();
+    var px=-uy,py=ux;
+    ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x1+ux*be+px*3.5,y1+uy*be+py*3.5);ctx.lineTo(x1+ux*be-px*3.5,y1+uy*be-py*3.5);ctx.closePath();ctx.fill();
+  }
+
+  // ===== GROUP DEFINITIONS =====
+  function makeCyclic(n) {
+    return { name:'Z'+n, elements: Array.from({length:n},function(_,i){return String(i);}),
+      size:n, abelian:true, identity:0,
+      mul:function(a,b){return (a+b)%n;},
+      index:function(s){return parseInt(s,10);}
+    };
+  }
+  var V4 = {
+    name:'V4', elements:['e','a','b','ab'], size:4, abelian:true, identity:0,
+    mul:function(a,b){var M=[[0,1,2,3],[1,0,3,2],[2,3,0,1],[3,2,1,0]];return M[a][b];},
+    index:function(s){return ['e','a','b','ab'].indexOf(s);}
+  };
+  // Sym_3: 0=e,1=(12),2=(13),3=(23),4=(123),5=(132)
+  var S3_PERMS = [[0,1,2],[1,0,2],[2,1,0],[0,2,1],[1,2,0],[2,0,1]];
+  var S3 = {
+    name:'S3', elements:['e','(12)','(13)','(23)','(123)','(132)'], size:6, abelian:false, identity:0,
+    mul:function(a,b){var pa=S3_PERMS[a],pb=S3_PERMS[b];var r=[pa[pb[0]],pa[pb[1]],pa[pb[2]]];
+      for(var i=0;i<6;i++){if(S3_PERMS[i][0]===r[0]&&S3_PERMS[i][1]===r[1]&&S3_PERMS[i][2]===r[2])return i;}return 0;},
+    index:function(s){return ['e','(12)','(13)','(23)','(123)','(132)'].indexOf(s);}
+  };
+  // D4: index = f*4+k, f=0(rotations),f=1(reflections)
+  var D4 = {
+    name:'D4', elements:['e','r','r²','r³','s','sr','sr²','sr³'], size:8, abelian:false, identity:0,
+    mul:function(a,b){
+      var ka=a%4,fa=Math.floor(a/4),kb=b%4,fb=Math.floor(b/4),k,f;
+      if(fa===0&&fb===0){k=(ka+kb)%4;f=0;}
+      else if(fa===0&&fb===1){k=((kb-ka)%4+4)%4;f=1;}
+      else if(fa===1&&fb===0){k=(ka+kb)%4;f=1;}
+      else{k=((kb-ka)%4+4)%4;f=0;}
+      return f*4+k;
+    },
+    index:function(s){return ['e','r','r²','r³','s','sr','sr²','sr³'].indexOf(s);}
+  };
+  // Q8: 0=1,1=-1,2=i,3=-i,4=j,5=-j,6=k,7=-k
+  var Q8_baseMul = [[[0,0],[1,0],[2,0],[3,0]],[[1,0],[0,1],[3,0],[2,1]],[[2,0],[3,1],[0,1],[1,0]],[[3,0],[2,0],[1,1],[0,1]]];
+  var Q8 = {
+    name:'Q8', elements:['1','-1','i','-i','j','-j','k','-k'], size:8, abelian:false, identity:0,
+    mul:function(a,b){
+      var sA=a%2,bA=Math.floor(a/2),sB=b%2,bB=Math.floor(b/2);
+      var r=Q8_baseMul[bA][bB];var s=(sA+sB+r[1])%2;return r[0]*2+s;
+    },
+    index:function(s){return ['1','-1','i','-i','j','-j','k','-k'].indexOf(s);}
+  };
+  var GROUPS = { z4:makeCyclic(4), z6:makeCyclic(6), v4:V4, s3:S3, d4:D4, q8:Q8 };
+
+  // ===================== FIGURE 1: Cayley Table Alive =====================
+  function initFig1() {
+    var sel = document.getElementById('fig1-group');
+    var tbl = document.getElementById('fig1-table');
+    var abB = document.getElementById('fig1-abelian');
+    var dI = document.getElementById('fig1-d-identity'), dIv = document.getElementById('fig1-d-inverse');
+    var dC = document.getElementById('fig1-d-commute'), dA = document.getElementById('fig1-d-assoc');
+    var ro = document.getElementById('fig1-readout');
+    var G = S3, detectors = { identity:false, inverse:false, commute:false, assoc:false };
+    var hoverR = -1, hoverC = -1;
+
+    function build() {
+      G = GROUPS[sel.value];
+      abB.textContent = G.abelian ? 'Abelian ✓' : 'Abelian ✗';
+      abB.className = 'badge ' + (G.abelian ? 'on' : 'warn');
+      var h = '<thead><tr><th></th>';
+      for (var j = 0; j < G.size; j++) h += '<th data-c="'+j+'">'+G.elements[j]+'</th>';
+      h += '</tr></thead><tbody>';
+      for (var i = 0; i < G.size; i++) {
+        h += '<tr><th data-r="'+i+'">'+G.elements[i]+'</th>';
+        for (var j2 = 0; j2 < G.size; j2++) {
+          h += '<td class="cell" data-r="'+i+'" data-c="'+j2+'">'+G.elements[G.mul(i,j2)]+'</td>';
+        }
+        h += '</tr>';
+      }
+      h += '</tbody>';
+      tbl.innerHTML = h;
+      attachEvents();
+      applyDetectors();
+    }
+    function attachEvents() {
+      var cells = tbl.querySelectorAll('td.cell');
+      var ths = tbl.querySelectorAll('th');
+      cells.forEach(function(td) {
+        td.addEventListener('mouseenter', function() {
+          hoverR = +td.dataset.r; hoverC = +td.dataset.c;
+          applyDetectors(); updateReadout();
+        });
+        td.addEventListener('mouseleave', function() {
+          hoverR = -1; hoverC = -1; applyDetectors(); updateReadout();
+        });
+      });
+      ths.forEach(function(th) {
+        th.addEventListener('mouseenter', function() {
+          if (th.dataset.r !== undefined) hoverR = +th.dataset.r;
+          if (th.dataset.c !== undefined) hoverC = +th.dataset.c;
+          applyDetectors();
+        });
+        th.addEventListener('mouseleave', function() { hoverR=-1;hoverC=-1;applyDetectors(); });
+      });
+    }
+    function updateReadout() {
+      if (hoverR < 0 || hoverC < 0) { ro.textContent = 'Hover a cell to trace a⋆b.'; return; }
+      var prod = G.mul(hoverR, hoverC);
+      ro.innerHTML = G.elements[hoverR] + ' ⋆ ' + G.elements[hoverC] + ' = <strong>' + G.elements[prod] + '</strong>';
+    }
+    function applyDetectors() {
+      var cells = tbl.querySelectorAll('td.cell');
+      var ths = tbl.querySelectorAll('th');
+      cells.forEach(function(td) { td.className = 'cell'; });
+      ths.forEach(function(th) { th.className = ''; });
+      if (detectors.identity) {
+        var idCells = tbl.querySelectorAll('td.cell[data-r="'+G.identity+'"], td.cell[data-c="'+G.identity+'"]');
+        idCells.forEach(function(td){ td.classList.add('identity-cell'); });
+        var idTh = tbl.querySelector('th[data-r="'+G.identity+'"], th[data-c="'+G.identity+'"]');
+        if (idTh) idTh.classList.add('identity-h');
+      }
+      if (detectors.inverse) {
+        for (var i = 0; i < G.size; i++) {
+          for (var j = 0; j < G.size; j++) {
+            if (G.mul(i,j) === G.identity) {
+              var td = tbl.querySelector('td.cell[data-r="'+i+'"][data-c="'+j+'"]');
+              if (td && !td.classList.contains('identity-cell')) td.classList.add('inverse-cell');
+            }
+          }
+        }
+      }
+      if (detectors.commute) {
+        for (var i2 = 0; i2 < G.size; i2++) {
+          var td2 = tbl.querySelector('td.cell[data-r="'+i2+'"][data-c="'+i2+'"]');
+          if (td2) td2.classList.add('diag-cell');
+        }
+      }
+      if (hoverR >= 0 && hoverC >= 0) {
+        var hp = tbl.querySelector('td.cell[data-r="'+hoverR+'"][data-c="'+hoverC+'"]');
+        if (hp) hp.classList.add('product-cell');
+        var hr = tbl.querySelector('th[data-r="'+hoverR+'"]');
+        var hc = tbl.querySelector('th[data-c="'+hoverC+'"]');
+        if (hr) hr.classList.add('header-hover');
+        if (hc) hc.classList.add('header-hover');
+      }
+    }
+    function toggleDetector(btn, key) {
+      detectors[key] = !detectors[key];
+      btn.classList.toggle('active', detectors[key]);
+      if (key === 'assoc' && detectors.assoc) runAssocCheck();
+      applyDetectors();
+    }
+    function runAssocCheck() {
+      var ok = true, tested = 0;
+      for (var t = 0; t < 50; t++) {
+        var a = Math.floor(Math.random()*G.size), b = Math.floor(Math.random()*G.size), c = Math.floor(Math.random()*G.size);
+        var ab = G.mul(a,b), bc = G.mul(b,c);
+        if (G.mul(ab,c) !== G.mul(a,bc)) { ok = false; break; }
+        tested++;
+      }
+      ro.innerHTML = 'Associativity: tested '+tested+' triples → ' + (ok ? '<strong style="color:var(--green)">✓ (a⋆b)⋆c = a⋆(b⋆c)</strong>' : '<strong style="color:var(--red)">✗ FAILS</strong>');
+    }
+    sel.onchange = build;
+    dI.onclick = function(){toggleDetector(dI,'identity');};
+    dIv.onclick = function(){toggleDetector(dIv,'inverse');};
+    dC.onclick = function(){toggleDetector(dC,'commute');};
+    dA.onclick = function(){toggleDetector(dA,'assoc');};
+    build();
+  }
+
+  // ===================== FIGURE 2: Dihedral Playground =====================
+  function initFig2() {
+    var canvas = document.getElementById('fig2-canvas');
+    var mS = document.getElementById('fig2-m'), mV = document.getElementById('fig2-m-val');
+    var rB = document.getElementById('fig2-rotate'), fB = document.getElementById('fig2-reflect');
+    var rst = document.getElementById('fig2-reset');
+    var wE = document.getElementById('fig2-word'), oE = document.getElementById('fig2-order');
+    var tbl = document.getElementById('fig2-table');
+    var m = 5, state = { k:0, f:0 };
+    var dragRot = null, dragK = 0;
+    var labels = ['e','σ','σ²','σ³','σ⁴','σ⁵','σ⁶','σ⁷','σ⁸'];
+
+    function DmMul(a, b) {
+      var ka=a.k,fa=a.f,kb=b.k,fb=b.f,k,f;
+      if(fa===0&&fb===0){k=(ka+kb)%m;f=0;}
+      else if(fa===0&&fb===1){k=((kb-ka)%m+m)%m;f=1;}
+      else if(fa===1&&fb===0){k=(ka+kb)%m;f=1;}
+      else{k=((kb-ka)%m+m)%m;f=0;}
+      return {k:k,f:f};
+    }
+    function stateIndex(s) { return s.f * m + s.k; }
+    function word(s) {
+      if (s.k === 0 && s.f === 0) return 'e';
+      if (s.f === 0) return labels[s.k] || ('σ^'+s.k);
+      if (s.k === 0) return 'τ';
+      return 'τ' + (labels[s.k] || ('σ^'+s.k));
+    }
+    function draw() {
+      var c = prepCanvas(canvas, 1), ctx = c.ctx, w = c.w, h = c.h;
+      ctx.clearRect(0,0,w,h);
+      var cx = w/2, cy = h/2, R = Math.min(w,h)/2 - 30;
+      // reflection axis if reflected
+      if (state.f === 1) {
+        ctx.strokeStyle = C.greyLight; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.moveTo(cx - R - 10, cy); ctx.lineTo(cx + R + 10, cy); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // polygon
+      var verts = [];
+      for (var i = 0; i < m; i++) {
+        var ang = (i/m)*Math.PI*2 - Math.PI/2;
+        var baseAng = ang;
+        if (state.f === 1) baseAng = -ang;
+        baseAng += state.k * (Math.PI*2/m);
+        verts.push({ x: cx + Math.cos(baseAng)*R, y: cy + Math.sin(baseAng)*R, i: i });
+      }
+      // fill
+      ctx.fillStyle = 'rgba(32,82,187,0.08)';
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (var j = 1; j < m; j++) ctx.lineTo(verts[j].x, verts[j].y);
+      ctx.closePath(); ctx.fill();
+      // edges
+      ctx.strokeStyle = C.blue; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(verts[0].x, verts[0].y);
+      for (var j2 = 1; j2 < m; j2++) ctx.lineTo(verts[j2].x, verts[j2].y);
+      ctx.closePath(); ctx.stroke();
+      // vertices (colored to show permutation)
+      for (var v = 0; v < m; v++) {
+        ctx.fillStyle = PAL[v % PAL.length];
+        ctx.beginPath(); ctx.arc(verts[v].x, verts[v].y, 10, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 9px '+SANS;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(String(v), verts[v].x, verts[v].y);
+      }
+      // center
+      ctx.fillStyle = C.green;
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+      wE.textContent = word(state);
+      oE.textContent = 2*m;
+    }
+    function buildTable() {
+      var els = [];
+      for (var k = 0; k < m; k++) els.push(labels[k] || ('σ^'+k));
+      for (var k2 = 0; k2 < m; k2++) {
+        if (k2 === 0) els.push('τ');
+        else els.push('τ' + (labels[k2] || ('σ^'+k2)));
+      }
+      var h = '<thead><tr><th></th>';
+      for (var j = 0; j < 2*m; j++) h += '<th>'+els[j]+'</th>';
+      h += '</tr></thead><tbody>';
+      for (var i = 0; i < 2*m; i++) {
+        h += '<tr><th>'+els[i]+'</th>';
+        for (var j2 = 0; j2 < 2*m; j2++) {
+          var a = { k: i < m ? i : i-m, f: i < m ? 0 : 1 };
+          var b = { k: j2 < m ? j2 : j2-m, f: j2 < m ? 0 : 1 };
+          var p = DmMul(a, b);
+          var pi = stateIndex(p);
+          var isCurr = (i === stateIndex(state));
+          h += '<td class="cell'+(isCurr?' product-cell':'')+'">'+els[pi]+'</td>';
+        }
+        h += '</tr>';
+      }
+      h += '</tbody>';
+      tbl.innerHTML = h;
+    }
+    function applyRotation(delta) {
+      var action = { k: delta, f: 0 };
+      state = DmMul(action, state);
+      draw(); buildTable();
+    }
+    function applyReflect() {
+      var action = { k: 0, f: 1 };
+      state = DmMul(action, state);
+      draw(); buildTable();
+    }
+    function reset() { state = { k:0, f:0 }; draw(); buildTable(); }
+
+    mS.oninput = function(){ m = +mS.value; mV.textContent = m; labels = ['e','σ','σ²','σ³','σ⁴','σ⁵','σ⁶','σ⁷','σ⁸']; reset(); };
+    rB.onclick = function(){ applyRotation(1); };
+    fB.onclick = applyReflect;
+    rst.onclick = reset;
+    // drag to rotate
+    canvas.addEventListener('pointerdown', function(e) {
+      var rect = canvas.getBoundingClientRect();
+      dragRot = { x: e.clientX - rect.left, y: e.clientY - rect.top, k: state.k };
+    });
+    canvas.addEventListener('pointermove', function(e) {
+      if (!dragRot) return;
+      var rect = canvas.getBoundingClientRect();
+      var cx = rect.width/2, cy = rect.height/2;
+      var a0 = Math.atan2(dragRot.y - cy, dragRot.x - cx);
+      var a1 = Math.atan2(e.clientY - rect.top - cy, e.clientX - rect.left - cx);
+      var delta = (a1 - a0);
+      var newK = Math.round((dragRot.k * (Math.PI*2/m) + delta) / (Math.PI*2/m));
+      if (newK !== state.k) {
+        state.k = ((newK % m) + m) % m;
+        draw(); buildTable();
+      }
+    });
+    canvas.addEventListener('pointerup', function(){ dragRot = null; });
+    canvas.addEventListener('pointerleave', function(){ dragRot = null; });
+    window.addEventListener('resize', draw);
+    reset();
+  }
+
+  // ===================== FIGURE 3: Rotating Cube (three.js) =====================
+  function initFig3() {
+    var wrap = document.getElementById('fig3-canvas-wrap');
+    var tokensEl = document.getElementById('fig3-tokens');
+    var countEl = document.getElementById('fig3-count');
+    var rxB = document.getElementById('fig3-rx'), ryB = document.getElementById('fig3-ry'), rzB = document.getElementById('fig3-rz');
+    var rstB = document.getElementById('fig3-reset');
+
+    if (typeof THREE === 'undefined') {
+      wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:#999;font-family:'+SANS+';">three.js failed to load. Check your connection.</div>';
+      return;
+    }
+    var W = wrap.clientWidth || 340, H = W;
+    var scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(3.5, 3, 3.5);
+    camera.lookAt(0, 0, 0);
+    var renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    wrap.appendChild(renderer.domElement);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0x666688, 0.6));
+    var dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(3,5,3); scene.add(dl);
+
+    // Cube group (will rotate)
+    var cubeGroup = new THREE.Group();
+    scene.add(cubeGroup);
+
+    // Cube wireframe edges
+    var edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.8, 1.8, 1.8));
+    var edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+    cubeGroup.add(new THREE.LineSegments(edgeGeo, edgeMat));
+
+    // Semi-transparent faces
+    var faceMat = new THREE.MeshBasicMaterial({ color: 0x2052BB, transparent: true, opacity: 0.06, side: THREE.DoubleSide });
+    cubeGroup.add(new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,1.8), faceMat));
+
+    // 8 vertex spheres, colored by diagonal pair
+    var verts = [[1,1,1],[-1,-1,-1],[1,1,-1],[-1,-1,1],[1,-1,1],[-1,1,-1],[1,-1,-1],[-1,1,1]];
+    var vColors = [0,0,1,1,2,2,3,3]; // which diagonal color
+    for (var i = 0; i < 8; i++) {
+      var sg = new THREE.SphereGeometry(0.12, 16, 16);
+      var sm = new THREE.MeshBasicMaterial({ color: parseInt(CUBE_COLORS[vColors[i]].slice(1), 16) });
+      var sphere = new THREE.Mesh(sg, sm);
+      sphere.position.set(verts[i][0]*0.9, verts[i][1]*0.9, verts[i][2]*0.9);
+      cubeGroup.add(sphere);
+    }
+    // Diagonal lines through center
+    var diags = [[0,1],[2,3],[4,5],[6,7]];
+    for (var d = 0; d < 4; d++) {
+      var v1 = verts[diags[d][0]], v2 = verts[diags[d][1]];
+      var lg = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(v1[0]*0.9,v1[1]*0.9,v1[2]*0.9),
+        new THREE.Vector3(v2[0]*0.9,v2[1]*0.9,v2[2]*0.9)
+      ]);
+      var lm = new THREE.LineBasicMaterial({ color: parseInt(CUBE_COLORS[d].slice(1),16), linewidth: 3 });
+      cubeGroup.add(new THREE.Line(lg, lm));
+    }
+
+    // State
+    var atPos = [0,1,2,3]; // atPos[p] = which color is at position p
+    var count = 0;
+    var targetQuat = new THREE.Quaternion();
+    var currentQuat = new THREE.Quaternion();
+    var animQ = null;
+
+    // Generator quaternions (90° rotations)
+    var genQuats = {
+      x: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI/2),
+      y: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2),
+      z: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1), Math.PI/2)
+    };
+    // Generator permutations (precomputed: perm[i] = where diagonal i goes)
+    var genPerms = {
+      x: [2,0,3,1], y: [1,2,3,0], z: [3,2,0,1]
+    };
+    function invertPerm(p) { var inv=[0,0,0,0]; for(var i=0;i<4;i++) inv[p[i]]=i; return inv; }
+    function applyGen(genperm) {
+      var inv = invertPerm(genperm);
+      var np = [0,0,0,0];
+      for (var j = 0; j < 4; j++) np[j] = atPos[inv[j]];
+      atPos = np;
+    }
+
+    function renderTokens() {
+      var html = '';
+      for (var p = 0; p < 4; p++) {
+        html += '<div class="token-pos"><div class="token-pos-label">pos '+p+'</div>';
+        html += '<div class="token" style="background:'+CUBE_COLORS[atPos[p]]+';">'+atPos[p]+'</div>';
+        html += '</div>';
+      }
+      tokensEl.innerHTML = html;
+      countEl.textContent = count;
+    }
+    function rotate(axis) {
+      if (animQ) return;
+      var newQuat = genQuats[axis].clone();
+      newQuat.multiply(currentQuat);
+      targetQuat.copy(newQuat);
+      animQ = { from: currentQuat.clone(), to: targetQuat.clone(), start: performance.now(), dur: 400 };
+      applyGen(genPerms[axis]);
+      count++;
+      requestAnimationFrame(animFrame);
+    }
+    function animFrame(t) {
+      if (!animQ) return;
+      var pr = Math.min((t - animQ.start)/animQ.dur, 1), e = easeIO(pr);
+      currentQuat.copy(animQ.from).slerp(animQ.to, e);
+      cubeGroup.quaternion.copy(currentQuat);
+      renderer.render(scene, camera);
+      if (pr >= 1) { animQ = null; renderTokens(); }
+      else requestAnimationFrame(animFrame);
+    }
+    function reset() {
+      currentQuat.identity(); targetQuat.identity();
+      cubeGroup.quaternion.identity();
+      atPos = [0,1,2,3]; count = 0; animQ = null;
+      renderer.render(scene, camera); renderTokens();
+    }
+
+    // Drag orbit (camera)
+    var drag = null;
+    renderer.domElement.addEventListener('pointerdown', function(e) {
+      drag = { x: e.clientX, y: e.clientY, camPhi: camPhi, camTheta: camTheta };
+    });
+    var camTheta = Math.PI/4, camPhi = Math.PI/4;
+    function updateCamera() {
+      var r = 5;
+      camera.position.x = r * Math.sin(camPhi) * Math.cos(camTheta);
+      camera.position.y = r * Math.cos(camPhi);
+      camera.position.z = r * Math.sin(camPhi) * Math.sin(camTheta);
+      camera.lookAt(0,0,0);
+      renderer.render(scene, camera);
+    }
+    renderer.domElement.addEventListener('pointermove', function(e) {
+      if (!drag) return;
+      camTheta = drag.camTheta - (e.clientX - drag.x) * 0.01;
+      camPhi = Math.max(0.1, Math.min(Math.PI - 0.1, drag.camPhi - (e.clientY - drag.y) * 0.01));
+      updateCamera();
+    });
+    renderer.domElement.addEventListener('pointerup', function(){ drag = null; });
+    renderer.domElement.addEventListener('pointerleave', function(){ drag = null; });
+
+    function resize() {
+      W = wrap.clientWidth || 340; H = W;
+      renderer.setSize(W, H);
+      camera.aspect = 1; camera.updateProjectionMatrix();
+      renderer.render(scene, camera);
+    }
+    window.addEventListener('resize', resize);
+
+    rxB.onclick = function(){ rotate('x'); };
+    ryB.onclick = function(){ rotate('y'); };
+    rzB.onclick = function(){ rotate('z'); };
+    rstB.onclick = reset;
+    updateCamera(); renderTokens();
+  }
+
+  // ===================== FIGURE 4: Cosets Tile the Group =====================
+  function initFig4() {
+    var canvas = document.getElementById('fig4-canvas');
+    var gSel = document.getElementById('fig4-group'), hSel = document.getElementById('fig4-subgroup');
+    var gO = document.getElementById('fig4-gorder'), hO = document.getElementById('fig4-horder'), iE = document.getElementById('fig4-index');
+    var lB = document.getElementById('fig4-lagrange');
+    var groupKey = 'z12', subgroupIdx = 0;
+
+    var subgroups = {
+      z12: [
+        { name:'⟨1⟩ = ℤ/12', els:[0,1,2,3,4,5,6,7,8,9,10,11] },
+        { name:'⟨2⟩ = {0,2,4,6,8,10}', els:[0,2,4,6,8,10] },
+        { name:'⟨3⟩ = {0,3,6,9}', els:[0,3,6,9] },
+        { name:'⟨4⟩ = {0,4,8}', els:[0,4,8] },
+        { name:'⟨6⟩ = {0,6}', els:[0,6] },
+        { name:'⟨0⟩ = {0}', els:[0] }
+      ],
+      s3: [
+        { name:'{e}', els:[0] },
+        { name:'{e, (12)}', els:[0,1] },
+        { name:'{e, (13)}', els:[0,2] },
+        { name:'{e, (23)}', els:[0,3] },
+        { name:'Alt₃ = {e,(123),(132)}', els:[0,4,5] },
+        { name:'Sym₃', els:[0,1,2,3,4,5] }
+      ]
+    };
+    function groupInfo() {
+      if (groupKey === 'z12') return { size:12, els:Array.from({length:12},function(_,i){return i;}), labels:Array.from({length:12},function(_,i){return String(i);}) };
+      return { size:6, els:[0,1,2,3,4,5], labels:['e','(12)','(13)','(23)','(123)','(132)'] };
+    }
+    function fillSubgroups() {
+      var sg = subgroups[groupKey];
+      hSel.innerHTML = '';
+      for (var i = 0; i < sg.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = i; opt.textContent = sg[i].name;
+        hSel.appendChild(opt);
+      }
+      subgroupIdx = Math.min(subgroupIdx, sg.length-1);
+      hSel.value = subgroupIdx;
+    }
+    function computeCosets() {
+      var gi = groupInfo();
+      var H = subgroups[groupKey][subgroupIdx].els;
+      var G = gi.els;
+      var op = groupKey === 'z12' ? function(a,b){return (a+b)%12;} : function(a,b){return S3.mul(a,b);};
+      var visited = {}, cosets = [], cosetColor = {};
+      for (var i = 0; i < G.length; i++) {
+        var g = G[i];
+        if (visited[g]) continue;
+        var coset = [];
+        for (var j = 0; j < H.length; j++) coset.push(op(g, H[j]));
+        cosets.push(coset);
+        for (var k = 0; k < coset.length; k++) { visited[coset[k]] = true; cosetColor[coset[k]] = cosets.length - 1; }
+      }
+      return { cosets: cosets, cosetColor: cosetColor, H: H, gi: gi };
+    }
+    function draw() {
+      var info = computeCosets();
+      var c = prepCanvas(canvas, 1), ctx = c.ctx, w = c.w, h = c.h;
+      ctx.clearRect(0,0,w,h);
+      var cx = w/2, cy = h/2, R = Math.min(w,h)/2 - 28;
+      var n = info.gi.size;
+      // circle
+      ctx.strokeStyle = C.greyLight; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, R+8, 0, Math.PI*2); ctx.stroke();
+      // elements
+      for (var i = 0; i < n; i++) {
+        var ang = (i/n)*Math.PI*2 - Math.PI/2;
+        var x = cx + Math.cos(ang)*R, y = cy + Math.sin(ang)*R;
+        var ci = info.cosetColor[i];
+        var inH = info.H.indexOf(i) >= 0;
+        var col = PAL[ci % PAL.length];
+        var rd = inH ? 14 : 11;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(x, y, rd, 0, Math.PI*2); ctx.fill();
+        if (inH) { ctx.strokeStyle = C.green; ctx.lineWidth = 2.5; ctx.stroke(); }
+        ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (inH ? '11' : '10') + 'px '+SANS;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(info.gi.labels[i], x, y);
+      }
+      // center info
+      ctx.fillStyle = C.text; ctx.font = 'bold 10px '+SANS;
+      ctx.textAlign='center';
+      ctx.fillText(info.cosets.length + ' cosets', cx, cy - 8);
+      ctx.fillText('× ' + info.H.length + ' each', cx, cy + 8);
+      // badges
+      gO.textContent = n; hO.textContent = info.H.length; iE.textContent = info.cosets.length;
+      var ok = n === info.cosets.length * info.H.length;
+      lB.textContent = ok ? '|G| = [G:H]·|H| ✓' : 'MISMATCH';
+      lB.className = 'badge ' + (ok ? 'on' : 'warn');
+    }
+    gSel.onchange = function(){ groupKey = gSel.value; subgroupIdx = 0; fillSubgroups(); draw(); };
+    hSel.onchange = function(){ subgroupIdx = +hSel.value; draw(); };
+    window.addEventListener('resize', draw);
+    fillSubgroups(); draw();
+  }
+
+  // ===================== FIGURE 5: Orbit-Stabiliser =====================
+  function initFig5() {
+    var canvas = document.getElementById('fig5-canvas');
+    var aB = document.getElementById('fig5-action'), cB = document.getElementById('fig5-conj');
+    var sB = document.getElementById('fig5-step'), rB = document.getElementById('fig5-reset');
+    var gO = document.getElementById('fig5-gorder'), oO = document.getElementById('fig5-orbsize'), sO = document.getElementById('fig5-stabsize');
+    var bal = document.getElementById('fig5-balance');
+    var mode = 'action', chosen = 0, stepIdx = 0;
+    var G = S3;
+
+    function computeOrbitStab() {
+      var orbit = {}, stab = [];
+      for (var i = 0; i < G.size; i++) {
+        var result;
+        if (mode === 'action') {
+          // S3 acts on {0,1,2} (indices of points); S3_PERMS[i] gives the permutation
+          result = S3_PERMS[i][chosen];
+        } else {
+          // conjugation: g * x * g^{-1}
+          var ginv = 0;
+          for (var j = 0; j < G.size; j++) if (G.mul(i,j) === 0) ginv = j;
+          result = G.mul(G.mul(i, chosen), ginv);
+        }
+        orbit[result] = true;
+        if (result === chosen) stab.push(i);
+      }
+      return { orbit: Object.keys(orbit).map(Number), stab: stab };
+    }
+    function draw() {
+      var info = computeOrbitStab();
+      var c = prepCanvas(canvas, 500/280), ctx = c.ctx, w = c.w, h = c.h;
+      ctx.clearRect(0,0,w,h);
+      // Left: triangle / group elements
+      var leftW = w * 0.55;
+      if (mode === 'action') {
+        var tcx = leftW/2, tcy = h/2 + 10, tR = Math.min(leftW, h)/2 - 30;
+        var pts = [];
+        for (var i = 0; i < 3; i++) {
+          var ang = (i/3)*Math.PI*2 - Math.PI/2;
+          pts.push({ x: tcx + Math.cos(ang)*tR, y: tcy + Math.sin(ang)*tR, i: i });
+        }
+        // triangle edges
+        ctx.strokeStyle = C.greyLight; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); ctx.lineTo(pts[1].x,pts[1].y); ctx.lineTo(pts[2].x,pts[2].y); ctx.closePath(); ctx.stroke();
+        // points
+        for (var p = 0; p < 3; p++) {
+          var isChosen = p === chosen;
+          var inOrbit = info.orbit.indexOf(p) >= 0;
+          ctx.fillStyle = isChosen ? C.blue : (inOrbit ? C.amber : C.greyLight);
+          ctx.beginPath(); ctx.arc(pts[p].x, pts[p].y, isChosen ? 16 : 13, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 12px '+SANS;
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(String(p+1), pts[p].x, pts[p].y);
+        }
+        // current action element label
+        if (stepIdx > 0) {
+          var gi = (stepIdx - 1) % G.size;
+          ctx.fillStyle = C.textLight; ctx.font = 'italic 10px '+SANS;
+          ctx.textAlign='center';
+          ctx.fillText('g = ' + G.elements[gi], tcx, tcy + tR + 20);
+        }
+      } else {
+        // conjugation: draw all 6 elements, color by class
+        var ccx = leftW/2, ccy = h/2, cR = Math.min(leftW, h)/2 - 30;
+        var classColors = {};
+        var clsIdx = 0;
+        var classOf = {};
+        for (var i2 = 0; i2 < G.size; i2++) {
+          var ginv2 = 0;
+          for (var j2 = 0; j2 < G.size; j2++) if (G.mul(i2,j2)===0) ginv2 = j2;
+          var c = G.mul(G.mul(i2, chosen), ginv2);
+          if (classOf[c] === undefined) { classOf[c] = clsIdx; clsIdx++; }
+        }
+        for (var i3 = 0; i3 < G.size; i3++) {
+          var ang3 = (i3/G.size)*Math.PI*2 - Math.PI/2;
+          var x3 = ccx + Math.cos(ang3)*cR, y3 = ccy + Math.sin(ang3)*cR;
+          var isChosen3 = i3 === chosen;
+          var ci3 = classOf[i3];
+          var col = PAL[ci3 % PAL.length];
+          ctx.fillStyle = col;
+          ctx.beginPath(); ctx.arc(x3, y3, isChosen3 ? 15 : 12, 0, Math.PI*2); ctx.fill();
+          if (isChosen3) { ctx.strokeStyle = C.blue; ctx.lineWidth = 2.5; ctx.stroke(); }
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 8px '+SANS;
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(G.elements[i3], x3, y3);
+        }
+      }
+      // Right: bar showing |G| = |Orbit| * |Stab|
+      var barX = w * 0.62, barW = w * 0.33, barY = 40, barH = h - 80;
+      ctx.strokeStyle = C.grey; ctx.lineWidth = 1.5;
+      ctx.strokeRect(barX, barY, barW, barH);
+      ctx.fillStyle = C.textLight; ctx.font = 'bold 10px '+SANS; ctx.textAlign='center';
+      ctx.fillText('|G| = ' + G.size, barX + barW/2, barY - 10);
+      // orbit portion
+      var orbH = (info.orbit.length / G.size) * barH;
+      ctx.fillStyle = C.amber;
+      ctx.fillRect(barX, barY + barH - orbH, barW, orbH);
+      // stab portion
+      var stabH = (info.stab.length / G.size) * barH;
+      ctx.fillStyle = C.green;
+      ctx.fillRect(barX, barY, barW, stabH);
+      ctx.fillStyle = C.text; ctx.font = '9px '+SANS;
+      ctx.fillText('|Orb|=' + info.orbit.length, barX + barW/2, barY + barH - orbH/2);
+      ctx.fillText('|Stab|=' + info.stab.length, barX + barW/2, barY + stabH/2);
+      // equals sign
+      ctx.fillStyle = C.text; ctx.font = 'bold 11px '+SANS;
+      ctx.fillText(info.orbit.length + ' × ' + info.stab.length + ' = ' + (info.orbit.length * info.stab.length), barX + barW/2, h - 15);
+      // badges
+      gO.textContent = G.size; oO.textContent = info.orbit.length; sO.textContent = info.stab.length;
+      var ok = G.size === info.orbit.length * info.stab.length;
+      bal.textContent = ok ? '|G| = |Orb|·|Stab| ✓' : 'MISMATCH';
+      bal.className = 'badge ' + (ok ? 'on' : 'warn');
+    }
+    function step() {
+      stepIdx++;
+      chosen = chosen % 3;
+      draw();
+    }
+    function setMode(m) {
+      mode = m;
+      aB.classList.toggle('active', m === 'action'); aB.setAttribute('aria-pressed', m==='action');
+      cB.classList.toggle('active', m === 'conj'); cB.setAttribute('aria-pressed', m==='conj');
+      chosen = 0; stepIdx = 0; draw();
+    }
+    aB.onclick = function(){ setMode('action'); };
+    cB.onclick = function(){ setMode('conj'); };
+    sB.onclick = step;
+    rB.onclick = function(){ chosen = 0; stepIdx = 0; draw(); };
+    // click to choose point (in action mode)
+    canvas.addEventListener('click', function(e) {
+      if (mode !== 'action') return;
+      var rect = canvas.getBoundingClientRect();
+      var x = e.clientX - rect.left, y = e.clientY - rect.top;
+      var w = rect.width, h = rect.height;
+      var leftW = w * 0.55;
+      var tcx = leftW/2, tcy = h/2 + 10, tR = Math.min(leftW, h)/2 - 30;
+      for (var i = 0; i < 3; i++) {
+        var ang = (i/3)*Math.PI*2 - Math.PI/2;
+        var px = tcx + Math.cos(ang)*tR, py = tcy + Math.sin(ang)*tR;
+        if (Math.hypot(x-px, y-py) < 18) { chosen = i; stepIdx = 0; draw(); return; }
+      }
+    });
+    window.addEventListener('resize', draw);
+    draw();
+  }
+
+  // ===================== FIGURE 6: Homomorphism Collapsing =====================
+  function initFig6() {
+    var tg = document.getElementById('fig6-table-g'), th = document.getElementById('fig6-table-h');
+    var cB = document.getElementById('fig6-collapse'), rB = document.getElementById('fig6-reset');
+    var ro = document.getElementById('fig6-readout');
+    var G = S3, H = makeCyclic(2);
+    // sign homomorphism: even → 0, odd → 1
+    var phi = [0, 1, 1, 1, 0, 0]; // phi[i] = image of S3 element i
+    var collapsed = false, hoverR = -1, hoverC = -1;
+
+    function reorder() {
+      // kernel first, then non-kernel
+      if (!collapsed) return [0,1,2,3,4,5];
+      return [0, 4, 5, 1, 2, 3]; // {e,(123),(132)} then {(12),(13),(23)}
+    }
+    function buildG() {
+      var order = reorder();
+      var h = '<thead><tr><th></th>';
+      for (var j = 0; j < G.size; j++) {
+        var cj = order[j];
+        var cls = phi[cj] === 0 ? 'kernel-cell' : 'nonkernel-cell';
+        h += '<th class="'+cls+'">'+G.elements[cj]+'</th>';
+      }
+      h += '</tr></thead><tbody>';
+      for (var i = 0; i < G.size; i++) {
+        var ci = order[i];
+        var cls2 = phi[ci] === 0 ? 'kernel-cell' : 'nonkernel-cell';
+        h += '<tr><th class="'+cls2+'">'+G.elements[ci]+'</th>';
+        for (var j2 = 0; j2 < G.size; j2++) {
+          var cj2 = order[j2];
+          var prod = G.mul(ci, cj2);
+          var pcls = phi[prod] === 0 ? 'kernel-cell' : 'nonkernel-cell';
+          h += '<td class="cell '+pcls+'" data-r="'+ci+'" data-c="'+cj2+'" data-pr="'+phi[ci]+'" data-pc="'+phi[cj2]+'" data-pp="'+phi[prod]+'">'+G.elements[prod]+'</td>';
+        }
+        h += '</tr>';
+      }
+      h += '</tbody>';
+      tg.innerHTML = h;
+      attachG();
+    }
+    function buildH() {
+      var h = '<thead><tr><th></th>';
+      for (var j = 0; j < 2; j++) h += '<th>'+(j===0?'0':'1')+'</th>';
+      h += '</tr></thead><tbody>';
+      for (var i = 0; i < 2; i++) {
+        h += '<tr><th>'+(i===0?'0':'1')+'</th>';
+        for (var j2 = 0; j2 < 2; j2++) {
+          h += '<td class="cell" data-r="'+i+'" data-c="'+j2+'">'+((i+j2)%2)+'</td>';
+        }
+        h += '</tr>';
+      }
+      h += '</tbody>';
+      th.innerHTML = h;
+      attachH();
+    }
+    function attachG() {
+      tg.querySelectorAll('td.cell').forEach(function(td) {
+        td.addEventListener('mouseenter', function() {
+          var pr = +td.dataset.pr, pc = +td.dataset.pc, pp = +td.dataset.pp;
+          ro.innerHTML = 'φ(' + G.elements[td.dataset.r] + ')=' + pr + ', φ(' + G.elements[td.dataset.c] + ')=' + pc +
+            ' → φ(a⋆b)=' + pp + ' = ' + pr + '+' + pc + ' = ' + ((pr+pc)%2) + ' ✓';
+          highlightH(pr, pc);
+        });
+        td.addEventListener('mouseleave', function() { ro.textContent = 'φ = sign: Sym₃ → ℤ/2. Hover a cell in G to see φ preserve the product.'; clearH(); });
+      });
+    }
+    function attachH() {}
+    function highlightH(pr, pc) {
+      th.querySelectorAll('td.cell').forEach(function(td) {
+        td.classList.toggle('product-cell', +td.dataset.r === pr && +td.dataset.c === pc);
+      });
+    }
+    function clearH() {
+      th.querySelectorAll('td.cell').forEach(function(td) { td.classList.remove('product-cell'); });
+    }
+    cB.onclick = function() { collapsed = !collapsed; cB.textContent = collapsed ? 'Expand G' : 'Collapse G → G/ker(φ)'; buildG(); };
+    rB.onclick = function() { collapsed = false; cB.textContent = 'Collapse G → G/ker(φ)'; buildG(); };
+    buildG(); buildH();
+  }
+
+  // ===================== FIGURE 7: Atoms & Molecules Coda =====================
+  function initFig7() {
+    var canvas = document.getElementById('fig7-canvas');
+    function draw() {
+      var c = prepCanvas(canvas, 620/360), ctx = c.ctx, w = c.w, h = c.h;
+      ctx.clearRect(0,0,w,h);
+      function drawTower(cx, baseY, blocks, title) {
+        // title
+        ctx.fillStyle = C.text; ctx.font = 'bold 12px '+SANS;
+        ctx.textAlign = 'center'; ctx.fillText(title, cx, baseY - 155);
+        var bw = 120, bh = 32;
+        for (var i = 0; i < 3; i++) {
+          var blk = blocks[i];
+          var by = baseY - (2-i) * (bh + 8);
+          ctx.fillStyle = blk.color;
+          rr(ctx, cx - bw/2, by, bw, bh, 6); ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 10px '+SANS;
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(blk.label, cx, by + bh/2);
+          // quotient arrow between levels
+          if (i < 2) {
+            var ay = by - 4;
+            ctx.strokeStyle = C.grey; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(cx, by); ctx.lineTo(cx, by - 8); ctx.stroke();
+            // atom label
+            ctx.fillStyle = blk.atomColor;
+            ctx.font = 'bold 9px '+SANS; ctx.textAlign = 'left';
+            ctx.fillText(blk.atom, cx + 8, by - 4);
+          }
+        }
+      }
+      // Sym_3 tower
+      drawTower(w * 0.25, h - 20, [
+        { label:'{e}', color: C.grey, atom:'', atomColor:C.grey },
+        { label:'Alt₃ ≅ ℤ/3', color: C.green, atom:'→ ℤ/3 (atom)', atomColor: C.green },
+        { label:'Sym₃', color: C.blue, atom:'→ ℤ/2 (atom)', atomColor: C.green }
+      ], 'Sym₃ (non-Abelian)');
+      // Z/6 tower
+      drawTower(w * 0.55, h - 20, [
+        { label:'{0}', color: C.grey, atom:'', atomColor:C.grey },
+        { label:'⟨2⟩ ≅ ℤ/3', color: C.green, atom:'→ ℤ/3 (atom)', atomColor: C.green },
+        { label:'ℤ/6', color: C.blue, atom:'→ ℤ/2 (atom)', atomColor: C.green }
+      ], 'ℤ/6 (Abelian)');
+      // A5 block (red, non-Abelian atom)
+      var a5x = w * 0.85, a5y = h/2 - 30;
+      ctx.fillStyle = C.red;
+      rr(ctx, a5x - 55, a5y - 35, 110, 70, 8); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 14px '+SANS;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('A₅', a5x, a5y - 8);
+      ctx.font = '8px '+SANS;
+      ctx.fillText('|A₅| = 60', a5x, a5y + 8);
+      ctx.fillText('non-Abelian', a5x, a5y + 20);
+      ctx.fillText('simple atom', a5x, a5y + 32);
+      // label
+      ctx.fillStyle = C.text; ctx.font = 'bold 10px '+SANS;
+      ctx.fillText('The obstruction', a5x, a5y - 50);
+      // atoms summary
+      ctx.fillStyle = C.textLight; ctx.font = 'italic 9px '+SANS;
+      ctx.textAlign = 'center';
+      ctx.fillText('atoms: {ℤ/3, ℤ/2}', w * 0.25, h - 5);
+      ctx.fillText('atoms: {ℤ/3, ℤ/2}', w * 0.55, h - 5);
+      ctx.fillText('same atoms!', w * 0.4, h - 40);
+      ctx.strokeStyle = C.amber; ctx.lineWidth = 1; ctx.setLineDash([3,2]);
+      ctx.beginPath(); ctx.moveTo(w*0.15, h-45); ctx.lineTo(w*0.65, h-45); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    window.addEventListener('resize', draw);
+    draw();
+  }
+
+  // ===== INIT =====
+  function renderKatex() {
+    if (typeof renderMathInElement !== 'undefined') {
+      renderMathInElement(document.body, {
+        delimiters: [ {left:'$$',right:'$$',display:true}, {left:'$',right:'$',display:false} ],
+        throwOnError: false
+      });
+    } else { setTimeout(renderKatex, 100); }
+  }
+  function init() {
+    initFig1(); initFig2(); initFig3(); initFig4(); initFig5(); initFig6(); initFig7();
+    renderKatex();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1330 @@
+<!-- 
+  FIGURES IN THIS PART:
+  1. The Cayley table, alive.
+  2. The dihedral playground.
+  3. The rotating cube (3D).
+  4. Cosets tile the group.
+  5. Orbit-Stabiliser as conservation.
+  6. Homomorphism as collapsing the table (First Isomorphism).
+  7. Atoms & molecules coda.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 2 — Groups</title>
+    
+    <!-- Three.js for Figure 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            /* Semantic Colors */
+            --primary-blue: #2052BB;
+            --action-amber: #F59E0B;
+            --success-green: #10B981;
+            --failure-red: #EF4444;
+            --neutral-grey: #9CA3AF;
+            --bg-color: #FAFAFA;
+            --text-main: #374151;
+            --text-muted: #6B7280;
+            
+            /* Typography */
+            --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-serif: "Georgia", "Times New Roman", serif;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-serif);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-body);
+            color: #111827;
+            margin-top: 2em;
+        }
+
+        h1 { font-size: 2.2rem; text-align: center; margin-bottom: 0.2em; }
+        .subtitle { text-align: center; color: var(--text-muted); font-family: var(--font-body); margin-bottom: 3em; }
+
+        p { margin-bottom: 1.5em; }
+        
+        a { color: var(--primary-blue); text-decoration: none; border-bottom: 1px solid rgba(32, 82, 187, 0.3); }
+        a:hover { border-bottom-color: var(--primary-blue); }
+
+        /* Epistemic Callouts */
+        .callout {
+            border-left: 4px solid var(--neutral-grey);
+            background: #F3F4F6;
+            padding: 16px 20px;
+            margin: 2em 0;
+            border-radius: 0 8px 8px 0;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+        }
+        .callout.definition {
+            border-left-color: var(--primary-blue);
+            background: rgba(32, 82, 187, 0.05);
+        }
+        .callout.metaphor {
+            border-left-color: var(--action-amber);
+            background: rgba(245, 158, 11, 0.05);
+        }
+        .callout-title {
+            font-weight: 600;
+            margin-bottom: 0.5em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+        }
+        .definition .callout-title { color: var(--primary-blue); }
+        .metaphor .callout-title { color: var(--action-amber); }
+
+        /* Figures */
+        .figure-container {
+            margin: 3em 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #E5E7EB;
+        }
+        .figure-canvas-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fff;
+            padding: 20px;
+            touch-action: none;
+            position: relative;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .figure-controls {
+            padding: 15px 20px;
+            background: #F9FAFB;
+            border-top: 1px solid #E5E7EB;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+        }
+        .figure-caption {
+            padding: 12px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            border-top: 1px solid #E5E7EB;
+        }
+
+        /* Controls */
+        button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-family: var(--font-body);
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { background: var(--neutral-grey); cursor: not-allowed; }
+        
+        select {
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #E5E7EB;
+            font-family: var(--font-body);
+            background: white;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            accent-color: var(--primary-blue);
+            cursor: pointer;
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .toggle-label input { margin: 0; cursor: pointer; accent-color: var(--primary-blue); }
+
+        /* Math */
+        .math { font-family: "Times New Roman", serif; font-style: italic; }
+        
+        /* Badges */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--neutral-grey);
+            color: white;
+            display: inline-block;
+        }
+        .badge.active-true { background: var(--success-green); }
+        .badge.active-false { background: var(--failure-red); }
+
+        .flex-row { display: flex; gap: 20px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Part 2: Groups</h1>
+    <div class="subtitle">Companion to Paulin's Introduction to Abstract Algebra</div>
+
+    <p>In Part 1, we saw that the structure of <span class="math">ℤ</span> and the clock <span class="math">ℤ/mℤ</span> share fundamental properties regarding how their elements compose. <strong>Groups</strong> are the abstract encapsulation of these properties. We drop the numbers entirely and keep only the rules of composition.</p>
+
+    <h2 id="basic-definitions">3.1 Basic Definitions</h2>
+
+    <div class="callout definition">
+        <div class="callout-title">Fundamental Definition</div>
+        A <strong>group</strong> is a set <i>G</i>, together with a binary operation ✱, such that:
+        <br>1. (Associativity): <i>(a ✱ b) ✱ c = a ✱ (b ✱ c)</i>
+        <br>2. (Identity): ∃ <i>e</i> ∈ <i>G</i> such that <i>a ✱ e = e ✱ a = a</i>
+        <br>3. (Inverses): Given <i>a</i>, ∃ <i>b</i> such that <i>a ✱ b = b ✱ a = e</i>
+    </div>
+
+    <p>We can visualize the entirety of a finite group by drawing its <strong>Cayley table</strong>: a grid where the row is the first element, the column is the second, and the cell is their product. The three axioms dictate the geometry of this grid.</p>
+
+    <div class="figure-container" id="fig-cayley">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-cayley"></canvas>
+        </div>
+        <div class="figure-controls">
+            <select id="sel-group">
+                <option value="z4">ℤ/4ℤ (Cyclic)</option>
+                <option value="v4">Klein Four (V₄)</option>
+                <option value="s3">Sym₃ (Non-Abelian)</option>
+            </select>
+            <label class="toggle-label"><input type="checkbox" id="chk-identity"> Show Identity</label>
+            <label class="toggle-label"><input type="checkbox" id="chk-inverses"> Show Inverses</label>
+            <label class="toggle-label"><input type="checkbox" id="chk-abelian"> Check Commutative</label>
+        </div>
+        <div class="figure-caption">
+            Hover over the grid to compute <b>a ✱ b</b>. Toggle the detectors to see how the axioms dictate the table's visual texture. 
+        </div>
+    </div>
+    
+    <p>Notice that for an <strong>Abelian</strong> (commutative) group, the table is perfectly symmetric across the main diagonal. In <em>Sym₃</em>, this symmetry breaks.</p>
+
+    <h2 id="symmetry">3.7 Symmetry of Sets with Extra Structure</h2>
+
+    <p>Where do non-Abelian groups come from? They arise naturally as the symmetries of geometric objects. Let's look at the symmetries of a regular polygon, known as the <strong>Dihedral Group</strong>.</p>
+
+    <div class="figure-container" id="fig-dihedral">
+        <div class="figure-canvas-wrapper" style="height: 280px;">
+            <canvas id="canvas-dihedral"></canvas>
+        </div>
+        <div class="figure-controls">
+            <div class="control-group">
+                <label>Sides (<i>m</i>): <span id="val-dihedral-m">3</span></label>
+                <input type="range" id="slider-dihedral-m" min="3" max="6" value="3">
+            </div>
+            <button id="btn-d-rot">Rotate (σ)</button>
+            <button id="btn-d-ref" style="background: var(--action-amber);">Reflect (τ)</button>
+            <button id="btn-d-reset" style="background: var(--neutral-grey);">Reset</button>
+        </div>
+        <div class="figure-caption">
+            Click to compose transformations. The current "word" is simplified live. Notice that <b>τ ✱ σ ≠ σ ✱ τ</b>.
+        </div>
+    </div>
+
+    <p>We can extend this to three dimensions. The symmetries of a solid cube permute its 4 body diagonals. Because there are exactly 4! = 24 ways to permute these 4 colors, and exactly 24 rotational symmetries of the cube, the rotation group of the cube is isomorphic to <em>Sym₄</em>.</p>
+
+    <div class="figure-container" id="fig-cube">
+        <div class="figure-canvas-wrapper" style="height: 320px;" id="cube-wrapper">
+            <!-- Three.js canvas injected here -->
+        </div>
+        <div class="figure-controls">
+            <span>Permutation of diagonals:</span>
+            <div id="cube-tokens" class="flex-row" style="gap: 5px;"></div>
+            <button id="btn-cube-reset" style="background: var(--neutral-grey); margin-left: auto;">Reset</button>
+        </div>
+        <div class="figure-caption">
+            Drag the <b>cube</b> to rotate it. It will snap to the nearest valid symmetry. Watch how the 4 colored body-diagonals are permuted.
+        </div>
+    </div>
+    
+    <div class="callout metaphor">
+        <div class="callout-title">Where the picture lies</div>
+        This visualizes <i>Rot<sub>□</sub></i> (orientation-preserving rotations only). The full symmetry group of the cube including reflections is twice as large (order 48).
+    </div>
+
+    <h2 id="cosets">3.2 Subgroups, Cosets and Lagrange's Theorem</h2>
+
+    <p>A <strong>subgroup</strong> <i>H</i> is a subset of <i>G</i> that is itself a group. We can use <i>H</i> to define an equivalence relation on <i>G</i>: two elements are related if you can multiply one by an element of <i>H</i> to get the other. The equivalence classes of this relation are called <strong>left cosets</strong>, written <i>gH</i>.</p>
+
+    <div class="callout definition">
+        <div class="callout-title">Lagrange's Theorem</div>
+        Let <i>G</i> be a finite group and <i>H ⊂ G</i> a subgroup. Then the size of <i>H</i> divides the size of <i>G</i>.
+    </div>
+
+    <div class="figure-container" id="fig-cosets">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-cosets"></canvas>
+        </div>
+        <div class="figure-controls">
+            <select id="sel-coset-h">
+                <option value="2">H = ⟨12⟩ (Size 2)</option>
+                <option value="3">H = ⟨8⟩ (Size 3)</option>
+                <option value="4">H = ⟨6⟩ (Size 4)</option>
+                <option value="6">H = ⟨4⟩ (Size 6)</option>
+            </select>
+        </div>
+        <div class="figure-caption">
+            The group <i>G = ℤ/24ℤ</i>. The chosen subgroup <i>H</i> is <span style="color:var(--success-green); font-weight:bold;">green</span>. The other left cosets partition the rest of the group into equal-sized colored tiles.
+        </div>
+    </div>
+
+    <h2 id="orbit-stabiliser">3.5 The Orbit-Stabiliser Theorem</h2>
+
+    <p>When a group <i>G</i> acts on a set <i>S</i>, the elements of <i>S</i> are moved around. For a specific item <i>s ∈ S</i>, the <strong>orbit</strong> is everywhere it can possibly be moved to. The <strong>stabiliser</strong> is the subgroup of <i>G</i> that leaves <i>s</i> perfectly in place.</p>
+
+    <div class="figure-container" id="fig-orbit">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-orbit"></canvas>
+        </div>
+        <div class="figure-controls">
+            <span>Target:</span>
+            <select id="sel-orbit-target">
+                <option value="vertex">A Vertex</option>
+                <option value="edge">An Edge</option>
+                <option value="square">The Whole Square</option>
+            </select>
+            <div style="flex-grow: 1; text-align: right;">
+                <b>|G| (8) = |Orbit| <span id="val-orb">4</span> × |Stab| <span id="val-stab">2</span></b>
+            </div>
+        </div>
+        <div class="figure-caption">
+            The Dihedral group <i>D₄</i> acting on a square. Select a target object. The <b>Orbit</b> leaves persistent ghost trails; the <b>Stabiliser</b> highlights in green when a symmetry fixes the object.
+        </div>
+    </div>
+
+    <h2 id="isomorphism">3.8 Normal Subgroups and Isomorphism Theorems</h2>
+
+    <p>A homomorphism <i>φ : G → H</i> is a map that preserves the group structure. The <strong>kernel</strong> of <i>φ</i> is the set of elements in <i>G</i> that map to the identity in <i>H</i>. The kernel is always a <strong>normal subgroup</strong>, which allows us to cleanly collapse the group into a quotient.</p>
+
+    <div class="callout definition">
+        <div class="callout-title">The First Isomorphism Theorem</div>
+        Let <i>φ : G → H</i> be a homomorphism. Then the induced map from the quotient group <i>G/\ker(φ)</i> to the image <i>Im(φ)</i> is an isomorphism.
+    </div>
+
+    <div class="figure-container" id="fig-homomorphism">
+        <div class="figure-canvas-wrapper flex-row">
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <span style="margin-bottom:8px; font-weight:bold;">G = Sym₃</span>
+                <canvas id="canvas-hom-g"></canvas>
+            </div>
+            <div style="font-size:24px; color:var(--neutral-grey);">→</div>
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <span style="margin-bottom:8px; font-weight:bold;">H = ℤ/2ℤ</span>
+                <canvas id="canvas-hom-h"></canvas>
+            </div>
+        </div>
+        <div class="figure-controls">
+            <button id="btn-collapse" style="background: var(--action-amber);">Collapse Table</button>
+        </div>
+        <div class="figure-caption">
+            Hover over <i>G</i> to see where elements map in <i>H</i>. The kernel elements are colored <span style="color:var(--failure-red); font-weight:bold;">red</span>. Click <b>Collapse</b> to see the 3×3 coset blocks of <i>G</i> visually merge into the 1×1 cells of <i>H</i>.
+        </div>
+    </div>
+    
+    <div class="callout metaphor">
+        <div class="callout-title">Where the picture lies</div>
+        The visual collapsing of a Cayley table by grouping it into block-cosets is an <strong>exact</strong> representation of quotient groups. A subgroup is normal <i>if and only if</i> this block-collapse results in a well-defined table.
+    </div>
+
+    <h2 id="classification">3.12 The Classification of Finite Groups</h2>
+
+    <p>Finite group theory is much like the theory of chemical molecules. The <strong>simple groups</strong> (groups with no normal subgroups other than trivial ones) act as atoms. Every finite group can be broken down into a <strong>composition series</strong>—a stack of these simple atoms.</p>
+
+    <div class="figure-container" id="fig-atoms">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-atoms"></canvas>
+        </div>
+        <div class="figure-controls">
+            <span class="badge active-true">Solvable (Green Atoms)</span>
+            <span class="badge active-false">Not Solvable (Red Atoms)</span>
+        </div>
+        <div class="figure-caption">
+            <i>Sym₃</i> and <i>ℤ/6ℤ</i> are different molecules built from the exact same atoms. <i>Sym₅</i> requires a new, non-Abelian atom (<i>A₅</i>), colored <span style="color:var(--failure-red); font-weight:bold;">red</span>. We will return to <i>A₅</i> in Part 4.
+        </div>
+    </div>
+
+    <hr style="margin: 4em 0; border: 0; border-top: 1px solid #E5E7EB;">
+
+    <script>
+        // Shared Utilities
+        const COLORS = {
+            primary: '#2052BB',
+            action: '#F59E0B',
+            success: '#10B981',
+            failure: '#EF4444',
+            grey: '#9CA3AF',
+            bg: '#FAFAFA',
+            text: '#374151',
+            cosetHues: [0, 190, 280, 320, 45, 220] // Distinct hues for cosets
+        };
+
+        function setupCanvas(id, wMax, hMax) {
+            const canvas = document.getElementById(id);
+            const parent = canvas.parentElement;
+            const w = Math.min(parent.clientWidth - 40, wMax || 600);
+            const h = hMax || 300;
+            
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            return { canvas, ctx, w, h };
+        }
+
+        // ==========================================
+        // Figure 1: Cayley Table
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-cayley', 400, 400);
+            
+            const GROUPS = {
+                z4: {
+                    labels: ['0', '1', '2', '3'],
+                    table: [
+                        [0,1,2,3],
+                        [1,2,3,0],
+                        [2,3,0,1],
+                        [3,0,1,2]
+                    ]
+                },
+                v4: {
+                    labels: ['e', 'a', 'b', 'c'],
+                    table: [
+                        [0,1,2,3],
+                        [1,0,3,2],
+                        [2,3,0,1],
+                        [3,2,1,0]
+                    ]
+                },
+                s3: {
+                    labels: ['e', 'r', 'r²', 's', 'rs', 'r²s'],
+                    table: [
+                        [0,1,2,3,4,5],
+                        [1,2,0,4,5,3],
+                        [2,0,1,5,3,4],
+                        [3,5,4,0,2,1],
+                        [4,3,5,1,0,2],
+                        [5,4,3,2,1,0]
+                    ]
+                }
+            };
+
+            let currentGroup = 'z4';
+            let hoverRow = -1;
+            let hoverCol = -1;
+
+            const sel = document.getElementById('sel-group');
+            const chkId = document.getElementById('chk-identity');
+            const chkInv = document.getElementById('chk-inverses');
+            const chkAb = document.getElementById('chk-abelian');
+
+            sel.addEventListener('change', e => { currentGroup = e.target.value; draw(); });
+            chkId.addEventListener('change', draw);
+            chkInv.addEventListener('change', draw);
+            chkAb.addEventListener('change', draw);
+
+            canvas.addEventListener('pointermove', e => {
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const g = GROUPS[currentGroup];
+                const n = g.labels.length;
+                const cs = Math.min(w, h) / (n + 1);
+                
+                let c = Math.floor(mx / cs) - 1;
+                let r = Math.floor(my / cs) - 1;
+                
+                if (c >= 0 && c < n && r >= 0 && r < n) {
+                    hoverRow = r; hoverCol = c;
+                } else {
+                    hoverRow = -1; hoverCol = -1;
+                }
+                draw();
+            });
+            canvas.addEventListener('pointerleave', () => { hoverRow = -1; hoverCol = -1; draw(); });
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                const g = GROUPS[currentGroup];
+                const n = g.labels.length;
+                const cs = Math.min(w, h) / (n + 1);
+                
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let r = -1; r < n; r++) {
+                    for (let c = -1; c < n; c++) {
+                        let x = (c + 1) * cs;
+                        let y = (r + 1) * cs;
+                        
+                        if (r === -1 && c === -1) {
+                            ctx.fillStyle = COLORS.text;
+                            ctx.fillText('✱', x + cs/2, y + cs/2);
+                            continue;
+                        }
+
+                        let text = '';
+                        let isHeader = false;
+                        if (r === -1) { text = g.labels[c]; isHeader = true; ctx.fillStyle = COLORS.action; }
+                        else if (c === -1) { text = g.labels[r]; isHeader = true; ctx.fillStyle = COLORS.primary; }
+                        else {
+                            let val = g.table[r][c];
+                            text = g.labels[val];
+                            ctx.fillStyle = COLORS.text;
+
+                            // Interactions
+                            let bg = 'white';
+                            if (hoverRow === r && hoverCol === c) bg = '#E5E7EB';
+                            
+                            if (chkId.checked && val === 0) bg = 'rgba(16, 185, 129, 0.2)'; // green tint
+                            if (chkId.checked && (r === 0 || c === 0)) bg = 'rgba(16, 185, 129, 0.2)';
+
+                            if (chkInv.checked && val === 0) bg = 'rgba(32, 82, 187, 0.2)';
+                            
+                            if (chkAb.checked) {
+                                if (r > c && g.table[r][c] !== g.table[c][r]) bg = 'rgba(239, 68, 68, 0.3)'; // red conflict
+                                else if (r !== c && g.table[r][c] === g.table[c][r]) bg = 'rgba(245, 158, 11, 0.15)'; // amber symmetry
+                            }
+
+                            ctx.fillStyle = bg;
+                            ctx.fillRect(x, y, cs, cs);
+                            ctx.strokeStyle = '#E5E7EB';
+                            ctx.strokeRect(x, y, cs, cs);
+                            
+                            ctx.fillStyle = COLORS.text;
+                            if (hoverRow !== -1 && hoverCol !== -1) {
+                                if (r === hoverRow || c === hoverCol) ctx.fillStyle = COLORS.primary;
+                                if (r === hoverRow && c === hoverCol) ctx.fontWeight = 'bold';
+                            }
+                        }
+
+                        ctx.fillText(text, x + cs/2, y + cs/2);
+                    }
+                }
+
+                // Draw abelian diagonal line
+                if (chkAb.checked) {
+                    ctx.beginPath();
+                    ctx.moveTo(cs, cs);
+                    ctx.lineTo((n+1)*cs, (n+1)*cs);
+                    ctx.strokeStyle = COLORS.action;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            draw();
+        })();
+
+        // ==========================================
+        // Figure 2: Dihedral Playground
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-dihedral', 300, 280);
+            const slider = document.getElementById('slider-dihedral-m');
+            const valSpan = document.getElementById('val-dihedral-m');
+            
+            let m = 3;
+            let currentRot = 0; // in steps 0 to m-1
+            let isFlipped = false; // tau
+            let word = [];
+            
+            let animRot = 0;
+            let animScaleX = 1;
+
+            slider.addEventListener('input', (e) => {
+                m = parseInt(e.target.value);
+                valSpan.innerText = m;
+                reset();
+            });
+
+            document.getElementById('btn-d-rot').onclick = () => {
+                currentRot = (currentRot + 1) % m;
+                word.push('σ');
+            };
+            document.getElementById('btn-d-ref').onclick = () => {
+                isFlipped = !isFlipped;
+                word.push('τ');
+            };
+            document.getElementById('btn-d-reset').onclick = reset;
+
+            function reset() {
+                currentRot = 0;
+                isFlipped = false;
+                word = [];
+            }
+
+            function loop() {
+                ctx.clearRect(0, 0, w, h);
+                
+                let targetRot = currentRot * (Math.PI * 2 / m);
+                // Handle wrap-around animation smoothly
+                let diff = targetRot - animRot;
+                if (diff > Math.PI) animRot += Math.PI * 2;
+                if (diff < -Math.PI) animRot -= Math.PI * 2;
+                animRot = animRot + (targetRot - animRot) * 0.15;
+                
+                let targetScale = isFlipped ? -1 : 1;
+                animScaleX = animScaleX + (targetScale - animScaleX) * 0.15;
+
+                const cx = w/2, cy = h/2 + 20;
+                const r = 80;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                
+                // Draw fixed axes
+                ctx.strokeStyle = '#E5E7EB';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(0, -r-20); ctx.lineTo(0, r+20); ctx.stroke();
+                
+                // Apply transforms
+                ctx.scale(animScaleX, 1);
+                ctx.rotate(animRot);
+
+                // Draw polygon
+                ctx.beginPath();
+                for (let i = 0; i < m; i++) {
+                    let a = i * Math.PI * 2 / m - Math.PI/2;
+                    let x = Math.cos(a) * r;
+                    let y = Math.sin(a) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(32, 82, 187, 0.1)';
+                ctx.fill();
+                ctx.strokeStyle = COLORS.primary;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw vertices with original labels
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                for (let i = 0; i < m; i++) {
+                    let a = i * Math.PI * 2 / m - Math.PI/2;
+                    let x = Math.cos(a) * r;
+                    let y = Math.sin(a) * r;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, Math.PI*2);
+                    ctx.fillStyle = i === 0 ? COLORS.action : 'white';
+                    ctx.fill();
+                    ctx.strokeStyle = COLORS.primary;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    ctx.save();
+                    // Undo rotation and scale for text so it stays upright relative to camera? 
+                    // No, keeping it glued to the vertex is better for intuition.
+                    ctx.translate(x, y);
+                    ctx.scale(animScaleX, 1); // unflip text horizontally
+                    ctx.fillStyle = i === 0 ? 'white' : COLORS.text;
+                    ctx.fillText(i+1, 0, 0);
+                    ctx.restore();
+                }
+                ctx.restore();
+
+                // Draw Word evaluation
+                ctx.font = '16px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = COLORS.text;
+                
+                let displayWord = word.length > 8 ? "..." + word.slice(-8).join('') : word.join('');
+                if (word.length === 0) displayWord = "e";
+                
+                let canon = "";
+                if (isFlipped) canon += "τ";
+                if (currentRot > 0) canon += "σ" + (currentRot > 1 ? currentRot : "");
+                if (!isFlipped && currentRot === 0) canon = "e";
+
+                ctx.fillText(`Word: ${displayWord} = ${canon}`, cx, 20);
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        // ==========================================
+        // Figure 3: Rotating Cube (Three.js)
+        // ==========================================
+        (function() {
+            const container = document.getElementById('cube-wrapper');
+            const w = container.clientWidth;
+            const h = 320;
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(COLORS.bg);
+            
+            const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+            camera.position.z = 6;
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            const group = new THREE.Group();
+            scene.add(group);
+
+            // Transparent Box
+            const boxGeo = new THREE.BoxGeometry(2, 2, 2);
+            const boxMat = new THREE.LineBasicMaterial({ color: 0x9CA3AF, transparent: true, opacity: 0.5 });
+            const boxEdges = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), boxMat);
+            group.add(boxEdges);
+
+            // 4 Diagonals
+            const diagColors = [0xEF4444, 0x10B981, 0x2052BB, 0xF59E0B];
+            const diagStr = ['Red', 'Green', 'Blue', 'Amber'];
+            const diagEnds = [
+                [new THREE.Vector3(-1,-1,-1), new THREE.Vector3(1,1,1)],
+                [new THREE.Vector3(-1,-1,1), new THREE.Vector3(1,1,-1)],
+                [new THREE.Vector3(-1,1,-1), new THREE.Vector3(1,-1,1)],
+                [new THREE.Vector3(1,-1,-1), new THREE.Vector3(-1,1,1)]
+            ];
+
+            const cylinders = [];
+            for (let i=0; i<4; i++) {
+                const start = diagEnds[i][0];
+                const end = diagEnds[i][1];
+                const distance = start.distanceTo(end);
+                const cyGeo = new THREE.CylinderGeometry(0.05, 0.05, distance, 8);
+                const cyMat = new THREE.MeshBasicMaterial({ color: diagColors[i] });
+                const mesh = new THREE.Mesh(cyGeo, cyMat);
+                
+                mesh.position.copy(start).lerp(end, 0.5);
+                mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), end.clone().sub(start).normalize());
+                
+                mesh.userData = { id: i, start, end };
+                group.add(mesh);
+                cylinders.push(mesh);
+            }
+
+            // Target quaternion for snapping
+            let targetQ = new THREE.Quaternion().copy(group.quaternion);
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            renderer.domElement.addEventListener('pointerdown', e => {
+                isDragging = true;
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+
+            renderer.domElement.addEventListener('pointermove', e => {
+                if (!isDragging) return;
+                const deltaMove = { x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y };
+                const dq = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+                    deltaMove.y * 0.01,
+                    deltaMove.x * 0.01,
+                    0,
+                    'XYZ'
+                ));
+                group.quaternion.multiplyQuaternions(dq, group.quaternion);
+                targetQ.copy(group.quaternion); // don't snap while dragging
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+                updateTokens(false);
+            });
+
+            renderer.domElement.addEventListener('pointerup', snapToNearestValid);
+            renderer.domElement.addEventListener('pointerleave', () => { if(isDragging) snapToNearestValid(); isDragging = false; });
+
+            // Generate 24 valid rotations (O group)
+            const validQs = [];
+            const eulerAngles = [0, Math.PI/2, Math.PI, -Math.PI/2];
+            for (let x of eulerAngles) {
+                for (let y of eulerAngles) {
+                    for (let z of eulerAngles) {
+                        let q = new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, 'XYZ'));
+                        // Check if it's uniquely new (dot product close to 1)
+                        let isNew = true;
+                        for (let vq of validQs) {
+                            if (Math.abs(q.dot(vq)) > 0.99) { isNew = false; break; }
+                        }
+                        if (isNew) validQs.push(q);
+                    }
+                }
+            }
+
+            function snapToNearestValid() {
+                isDragging = false;
+                let bestDot = -1;
+                let bestQ = validQs[0];
+                for (let vq of validQs) {
+                    let dot = Math.abs(group.quaternion.dot(vq));
+                    if (dot > bestDot) {
+                        bestDot = dot;
+                        bestQ = vq;
+                    }
+                }
+                
+                // Align sign for smooth slerp
+                if (group.quaternion.dot(bestQ) < 0) {
+                    targetQ.set(-bestQ.x, -bestQ.y, -bestQ.z, -bestQ.w);
+                } else {
+                    targetQ.copy(bestQ);
+                }
+                setTimeout(() => updateTokens(true), 200);
+            }
+
+            const tokenContainer = document.getElementById('cube-tokens');
+            
+            function getCSSColor(hex) {
+                return '#' + hex.toString(16).padStart(6, '0');
+            }
+
+            function updateTokens(snapped) {
+                if (!snapped) {
+                    tokenContainer.style.opacity = '0.5';
+                    return;
+                }
+                tokenContainer.style.opacity = '1';
+                
+                // Determine permutation. Project fixed canonical positions through inverse of group rotation.
+                // Where did diagonal i end up?
+                let perm = [];
+                const invQ = targetQ.clone().invert();
+                
+                for (let i=0; i<4; i++) {
+                    // map canonical start point of diagonal i
+                    let p = diagEnds[i][0].clone().applyQuaternion(targetQ);
+                    
+                    // which original diagonal does p match?
+                    let bestMatch = -1;
+                    let bestDist = 999;
+                    for(let j=0; j<4; j++) {
+                        let d1 = p.distanceTo(diagEnds[j][0]);
+                        let d2 = p.distanceTo(diagEnds[j][1]); // lines are symmetric
+                        let d = Math.min(d1, d2);
+                        if (d < bestDist) {
+                            bestDist = d;
+                            bestMatch = j;
+                        }
+                    }
+                    perm.push(bestMatch);
+                }
+
+                // Render tokens based on where slot i is filled by original color
+                tokenContainer.innerHTML = '';
+                for(let i=0; i<4; i++) {
+                    let div = document.createElement('div');
+                    div.style.width = '24px';
+                    div.style.height = '24px';
+                    div.style.borderRadius = '50%';
+                    div.style.backgroundColor = getCSSColor(diagColors[perm[i]]);
+                    tokenContainer.appendChild(div);
+                }
+            }
+
+            document.getElementById('btn-cube-reset').onclick = () => {
+                targetQ.identity();
+                setTimeout(() => updateTokens(true), 200);
+            };
+
+            updateTokens(true);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (!isDragging) {
+                    group.quaternion.slerp(targetQ, 0.1);
+                }
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            // Resize handler
+            window.addEventListener('resize', () => {
+                const nw = container.clientWidth;
+                camera.aspect = nw / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(nw, h);
+            });
+        })();
+
+        // ==========================================
+        // Figure 4: Cosets Tile the Group
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-cosets', 500, 260);
+            const sel = document.getElementById('sel-coset-h');
+            
+            let subgroupSize = parseInt(sel.value);
+            sel.addEventListener('change', e => {
+                subgroupSize = parseInt(e.target.value);
+                draw();
+            });
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                const cols = 6;
+                const rows = 4; // 24 elements total
+                const cs = Math.min((w - 40) / cols, (h - 20) / rows);
+                const startX = (w - cols * cs) / 2;
+                const startY = 10;
+
+                const H = new Set();
+                const gen = 24 / subgroupSize;
+                for (let i = 0; i < subgroupSize; i++) {
+                    H.add((i * gen) % 24);
+                }
+
+                // Assign cosets
+                let cosets = [];
+                let assigned = new Set();
+                
+                // H is first coset
+                let hArray = Array.from(H).sort((a,b)=>a-b);
+                cosets.push({ reps: hArray, color: COLORS.success });
+                hArray.forEach(x => assigned.add(x));
+
+                let hueIdx = 0;
+                for (let i = 0; i < 24; i++) {
+                    if (!assigned.has(i)) {
+                        let cset = [];
+                        for (let h of H) {
+                            let val = (i + h) % 24;
+                            cset.push(val);
+                            assigned.add(val);
+                        }
+                        cosets.push({ 
+                            reps: cset, 
+                            color: `hsl(${COLORS.cosetHues[hueIdx % COLORS.cosetHues.length]}, 70%, 60%)` 
+                        });
+                        hueIdx++;
+                    }
+                }
+
+                // Map element to its color
+                let colorMap = {};
+                cosets.forEach(c => {
+                    c.reps.forEach(v => colorMap[v] = c.color);
+                });
+
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let i = 0; i < 24; i++) {
+                    let r = Math.floor(i / cols);
+                    let c = i % cols;
+                    let x = startX + c * cs;
+                    let y = startY + r * cs;
+
+                    ctx.fillStyle = colorMap[i];
+                    ctx.globalAlpha = 0.2;
+                    ctx.fillRect(x + 2, y + 2, cs - 4, cs - 4);
+                    
+                    ctx.globalAlpha = 1.0;
+                    ctx.strokeStyle = colorMap[i];
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 2, y + 2, cs - 4, cs - 4);
+
+                    ctx.fillStyle = COLORS.text;
+                    ctx.fillText(i, x + cs/2, y + cs/2);
+                }
+            }
+            draw();
+        })();
+
+        // ==========================================
+        // Figure 5: Orbit-Stabiliser
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-orbit', 400, 300);
+            const sel = document.getElementById('sel-orbit-target');
+            const valOrb = document.getElementById('val-orb');
+            const valStab = document.getElementById('val-stab');
+
+            let target = 'vertex'; // vertex, edge, square
+            let step = 0;
+            let lastTime = 0;
+
+            const D4 = [
+                { id: 'e', r: 0, f: 1 },
+                { id: 'r', r: 1, f: 1 },
+                { id: 'r²', r: 2, f: 1 },
+                { id: 'r³', r: 3, f: 1 },
+                { id: 's', r: 0, f: -1 },
+                { id: 'rs', r: 1, f: -1 },
+                { id: 'r²s', r: 2, f: -1 },
+                { id: 'r³s', r: 3, f: -1 }
+            ];
+
+            sel.addEventListener('change', e => {
+                target = e.target.value;
+                step = 0;
+            });
+
+            function getTransformedPos(x, y, r, f) {
+                // assume center 0,0
+                let nx = x, ny = y;
+                if (f === -1) nx = -nx; // flip across y axis
+                let angle = r * Math.PI / 2;
+                let tx = nx * Math.cos(angle) - ny * Math.sin(angle);
+                let ty = nx * Math.sin(angle) + ny * Math.cos(angle);
+                return { x: tx, y: ty };
+            }
+
+            function isFixed(op) {
+                if (target === 'square') return true; // all fix the square as a set
+                
+                // Base vertex at (1,1)
+                let baseV = {x: 1, y: 1};
+                let tv = getTransformedPos(baseV.x, baseV.y, op.r, op.f);
+                if (target === 'vertex') {
+                    return Math.abs(tv.x - baseV.x) < 0.1 && Math.abs(tv.y - baseV.y) < 0.1;
+                }
+                
+                // Base edge from (1,1) to (-1,1)
+                let e1 = {x: 1, y: 1}, e2 = {x: -1, y: 1};
+                let te1 = getTransformedPos(e1.x, e1.y, op.r, op.f);
+                let te2 = getTransformedPos(e2.x, e2.y, op.r, op.f);
+                
+                let matchesDirect = (Math.abs(te1.x - e1.x) < 0.1 && Math.abs(te1.y - e1.y) < 0.1) && 
+                                    (Math.abs(te2.x - e2.x) < 0.1 && Math.abs(te2.y - e2.y) < 0.1);
+                let matchesFlipped = (Math.abs(te1.x - e2.x) < 0.1 && Math.abs(te1.y - e2.y) < 0.1) && 
+                                     (Math.abs(te2.x - e1.x) < 0.1 && Math.abs(te2.y - e1.y) < 0.1);
+                
+                if (target === 'edge') {
+                    return matchesDirect || matchesFlipped;
+                }
+                return false;
+            }
+
+            function drawObject(ctx, size, color, op) {
+                ctx.beginPath();
+                if (target === 'vertex') {
+                    let tv = getTransformedPos(1, 1, op.r, op.f);
+                    ctx.arc(tv.x * size, tv.y * size, 8, 0, Math.PI*2);
+                    ctx.fillStyle = color; ctx.fill();
+                } else if (target === 'edge') {
+                    let te1 = getTransformedPos(1, 1, op.r, op.f);
+                    let te2 = getTransformedPos(-1, 1, op.r, op.f);
+                    ctx.moveTo(te1.x * size, te1.y * size);
+                    ctx.lineTo(te2.x * size, te2.y * size);
+                    ctx.strokeStyle = color; ctx.lineWidth = 6; ctx.stroke();
+                } else {
+                    ctx.rect(-size, -size, 2*size, 2*size);
+                    ctx.fillStyle = color; ctx.fill();
+                }
+            }
+
+            function loop(time) {
+                if (time - lastTime > 600) {
+                    step = (step + 1) % 8;
+                    lastTime = time;
+                }
+
+                ctx.clearRect(0, 0, w, h);
+                const cx = w/2, cy = h/2 - 10;
+                const size = 60;
+
+                // Stats calculation
+                let orbitCnt = target === 'vertex' ? 4 : (target === 'edge' ? 4 : 1);
+                let stabCnt = 8 / orbitCnt;
+                valOrb.innerText = orbitCnt;
+                valStab.innerText = stabCnt;
+
+                // Draw base square
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.strokeStyle = '#E5E7EB';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-size, -size, 2*size, 2*size);
+
+                // Draw orbit trails
+                for (let i = 0; i < 8; i++) {
+                    ctx.globalAlpha = 0.15;
+                    drawObject(ctx, size, COLORS.primary, D4[i]);
+                }
+
+                // Draw current transformation
+                let op = D4[step];
+                let fixed = isFixed(op);
+                ctx.globalAlpha = 1.0;
+                drawObject(ctx, size, fixed ? COLORS.success : COLORS.primary, op);
+
+                ctx.restore();
+
+                // Draw status text
+                ctx.font = '16px Georgia';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText(`Applying ${op.id}`, cx, cy + size + 40);
+                
+                if (fixed) {
+                    ctx.fillStyle = COLORS.success;
+                    ctx.fillText(`Fixes the object (in Stabiliser)`, cx, cy + size + 60);
+                } else {
+                    ctx.fillStyle = COLORS.grey;
+                    ctx.fillText(`Moves the object (in Orbit)`, cx, cy + size + 60);
+                }
+
+                requestAnimationFrame(loop);
+            }
+            requestAnimationFrame(loop);
+        })();
+
+        // ==========================================
+        // Figure 6: Homomorphism Collapse
+        // ==========================================
+        (function() {
+            let {canvas: cg, ctx: ctxg} = setupCanvas('canvas-hom-g', 240, 240);
+            let {canvas: ch, ctx: ctxh} = setupCanvas('canvas-hom-h', 100, 100);
+            
+            const btn = document.getElementById('btn-collapse');
+            let collapsed = false;
+
+            // S3 ordered by Kernel A3 first, then coset
+            const gLabels = ['e', 'r', 'r²', 's', 'rs', 'r²s'];
+            const hLabels = ['1', '-1'];
+
+            // map: 0,1,2 -> 0 (+1); 3,4,5 -> 1 (-1)
+            function phi(i) { return i < 3 ? 0 : 1; }
+
+            // S3 table
+            const gTable = [
+                [0,1,2, 3,4,5],
+                [1,2,0, 4,5,3],
+                [2,0,1, 5,3,4],
+
+                [3,5,4, 0,2,1],
+                [4,3,5, 1,0,2],
+                [5,4,3, 2,1,0]
+            ];
+
+            const hTable = [
+                [0, 1],
+                [1, 0]
+            ];
+
+            let hoverR = -1, hoverC = -1;
+
+            cg.addEventListener('pointermove', e => {
+                const cs = cg.width / (window.devicePixelRatio * 7);
+                let c = Math.floor(e.offsetX / cs) - 1;
+                let r = Math.floor(e.offsetY / cs) - 1;
+                if (c >= 0 && c < 6 && r >= 0 && r < 6) {
+                    hoverR = r; hoverC = c;
+                } else {
+                    hoverR = -1; hoverC = -1;
+                }
+                draw();
+            });
+            cg.addEventListener('pointerleave', () => { hoverR = -1; hoverC = -1; draw(); });
+
+            btn.onclick = () => {
+                collapsed = !collapsed;
+                btn.innerText = collapsed ? "Expand Table" : "Collapse Table";
+                draw();
+            };
+
+            function draw() {
+                // Animate if collapsed? Just instant switch for precise math exactness
+                ctxg.clearRect(0, 0, cg.width, cg.height);
+                ctxh.clearRect(0, 0, ch.width, ch.height);
+
+                let csg = cg.width / (window.devicePixelRatio * 7);
+                let csh = ch.width / (window.devicePixelRatio * 3);
+
+                ctxg.font = '12px sans-serif'; ctxg.textAlign = 'center'; ctxg.textBaseline = 'middle';
+                ctxh.font = '12px sans-serif'; ctxh.textAlign = 'center'; ctxh.textBaseline = 'middle';
+
+                // Draw H
+                for(let r=-1; r<2; r++) {
+                    for(let c=-1; c<2; c++) {
+                        let x = (c+1)*csh, y = (r+1)*csh;
+                        if(r===-1 && c===-1) continue;
+                        
+                        let text = '';
+                        let bg = 'white';
+                        if(r===-1) { text = hLabels[c]; ctxh.fillStyle = COLORS.action; }
+                        else if(c===-1) { text = hLabels[r]; ctxh.fillStyle = COLORS.primary; }
+                        else {
+                            let val = hTable[r][c];
+                            text = hLabels[val];
+                            ctxh.fillStyle = COLORS.text;
+                            if (val === 0) bg = 'rgba(239, 68, 68, 0.2)'; // kernel is red in H
+                            
+                            // Link hover
+                            if (hoverR !== -1 && phi(hoverR) === r && phi(hoverC) === c) {
+                                bg = '#D1D5DB'; // Highlight corresponding block
+                            }
+                        }
+
+                        ctxh.fillStyle = bg;
+                        ctxh.fillRect(x, y, csh, csh);
+                        ctxh.strokeStyle = '#E5E7EB'; ctxh.strokeRect(x, y, csh, csh);
+                        ctxh.fillStyle = (r===-1 || c===-1) ? (r===-1?COLORS.action:COLORS.primary) : COLORS.text;
+                        ctxh.fillText(text, x+csh/2, y+csh/2);
+                    }
+                }
+
+                // Draw G
+                for(let r=-1; r<6; r++) {
+                    for(let c=-1; c<6; c++) {
+                        let baseCs = csg;
+                        
+                        if (collapsed) {
+                            // visually clump them. 0,1,2 share space.
+                            let bx = c < 0 ? 0 : (Math.floor(c/3) * baseCs * 3 + baseCs);
+                            let by = r < 0 ? 0 : (Math.floor(r/3) * baseCs * 3 + baseCs);
+                            let ox = c < 0 ? baseCs/2 : ((c%3)*baseCs);
+                            let oy = r < 0 ? baseCs/2 : ((r%3)*baseCs);
+                            
+                            // Scale down internal blocks
+                            let x = bx + ox * 0.3 + (c<0?0:baseCs*1);
+                            let y = by + oy * 0.3 + (r<0?0:baseCs*1);
+                            let s = baseCs * 0.3;
+                            if(r===-1 && c===-1) continue;
+                            
+                            drawGCell(r, c, x, y, s, true);
+
+                            // Draw block borders
+                            if (r%3 === 0 && c%3 === 0 && r>=0 && c>=0) {
+                                ctxg.strokeStyle = COLORS.action;
+                                ctxg.lineWidth = 2;
+                                ctxg.strokeRect(bx + baseCs*0.8, by + baseCs*0.8, baseCs*1.4, baseCs*1.4);
+                            }
+                        } else {
+                            let x = (c+1)*csg;
+                            let y = (r+1)*csg;
+                            if(r===-1 && c===-1) continue;
+                            drawGCell(r, c, x, y, csg, false);
+                        }
+                    }
+                }
+
+                function drawGCell(r, c, x, y, size, small) {
+                    let text = '';
+                    let bg = 'white';
+                    
+                    if(r===-1) { text = gLabels[c]; }
+                    else if(c===-1) { text = gLabels[r]; }
+                    else {
+                        let val = gTable[r][c];
+                        text = gLabels[val];
+                        
+                        if (phi(val) === 0) bg = 'rgba(239, 68, 68, 0.2)'; // Kernel in G is RED
+                        if (r === hoverR && c === hoverC) bg = '#D1D5DB';
+                    }
+
+                    ctxg.fillStyle = bg;
+                    ctxg.fillRect(x, y, size, size);
+                    ctxg.strokeStyle = '#E5E7EB'; ctxg.strokeRect(x, y, size, size);
+                    
+                    if (!small) {
+                        ctxg.fillStyle = (r===-1 || c===-1) ? (r===-1?COLORS.action:COLORS.primary) : COLORS.text;
+                        ctxg.fillText(text, x+size/2, y+size/2);
+                    }
+                }
+            }
+            draw();
+        })();
+
+        // ==========================================
+        // Figure 7: Atoms & Molecules
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-atoms', 600, 240);
+
+            function drawTower(x, y, blocks, label) {
+                let currentY = y;
+                blocks.forEach(b => {
+                    ctx.fillStyle = b.color;
+                    ctx.fillRect(x, currentY - b.h, 100, b.h);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, currentY - b.h, 100, b.h);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(b.label, x + 50, currentY - b.h/2);
+                    
+                    currentY -= b.h;
+                });
+                
+                ctx.fillStyle = COLORS.text;
+                ctx.font = 'italic 16px Georgia';
+                ctx.fillText(label, x + 50, y + 25);
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                
+                // Z/6Z
+                drawTower(80, h-40, [
+                    { label: 'ℤ/3ℤ', h: 60, color: COLORS.success },
+                    { label: 'ℤ/2ℤ', h: 40, color: COLORS.success }
+                ], 'ℤ/6ℤ');
+
+                // S3
+                drawTower(250, h-40, [
+                    { label: 'A₃ ≅ ℤ/3', h: 60, color: COLORS.success },
+                    { label: 'ℤ/2ℤ', h: 40, color: COLORS.success }
+                ], 'Sym₃');
+
+                // S5
+                drawTower(420, h-40, [
+                    { label: 'A₅', h: 120, color: COLORS.failure },
+                    { label: 'ℤ/2ℤ', h: 40, color: COLORS.success }
+                ], 'Sym₅');
+
+            }
+            draw();
+        })();
+
+    </script>
+</div>
+</body>
+</html>

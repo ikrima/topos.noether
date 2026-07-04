@@ -1,0 +1,1104 @@
+<!-- 
+  FIGURES IN THIS PART:
+  1. Distributivity as area.
+  2. The clock returns as a ring (both + and x tables, integral domain status).
+  3. Ideals as absorbing sets (Integer line/lattice, multiples, absorption, quotient as wrapping).
+  4. Prime vs maximal, via the quotient (small ring, ideal, R/I table, integral domain / field lights).
+  5. Polynomials as coefficient vectors (convolution, degrees add).
+  6. The Euclidean algorithm, animated — twice (twin panels: Z left, F[X] right).
+  7. The UFD ⊃ PID ⊃ Euclidean nesting.
+  8. A periodic table per field (Irreducibles in C, R, Q, Fp).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part 3 — Rings and Fields</title>
+
+    <style>
+        :root {
+            /* Semantic Colors */
+            --primary-blue: #2052BB;
+            --action-amber: #F59E0B;
+            --success-green: #10B981;
+            --failure-red: #EF4444;
+            --neutral-grey: #9CA3AF;
+            --bg-color: #FAFAFA;
+            --text-main: #374151;
+            --text-muted: #6B7280;
+            
+            /* Typography */
+            --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-serif: "Georgia", "Times New Roman", serif;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-serif);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--font-body);
+            color: #111827;
+            margin-top: 2em;
+        }
+
+        h1 { font-size: 2.2rem; text-align: center; margin-bottom: 0.2em; }
+        .subtitle { text-align: center; color: var(--text-muted); font-family: var(--font-body); margin-bottom: 3em; }
+
+        p { margin-bottom: 1.5em; }
+        
+        a { color: var(--primary-blue); text-decoration: none; border-bottom: 1px solid rgba(32, 82, 187, 0.3); }
+        a:hover { border-bottom-color: var(--primary-blue); }
+
+        /* Epistemic Callouts */
+        .callout {
+            border-left: 4px solid var(--neutral-grey);
+            background: #F3F4F6;
+            padding: 16px 20px;
+            margin: 2em 0;
+            border-radius: 0 8px 8px 0;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+        }
+        .callout.definition {
+            border-left-color: var(--primary-blue);
+            background: rgba(32, 82, 187, 0.05);
+        }
+        .callout.metaphor {
+            border-left-color: var(--action-amber);
+            background: rgba(245, 158, 11, 0.05);
+        }
+        .callout-title {
+            font-weight: 600;
+            margin-bottom: 0.5em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.85rem;
+        }
+        .definition .callout-title { color: var(--primary-blue); }
+        .metaphor .callout-title { color: var(--action-amber); }
+
+        /* Figures */
+        .figure-container {
+            margin: 3em 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            border: 1px solid #E5E7EB;
+        }
+        .figure-canvas-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fff;
+            padding: 20px;
+            touch-action: none;
+            position: relative;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .figure-controls {
+            padding: 15px 20px;
+            background: #F9FAFB;
+            border-top: 1px solid #E5E7EB;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+        }
+        .figure-caption {
+            padding: 12px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            border-top: 1px solid #E5E7EB;
+        }
+
+        /* Controls */
+        button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-family: var(--font-body);
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { background: var(--neutral-grey); cursor: not-allowed; }
+        
+        select {
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #E5E7EB;
+            font-family: var(--font-body);
+            background: white;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            accent-color: var(--primary-blue);
+            cursor: pointer;
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .toggle-label input { margin: 0; cursor: pointer; accent-color: var(--primary-blue); }
+
+        /* Math */
+        .math { font-family: "Times New Roman", serif; font-style: italic; }
+        
+        /* Badges */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--neutral-grey);
+            color: white;
+            display: inline-block;
+        }
+        .badge.active-true { background: var(--success-green); }
+        .badge.active-false { background: var(--failure-red); }
+
+        .flex-row { display: flex; gap: 20px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Part 3: Rings and Fields</h1>
+    <div class="subtitle">Companion to Paulin's Introduction to Abstract Algebra</div>
+
+    <p>In Part 2, we isolated a single combining operation to build Groups. But the integers <span class="math">ℤ</span> possess <em>two</em> natural operations: addition and multiplication. A <strong>Ring</strong> is an abstract set equipped with both, bound together by a single crucial law.</p>
+
+    <h2 id="basic-definitions">4.1 Basic Definitions</h2>
+
+    <div class="callout definition">
+        <div class="callout-title">Fundamental Definition</div>
+        A <strong>ring</strong> is a set <i>R</i> with two binary operations, <i>+</i> and <i>×</i>, such that:
+        <br>1. <i>R</i> is an Abelian group under addition.
+        <br>2. <i>R</i> is a monoid under multiplication (associative, has identity 1).
+        <br>3. <i>+</i> and <i>×</i> are related by the <strong>distributive law</strong>: <i>a × (b + c) = (a × b) + (a × c)</i>.
+    </div>
+
+    <p>The distributive law is what makes a ring a single unified structure, rather than two unrelated operations living on the same set. We can visualize it as area.</p>
+
+    <div class="figure-container" id="fig-distrib">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-distrib"></canvas>
+        </div>
+        <div class="figure-controls">
+            <div class="control-group">
+                <label><i>a</i>: <span id="val-d-a">4</span></label>
+                <input type="range" id="slider-d-a" min="1" max="8" value="4">
+            </div>
+            <div class="control-group">
+                <label><i>b</i>: <span id="val-d-b">3</span></label>
+                <input type="range" id="slider-d-b" min="1" max="8" value="3">
+            </div>
+            <div class="control-group">
+                <label><i>c</i>: <span id="val-d-c">2</span></label>
+                <input type="range" id="slider-d-c" min="1" max="8" value="2">
+            </div>
+        </div>
+        <div class="figure-caption">
+            Slide the <b>variables</b>. The primary <span style="color:var(--primary-blue);font-weight:bold;">a</span> acts simultaneously across the sum of <span style="color:var(--action-amber);font-weight:bold;">b</span> and <span style="color:var(--action-amber);font-weight:bold;">c</span>.
+        </div>
+    </div>
+
+    <p>Let's return to the clock from Part 1, <span class="math">ℤ/mℤ</span>, but now view it fully as a ring. We can display both its addition and multiplication tables. While addition always forms a perfect group, multiplication can be messy. Two non-zero numbers might multiply to zero!</p>
+
+    <div class="callout definition">
+        <div class="callout-title">Definition</div>
+        A non-zero element <i>a</i> is a <strong>zero-divisor</strong> if <i>ab = 0</i> for some non-zero <i>b</i>. A commutative ring with no zero-divisors is an <strong>integral domain</strong>. If every non-zero element has an inverse, the ring is a <strong>field</strong>.
+    </div>
+
+    <div class="figure-container" id="fig-ringclock">
+        <div class="figure-canvas-wrapper flex-row" style="align-items: flex-start;">
+            <canvas id="canvas-ringclock-dial"></canvas>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <select id="sel-ringclock-table">
+                    <option value="add">Show Addition (+)</option>
+                    <option value="mul" selected>Show Multiplication (×)</option>
+                </select>
+                <canvas id="canvas-ringclock-table"></canvas>
+            </div>
+        </div>
+        <div class="figure-controls">
+            <div class="control-group">
+                <label>Modulus <i>m</i>: <span id="val-m-ringclock">6</span></label>
+                <input type="range" id="slider-m-ringclock" min="2" max="11" value="6">
+            </div>
+            <span class="badge" id="badge-integral">Integral Domain ✓/✗</span>
+        </div>
+        <div class="figure-caption">
+            Hover over the <b>table</b>. <span style="color:var(--failure-red);font-weight:bold;">Red</span> elements are zero-divisors. <span style="color:var(--success-green);font-weight:bold;">Green</span> elements are units (invertible). Slide <i>m</i> to a prime number to form a Field.
+        </div>
+    </div>
+
+    <h2 id="ideals">4.2 Ideals and Quotient Rings</h2>
+
+    <p>In group theory, we collapsed groups using Normal Subgroups. In ring theory, the structure that lets us cleanly collapse a ring is called an <strong>Ideal</strong>. An ideal <i>I</i> is a sub-group under addition that perfectly "absorbs" multiplication by <em>any</em> element of the ring <i>R</i>.</p>
+
+    <div class="figure-container" id="fig-ideals">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-ideals"></canvas>
+        </div>
+        <div class="figure-controls">
+            <div class="control-group">
+                <label>Ideal generator <i>a</i>: <span id="val-ideal-a">3</span></label>
+                <input type="range" id="slider-ideal-a" min="2" max="6" value="3">
+            </div>
+            <button id="btn-ideal-fire" style="background: var(--action-amber);">Multiply Random <i>r</i> × <i>x</i></button>
+        </div>
+        <div class="figure-caption">
+            The ideal <i>(a)</i> is the set of <span style="color:var(--success-green);font-weight:bold;">green multiples</span>. Click <b>Multiply</b> to take an element <i>x</i> inside the ideal, multiply it by <i>any</i> integer <i>r</i>, and watch it absorb back inside.
+        </div>
+    </div>
+
+    <h2 id="prime-maximal">4.8 Principal, Prime, and Maximal Ideals</h2>
+
+    <p>Because an ideal absorbs everything, we can form the quotient ring <i>R/I</i>. The properties of the ideal completely determine the properties of the quotient. If <i>I</i> is "prime", <i>R/I</i> has no zero-divisors (Integral Domain). If <i>I</i> is "maximal" (no larger proper ideal can contain it), <i>R/I</i> is a Field.</p>
+
+    <div class="figure-container" id="fig-primemax">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-primemax"></canvas>
+        </div>
+        <div class="figure-controls">
+            <div class="control-group">
+                <label>Ideal <i>I = (m)</i> in <i>ℤ</i>: <span id="val-pm-m">4</span></label>
+                <input type="range" id="slider-pm-m" min="2" max="11" value="4">
+            </div>
+            <div class="flex-row">
+                <span class="badge" id="badge-prime">I is Prime <=> R/I Domain</span>
+                <span class="badge" id="badge-max">I is Maximal <=> R/I Field</span>
+            </div>
+        </div>
+        <div class="figure-caption">
+            Viewing the quotient ring <i>R/I</i> (which is <i>ℤ/mℤ</i>). In the integers, every non-zero prime ideal is automatically maximal, so both badges always light up together!
+        </div>
+    </div>
+    
+    <div class="callout metaphor">
+        <div class="callout-title">Where the picture lies</div>
+        In finite integral domains (and quotients of <i>ℤ</i>), every Prime ideal is Maximal. In more complex rings (like polynomials in two variables), an ideal can be Prime without being Maximal—the first badge would light up while the second stays off.
+    </div>
+
+    <h2 id="polynomials">4.4 Polynomial Rings</h2>
+
+    <p>We can build rings out of things besides numbers. A polynomial is formally just an infinite sequence of coefficients where only finitely many are non-zero. Let's look at <i>F[X]</i>, where the coefficients themselves come from a field <i>F</i> (like <i>ℤ/5ℤ</i>).</p>
+
+    <div class="figure-container" id="fig-polys">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-polys"></canvas>
+        </div>
+        <div class="figure-controls">
+            <span><b>f(X)</b>:</span>
+            <input type="range" class="poly-slider" id="f0" min="0" max="4" value="1">
+            <input type="range" class="poly-slider" id="f1" min="0" max="4" value="2">
+            <input type="range" class="poly-slider" id="f2" min="0" max="4" value="0">
+            <span style="margin-left:20px;"><b>g(X)</b>:</span>
+            <input type="range" class="poly-slider" id="g0" min="0" max="4" value="3">
+            <input type="range" class="poly-slider" id="g1" min="0" max="4" value="1">
+        </div>
+        <div class="figure-caption">
+            Slide the coefficients to multiply <i>f</i> and <i>g</i> in <i>(ℤ/5ℤ)[X]</i>. Notice that the degree of <i>f×g</i> is exactly the sum of their degrees.
+        </div>
+    </div>
+
+    <h2 id="factorisation">4.9 Factorisation in Integral Domains</h2>
+
+    <p>We know how to find the Greatest Common Divisor in <i>ℤ</i> using the <strong>Euclidean Algorithm</strong>: repeated division with remainder. Miraculously, because degrees of polynomials act just like the absolute value of integers, the <em>exact same algorithm</em> works in <i>F[X]</i>.</p>
+
+    <div class="figure-container" id="fig-euclid">
+        <div class="figure-canvas-wrapper flex-row">
+            <div style="flex:1; text-align:center;">
+                <b>Ring <i>ℤ</i></b>
+                <canvas id="canvas-euclid-z" style="margin-top:10px;"></canvas>
+            </div>
+            <div style="flex:1; text-align:center;">
+                <b>Ring <i>F[X]</i></b>
+                <canvas id="canvas-euclid-f" style="margin-top:10px;"></canvas>
+            </div>
+        </div>
+        <div class="figure-controls">
+            <button id="btn-euclid-step" style="background: var(--action-amber);">Next Step</button>
+            <button id="btn-euclid-reset" style="background: var(--neutral-grey);">Reset</button>
+        </div>
+        <div class="figure-caption">
+            Click <b>Next Step</b>. The algorithm descends by shrinking the integer size (left) and the polynomial degree (right). They are structurally the same kind of ring.
+        </div>
+    </div>
+
+    <p>This allows us to classify rings into a hierarchy. Every Euclidean Domain (ED) guarantees Principal Ideals (PID), which in turn guarantees Unique Factorization (UFD).</p>
+
+    <div class="figure-container" id="fig-nesting">
+        <div class="figure-canvas-wrapper">
+            <canvas id="canvas-nesting" height="300"></canvas>
+        </div>
+        <div class="figure-controls" id="nesting-controls">
+            <!-- Tokens injected by JS -->
+        </div>
+        <div class="figure-caption">
+            Drag the <b>Tokens</b> into the correct region of the hierarchy. They will snap back if placed incorrectly.
+        </div>
+    </div>
+    
+    <div class="callout metaphor">
+        <div class="callout-title">Where the picture lies</div>
+        The strict nesting <i>ED ⊂ PID ⊂ UFD ⊂ Integral Domain</i> is a proven theorem (exact). The tokens represent standard counterexamples proving the containments are strict.
+    </div>
+
+    <h2 id="irreducibles">Atoms of F[X]</h2>
+
+    <p>In the ring of integers, the "atoms" are primes. In a polynomial ring <i>F[X]</i>, the atoms are <strong>irreducible polynomials</strong>. But unlike <i>ℤ</i>, the "periodic table" of atoms in <i>F[X]</i> changes drastically depending on which field <i>F</i> you use for the coefficients!</p>
+
+    <div class="figure-container" id="fig-atoms-fx">
+        <div class="figure-canvas-wrapper" style="height: 250px;">
+            <canvas id="canvas-atoms-fx"></canvas>
+        </div>
+        <div class="figure-controls">
+            <select id="sel-field">
+                <option value="C">ℂ (Complex Numbers)</option>
+                <option value="R">ℝ (Real Numbers)</option>
+                <option value="Q">ℚ (Rational Numbers)</option>
+            </select>
+        </div>
+        <div class="figure-caption">
+            Toggle the base Field. In <i>ℂ</i>, every atom is degree 1. In <i>ℝ</i>, atoms can be degree 1 or 2. In <i>ℚ</i>, there are atoms of <b>every possible degree</b> (a fact proved by Eisenstein's Criterion).
+        </div>
+    </div>
+    <p>This wild complexity in <i>ℚ[X]</i> is the seed for Part 4. The roots of these irreducible polynomials generate new, higher-dimensional field extensions, leading us to Galois Theory.</p>
+
+    <hr style="margin: 4em 0; border: 0; border-top: 1px solid #E5E7EB;">
+
+    <!-- End of content, begin scripts -->
+    <script>
+        // Shared Utilities
+        const COLORS = {
+            primary: '#2052BB',
+            action: '#F59E0B',
+            success: '#10B981',
+            failure: '#EF4444',
+            grey: '#9CA3AF',
+            bg: '#FAFAFA',
+            text: '#374151'
+        };
+
+        function setupCanvas(id, wMax, hMax) {
+            const canvas = document.getElementById(id);
+            const parent = canvas.parentElement;
+            const w = Math.min(parent.clientWidth - 40, wMax || 600);
+            const h = hMax || 300;
+            
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = w * dpr;
+            canvas.height = h * dpr;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            return { canvas, ctx, w, h };
+        }
+
+        function lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
+        function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+        function isPrime(n) {
+            if (n < 2) return false;
+            for(let i=2; i<=Math.sqrt(n); i++) if (n%i===0) return false;
+            return true;
+        }
+
+        // ==========================================
+        // Figure 1: Distributivity
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-distrib', 500, 240);
+            let a = 4, b = 3, c = 2;
+            let currentA = a, currentB = b, currentC = c;
+            
+            document.getElementById('slider-d-a').addEventListener('input', e => { a = parseInt(e.value); document.getElementById('val-d-a').innerText = a; });
+            document.getElementById('slider-d-b').addEventListener('input', e => { b = parseInt(e.value); document.getElementById('val-d-b').innerText = b; });
+            document.getElementById('slider-d-c').addEventListener('input', e => { c = parseInt(e.value); document.getElementById('val-d-c').innerText = c; });
+
+            function loop() {
+                ctx.clearRect(0, 0, w, h);
+                currentA = lerp(currentA, a, 0.1);
+                currentB = lerp(currentB, b, 0.1);
+                currentC = lerp(currentC, c, 0.1);
+
+                const scale = 20;
+                const totalW = currentA * scale;
+                const totalH = (currentB + currentC) * scale;
+                
+                const startX = w/2 - totalW/2;
+                const startY = h/2 - totalH/2 + 20;
+
+                // Rect b
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.2)'; // amber tint
+                ctx.fillRect(startX, startY, totalW, currentB * scale);
+                ctx.strokeStyle = COLORS.action;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(startX, startY, totalW, currentB * scale);
+                
+                // Rect c
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.4)'; 
+                ctx.fillRect(startX, startY + currentB*scale, totalW, currentC * scale);
+                ctx.strokeRect(startX, startY + currentB*scale, totalW, currentC * scale);
+
+                // Side bracket a
+                ctx.beginPath();
+                ctx.moveTo(startX - 10, startY);
+                ctx.lineTo(startX - 15, startY);
+                ctx.lineTo(startX - 15, startY + totalH);
+                ctx.lineTo(startX - 10, startY + totalH);
+                ctx.strokeStyle = COLORS.primary;
+                ctx.stroke();
+                
+                ctx.fillStyle = COLORS.primary;
+                ctx.font = 'bold 16px Georgia';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`a=${Math.round(currentA)}`, startX - 20, startY + totalH/2);
+
+                // Top brackets b, c
+                ctx.fillStyle = COLORS.action;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(`b=${Math.round(currentB)}`, startX + totalW/2, startY - 10);
+                ctx.fillText(`c=${Math.round(currentC)}`, startX + totalW/2, startY + currentB*scale + currentC*scale/2);
+
+                // Math eq
+                ctx.fillStyle = COLORS.text;
+                ctx.textBaseline = 'middle';
+                ctx.font = '16px Georgia';
+                ctx.fillText(`a(b + c)  =  ab + ac`, w/2, 20);
+                
+                let areaLeft = a * (b + c);
+                let areaRight = a*b + a*c;
+                ctx.fillText(`${a}(${b} + ${c}) = ${a*b} + ${a*c} = ${areaLeft}`, w/2, 45);
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        // ==========================================
+        // Figure 2: The Clock returns as a ring
+        // ==========================================
+        (function() {
+            let {canvas: cDial, ctx: ctxDial} = setupCanvas('canvas-ringclock-dial', 240, 240);
+            let {canvas: cTable, ctx: ctxTable} = setupCanvas('canvas-ringclock-table', 260, 260);
+            
+            let m = 6;
+            let mode = 'mul'; // add or mul
+            let hoverR = -1, hoverC = -1;
+
+            const slider = document.getElementById('slider-m-ringclock');
+            const valSpan = document.getElementById('val-m-ringclock');
+            const selMode = document.getElementById('sel-ringclock-table');
+            const badge = document.getElementById('badge-integral');
+
+            slider.addEventListener('input', e => {
+                m = parseInt(e.target.value);
+                valSpan.innerText = m;
+                hoverR = -1; hoverC = -1;
+                badge.className = 'badge ' + (isPrime(m) ? 'active-true' : 'active-false');
+            });
+            selMode.addEventListener('change', e => { mode = e.target.value; hoverR = -1; hoverC = -1; });
+
+            badge.className = 'badge active-false'; // 6 is composite
+
+            cTable.addEventListener('pointermove', e => {
+                const cs = cTable.width / (window.devicePixelRatio * (m+1));
+                let c = Math.floor(e.offsetX / cs) - 1;
+                let r = Math.floor(e.offsetY / cs) - 1;
+                if(c >= 0 && c < m && r >= 0 && r < m) {
+                    hoverR = r; hoverC = c;
+                } else {
+                    hoverR = -1; hoverC = -1;
+                }
+            });
+            cTable.addEventListener('pointerleave', () => { hoverR = -1; hoverC = -1; });
+
+            function getPt(val, rad=80) {
+                const angle = -Math.PI/2 + (val / m) * Math.PI * 2;
+                return { x: cDial.width/(2*window.devicePixelRatio) + rad * Math.cos(angle), 
+                         y: cDial.height/(2*window.devicePixelRatio) + rad * Math.sin(angle) };
+            }
+
+            function loop() {
+                // Table
+                ctxTable.clearRect(0,0, cTable.width, cTable.height);
+                let wT = cTable.width / window.devicePixelRatio;
+                let hT = cTable.height / window.devicePixelRatio;
+                let cs = Math.min(wT, hT) / (m+1);
+                
+                ctxTable.font = '12px sans-serif';
+                ctxTable.textAlign = 'center';
+                ctxTable.textBaseline = 'middle';
+
+                for(let r=-1; r<m; r++) {
+                    for(let c=-1; c<m; c++) {
+                        let x = (c+1)*cs, y = (r+1)*cs;
+                        if(r===-1 && c===-1) {
+                            ctxTable.fillStyle = COLORS.text;
+                            ctxTable.fillText(mode==='mul'?'×':'+', x+cs/2, y+cs/2);
+                            continue;
+                        }
+                        
+                        let bg = 'white';
+                        let text = '';
+                        let isHeader = (r===-1 || c===-1);
+                        
+                        if(r===-1) { text = c; ctxTable.fillStyle = COLORS.action; }
+                        else if(c===-1) { text = r; ctxTable.fillStyle = COLORS.primary; }
+                        else {
+                            let val = mode==='mul' ? (r*c)%m : (r+c)%m;
+                            text = val;
+                            
+                            // Domain rules:
+                            // In Z/mZ, unit <=> gcd(x,m)=1. zero divisor <=> gcd(x,m)>1 (for x!=0).
+                            let isZeroDiv = mode==='mul' && val===0 && r!==0 && c!==0;
+                            // color individual items
+                            if (mode==='mul') {
+                                let gc = gcd(val, m);
+                                if (val===0 || gc > 1) bg = 'rgba(239, 68, 68, 0.1)'; // faint red
+                                if (gc === 1) bg = 'rgba(16, 185, 129, 0.1)'; // faint green
+                            }
+                            
+                            if (hoverR === r && hoverC === c) bg = '#D1D5DB';
+                            ctxTable.fillStyle = COLORS.text;
+                            if(mode==='mul') {
+                                let g = gcd(val,m);
+                                if(val===0 || g>1) ctxTable.fillStyle = COLORS.failure;
+                                if(g===1 && val!==0) ctxTable.fillStyle = COLORS.success;
+                            }
+                        }
+
+                        ctxTable.fillStyle = isHeader ? bg : bg;
+                        if(isHeader) ctxTable.fillStyle = 'white';
+                        ctxTable.fillRect(x,y,cs,cs);
+                        ctxTable.strokeStyle = '#E5E7EB';
+                        ctxTable.strokeRect(x,y,cs,cs);
+                        
+                        ctxTable.fillStyle = isHeader ? (r===-1?COLORS.action:COLORS.primary) : ctxTable.fillStyle;
+                        ctxTable.fillText(text, x+cs/2, y+cs/2);
+                    }
+                }
+
+                // Dial
+                ctxDial.clearRect(0,0, cDial.width, cDial.height);
+                let cx = cDial.width/(2*window.devicePixelRatio);
+                let cy = cDial.height/(2*window.devicePixelRatio);
+                
+                ctxDial.beginPath();
+                ctxDial.arc(cx, cy, 80, 0, Math.PI*2);
+                ctxDial.strokeStyle = '#E5E7EB'; ctxDial.lineWidth = 2; ctxDial.stroke();
+
+                if(hoverR !== -1 && hoverC !== -1) {
+                    // Draw action
+                    if(mode === 'mul') {
+                        let cur = 0;
+                        ctxDial.beginPath();
+                        for(let step=1; step<=hoverC; step++) {
+                            let nxt = (cur + hoverR)%m;
+                            let p1 = getPt(cur, 80); let p2 = getPt(nxt, 80);
+                            
+                            ctxDial.moveTo(p1.x, p1.y);
+                            let cp = { x: cx + (p1.x+p2.x-2*cx)*0.4, y: cy + (p1.y+p2.y-2*cy)*0.4 };
+                            ctxDial.quadraticCurveTo(cp.x, cp.y, p2.x, p2.y);
+                            
+                            cur = nxt;
+                        }
+                        ctxDial.strokeStyle = COLORS.action; ctxDial.lineWidth = 3; ctxDial.stroke();
+                        let d = getPt(cur, 80);
+                        ctxDial.beginPath(); ctxDial.arc(d.x, d.y, 16, 0, Math.PI*2); ctxDial.stroke();
+                    } else {
+                        // Add
+                        let p1 = getPt(hoverR, 80);
+                        let p2 = getPt((hoverR+hoverC)%m, 80);
+                        ctxDial.beginPath();
+                        ctxDial.moveTo(p1.x, p1.y);
+                        let cp = { x: cx + (p1.x+p2.x-2*cx)*0.4, y: cy + (p1.y+p2.y-2*cy)*0.4 };
+                        ctxDial.quadraticCurveTo(cp.x, cp.y, p2.x, p2.y);
+                        ctxDial.strokeStyle = COLORS.action; ctxDial.lineWidth = 3; ctxDial.stroke();
+                        ctxDial.beginPath(); ctxDial.arc(p2.x, p2.y, 16, 0, Math.PI*2); ctxDial.stroke();
+                    }
+                }
+
+                for(let i=0; i<m; i++) {
+                    let pt = getPt(i, 80);
+                    let gc = gcd(i, m);
+                    let color = COLORS.grey;
+                    if(mode === 'mul') {
+                        color = (gc===1 && i!==0) ? COLORS.success : COLORS.failure;
+                    }
+                    
+                    ctxDial.beginPath(); ctxDial.arc(pt.x, pt.y, 12, 0, Math.PI*2);
+                    ctxDial.fillStyle = color; ctxDial.fill();
+                    ctxDial.fillStyle = 'white'; ctxDial.font = '12px sans-serif'; ctxDial.textAlign = 'center'; ctxDial.textBaseline='middle';
+                    ctxDial.fillText(i, pt.x, pt.y);
+                }
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        // ==========================================
+        // Figure 3: Ideals (Absorption)
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-ideals', 600, 160);
+            let a = 3;
+            let animR = 0;
+            let animX = 0;
+            let isAnimating = false;
+            let progress = 0;
+
+            const slider = document.getElementById('slider-ideal-a');
+            const valSpan = document.getElementById('val-ideal-a');
+            const btnFire = document.getElementById('btn-ideal-fire');
+
+            slider.addEventListener('input', e => {
+                a = parseInt(e.target.value);
+                valSpan.innerText = a;
+                isAnimating = false;
+            });
+
+            btnFire.onclick = () => {
+                // pick a random r in [-2, 2]
+                animR = Math.floor(Math.random()*5) - 2;
+                // pick a random x in the ideal (e.g., -a, 0, a)
+                animX = (Math.floor(Math.random()*3) - 1) * a;
+                isAnimating = true;
+                progress = 0;
+            };
+
+            function loop() {
+                ctx.clearRect(0, 0, w, h);
+                
+                const cy = h/2 + 20;
+                const scale = 20;
+                const cx = w/2; // x=0
+
+                ctx.beginPath();
+                ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+                ctx.strokeStyle = COLORS.grey; ctx.lineWidth = 2; ctx.stroke();
+
+                ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline='top';
+                
+                for(let i=-12; i<=12; i++) {
+                    let px = cx + i*scale;
+                    let isIdeal = (i % a === 0);
+                    
+                    ctx.beginPath(); ctx.moveTo(px, cy-5); ctx.lineTo(px, cy+5);
+                    ctx.strokeStyle = isIdeal ? COLORS.success : COLORS.grey;
+                    ctx.stroke();
+
+                    if(isIdeal) {
+                        ctx.beginPath(); ctx.arc(px, cy, 5, 0, Math.PI*2);
+                        ctx.fillStyle = COLORS.success; ctx.fill();
+                    }
+                    if(Math.abs(i) <= 10) {
+                        ctx.fillStyle = isIdeal ? COLORS.success : COLORS.grey;
+                        ctx.fillText(i, px, cy+10);
+                    }
+                }
+
+                if(isAnimating) {
+                    progress += 0.02;
+                    if(progress > 1) progress = 1;
+                    
+                    let startPx = cx + animX * scale;
+                    let targetVal = animX * animR;
+                    let targetPx = cx + targetVal * scale;
+
+                    let curPx = lerp(startPx, targetPx, progress);
+                    
+                    // Arc arc
+                    ctx.beginPath();
+                    ctx.moveTo(startPx, cy);
+                    let topY = cy - 40 - Math.abs(targetPx - startPx)*0.2;
+                    ctx.quadraticCurveTo((startPx+targetPx)/2, topY, curPx, cy-10);
+                    ctx.strokeStyle = COLORS.action; ctx.lineWidth = 3; ctx.stroke();
+                    
+                    ctx.beginPath(); ctx.arc(curPx, cy-10, 6, 0, Math.PI*2);
+                    ctx.fillStyle = COLORS.action; ctx.fill();
+
+                    ctx.fillStyle = COLORS.text;
+                    ctx.font = '16px Georgia';
+                    ctx.fillText(`r = ${animR}   x = ${animX}   rx = ${targetVal}`, cx, 20);
+
+                    if(progress === 1) {
+                        ctx.beginPath(); ctx.arc(targetPx, cy, 8, 0, Math.PI*2);
+                        ctx.strokeStyle = COLORS.action; ctx.lineWidth = 3; ctx.stroke();
+                    }
+                }
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        // ==========================================
+        // Figure 4: Prime vs Maximal
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-primemax', 300, 300);
+            let m = 4;
+            const slider = document.getElementById('slider-pm-m');
+            const valSpan = document.getElementById('val-pm-m');
+            const badgePrime = document.getElementById('badge-prime');
+            const badgeMax = document.getElementById('badge-max');
+
+            slider.addEventListener('input', e => {
+                m = parseInt(e.target.value);
+                valSpan.innerText = m;
+                let prime = isPrime(m);
+                badgePrime.className = 'badge ' + (prime ? 'active-true' : 'active-false');
+                badgeMax.className = 'badge ' + (prime ? 'active-true' : 'active-false');
+            });
+            
+            function loop() {
+                ctx.clearRect(0,0,w,h);
+                let cs = Math.min(w,h) / (m+1);
+                
+                ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline='middle';
+                for(let r=-1; r<m; r++) {
+                    for(let c=-1; c<m; c++) {
+                        let x = (c+1)*cs, y = (r+1)*cs;
+                        if(r===-1 && c===-1) continue;
+                        
+                        let isH = (r===-1 || c===-1);
+                        let text = isH ? (r===-1?c:r) : (r*c)%m;
+                        
+                        let bg = 'white';
+                        if (isH) bg = (r===-1)?COLORS.action:COLORS.primary;
+                        else {
+                            let val = (r*c)%m;
+                            if (val===0 && r!==0 && c!==0) bg = 'rgba(239,68,68,0.2)'; // zero divisor
+                            else if (val===1) bg = 'rgba(16,185,129,0.2)'; // unit
+                        }
+                        
+                        ctx.fillStyle = bg; ctx.fillRect(x,y,cs,cs);
+                        ctx.strokeStyle = '#E5E7EB'; ctx.strokeRect(x,y,cs,cs);
+                        ctx.fillStyle = isH ? 'white' : COLORS.text;
+                        ctx.fillText(text, x+cs/2, y+cs/2);
+                    }
+                }
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        // ==========================================
+        // Figure 5: Polynomials
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-polys', 600, 200);
+            const p = 5; // GF(5)
+            
+            function getVal(id) { return parseInt(document.getElementById(id).value); }
+
+            function loop() {
+                ctx.clearRect(0,0,w,h);
+                
+                let f = [getVal('f0'), getVal('f1'), getVal('f2')]; // a0, a1, a2
+                let g = [getVal('g0'), getVal('g1')]; // b0, b1
+                
+                let out = [0,0,0,0];
+                for(let i=0; i<f.length; i++) {
+                    for(let j=0; j<g.length; j++) {
+                        out[i+j] = (out[i+j] + f[i]*g[j]) % p;
+                    }
+                }
+
+                ctx.font = '18px Georgia'; ctx.textAlign = 'left'; ctx.textBaseline='middle';
+                
+                function formatPoly(coeffs, color) {
+                    let terms = [];
+                    for(let i=coeffs.length-1; i>=0; i--) {
+                        if(coeffs[i]!==0) {
+                            let term = (coeffs[i]===1 && i!==0) ? "" : coeffs[i];
+                            if(i===1) term += "X";
+                            else if(i>1) term += "X²".replace('²', i===2?'²':i===3?'³':'');
+                            terms.push(term);
+                        }
+                    }
+                    if(terms.length===0) return "0";
+                    return terms.join(" + ");
+                }
+
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText(`f(X) = `, 20, 40);
+                ctx.fillStyle = COLORS.primary;
+                ctx.fillText(formatPoly(f), 80, 40);
+
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText(`g(X) = `, 20, 80);
+                ctx.fillStyle = COLORS.action;
+                ctx.fillText(formatPoly(g), 80, 80);
+
+                ctx.fillStyle = COLORS.text;
+                ctx.fillText(`f(X) × g(X)  = `, 20, 140);
+                ctx.fillStyle = COLORS.success;
+                ctx.fillText(formatPoly(out) + `   (mod ${p})`, 140, 140);
+                
+                // Show degree adding
+                let degF = f[2]?2:(f[1]?1:(f[0]?0:-1));
+                let degG = g[1]?1:(g[0]?0:-1);
+                let degOut = out[3]?3:(out[2]?2:(out[1]?1:(out[0]?0:-1)));
+                
+                ctx.fillStyle = COLORS.grey;
+                ctx.font = '14px sans-serif';
+                ctx.fillText(`deg(f) = ${degF}   deg(g) = ${degG}   deg(f×g) = ${degOut}`, 20, 180);
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+            // Bind listeners
+            document.querySelectorAll('.poly-slider').forEach(s => s.addEventListener('input', loop));
+        })();
+
+        // ==========================================
+        // Figure 6: Euclidean Algorithm
+        // ==========================================
+        (function() {
+            let {canvas: cZ, ctx: ctxZ} = setupCanvas('canvas-euclid-z', 260, 200);
+            let {canvas: cF, ctx: ctxF} = setupCanvas('canvas-euclid-f', 260, 200);
+            
+            const btnStep = document.getElementById('btn-euclid-step');
+            const btnReset = document.getElementById('btn-euclid-reset');
+
+            let stepsZ = [
+                {a: 17, b: 5, q: 3, r: 2},
+                {a: 5, b: 2, q: 2, r: 1},
+                {a: 2, b: 1, q: 2, r: 0}
+            ];
+            
+            let stepsF = [
+                {a: "X²+1", b: "X+1", q: "X-1", r: "2"},
+                {a: "X+1", b: "2", q: "2X+2", r: "0"} // mod 3
+            ];
+
+            let stepIdx = 0;
+
+            btnStep.onclick = () => { if(stepIdx < 2) stepIdx++; draw(); };
+            btnReset.onclick = () => { stepIdx = 0; draw(); };
+
+            function draw() {
+                ctxZ.clearRect(0,0, cZ.width, cZ.height);
+                ctxF.clearRect(0,0, cF.width, cF.height);
+                
+                ctxZ.font = '16px Georgia'; ctxZ.textAlign = 'center'; ctxZ.textBaseline='middle';
+                ctxF.font = '16px Georgia'; ctxF.textAlign = 'center'; ctxF.textBaseline='middle';
+                
+                for(let i=0; i<=stepIdx; i++) {
+                    if(i < stepsZ.length) {
+                        let sz = stepsZ[i];
+                        ctxZ.fillStyle = COLORS.text;
+                        ctxZ.fillText(`${sz.a} = ${sz.q}(${sz.b}) + ${sz.r}`, cZ.width/(2*window.devicePixelRatio), 40 + i*50);
+                        if(sz.r===0) { ctxZ.fillStyle = COLORS.success; ctxZ.fillText(`GCD is ${sz.b}`, cZ.width/(2*window.devicePixelRatio), 40 + i*50 + 30); }
+                    }
+                    if(i < stepsF.length) {
+                        let sf = stepsF[i];
+                        ctxF.fillStyle = COLORS.text;
+                        ctxF.fillText(`${sf.a} = (${sf.q})(${sf.b}) + ${sf.r}`, cF.width/(2*window.devicePixelRatio), 40 + i*50);
+                        if(sf.r==="0") { ctxF.fillStyle = COLORS.success; ctxF.fillText(`GCD is 1`, cF.width/(2*window.devicePixelRatio), 40 + i*50 + 30); }
+                    }
+                }
+            }
+            draw();
+        })();
+
+        // ==========================================
+        // Figure 7: Nesting Hierarchy
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-nesting', 600, 300);
+            
+            // Regions: ID (outer), UFD, PID, ED (inner)
+            // Center w/2, h/2
+            
+            let tokens = [
+                { label: 'ℤ', type: 'ED', x: 50, y: 50, tx: 50, ty: 50 },
+                { label: 'ℝ[X]', type: 'ED', x: 120, y: 50, tx: 120, ty: 50 },
+                { label: 'ℤ[X]', type: 'UFD', x: 190, y: 50, tx: 190, ty: 50 },
+                { label: 'ℤ[√-5]', type: 'ID', x: 280, y: 50, tx: 280, ty: 50 }
+            ];
+
+            let dragging = null;
+
+            canvas.addEventListener('pointerdown', e => {
+                let rect = canvas.getBoundingClientRect();
+                let mx = e.clientX - rect.left;
+                let my = e.clientY - rect.top;
+                for(let t of tokens) {
+                    if(Math.hypot(t.x-mx, t.y-my) < 25) { dragging = t; break; }
+                }
+            });
+            canvas.addEventListener('pointermove', e => {
+                if(!dragging) return;
+                let rect = canvas.getBoundingClientRect();
+                dragging.tx = e.clientX - rect.left;
+                dragging.ty = e.clientY - rect.top;
+            });
+            canvas.addEventListener('pointerup', e => {
+                if(!dragging) return;
+                // Evaluate drop zone
+                let d = Math.hypot(dragging.tx - w/2, dragging.ty - h/2);
+                let zone = 'ID';
+                if(d < 60) zone = 'ED';
+                else if(d < 100) zone = 'PID';
+                else if(d < 140) zone = 'UFD';
+
+                if(zone !== dragging.type && !(zone==='PID' && dragging.type==='ED') && !(zone==='UFD' && (dragging.type==='ED'||dragging.type==='PID')) && !(zone==='ID')) {
+                    // Invalid, snap back
+                    dragging.tx = 50 + tokens.indexOf(dragging)*70;
+                    dragging.ty = 50;
+                }
+                dragging = null;
+            });
+
+            function loop() {
+                ctx.clearRect(0,0,w,h);
+                const cx = w/2, cy = h/2 + 20;
+
+                // Draw circles
+                let radiuses = [
+                    {r: 140, label: 'UFD', color: '#E5E7EB'},
+                    {r: 100, label: 'PID', color: '#D1D5DB'},
+                    {r: 60, label: 'Euclidean (ED)', color: '#9CA3AF'}
+                ];
+
+                radiuses.forEach(R => {
+                    ctx.beginPath(); ctx.arc(cx, cy, R.r, 0, Math.PI*2);
+                    ctx.fillStyle = R.color; ctx.fill();
+                    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = COLORS.text; ctx.font = '12px sans-serif'; ctx.textAlign='center';
+                    ctx.fillText(R.label, cx, cy - R.r + 15);
+                });
+                ctx.fillText('Integral Domain (ID)', cx, cy - 140 - 15);
+
+                // Draw tokens
+                tokens.forEach(t => {
+                    t.x = lerp(t.x, t.tx, 0.2);
+                    t.y = lerp(t.y, t.ty, 0.2);
+                    
+                    ctx.beginPath(); ctx.arc(t.x, t.y, 25, 0, Math.PI*2);
+                    ctx.fillStyle = COLORS.primary; ctx.fill();
+                    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = 'white'; ctx.font = '14px Georgia'; ctx.textAlign='center'; ctx.textBaseline='middle';
+                    ctx.fillText(t.label, t.x, t.y);
+                });
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+        // ==========================================
+        // Figure 8: Periodic Table
+        // ==========================================
+        (function() {
+            let {canvas, ctx, w, h} = setupCanvas('canvas-atoms-fx', 600, 250);
+            const sel = document.getElementById('sel-field');
+            
+            let field = 'C';
+            sel.addEventListener('change', e => { field = e.target.value; });
+
+            let time = 0;
+            function loop() {
+                ctx.clearRect(0,0,w,h);
+                time += 0.05;
+
+                ctx.font = '14px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+
+                if (field === 'C') {
+                    // Just degree 1
+                    for(let i=0; i<15; i++) {
+                        let x = w/2 - 140 + (i%5)*60;
+                        let y = h/2 - 40 + Math.floor(i/5)*40;
+                        ctx.fillStyle = COLORS.success; ctx.fillRect(x, y, 40, 30);
+                        ctx.fillStyle = 'white'; ctx.fillText('Deg 1', x+20, y+15);
+                    }
+                    ctx.fillStyle = COLORS.text; ctx.fillText('Only Linear Factors: (X - α)', w/2, h - 20);
+                } else if (field === 'R') {
+                    // Deg 1 and 2
+                    for(let i=0; i<6; i++) {
+                        let x = w/2 - 140 + (i%3)*60;
+                        let y = h/2 - 40 + Math.floor(i/3)*40;
+                        ctx.fillStyle = COLORS.success; ctx.fillRect(x, y, 40, 30);
+                        ctx.fillStyle = 'white'; ctx.fillText('Deg 1', x+20, y+15);
+                    }
+                    for(let i=0; i<4; i++) {
+                        let x = w/2 + 40 + (i%2)*60;
+                        let y = h/2 - 40 + Math.floor(i/2)*50;
+                        ctx.fillStyle = COLORS.action; ctx.fillRect(x, y, 50, 40);
+                        ctx.fillStyle = 'white'; ctx.fillText('Deg 2', x+25, y+20);
+                    }
+                    ctx.fillStyle = COLORS.text; ctx.fillText('Linear and irreducible Quadratics', w/2, h - 20);
+                } else if (field === 'Q') {
+                    // Infinite complexity
+                    let sizes = [30, 40, 50, 60, 70];
+                    let colors = [COLORS.success, COLORS.action, COLORS.primary, '#8B5CF6', '#EC4899'];
+                    let startX = w/2 - 180;
+                    for(let i=0; i<sizes.length; i++) {
+                        let yOffset = Math.sin(time + i)*5;
+                        ctx.fillStyle = colors[i]; ctx.fillRect(startX, h/2 - sizes[i]/2 + yOffset, sizes[i], sizes[i]);
+                        ctx.fillStyle = 'white'; ctx.fillText(`Deg ${i+1}`, startX+sizes[i]/2, h/2 + yOffset);
+                        startX += sizes[i] + 20;
+                    }
+                    ctx.fillStyle = COLORS.text; ctx.fillText('Irreducibles of every possible degree exist!', w/2, h - 20);
+                }
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+
+    </script>
+</div>
+</body>
+</html>

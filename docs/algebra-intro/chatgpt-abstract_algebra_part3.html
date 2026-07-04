@@ -1,0 +1,790 @@
+<!doctype html>
+<!--
+Part 3 — Rings and Fields
+Figures built in this file:
+1. Distributivity as area
+2. The clock returns as a ring
+3. Ideals as absorbing sets
+4. Prime vs maximal, via the quotient
+5. Polynomials as coefficient vectors
+6. The Euclidean algorithm, animated — twice
+7. The UFD ⊃ PID ⊃ Euclidean nesting
+8. A periodic table per field
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Abstract Algebra, Part 3 — Rings and Fields</title>
+  <style>
+    :root{
+      --bg:#fbf7ef;
+      --paper:#fffdfa;
+      --ink:#262624;
+      --muted:#6c6a65;
+      --line:#d9d1c5;
+      --soft:#efe8dc;
+      --blue:#2052BB;
+      --amber:#D99020;
+      --green:#248A3D;
+      --red:#C93632;
+      --grey:#7a7d83;
+      --shadow:0 10px 30px rgba(30,24,12,.08);
+      --radius:18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Charter, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;background:var(--bg);color:var(--ink)}
+    body{margin:0;font-family:var(--serif);font-size:18px;line-height:1.62;background:radial-gradient(circle at 20% 0%, #fffaf2 0, var(--bg) 38rem)}
+    .page{max-width:760px;margin:0 auto;padding:44px 18px 84px}
+    header{margin:18px 0 44px}
+    .eyebrow{font-family:var(--sans);font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+    h1{font-family:var(--sans);font-size:clamp(34px,8vw,64px);line-height:.98;letter-spacing:-.055em;margin:12px 0 20px;color:#171716}
+    h2{font-family:var(--sans);font-size:clamp(25px,5vw,38px);line-height:1.08;letter-spacing:-.035em;margin:58px 0 16px;padding-top:8px}
+    h2 a{color:inherit;text-decoration:none}
+    h3{font-family:var(--sans);font-size:21px;letter-spacing:-.02em;margin:28px 0 8px}
+    p{margin:0 0 20px}
+    a{color:var(--blue)}
+    code,.math{font-family:var(--mono);font-size:.94em;background:#fff6e7;border:1px solid #ecd9b9;border-radius:8px;padding:.1em .33em}
+    .lead{font-size:22px;line-height:1.45;color:#32312e}
+    .toc{font-family:var(--sans);font-size:14px;display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+    .toc a{color:#4c4942;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,.55)}
+    .toc a:hover{background:white;border-color:#c8bbab}
+    .callout{border-left:4px solid var(--blue);background:rgba(32,82,187,.06);padding:14px 16px;border-radius:14px;margin:20px 0;font-size:16px;color:#2f333d}
+    .callout.theorem{border-color:var(--green);background:rgba(36,138,61,.07)}
+    .callout.lie{border-color:var(--amber);background:rgba(217,144,32,.08)}
+    .callout strong{font-family:var(--sans);font-size:13px;text-transform:uppercase;letter-spacing:.075em;margin-right:6px}
+    .figure{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin:28px 0 30px;overflow:hidden}
+    .fig-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin:2px 2px 10px;font-family:var(--sans)}
+    .fig-title{font-weight:800;letter-spacing:-.02em}
+    .fig-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;white-space:nowrap}
+    canvas{display:block;width:100%;height:auto;border-radius:14px;background:linear-gradient(180deg,#fffdfa,#fcf4e8);border:1px solid #ebe1d3;touch-action:none}
+    .controls{font-family:var(--sans);display:grid;grid-template-columns:repeat(auto-fit,minmax(142px,1fr));gap:10px;align-items:end;margin-top:12px}
+    .controls label{font-size:12px;color:var(--muted);font-weight:750;text-transform:uppercase;letter-spacing:.06em;display:flex;flex-direction:column;gap:5px}
+    .controls .inline{flex-direction:row;align-items:center;gap:8px;text-transform:none;font-size:13px;letter-spacing:0;color:#45423b}
+    input[type="range"]{width:100%;accent-color:var(--blue)}
+    select,button{font-family:var(--sans);font-size:14px;border:1px solid var(--line);background:#fffaf3;border-radius:11px;padding:8px 10px;color:var(--ink)}
+    button{cursor:pointer;font-weight:760}
+    button:hover,select:hover{border-color:#bfae99;background:white}
+    .button-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .caption{font-family:var(--sans);font-size:13px;line-height:1.45;color:var(--muted);margin:10px 2px 0}
+    .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;font-family:var(--sans);font-size:13px}
+    .badge{border:1px solid var(--line);border-radius:999px;padding:5px 9px;background:#fffaf3;color:#575148}
+    .badge.ok{border-color:rgba(36,138,61,.35);background:rgba(36,138,61,.08);color:var(--green)}
+    .badge.bad{border-color:rgba(201,54,50,.35);background:rgba(201,54,50,.08);color:var(--red)}
+    .badge.warn{border-color:rgba(217,144,32,.45);background:rgba(217,144,32,.10);color:#9a5b08}
+    footer{margin-top:66px;border-top:1px solid var(--line);padding-top:24px;color:var(--muted);font-family:var(--sans);font-size:14px}
+    @media (max-width:520px){body{font-size:17px}.page{padding-left:12px;padding-right:12px}.figure{padding:10px;border-radius:15px}.controls{grid-template-columns:1fr}.fig-head{display:block}.fig-kicker{margin-top:2px}.lead{font-size:20px}}
+  </style>
+</head>
+<body>
+<div class="page">
+<header>
+  <div class="eyebrow">Interactive Abstract Algebra Visual Essays</div>
+  <h1>Part 3 — Rings and Fields</h1>
+  <p class="lead">A ring is where two compositions negotiate with each other. Addition behaves like an Abelian group; multiplication behaves like a monoid; distributivity is the treaty that lets the two operations share structure.</p>
+  <nav class="toc" aria-label="Part 3 table of contents">
+    <a href="#area">Distributivity</a>
+    <a href="#clock-ring">Clock ring</a>
+    <a href="#ideals">Ideals</a>
+    <a href="#prime-maximal">Prime/maximal</a>
+    <a href="#polynomials">Polynomials</a>
+    <a href="#euclid">Euclidean algorithm</a>
+    <a href="#nesting">UFD/PID/Euclidean</a>
+    <a href="#periodic">Irreducible atoms</a>
+  </nav>
+</header>
+
+<section id="area">
+  <h2><a href="#area">1. Distributivity as area</a></h2>
+  <p>In a group there was only one operation. In a ring there are two: <span class="math">+</span> and <span class="math">×</span>. The point is not merely that both exist; the point is that multiplication distributes over addition.</p>
+  <p>The rectangle below is the tactile model. One side has length <span class="math">a</span>; the other side is split into <span class="math">b+c</span>. Moving the split never changes the equality <span class="math">a(b+c)=ab+ac</span>; it only changes how the total area decomposes.</p>
+
+  <figure class="figure" id="fig-area">
+    <div class="fig-head"><div class="fig-title">Distributivity as area</div><div class="fig-kicker">two operations, one treaty</div></div>
+    <canvas id="areaCanvas" height="360"></canvas>
+    <div class="controls">
+      <label>a
+        <input id="areaA" type="range" min="1" max="9" value="5" />
+      </label>
+      <label>b
+        <input id="areaB" type="range" min="1" max="9" value="4" />
+      </label>
+      <label>c
+        <input id="areaC" type="range" min="1" max="9" value="3" />
+      </label>
+      <div class="button-row"><button id="areaReset">reset</button></div>
+    </div>
+    <div class="badge-row" id="areaBadges"></div>
+    <p class="caption">Drag the vertical split inside the canvas, or use the sliders. Blue is the primary factor a; amber is the second summand/action c; green marks the successful equality.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Definition</strong>A ring is a set R with addition and multiplication such that R is an Abelian group under addition, a monoid under multiplication, and multiplication distributes over addition on both sides.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>The area model is exact for ordinary nonnegative real lengths. For an abstract ring it is a faithful memory aid for the law, not a literal geometry of arbitrary elements.</div>
+</section>
+
+<section id="clock-ring">
+  <h2><a href="#clock-ring">2. The clock returns as a ring</a></h2>
+  <p>Part 1 introduced <span class="math">ℤ/mℤ</span> as a wrap-around world. Now the same clock carries both addition and multiplication. Addition is always group-like, but multiplication can fail dramatically: nonzero elements may multiply to zero.</p>
+  <p>That failure is the first ring-specific obstruction. A nonzero element that kills another nonzero element is a <strong>zero-divisor</strong>. An element with a multiplicative inverse is a <strong>unit</strong>. When <span class="math">m</span> is prime, every nonzero residue becomes green: <span class="math">ℤ/pℤ</span> is a field.</p>
+
+  <figure class="figure" id="fig-clock-ring">
+    <div class="fig-head"><div class="fig-title">The clock returns as a ring</div><div class="fig-kicker">ℤ/mℤ with + and ×</div></div>
+    <canvas id="ringClockCanvas" height="510"></canvas>
+    <div class="controls">
+      <label>modulus m
+        <input id="ringM" type="range" min="2" max="14" value="10" />
+      </label>
+      <label>a
+        <input id="ringA" type="range" min="0" max="13" value="4" />
+      </label>
+      <label>b
+        <input id="ringB" type="range" min="0" max="13" value="6" />
+      </label>
+      <label>table
+        <select id="ringTableMode">
+          <option value="mul">multiplication ×</option>
+          <option value="add">addition +</option>
+        </select>
+      </label>
+    </div>
+    <div class="badge-row" id="ringBadges"></div>
+    <p class="caption">Green residues are units; red nonzero residues are zero-divisors. The selected operation table reuses the same Cayley-table language as Parts 1–2.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Theorem</strong>In <span class="math">ℤ/mℤ</span>, a residue [a] has a multiplicative inverse exactly when a is coprime to m. Consequently <span class="math">ℤ/mℤ</span> is a field exactly when m is prime.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>The clock and the table are exact for the displayed finite ring. The red/green coloring is not metaphorical: it is computed by gcd(a,m).</div>
+</section>
+
+<section id="ideals">
+  <h2><a href="#ideals">3. Ideals as absorbing sets</a></h2>
+  <p>A subgroup of the additive group of a ring is not yet enough to form a quotient ring. The subset must also be stable under multiplication by arbitrary ring elements. That is the absorption condition.</p>
+  <p>On the integer line, the principal ideal <span class="math">(a)=aℤ</span> is the set of all multiples of <span class="math">a</span>. Choose an element inside it, multiply it by any integer <span class="math">r</span>, and it remains inside. This is the ring-theoretic analogue of a normal subgroup: exactly the kind of subset whose cosets can inherit structure.</p>
+
+  <figure class="figure" id="fig-ideals">
+    <div class="fig-head"><div class="fig-title">Ideals as absorbing sets</div><div class="fig-kicker">multiples stay inside</div></div>
+    <canvas id="idealCanvas" height="430"></canvas>
+    <div class="controls">
+      <label>generator a
+        <input id="idealA" type="range" min="2" max="8" value="4" />
+      </label>
+      <label>inside element k·a
+        <input id="idealK" type="range" min="-4" max="4" value="2" />
+      </label>
+      <label>multiplier r
+        <input id="idealR" type="range" min="-5" max="5" value="-3" />
+      </label>
+      <label>quotient view
+        <select id="idealQuotient">
+          <option value="line">integer line</option>
+          <option value="clock">wrap to ℤ/aℤ</option>
+        </select>
+      </label>
+    </div>
+    <div class="badge-row" id="idealBadges"></div>
+    <p class="caption">Green points are the ideal (a). The red candidate subset {−1,0,1} is additively visible but not absorbing: multiply 1 by 2 and it escapes.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Definition</strong>An ideal I⊂R is an additive subgroup such that x∈I implies rx∈I and xr∈I for every r∈R. The quotient R/I inherits a ring structure.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>For ideals (a) in ℤ, the multiples picture is exact. The red subset is a contrast object, not an ideal. Quotient wrapping to ℤ/aℤ is exact for ℤ/(a).</div>
+</section>
+
+<section id="prime-maximal">
+  <h2><a href="#prime-maximal">4. Prime vs maximal, via the quotient</a></h2>
+  <p>Ideals become easier to classify by looking at what their quotients remember. A prime ideal is one whose quotient has no zero-divisors. A maximal ideal is one whose quotient is a field. Thus “prime” and “maximal” are properties of the collapsed world.</p>
+  <p>Inside <span class="math">ℤ/12ℤ</span>, choose an ideal generated by a divisor d of 12. The quotient behaves like <span class="math">ℤ/dℤ</span>. When that quotient is a field, the ideal is maximal; when it is merely an integral domain, the ideal is prime. In these finite commutative examples, those lights turn on together.</p>
+
+  <figure class="figure" id="fig-prime-maximal">
+    <div class="fig-head"><div class="fig-title">Prime vs maximal, via the quotient</div><div class="fig-kicker">R/I tells the truth</div></div>
+    <canvas id="quotientCanvas" height="500"></canvas>
+    <div class="controls">
+      <label>ideal I=(d) in ℤ/12ℤ
+        <select id="idealD">
+          <option value="2">(2)</option>
+          <option value="3">(3)</option>
+          <option value="4">(4)</option>
+          <option value="6">(6)</option>
+          <option value="12">(12) = zero ideal</option>
+          <option value="1">(1) = whole ring</option>
+        </select>
+      </label>
+      <label>table
+        <select id="quotientTableMode">
+          <option value="mul">quotient × table</option>
+          <option value="add">quotient + table</option>
+        </select>
+      </label>
+    </div>
+    <div class="badge-row" id="quotientBadges"></div>
+    <p class="caption">The quotient table is drawn after collapsing ideal cosets. Red cells expose zero-divisors; green rings are fields.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Theorem</strong>For a commutative ring R and ideal I: I is prime iff R/I is an integral domain. I is maximal iff R/I is a field. Maximal implies prime.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>This figure is exact for the ideals of ℤ/12ℤ generated by divisors of 12. It does not assert that all prime ideals are maximal in arbitrary rings.</div>
+</section>
+
+<section id="polynomials">
+  <h2><a href="#polynomials">5. Polynomials as coefficient vectors</a></h2>
+  <p>A polynomial is not just a function; in algebra it is a formal finite list of coefficients. Addition adds lists. Multiplication convolves lists. Over a field <span class="math">F</span>, degrees behave well: nonzero leading coefficients cannot multiply to zero.</p>
+
+  <figure class="figure" id="fig-polynomials">
+    <div class="fig-head"><div class="fig-title">Polynomials as coefficient vectors</div><div class="fig-kicker">coefficient convolution</div></div>
+    <canvas id="polyCanvas" height="470"></canvas>
+    <div class="controls">
+      <label>field Fₚ
+        <select id="polyP">
+          <option value="2">𝔽₂</option>
+          <option value="3" selected>𝔽₃</option>
+          <option value="5">𝔽₅</option>
+        </select>
+      </label>
+      <label>f coefficient x⁰
+        <input id="f0" type="range" min="0" max="4" value="1" />
+      </label>
+      <label>f coefficient x¹
+        <input id="f1" type="range" min="0" max="4" value="2" />
+      </label>
+      <label>f coefficient x²
+        <input id="f2" type="range" min="0" max="4" value="1" />
+      </label>
+      <label>g coefficient x⁰
+        <input id="g0" type="range" min="0" max="4" value="2" />
+      </label>
+      <label>g coefficient x¹
+        <input id="g1" type="range" min="0" max="4" value="1" />
+      </label>
+      <label>g coefficient x²
+        <input id="g2" type="range" min="0" max="4" value="0" />
+      </label>
+    </div>
+    <div class="badge-row" id="polyBadges"></div>
+    <p class="caption">Bars are coefficients mod p. Multiplication sends two short coefficient vectors to a longer convolution vector, then reduces coefficients modulo p.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Theorem</strong>If R is entire, then R[X] is entire and deg(fg)=deg(f)+deg(g) for nonzero polynomials f,g. In particular, F[X] is an integral domain for every field F.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>The coefficient-vector model is exact for formal polynomials of the displayed degree bound. The canvas truncates input degrees to keep the multiplication visible.</div>
+</section>
+
+<section id="euclid">
+  <h2><a href="#euclid">6. The Euclidean algorithm, animated — twice</a></h2>
+  <p>The same algorithm lives in two different rings. In <span class="math">ℤ</span>, divide integers and keep remainders. In <span class="math">F[X]</span>, divide polynomials and keep lower-degree remainders. The common structure is Euclidean: every division step makes a norm smaller.</p>
+
+  <figure class="figure" id="fig-euclid">
+    <div class="fig-head"><div class="fig-title">The Euclidean algorithm, animated — twice</div><div class="fig-kicker">ℤ and F[X]</div></div>
+    <canvas id="euclidCanvas" height="520"></canvas>
+    <div class="controls">
+      <label>integer A
+        <input id="euclidA" type="range" min="12" max="120" value="84" />
+      </label>
+      <label>integer B
+        <input id="euclidB" type="range" min="2" max="80" value="30" />
+      </label>
+      <label>polynomial pair over 𝔽₂
+        <select id="euclidPolyCase">
+          <option value="0">x⁵+x²+1 and x³+x+1</option>
+          <option value="1">x⁴+x³+1 and x²+x+1</option>
+          <option value="2">x⁶+x+1 and x⁴+x³+x²+1</option>
+        </select>
+      </label>
+      <label>step
+        <input id="euclidStep" type="range" min="0" max="7" value="2" />
+      </label>
+    </div>
+    <div class="badge-row" id="euclidBadges"></div>
+    <p class="caption">The highlighted row is the current division step. The integer norm is absolute value; the polynomial norm is degree.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Theorem</strong>Every Euclidean ring is a PID, every PID is a UFD, and therefore every Euclidean ring is a UFD. For any field F, F[X] is Euclidean using degree.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>The displayed computations are exact. The side-by-side rhythm is the metaphor: the same proof schema applies because both rings admit division with smaller remainder.</div>
+</section>
+
+<section id="nesting">
+  <h2><a href="#nesting">7. The UFD ⊃ PID ⊃ Euclidean nesting</a></h2>
+  <p>The algebraic properties form a hierarchy. Euclidean domains have an algorithm. Principal ideal domains have every ideal generated by one element. Unique factorization domains have irreducible atoms with unique decompositions. Each implication goes outward.</p>
+
+  <figure class="figure" id="fig-nesting">
+    <div class="fig-head"><div class="fig-title">The UFD ⊃ PID ⊃ Euclidean nesting</div><div class="fig-kicker">drag the token</div></div>
+    <canvas id="nestCanvas" height="430"></canvas>
+    <div class="controls">
+      <label>snap example
+        <select id="nestExample">
+          <option value="Z">ℤ</option>
+          <option value="FX">F[X]</option>
+          <option value="Zx">ℤ[x]</option>
+          <option value="PIDnotE">ℤ[(1+√−19)/2]</option>
+          <option value="bad">ℤ[√−5]</option>
+        </select>
+      </label>
+      <div class="button-row"><button id="nestReset">reset</button></div>
+    </div>
+    <div class="badge-row" id="nestBadges"></div>
+    <p class="caption">Drag the blue token between regions. The label reports what the region guarantees, and why irreducible-versus-prime matters.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Theorem</strong>Euclidean domain ⇒ PID ⇒ UFD. In a PID, irreducible elements are prime; in a UFD, complete factorizations into irreducibles are unique up to associates and ordering.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>The containments are exact. The named rings are illustrative landmarks; the nested ovals do not encode all integral domains or all possible refinements.</div>
+</section>
+
+<section id="periodic">
+  <h2><a href="#periodic">8. A periodic table per field</a></h2>
+  <p>In <span class="math">F[X]</span>, irreducible polynomials are the atoms. Change the coefficient field and the periodic table changes. Over <span class="math">ℂ</span>, every atom is linear. Over <span class="math">ℝ</span>, atoms are linear or quadratic. Over finite fields and <span class="math">ℚ</span>, the table becomes rich.</p>
+
+  <figure class="figure" id="fig-periodic">
+    <div class="fig-head"><div class="fig-title">A periodic table per field</div><div class="fig-kicker">irreducibles as atoms</div></div>
+    <canvas id="periodicCanvas" height="450"></canvas>
+    <div class="controls">
+      <label>field
+        <select id="periodicField">
+          <option value="C">ℂ</option>
+          <option value="R">ℝ</option>
+          <option value="F2">𝔽₂</option>
+          <option value="Q" selected>ℚ</option>
+        </select>
+      </label>
+    </div>
+    <div class="badge-row" id="periodicBadges"></div>
+    <p class="caption">Each tile is an irreducible type. Green means a simple classification; amber means structured but richer; red marks the obstruction that not every polynomial splits over the base field.</p>
+  </figure>
+
+  <div class="callout theorem"><strong>Theorem</strong>For a field F, F[X] is a UFD. The irreducible polynomials are therefore the multiplicative atoms of polynomial factorization over F.</div>
+  <div class="callout lie"><strong>Where the picture lies</strong>The tiles are representative, not exhaustive. The statements “ℂ has only linear irreducibles” and “ℝ has only linear and irreducible quadratic irreducibles” are exact; the finite-field and ℚ panels show finite samples.</div>
+</section>
+
+<footer>
+  <p>Part 3 extends the recurring threads: operation tables become ring tables, the clock reveals units and zero-divisors, partitions become ideal cosets, and prime atoms become irreducible polynomial atoms.</p>
+</footer>
+</div>
+
+<script>
+(() => {
+  const C = {
+    bg:'#fbf7ef', paper:'#fffdfa', ink:'#262624', muted:'#6c6a65', line:'#d9d1c5', soft:'#efe8dc',
+    blue:'#2052BB', amber:'#D99020', green:'#248A3D', red:'#C93632', grey:'#7a7d83', paleBlue:'rgba(32,82,187,.11)', paleAmber:'rgba(217,144,32,.12)', paleGreen:'rgba(36,138,61,.12)', paleRed:'rgba(201,54,50,.12)'
+  };
+  const TAU = Math.PI*2;
+  const $ = id => document.getElementById(id);
+  const gcd = (a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||0;};
+  const isPrime = n => { if(n<2) return false; for(let i=2;i*i<=n;i++) if(n%i===0) return false; return true; };
+  const mod = (a,m)=>((a%m)+m)%m;
+  function setupCanvas(canvas, draw){
+    const ctx = canvas.getContext('2d');
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const cssH = parseFloat(canvas.getAttribute('height')) || 420;
+      canvas.width = Math.max(300, Math.floor(rect.width*dpr));
+      canvas.height = Math.floor(cssH*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      draw(ctx, rect.width, cssH);
+    }
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(resize);
+    return resize;
+  }
+  function roundRect(ctx,x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();
+  }
+  function fillRound(ctx,x,y,w,h,r,fill,stroke=C.line){ roundRect(ctx,x,y,w,h,r); ctx.fillStyle=fill; ctx.fill(); if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();} }
+  function text(ctx, str, x, y, opts={}){
+    ctx.save();
+    ctx.fillStyle = opts.color || C.ink;
+    ctx.font = `${opts.weight||500} ${opts.size||14}px ${opts.font||'Inter, system-ui, sans-serif'}`;
+    ctx.textAlign = opts.align || 'left'; ctx.textBaseline = opts.base || 'alphabetic';
+    ctx.fillText(str,x,y);
+    ctx.restore();
+  }
+  function line(ctx,x1,y1,x2,y2,color=C.line,w=1){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}
+  function circle(ctx,x,y,r,fill,stroke=C.line,w=1){ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=w;ctx.stroke();}ctx.restore();}
+  function arrow(ctx,x1,y1,x2,y2,color=C.ink,w=2){
+    ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const a=Math.atan2(y2-y1,x2-x1), s=8; ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-s*Math.cos(a-.45),y2-s*Math.sin(a-.45)); ctx.lineTo(x2-s*Math.cos(a+.45),y2-s*Math.sin(a+.45)); ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function setBadges(el, badges){
+    el.innerHTML = badges.map(b=>`<span class="badge ${b.kind||''}">${b.text}</span>`).join('');
+  }
+  function value(id){ return Number($(id).value); }
+
+  // Figure 1: Distributivity as area
+  let areaDragging = false;
+  function drawArea(ctx,w,h){
+    const a=value('areaA'), b=value('areaB'), c=value('areaC');
+    ctx.clearRect(0,0,w,h);
+    const pad=46, maxW=w-pad*2, maxH=h-105;
+    const scaleX=maxW/18, scaleY=maxH/10;
+    const rw=(b+c)*scaleX, rh=a*scaleY;
+    const x=(w-rw)/2, y=54;
+    fillRound(ctx, x-18, y-18, rw+36, rh+36, 18, 'rgba(255,255,255,.55)', null);
+    ctx.fillStyle=C.paleBlue; ctx.fillRect(x,y,b*scaleX,rh);
+    ctx.fillStyle=C.paleAmber; ctx.fillRect(x+b*scaleX,y,c*scaleX,rh);
+    ctx.strokeStyle=C.blue; ctx.lineWidth=2; ctx.strokeRect(x,y,b*scaleX,rh);
+    ctx.strokeStyle=C.amber; ctx.strokeRect(x+b*scaleX,y,c*scaleX,rh);
+    line(ctx,x+b*scaleX,y,x+b*scaleX,y+rh,C.ink,2.5);
+    circle(ctx,x+b*scaleX,y+rh/2,8,C.paper,C.ink,2);
+    text(ctx,'drag split',x+b*scaleX+12,y+rh/2+5,{size:12,color:C.muted});
+    arrow(ctx,x-24,y+rh+24,x+rw+24,y+rh+24,C.grey,1.5);
+    arrow(ctx,x-24,y+rh+24,x-24,y-2,C.grey,1.5);
+    text(ctx,`b = ${b}`,x+b*scaleX/2,y+rh+45,{size:14,align:'center',color:C.blue,weight:800});
+    text(ctx,`c = ${c}`,x+b*scaleX+c*scaleX/2,y+rh+45,{size:14,align:'center',color:C.amber,weight:800});
+    text(ctx,`a = ${a}`,x-38,y+rh/2,{size:14,align:'center',color:C.blue,weight:800});
+    text(ctx,`a(b+c) = ${a}(${b}+${c}) = ${a*(b+c)}`,w/2,28,{size:20,align:'center',weight:900});
+    text(ctx,`ab + ac = ${a*b} + ${a*c} = ${a*b+a*c}`,w/2,h-30,{size:18,align:'center',color:C.green,weight:900});
+    setBadges($('areaBadges'),[
+      {kind:'ok',text:`left side ${a*(b+c)}`},{kind:'ok',text:`right side ${a*b+a*c}`},{text:'distributive law preserved'}
+    ]);
+  }
+  const areaResize = setupCanvas($('areaCanvas'), drawArea);
+  ['areaA','areaB','areaC'].forEach(id=>$(id).addEventListener('input', areaResize));
+  $('areaReset').addEventListener('click',()=>{ $('areaA').value=5; $('areaB').value=4; $('areaC').value=3; areaResize(); });
+  $('areaCanvas').addEventListener('pointerdown', e=>{ areaDragging=true; $('areaCanvas').setPointerCapture(e.pointerId); });
+  $('areaCanvas').addEventListener('pointerup', e=>{ areaDragging=false; try{$('areaCanvas').releasePointerCapture(e.pointerId);}catch{} });
+  $('areaCanvas').addEventListener('pointermove', e=>{
+    if(!areaDragging) return;
+    const rect=$('areaCanvas').getBoundingClientRect(), x=e.clientX-rect.left, w=rect.width;
+    const total=value('areaB')+value('areaC');
+    const pad=46, maxW=w-pad*2, scaleX=maxW/18, rw=total*scaleX, start=(w-rw)/2;
+    let newB=Math.round((x-start)/scaleX); newB=Math.max(1,Math.min(9,newB));
+    let newC=Math.max(1,Math.min(9,total-newB));
+    if(newB+newC!==total) newB=total-newC;
+    $('areaB').value=newB; $('areaC').value=newC; areaResize();
+  });
+
+  // Figure 2: Clock Ring
+  function drawTable(ctx, x,y, size, m, mode){
+    const n=m, cell=size/(n+1), maxFont=Math.max(7, Math.min(12, cell*.45));
+    fillRound(ctx,x,y,size,size,10,'rgba(255,255,255,.7)',C.line);
+    for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
+      const px=x+j*cell, py=y+i*cell;
+      if(i===0 || j===0){ ctx.fillStyle='rgba(122,125,131,.12)'; ctx.fillRect(px,py,cell,cell); }
+      else {
+        const a=i-1,b=j-1, val=mode==='mul'?mod(a*b,n):mod(a+b,n);
+        if(mode==='mul' && a>0 && b>0 && val===0) ctx.fillStyle=C.paleRed;
+        else if(mode==='mul' && a>0 && b>0 && val===1) ctx.fillStyle=C.paleGreen;
+        else ctx.fillStyle='rgba(255,255,255,.2)';
+        ctx.fillRect(px,py,cell,cell);
+      }
+      ctx.strokeStyle='rgba(217,209,197,.75)'; ctx.lineWidth=.75; ctx.strokeRect(px,py,cell,cell);
+      if(i===0 && j>0) text(ctx,String(j-1),px+cell/2,py+cell/2+4,{size:maxFont,align:'center',color:C.muted});
+      if(j===0 && i>0) text(ctx,String(i-1),px+cell/2,py+cell/2+4,{size:maxFont,align:'center',color:C.muted});
+      if(i>0 && j>0){ const val=mode==='mul'?mod((i-1)*(j-1),n):mod(i+j-2,n); text(ctx,String(val),px+cell/2,py+cell/2+4,{size:maxFont,align:'center',weight:700}); }
+    }
+    text(ctx, mode==='mul'?'× table':'+ table', x+size/2, y-8, {size:13,align:'center',weight:800,color:C.muted});
+  }
+  function drawRingClock(ctx,w,h){
+    let m=value('ringM');
+    $('ringA').max=m-1; $('ringB').max=m-1;
+    if(value('ringA')>=m) $('ringA').value=m-1;
+    if(value('ringB')>=m) $('ringB').value=m-1;
+    const a=value('ringA'), b=value('ringB'), mode=$('ringTableMode').value;
+    ctx.clearRect(0,0,w,h);
+    const cx=Math.min(w*.33,210), cy=215, r=Math.min(150,w*.28);
+    circle(ctx,cx,cy,r+18,'rgba(255,255,255,.62)',C.line);
+    for(let i=0;i<m;i++){
+      const ang=-Math.PI/2+TAU*i/m, x=cx+r*Math.cos(ang), y=cy+r*Math.sin(ang);
+      let fill='white', stroke=C.line;
+      if(i===0){ fill=C.paleRed; stroke=C.red; }
+      else if(gcd(i,m)===1){ fill=C.paleGreen; stroke=C.green; }
+      else { fill=C.paleRed; stroke=C.red; }
+      circle(ctx,x,y,15,fill,stroke,2);
+      text(ctx,String(i),x,y+5,{size:13,align:'center',weight:850,color:i===0?C.red:(gcd(i,m)===1?C.green:C.red)});
+    }
+    const sum=mod(a+b,m), prod=mod(a*b,m);
+    function point(v,rad=r){ const ang=-Math.PI/2+TAU*v/m; return [cx+rad*Math.cos(ang), cy+rad*Math.sin(ang)]; }
+    const [ax,ay]=point(a,r-42), [sx,sy]=point(sum,r-42), [px,py]=point(prod,r-70);
+    arrow(ctx,cx,cy,ax,ay,C.blue,3); circle(ctx,ax,ay,8,C.blue,null);
+    arrow(ctx,ax,ay,sx,sy,C.amber,3); circle(ctx,sx,sy,9,C.green,null);
+    arrow(ctx,cx,cy,px,py,C.red,2.5); circle(ctx,px,py,8,C.red,null);
+    text(ctx,`[${a}]+[${b}]=[${sum}]`,cx,cy+r+54,{size:15,align:'center',weight:850,color:C.green});
+    text(ctx,`[${a}]×[${b}]=[${prod}]`,cx,cy+r+76,{size:15,align:'center',weight:850,color:prod===0&&a&&b?C.red:C.ink});
+    text(ctx,`ℤ/${m}ℤ`,cx,34,{size:24,align:'center',weight:900});
+    const tableSize=Math.min(330, w-cx-r-52);
+    if(tableSize>180) drawTable(ctx, cx+r+38, 88, tableSize, m, mode);
+    else drawTable(ctx, 24, 330, w-48, m, mode);
+    const units=[]; const zds=[];
+    for(let i=1;i<m;i++) (gcd(i,m)===1?units:zds).push(i);
+    setBadges($('ringBadges'),[
+      {kind:isPrime(m)?'ok':'bad', text:isPrime(m)?'integral domain ✓':'integral domain ✗'},
+      {kind:isPrime(m)?'ok':'bad', text:isPrime(m)?'field ✓':'field ✗'},
+      {kind:'ok', text:`units: ${units.length?units.join(', '):'none'}`},
+      {kind:zds.length?'bad':'ok', text:`zero-divisors: ${zds.length?zds.join(', '):'none'}`}
+    ]);
+  }
+  const ringResize=setupCanvas($('ringClockCanvas'), drawRingClock);
+  ['ringM','ringA','ringB','ringTableMode'].forEach(id=>$(id).addEventListener('input', ringResize));
+  $('ringTableMode').addEventListener('change', ringResize);
+
+  // Figure 3: Ideals
+  function drawIdeal(ctx,w,h){
+    const a=value('idealA'), k=value('idealK'), r=value('idealR'), mode=$('idealQuotient').value;
+    const x0=44, x1=w-44, y=190, min=-18, max=18, scale=(x1-x0)/(max-min);
+    const toX=n=>x0+(n-min)*scale;
+    ctx.clearRect(0,0,w,h);
+    text(ctx,`Ideal (a)=(${a})=${a}ℤ`,w/2,30,{size:22,align:'center',weight:900});
+    if(mode==='line'){
+      line(ctx,x0,y,x1,y,C.grey,2);
+      for(let n=min;n<=max;n++){
+        const x=toX(n), isMult=n%a===0;
+        line(ctx,x,y-6,x,y+6,C.line,1);
+        if(n%2===0) text(ctx,String(n),x,y+25,{size:10,align:'center',color:C.muted});
+        circle(ctx,x,y,isMult?7:3,isMult?C.paleGreen:'#fff',isMult?C.green:C.line,isMult?2:1);
+      }
+      [-1,0,1].forEach(n=>circle(ctx,toX(n),y-34,7,C.paleRed,C.red,2));
+      text(ctx,'contrast subset {−1,0,1}: not absorbing',w/2,y-52,{size:13,align:'center',color:C.red,weight:800});
+      const inside=k*a, out=r*inside;
+      const ix=toX(Math.max(min,Math.min(max,inside))), ox=toX(Math.max(min,Math.min(max,out)));
+      circle(ctx,ix,y,12,C.blue,C.blue,2); text(ctx,String(inside),ix,y-18,{size:13,align:'center',weight:900,color:C.blue});
+      if(out>=min&&out<=max){ arrow(ctx,ix,y-48,ox,y-48,C.amber,2); circle(ctx,ox,y,12,C.amber,C.amber,2); text(ctx,String(out),ox,y-18,{size:13,align:'center',weight:900,color:C.amber}); }
+      else { arrow(ctx,ix,y-48,out<min?x0:x1,y-48,C.amber,2); text(ctx,`${out} is off-screen, still multiple of ${a}`,w/2,y+78,{size:14,align:'center',weight:800,color:C.amber}); }
+      text(ctx,`${r} · (${inside}) = ${out} ∈ (${a})`,w/2,h-38,{size:18,align:'center',weight:900,color:C.green});
+    } else {
+      const cx=w/2, cy=205, rad=Math.min(145,w*.34);
+      circle(ctx,cx,cy,rad+18,'rgba(255,255,255,.62)',C.line);
+      for(let i=0;i<a;i++){
+        const ang=-Math.PI/2+TAU*i/a, x=cx+rad*Math.cos(ang), yy=cy+rad*Math.sin(ang);
+        circle(ctx,x,yy,18,i===0?C.paleGreen:'#fff',i===0?C.green:C.line,2);
+        text(ctx,String(i),x,yy+5,{size:14,align:'center',weight:850,color:i===0?C.green:C.ink});
+      }
+      text(ctx,`ℤ/(${a}) wraps every integer to its residue`,cx,43,{size:19,align:'center',weight:900});
+      const inside=k*a, out=r*inside;
+      text(ctx,`${inside} and ${out} both collapse to 0 mod ${a}`,cx,h-46,{size:17,align:'center',weight:900,color:C.green});
+      arrow(ctx,cx,cy,cx,cy-rad+20,C.green,3);
+    }
+    const inside=k*a, out=r*inside;
+    setBadges($('idealBadges'),[
+      {kind:'ok',text:`${inside} ∈ (${a})`},{kind:'ok',text:`${r}·${inside}=${out} ∈ (${a})`},{kind:'bad',text:'{−1,0,1} fails absorption'}
+    ]);
+  }
+  const idealResize=setupCanvas($('idealCanvas'), drawIdeal);
+  ['idealA','idealK','idealR','idealQuotient'].forEach(id=>$(id).addEventListener('input', idealResize));
+  $('idealQuotient').addEventListener('change', idealResize);
+
+  // Figure 4: prime/maximal quotient
+  function idealElements(d,n=12){ const arr=[]; for(let i=0;i<n;i++) if(i%d===0) arr.push(i); return arr; }
+  function drawMiniTable(ctx,x,y,size,n,mode){
+    const cell=size/(n+1), fs=Math.max(8,Math.min(15,cell*.42));
+    fillRound(ctx,x,y,size,size,10,'rgba(255,255,255,.65)',C.line);
+    for(let i=0;i<=n;i++) for(let j=0;j<=n;j++){
+      const px=x+j*cell, py=y+i*cell;
+      if(i===0||j===0) ctx.fillStyle='rgba(122,125,131,.12)';
+      else { const a=i-1,b=j-1,val=mode==='mul'?mod(a*b,n):mod(a+b,n); ctx.fillStyle=(mode==='mul'&&a&&b&&val===0)?C.paleRed:'rgba(255,255,255,.18)'; }
+      ctx.fillRect(px,py,cell,cell); ctx.strokeStyle='rgba(217,209,197,.75)'; ctx.strokeRect(px,py,cell,cell);
+      if(i===0&&j>0) text(ctx,String(j-1),px+cell/2,py+cell/2+4,{size:fs,align:'center',color:C.muted});
+      if(j===0&&i>0) text(ctx,String(i-1),px+cell/2,py+cell/2+4,{size:fs,align:'center',color:C.muted});
+      if(i>0&&j>0){ const val=mode==='mul'?mod((i-1)*(j-1),n):mod(i+j-2,n); text(ctx,String(val),px+cell/2,py+cell/2+4,{size:fs,align:'center',weight:800}); }
+    }
+  }
+  function drawQuotient(ctx,w,h){
+    const d=value('idealD'), n=12, mode=$('quotientTableMode').value;
+    ctx.clearRect(0,0,w,h);
+    text(ctx,`R = ℤ/12ℤ,   I = (${d})`,w/2,30,{size:22,align:'center',weight:900});
+    const elems=idealElements(d,n);
+    const sx=50, sy=82, gap=Math.min(50,(w-100)/12);
+    for(let i=0;i<n;i++){
+      const x=sx+i*gap;
+      const inI=elems.includes(i);
+      circle(ctx,x,sy,14,inI?C.paleGreen:'#fff',inI?C.green:C.line,2);
+      text(ctx,String(i),x,sy+5,{size:12,align:'center',weight:800,color:inI?C.green:C.ink});
+    }
+    text(ctx,`I has ${elems.length} elements: {${elems.join(', ')}}`,w/2,124,{size:13,align:'center',color:C.muted,weight:800});
+    const qSize=d;
+    text(ctx,`R/I ≅ ℤ/${d}ℤ`,w/2,158,{size:19,align:'center',weight:900,color:d===1?C.red:(isPrime(d)?C.green:C.ink)});
+    const tableSize=Math.min(310,w-90);
+    drawMiniTable(ctx,(w-tableSize)/2,184,tableSize,qSize,mode);
+    const proper=d!==1;
+    const domain=proper && isPrime(d);
+    const field=proper && isPrime(d);
+    const statusY=184+tableSize+42;
+    fillRound(ctx,50,statusY,w-100,56,16, domain?C.paleGreen:C.paleRed, domain?C.green:C.red);
+    text(ctx, proper?`prime ideal ${domain?'✓':'✗'}   maximal ideal ${field?'✓':'✗'}`:'whole ring: not a proper ideal', w/2, statusY+34, {size:18,align:'center',weight:900,color:domain?C.green:C.red});
+    setBadges($('quotientBadges'),[
+      {kind:proper?'ok':'bad',text:proper?'proper ideal':'not proper'},
+      {kind:domain?'ok':'bad',text:domain?'R/I integral domain':'R/I has zero-divisors or is trivial'},
+      {kind:field?'ok':'bad',text:field?'R/I field':'R/I not a field'}
+    ]);
+  }
+  const quotientResize=setupCanvas($('quotientCanvas'), drawQuotient);
+  ['idealD','quotientTableMode'].forEach(id=>$(id).addEventListener('change', quotientResize));
+
+  // Figure 5: Polynomials
+  function coeffs(prefix){ return [0,1,2].map(i=>Number($(`${prefix}${i}`).value)); }
+  function trim(poly){ let p=poly.slice(); while(p.length>1 && p[p.length-1]===0) p.pop(); return p; }
+  function degree(poly){ const p=trim(poly); return p.length===1&&p[0]===0 ? -Infinity : p.length-1; }
+  function polyStr(poly, variable='x'){
+    poly=trim(poly); if(poly.length===1&&poly[0]===0) return '0';
+    const parts=[];
+    for(let i=poly.length-1;i>=0;i--){ const c=poly[i]; if(!c) continue; let term=''; if(i===0) term=String(c); else { if(c!==1) term+=String(c); term+=variable; if(i>1) term+='^'+i; } parts.push(term); }
+    return parts.join(' + ');
+  }
+  function multiplyPoly(a,b,p){ const out=Array(a.length+b.length-1).fill(0); for(let i=0;i<a.length;i++) for(let j=0;j<b.length;j++) out[i+j]=mod(out[i+j]+a[i]*b[j],p); return out; }
+  function drawCoeffBars(ctx, arr, p, x,y,w,h,label,color){
+    text(ctx,label,x,y-12,{size:15,weight:900,color});
+    const gap=7, cell=(w-gap*(arr.length-1))/arr.length;
+    for(let i=0;i<arr.length;i++){
+      const bh=(arr[i]/Math.max(1,p-1))*h;
+      fillRound(ctx,x+i*(cell+gap),y+h-bh,cell,bh||2,8,color==='green'?C.paleGreen:(color==='amber'?C.paleAmber:C.paleBlue), color==='green'?C.green:(color==='amber'?C.amber:C.blue));
+      text(ctx,String(arr[i]),x+i*(cell+gap)+cell/2,y+h+18,{size:12,align:'center',weight:800});
+      text(ctx,`x^${i}`,x+i*(cell+gap)+cell/2,y+h+35,{size:10,align:'center',color:C.muted});
+    }
+  }
+  function drawPoly(ctx,w,h){
+    const p=value('polyP');
+    ['f0','f1','f2','g0','g1','g2'].forEach(id=>{ $(id).max=p-1; if(value(id)>=p) $(id).value=p-1; });
+    const f=coeffs('f'), g=coeffs('g'), prod=multiplyPoly(f,g,p);
+    ctx.clearRect(0,0,w,h);
+    text(ctx,`Working in 𝔽${p}[x]`,w/2,30,{size:22,align:'center',weight:900});
+    drawCoeffBars(ctx,f,p,50,88,Math.min(250,w-100),100,'f coefficients', 'blue');
+    drawCoeffBars(ctx,g,p,w>610?420:50,w>610?88:235,Math.min(250,w-100),100,'g coefficients', 'amber');
+    const prodY=w>610?260:350;
+    drawCoeffBars(ctx,prod,p,50,prodY,w-100,95,'f × g coefficients', 'green');
+    text(ctx,`f = ${polyStr(f)}     g = ${polyStr(g)}`,w/2,w>610?222:204,{size:15,align:'center',weight:800});
+    text(ctx,`fg = ${polyStr(prod)}  mod ${p}`,w/2,h-30,{size:18,align:'center',weight:900,color:C.green});
+    const df=degree(f), dg=degree(g), dp=degree(prod);
+    setBadges($('polyBadges'),[
+      {text:`deg f = ${df<0?'−∞':df}`},{text:`deg g = ${dg<0?'−∞':dg}`},{kind:dp===df+dg?'ok':'warn',text:`deg(fg) = ${dp<0?'−∞':dp}`},{kind:'ok',text:'field coefficients prevent leading zero-divisor failures'}
+    ]);
+  }
+  const polyResize=setupCanvas($('polyCanvas'), drawPoly);
+  ['polyP','f0','f1','f2','g0','g1','g2'].forEach(id=>$(id).addEventListener('input', polyResize));
+  $('polyP').addEventListener('change', polyResize);
+
+  // Figure 6: Euclid
+  function intEuclid(a,b){ a=Math.abs(a); b=Math.abs(b); if(b>a)[a,b]=[b,a]; const steps=[]; while(b!==0 && steps.length<12){ const q=Math.floor(a/b), r=a-q*b; steps.push({a,b,q,r,desc:`${a} = ${q}·${b} + ${r}`}); a=b; b=r; } return steps; }
+  function polyDeg(p){ for(let i=p.length-1;i>=0;i--) if(p[i]) return i; return -1; }
+  function polyAdd(a,b){ const n=Math.max(a.length,b.length), out=Array(n).fill(0); for(let i=0;i<n;i++) out[i]=(a[i]||0)^(b[i]||0); return trim(out); }
+  function polyShift(p,k){ return Array(k).fill(0).concat(p); }
+  function polyDivmodF2(a,b){ a=trim(a); b=trim(b); let r=a.slice(), q=[0]; const db=polyDeg(b); if(db<0) return {q,r}; while(polyDeg(r)>=db && polyDeg(r)>=0){ const shift=polyDeg(r)-db; q[shift]=1; r=polyAdd(r, polyShift(b,shift)); } return {q:trim(q), r:trim(r)}; }
+  function polyEuclidCase(idx){
+    const cases=[[[1,0,1,0,0,1],[1,1,0,1]], [[1,0,0,1,1],[1,1,1]], [[1,1,0,0,0,0,1],[1,0,1,1,1]]];
+    let [a,b]=cases[idx].map(x=>x.slice()); const steps=[];
+    while(polyDeg(b)>=0 && !(b.length===1&&b[0]===0) && steps.length<10){ const {q,r}=polyDivmodF2(a,b); steps.push({a:polyStr(a), b:polyStr(b), q:polyStr(q), r:polyStr(r), desc:`${polyStr(a)} = (${polyStr(q)})·(${polyStr(b)}) + ${polyStr(r)}`}); a=b; b=r; }
+    return steps;
+  }
+  function drawEuclid(ctx,w,h){
+    const A=value('euclidA'), B=value('euclidB'), idx=value('euclidPolyCase');
+    const ints=intEuclid(A,B), polys=polyEuclidCase(idx);
+    const maxSteps=Math.max(ints.length,polys.length)-1; $('euclidStep').max=Math.max(0,maxSteps); if(value('euclidStep')>maxSteps) $('euclidStep').value=maxSteps;
+    const s=value('euclidStep');
+    ctx.clearRect(0,0,w,h);
+    const mid=w/2;
+    text(ctx,'Integers ℤ',mid/2,30,{size:21,align:'center',weight:900,color:C.blue});
+    text(ctx,'Polynomials 𝔽₂[x]',mid+mid/2,30,{size:21,align:'center',weight:900,color:C.amber});
+    line(ctx,mid,54,mid,h-34,C.line,2);
+    function drawRows(steps,x0,x1,y0,color){
+      const rowH=45;
+      steps.forEach((st,i)=>{
+        const y=y0+i*rowH;
+        fillRound(ctx,x0,y,x1-x0,rowH-8,10,i===s?'rgba(32,82,187,.10)':'rgba(255,255,255,.55)',i===s?color:C.line);
+        text(ctx,st.desc,x0+12,y+25,{size:i===s?14:12,weight:i===s?900:650,color:i===s?C.ink:C.muted});
+        if(i===s){
+          const norm = st.r==='0'||st.r===0 ? 'stop' : (typeof st.r==='number'?`|r|=${Math.abs(st.r)}`:`deg r=${polyDegString(st.r)}`);
+          text(ctx,norm,x1-12,y+25,{size:12,align:'right',weight:900,color:C.green});
+        }
+      });
+    }
+    function polyDegString(str){ if(str==='0') return '−∞'; const matches=[...str.matchAll(/x\^(\d+)/g)].map(m=>+m[1]); if(str.includes('x') && !matches.length) return '1'; return String(Math.max(0,...matches)); }
+    drawRows(ints,30,mid-18,70,C.blue);
+    drawRows(polys,mid+18,w-30,70,C.amber);
+    const ig = ints.length ? (ints[ints.length-1].b || ints[ints.length-1].a) : 0;
+    const pg = polys.length ? polys[polys.length-1].b : '0';
+    fillRound(ctx,34,h-70,mid-70,42,12,C.paleGreen,C.green);
+    fillRound(ctx,mid+34,h-70,mid-70,42,12,C.paleGreen,C.green);
+    text(ctx,`gcd(${A},${B}) = ${ig}`,mid/2,h-43,{size:16,align:'center',weight:900,color:C.green});
+    text(ctx,`last nonzero remainder: ${pg}`,mid+mid/2,h-43,{size:15,align:'center',weight:900,color:C.green});
+    setBadges($('euclidBadges'),[
+      {kind:'ok',text:'remainder strictly decreases'},
+      {kind:'ok',text:'HCF appears as last nonzero remainder'},
+      {text:'same proof rhythm: Euclidean ⇒ PID ⇒ UFD'}
+    ]);
+  }
+  const euclidResize=setupCanvas($('euclidCanvas'), drawEuclid);
+  ['euclidA','euclidB','euclidPolyCase','euclidStep'].forEach(id=>$(id).addEventListener('input', euclidResize));
+  $('euclidPolyCase').addEventListener('change',()=>{$('euclidStep').value=0; euclidResize();});
+
+  // Figure 7: Nesting
+  const nestCanvas=$('nestCanvas');
+  const nestState={x:355,y:220,drag:false};
+  const examples={
+    Z:{x:.50,y:.52,label:'ℤ',zone:'Euclidean',note:'integer division gives a Euclidean algorithm'},
+    FX:{x:.39,y:.52,label:'F[X]',zone:'Euclidean',note:'degree gives polynomial division'},
+    Zx:{x:.68,y:.50,label:'ℤ[x]',zone:'UFD only',note:'Gauss gives UFD, but ideals need not be principal'},
+    PIDnotE:{x:.53,y:.37,label:'ℤ[(1+√−19)/2]',zone:'PID not Euclidean',note:'a classical PID outside the Euclidean region'},
+    bad:{x:.82,y:.70,label:'ℤ[√−5]',zone:'not UFD',note:'6 = 2·3 = (1+√−5)(1−√−5) breaks unique factorization'}
+  };
+  function zoneFor(x,y,w,h){
+    const cx=w/2, cy=h/2+10;
+    function inside(rx,ry){ const dx=(x-cx)/rx, dy=(y-cy)/ry; return dx*dx+dy*dy<=1; }
+    if(inside(Math.min(155,w*.22),75)) return 'Euclidean';
+    if(inside(Math.min(235,w*.32),120)) return 'PID not Euclidean';
+    if(inside(Math.min(315,w*.43),165)) return 'UFD only';
+    return 'not UFD';
+  }
+  function drawNest(ctx,w,h){
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2+10;
+    ctx.save();
+    ctx.translate(cx,cy);
+    function ellipse(rx,ry,fill,stroke,label,yoff){
+      ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,TAU); ctx.fillStyle=fill; ctx.fill(); ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke();
+      text(ctx,label,0,-ry+yoff,{size:16,align:'center',weight:900,color:stroke});
+    }
+    ellipse(Math.min(315,w*.43),165,'rgba(32,82,187,.06)',C.blue,'UFD',30);
+    ellipse(Math.min(235,w*.32),120,'rgba(36,138,61,.07)',C.green,'PID',30);
+    ellipse(Math.min(155,w*.22),75,'rgba(217,144,32,.10)',C.amber,'Euclidean',30);
+    ctx.restore();
+    const z=zoneFor(nestState.x,nestState.y,w,h);
+    circle(ctx,nestState.x,nestState.y,18,C.paleBlue,C.blue,3);
+    text(ctx,'R',nestState.x,nestState.y+6,{size:16,align:'center',weight:900,color:C.blue});
+    const note = z==='Euclidean'?'algorithmic division ⇒ principal ideals ⇒ unique atoms': z==='PID not Euclidean'?'principal ideals and unique factorization, but no Euclidean algorithm shown': z==='UFD only'?'unique atom factorization, but not every ideal is principal':'irreducible atoms may fail to be prime; unique factorization can break';
+    fillRound(ctx,55,h-82,w-110,54,14,z==='not UFD'?C.paleRed:C.paleGreen,z==='not UFD'?C.red:C.green);
+    text(ctx,`${z}: ${note}`,w/2,h-50,{size:14,align:'center',weight:850,color:z==='not UFD'?C.red:C.green});
+    setBadges($('nestBadges'),[
+      {kind:z==='not UFD'?'bad':'ok',text:`region: ${z}`},
+      {text:'Euclidean ⇒ PID ⇒ UFD'},
+      {kind:z==='not UFD'?'bad':'ok',text:z==='not UFD'?'factorization obstruction visible':'irreducible/prime behavior controlled'}
+    ]);
+  }
+  const nestResize=setupCanvas(nestCanvas, drawNest);
+  function snapNest(key){ const ex=examples[key], rect=nestCanvas.getBoundingClientRect(); nestState.x=ex.x*rect.width; nestState.y=ex.y*(parseFloat(nestCanvas.getAttribute('height'))||430); nestResize(); setBadges($('nestBadges'),[{kind:ex.zone==='not UFD'?'bad':'ok',text:ex.label},{text:ex.zone},{text:ex.note}]); }
+  $('nestExample').addEventListener('change',e=>snapNest(e.target.value));
+  $('nestReset').addEventListener('click',()=>snapNest('Z'));
+  nestCanvas.addEventListener('pointerdown',e=>{nestState.drag=true; nestCanvas.setPointerCapture(e.pointerId);});
+  nestCanvas.addEventListener('pointerup',e=>{nestState.drag=false; try{nestCanvas.releasePointerCapture(e.pointerId);}catch{}});
+  nestCanvas.addEventListener('pointermove',e=>{ if(!nestState.drag) return; const r=nestCanvas.getBoundingClientRect(); nestState.x=e.clientX-r.left; nestState.y=e.clientY-r.top; nestResize(); });
+  requestAnimationFrame(()=>snapNest('Z'));
+
+  // Figure 8: Periodic table
+  const fieldPanels={
+    C:{title:'ℂ[x]',badge:'algebraically closed',kind:'ok',tiles:[['degree 1','x−α','all atoms are linear',C.green],['degree ≥2','splits','no higher atoms',C.paleGreen]],note:'Every nonconstant polynomial splits into linear factors over ℂ.'},
+    R:{title:'ℝ[x]',badge:'linear + quadratic atoms',kind:'ok',tiles:[['degree 1','x−a','real roots',C.green],['degree 2','x²+bx+c','irreducible when discriminant < 0',C.amber],['degree ≥3','reducible','has linear or quadratic factors',C.paleGreen]],note:'Over ℝ, irreducibles have degree 1 or 2.'},
+    F2:{title:'𝔽₂[x]',badge:'finite but infinite table',kind:'warn',tiles:[['deg 1','x, x+1','linear atoms',C.green],['deg 2','x²+x+1','first quadratic atom',C.amber],['deg 3','x³+x+1','sample cubic atom',C.amber],['deg 4','x⁴+x+1','sample higher atom',C.amber]],note:'Finite fields have irreducibles in every degree, but only finitely many per degree.'},
+    Q:{title:'ℚ[x]',badge:'Eisenstein gives atoms in every degree',kind:'warn',tiles:[['linear','x−q','rational roots',C.green],['quadratic','x²−2','irreducible over ℚ',C.amber],['degree n','xⁿ−p','Eisenstein examples',C.amber],['obstruction','no full simple list','factorization is rich',C.red]],note:'ℚ[x] is a UFD, but irreducibility is arithmetically subtle.'}
+  };
+  function drawPeriodic(ctx,w,h){
+    const panel=fieldPanels[$('periodicField').value];
+    ctx.clearRect(0,0,w,h);
+    text(ctx,panel.title,w/2,34,{size:25,align:'center',weight:900});
+    const cols=w<560?1:2, gap=14, tileW=(w-70-gap*(cols-1))/cols, tileH=78;
+    panel.tiles.forEach((t,i)=>{
+      const col=i%cols,row=Math.floor(i/cols),x=35+col*(tileW+gap),y=78+row*(tileH+gap);
+      const fill=t[3]===C.red?C.paleRed:(t[3]===C.green?C.paleGreen:(t[3]===C.amber?C.paleAmber:'rgba(36,138,61,.08)'));
+      fillRound(ctx,x,y,tileW,tileH,16,fill,t[3]===C.paleGreen?C.green:t[3]);
+      text(ctx,t[0],x+16,y+24,{size:13,weight:900,color:t[3]===C.red?C.red:C.muted});
+      text(ctx,t[1],x+16,y+48,{size:18,weight:900,color:C.ink});
+      text(ctx,t[2],x+16,y+66,{size:11,weight:700,color:C.muted});
+    });
+    const noteY=78+Math.ceil(panel.tiles.length/cols)*(tileH+gap)+22;
+    fillRound(ctx,35,noteY,w-70,64,16,'rgba(255,255,255,.65)',C.line);
+    text(ctx,panel.note,w/2,noteY+38,{size:15,align:'center',weight:850,color:C.ink});
+    setBadges($('periodicBadges'),[
+      {kind:panel.kind,text:panel.badge},{text:'irreducibles are atoms in F[x]'},{text:'sets up splitting fields in Part 4'}
+    ]);
+  }
+  const periodicResize=setupCanvas($('periodicCanvas'), drawPeriodic);
+  $('periodicField').addEventListener('change', periodicResize);
+})();
+</script>
+</body>
+</html>
