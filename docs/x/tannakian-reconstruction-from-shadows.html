@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Reconstruction: Seeing a World from Its Shadows</title>
+<style>
+  :root{
+    --paper:#f1ede3;
+    --paper-2:#e8e1d4;
+    --ink:#1b1b18;
+    --muted:#6d6a61;
+    --blue:#2e69a4;
+    --blue-soft:#8fb4d8;
+    --red:#c84b32;
+    --gold:#a17a32;
+    --green:#627b55;
+    --rule:rgba(27,27,24,.18);
+    --shadow:0 24px 80px rgba(25,22,16,.12);
+    --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+    --sans:"Avenir Next","Gill Sans","Trebuchet MS",sans-serif;
+    --mono:"SFMono-Regular","Cascadia Code","Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;background:var(--paper);color:var(--ink)}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255,255,255,.8), transparent 28%),
+      radial-gradient(circle at 83% 7%, rgba(185,158,111,.13), transparent 30%),
+      linear-gradient(var(--paper),var(--paper));
+    font-family:var(--serif);
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  body:before{
+    content:"";
+    position:fixed;inset:0;pointer-events:none;z-index:999;
+    opacity:.18;
+    background-image:
+      repeating-radial-gradient(circle at 0 0, transparent 0 2px, rgba(0,0,0,.08) 2.3px 2.7px);
+    background-size:7px 7px;
+    mix-blend-mode:multiply;
+  }
+  a{color:inherit}
+  .page{width:min(1260px,calc(100% - 40px));margin:auto}
+  .hero{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr);
+    gap:48px;
+    align-items:center;
+    padding:48px 0 64px;
+  }
+  .kicker,.eyebrow{
+    font-family:var(--sans);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--blue);font-weight:700;
+  }
+  h1{
+    font-size:clamp(56px,8vw,126px);
+    line-height:.86;
+    letter-spacing:-.055em;
+    margin:.18em 0 .2em;
+    max-width:8.5ch;
+    font-weight:600;
+  }
+  h1 em{font-style:italic;font-weight:500}
+  .dek{
+    font-size:clamp(19px,2vw,28px);
+    line-height:1.35;
+    max-width:31ch;
+    color:#3f3d37;
+  }
+  .hero-note{
+    display:flex;align-items:center;gap:14px;margin-top:34px;
+    font-family:var(--sans);font-size:13px;color:var(--muted)
+  }
+  .hero-note .line{height:1px;background:var(--rule);width:64px}
+  .hero-stage{
+    position:relative;
+    border:1px solid rgba(27,27,24,.16);
+    background:rgba(255,255,255,.24);
+    box-shadow:var(--shadow);
+    min-height:620px;
+    overflow:hidden;
+  }
+  canvas{display:block;width:100%;height:100%}
+  .stage-label{
+    position:absolute;left:18px;top:16px;font-family:var(--sans);font-size:11px;
+    letter-spacing:.15em;text-transform:uppercase;color:var(--muted)
+  }
+  .mode-toggle{
+    position:absolute;right:16px;top:14px;display:flex;border:1px solid var(--rule);background:rgba(241,237,227,.86);backdrop-filter:blur(8px)
+  }
+  .mode-toggle button,.small-btn{
+    appearance:none;border:0;background:none;color:var(--ink);font:600 11px var(--sans);
+    text-transform:uppercase;letter-spacing:.12em;padding:10px 12px;cursor:pointer
+  }
+  .mode-toggle button.active{background:var(--ink);color:var(--paper)}
+  .scroll-cue{
+    position:absolute;bottom:18px;left:18px;font:12px var(--sans);color:var(--muted);
+    display:flex;gap:9px;align-items:center
+  }
+  .scroll-cue:before{content:"";width:1px;height:34px;background:var(--rule);display:block}
+
+  section{padding:120px 0;position:relative}
+  .section-grid{
+    display:grid;grid-template-columns:minmax(280px,.72fr) minmax(520px,1.28fr);gap:72px;align-items:start
+  }
+  .copy{position:sticky;top:58px}
+  .chapter-num{
+    font-family:var(--sans);font-size:12px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:18px
+  }
+  h2{
+    font-size:clamp(38px,5.6vw,78px);line-height:.98;letter-spacing:-.045em;
+    margin:0 0 24px;font-weight:600
+  }
+  h3{font-size:31px;line-height:1.05;margin:0 0 12px;letter-spacing:-.025em}
+  p{font-size:20px;margin:0 0 1.05em;color:#37352f}
+  .small{font-size:15px;color:var(--muted);font-family:var(--sans);line-height:1.55}
+  .equation{
+    margin:28px 0;padding:18px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);
+    font-size:clamp(26px,3.5vw,46px);letter-spacing:-.025em
+  }
+  .equation small{font:12px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px}
+  .demo{
+    min-height:620px;position:relative;background:rgba(255,255,255,.28);
+    border:1px solid rgba(27,27,24,.16);box-shadow:var(--shadow);overflow:hidden
+  }
+  .demo.tall{min-height:760px}
+  .demo-head{
+    position:absolute;z-index:4;left:16px;right:16px;top:14px;display:flex;justify-content:space-between;align-items:center;
+    pointer-events:none
+  }
+  .demo-title{font:700 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .legend{display:flex;gap:14px;font:11px var(--sans);color:var(--muted)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+  .dot.blue{background:var(--blue)} .dot.red{background:var(--red)} .dot.gold{background:var(--gold)}
+  .control-strip{
+    position:absolute;z-index:5;left:16px;right:16px;bottom:14px;
+    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    background:rgba(241,237,227,.88);backdrop-filter:blur(10px);
+    border:1px solid var(--rule);padding:10px 12px
+  }
+  .control-strip label{font:12px var(--sans);color:var(--muted)}
+  input[type="range"]{accent-color:var(--blue);width:160px}
+  .pill{
+    font:700 10px var(--sans);text-transform:uppercase;letter-spacing:.12em;padding:6px 8px;border-radius:999px;border:1px solid var(--rule)
+  }
+  .pill.exact{background:rgba(98,123,85,.12);color:var(--green)}
+  .pill.structural{background:rgba(46,105,164,.12);color:var(--blue)}
+  .pill.illustrative{background:rgba(161,122,50,.12);color:var(--gold)}
+  .quote{
+    font-size:clamp(31px,5vw,68px);line-height:1.06;letter-spacing:-.045em;
+    max-width:15ch;margin:0 auto;text-align:center;padding:80px 0
+  }
+  .quote b{font-weight:600;color:var(--blue)}
+  .rule{height:1px;background:var(--rule);margin:0}
+  .full-bleed{width:min(1500px,calc(100% - 20px));margin:auto}
+  .split-note{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:38px
+  }
+  .split-note > div{background:var(--paper);padding:20px}
+  .split-note h4{font:700 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;margin:0 0 8px;color:var(--muted)}
+  .split-note p{font-size:15px;margin:0}
+  .rossetta{
+    border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)
+  }
+  .instrument-grid{
+    display:grid;grid-template-columns:260px 1fr;min-height:760px
+  }
+  .instrument-tabs{
+    border-right:1px solid var(--rule);display:flex;flex-direction:column
+  }
+  .instrument-tabs button{
+    appearance:none;border:0;border-bottom:1px solid var(--rule);background:transparent;text-align:left;
+    padding:22px 20px;cursor:pointer;font-family:var(--serif);font-size:19px;color:var(--ink)
+  }
+  .instrument-tabs button span{display:block;font:10px var(--sans);letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+  .instrument-tabs button.active{background:var(--ink);color:var(--paper)}
+  .instrument-tabs button.active span{color:#bdb7aa}
+  .instrument-stage{position:relative;min-height:760px;background:rgba(255,255,255,.22)}
+  .instrument-copy{
+    position:absolute;left:28px;bottom:26px;right:28px;background:rgba(241,237,227,.9);
+    backdrop-filter:blur(12px);border:1px solid var(--rule);padding:18px 20px;max-width:660px
+  }
+  .instrument-copy h3{font-size:36px}
+  .instrument-copy p{font-size:16px;margin:0}
+  .pipeline{
+    display:grid;grid-template-columns:repeat(8,1fr);border:1px solid var(--rule);margin-top:42px
+  }
+  .pipe{
+    min-height:190px;padding:16px 14px;border-right:1px solid var(--rule);position:relative;cursor:pointer;transition:.2s ease
+  }
+  .pipe:last-child{border-right:0}
+  .pipe:hover,.pipe.active{background:var(--ink);color:var(--paper);transform:translateY(-6px)}
+  .pipe .n{font:10px var(--sans);letter-spacing:.14em;text-transform:uppercase;opacity:.55}
+  .pipe strong{display:block;font-size:22px;line-height:1;margin-top:46px}
+  .pipe em{display:block;font:12px var(--sans);font-style:normal;margin-top:8px;opacity:.66}
+  .finale{
+    min-height:100vh;display:grid;place-items:center;text-align:center;padding:100px 20px
+  }
+  .finale-inner{max-width:970px}
+  .finale h2{font-size:clamp(50px,8vw,116px);max-width:11ch;margin:0 auto 30px}
+  .finale p{max-width:42ch;margin:0 auto;font-size:24px}
+  .endmark{margin-top:80px;font:11px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+
+  .fade-up{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s ease}
+  .fade-up.visible{opacity:1;transform:none}
+
+  @media(max-width:980px){
+    .hero,.section-grid{grid-template-columns:1fr}
+    .copy{position:relative;top:auto}
+    .hero-stage{min-height:520px}
+    .demo,.demo.tall{min-height:560px}
+    .instrument-grid{grid-template-columns:1fr}
+    .instrument-tabs{border-right:0;display:grid;grid-template-columns:repeat(2,1fr)}
+    .pipeline{grid-template-columns:repeat(2,1fr)}
+    .pipe{border-bottom:1px solid var(--rule)}
+  }
+  @media(max-width:640px){
+    .page{width:min(100% - 24px,1260px)}
+    section{padding:78px 0}
+    .hero{padding-top:24px}
+    h1{font-size:58px}
+    .hero-stage{min-height:440px}
+    .split-note{grid-template-columns:1fr}
+    .instrument-tabs{grid-template-columns:1fr 1fr}
+    .instrument-tabs button{padding:14px 12px;font-size:15px}
+    .demo,.demo.tall,.instrument-stage{min-height:500px}
+  }
+</style>
+</head>
+<body>
+
+<header class="page hero">
+  <div>
+    <div class="kicker fade-up">A visual essay about reconstruction</div>
+    <h1 class="fade-up">Seeing a World from Its <em>Shadows</em></h1>
+    <p class="dek fade-up">Photogrammetry is what happens when a reconstruction theorem has to survive finite cameras, missing data, uncertain correspondences, noise, gauge freedom, and bad conditioning.</p>
+    <div class="hero-note fade-up"><span class="line"></span><span>Drag the world. Then take it away.</span></div>
+  </div>
+  <div class="hero-stage fade-up">
+    <canvas id="heroCanvas"></canvas>
+    <div class="stage-label">One world · five cameras</div>
+    <div class="mode-toggle">
+      <button data-hero-mode="world" class="active">World</button>
+      <button data-hero-mode="appearances">Appearances</button>
+    </div>
+    <div class="scroll-cue">Scroll to remove the object</div>
+  </div>
+</header>
+
+<div class="rule"></div>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">01 · The forward direction</div>
+      <h2>One image is not a world.</h2>
+      <p>A camera collapses a three-dimensional point onto a two-dimensional measurement. Running that process forward is easy. Running it backward creates a family of possibilities.</p>
+      <div class="equation"><small>Projection</small>x ∼ P X</div>
+      <p class="small">Drag the image point. Every point along the blue ray explains the same measurement.</p>
+    </div>
+    <div class="demo fade-up">
+      <canvas id="projectionCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">Projection destroys depth</div><div class="legend"><span><i class="dot blue"></i>possible worlds</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">02 · Triangulation</div>
+      <h2>A second view cuts the ambiguity.</h2>
+      <p>Two observations can intersect to localize a point. Yet a reconstruction may be unique in principle and still be numerically fragile.</p>
+      <div class="equation"><small>Two views</small>x₁ ∼ P₁X &nbsp;&nbsp;·&nbsp;&nbsp; x₂ ∼ P₂X</div>
+      <p>Move the camera baseline toward zero. The uncertainty stretches into a long, unstable needle.</p>
+    </div>
+    <div class="demo fade-up">
+      <canvas id="triangulationCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">Uniqueness is not stability</div><div class="legend"><span><i class="dot red"></i>uncertainty</span></div></div>
+      <div class="control-strip">
+        <label>Camera baseline <input id="baselineSlider" type="range" min="10" max="100" value="72"></label>
+        <label>Measurement noise <input id="noiseSlider" type="range" min="0" max="100" value="24"></label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="full-bleed">
+  <div class="quote fade-up">A pile of appearances becomes a reconstruction only after we discover <b>identity across views</b>.</div>
+</div>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">03 · Correspondence</div>
+      <h2>Which dot is the same dot?</h2>
+      <p>Before two images can agree, we must decide what in one image corresponds to what in another. Wrong identities can look locally plausible and still fail globally.</p>
+      <div class="equation"><small>The missing stage</small>Observe → <strong>Correspond</strong> → Constrain</div>
+      <p class="small">Click a feature in the left image, then click its matching feature in the right. Correct matches pull into a coherent 3D explanation.</p>
+    </div>
+    <div class="demo tall fade-up">
+      <canvas id="correspondenceCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">Cross-view identity produces geometry</div><div class="legend"><span><i class="dot blue"></i>accepted</span><span><i class="dot red"></i>inconsistent</span></div></div>
+      <div class="control-strip">
+        <button class="small-btn" id="resetMatches">Reset matches</button>
+        <span class="small" id="matchStatus">Select a point in the left image.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">04 · Coherence</div>
+      <h2>Pairwise agreement is not enough.</h2>
+      <p>Three locally plausible relationships can still fail to describe one global world. The loop must close.</p>
+      <div class="equation"><small>Cycle consistency</small>φ<sub>ki</sub> ∘ φ<sub>jk</sub> ∘ φ<sub>ij</sub> ≈ id</div>
+      <div class="split-note">
+        <div><h4>Exact</h4><p>Photogrammetry genuinely requires a globally consistent geometric explanation.</p></div>
+        <div><h4>Structural</h4><p>Overlapping views and compatibility data strongly resemble descent.</p></div>
+        <div><h4>Limit</h4><p>A photograph is not simply an open-set restriction of a scene.</p></div>
+      </div>
+    </div>
+    <div class="demo fade-up">
+      <canvas id="coherenceCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">The loop does not close</div><div class="legend"><span><i class="dot red"></i>residual</span></div></div>
+      <div class="control-strip">
+        <button class="small-btn" id="refineLoop">Refine globally</button>
+        <span class="pill structural">Descent-like</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">05 · Bundle adjustment</div>
+      <h2>The whole hypothesis is asked to tell one story.</h2>
+      <p>Cameras and points move together so that the total reprojection inconsistency shrinks. Global refinement is not decorative polish; it is where many local claims become one coherent hypothesis.</p>
+      <div class="equation"><small>Global refinement</small>min Σ ‖x<sub>ij</sub> − π(P<sub>i</sub>X<sub>j</sub>)‖²</div>
+    </div>
+    <div class="demo fade-up">
+      <canvas id="bundleCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">Residuals behave like stretched springs</div><div class="legend"><span><i class="dot red"></i>reprojection error</span></div></div>
+      <div class="control-strip">
+        <button class="small-btn" id="bundleButton">Refine</button>
+        <span class="small" id="bundleStatus">The current hypothesis is inconsistent.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">06 · Gauge</div>
+      <h2>Grab the universe.</h2>
+      <p>Rotate, translate, or scale the reconstruction together with its cameras. The photographs can remain unchanged.</p>
+      <div class="equation"><small>Observational equivalence</small>E(X) = E(gX)</div>
+      <p>The correct answer is often not an object, but an equivalence class.</p>
+      <div class="equation"><small>Recovered object</small>[X] = X / G</div>
+    </div>
+    <div class="demo fade-up">
+      <canvas id="gaugeCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">Move everything; preserve the evidence</div><div class="legend"><span><i class="dot gold"></i>same images</span></div></div>
+      <div class="control-strip">
+        <label>Rotate universe <input id="gaugeRotate" type="range" min="-100" max="100" value="0"></label>
+        <label>Scale universe <input id="gaugeScale" type="range" min="65" max="145" value="100"></label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="section-grid">
+    <div class="copy fade-up">
+      <div class="chapter-num">07 · The null space</div>
+      <h2>What the cameras cannot see can still change.</h2>
+      <p>Unobserved structure lies in a kind of observational null space. Edit the hidden rear geometry: the camera images stay fixed.</p>
+      <div class="equation"><small>Non-identifiability</small>S₁ ≠ S₂ &nbsp;&nbsp;but&nbsp;&nbsp; F(S₁)=F(S₂)</div>
+      <p class="small">Add coverage and the ambiguity region shrinks.</p>
+    </div>
+    <div class="demo fade-up">
+      <canvas id="nullCanvas"></canvas>
+      <div class="demo-head"><div class="demo-title">Coverage decides what can be known</div><div class="legend"><span><i class="dot gold"></i>unobserved</span></div></div>
+      <div class="control-strip">
+        <label>Camera coverage <input id="coverageSlider" type="range" min="1" max="8" value="2"></label>
+        <label>Hidden deformation <input id="deformSlider" type="range" min="0" max="100" value="30"></label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="rossetta">
+  <div class="page" style="padding:120px 0 44px">
+    <div class="eyebrow fade-up">08 · The Reconstruction Observatory</div>
+    <h2 class="fade-up" style="max-width:12ch">Seven ways to ask what counts as an appearance.</h2>
+    <p class="fade-up" style="max-width:42ch">Keep the hidden sculpture fixed. Change the instrument through which it is allowed to appear.</p>
+  </div>
+  <div class="instrument-grid">
+    <div class="instrument-tabs" id="instrumentTabs">
+      <button class="active" data-inst="inverse">Inverse problems<span>Exact</span></button>
+      <button data-inst="descent">Descent<span>Structurally strong</span></button>
+      <button data-inst="yoneda">Yoneda<span>Strong intuition</span></button>
+      <button data-inst="tannaka">Tannaka<span>Deep analogy</span></button>
+      <button data-inst="fourier">Fourier<span>Probe completeness</span></button>
+      <button data-inst="gelfand">Gelfand<span>Illustrative</span></button>
+      <button data-inst="stone">Stone<span>Mostly illustrative</span></button>
+    </div>
+    <div class="instrument-stage">
+      <canvas id="instrumentCanvas"></canvas>
+      <div class="instrument-copy" id="instrumentCopy"></div>
+    </div>
+  </div>
+</section>
+
+<section class="page">
+  <div class="eyebrow fade-up">09 · One machine behind many theories</div>
+  <h2 class="fade-up" style="max-width:13ch">The universal reconstruction pipeline.</h2>
+  <p class="fade-up" style="max-width:46ch">Photogrammetry makes every stage tangible because each stage can fail separately.</p>
+  <div class="pipeline fade-up" id="pipeline">
+    <div class="pipe active"><span class="n">01</span><strong>Probe</strong><em>Choose how the world can be interrogated.</em></div>
+    <div class="pipe"><span class="n">02</span><strong>Observe</strong><em>Collect appearances.</em></div>
+    <div class="pipe"><span class="n">03</span><strong>Correspond</strong><em>Establish identity across appearances.</em></div>
+    <div class="pipe"><span class="n">04</span><strong>Constrain</strong><em>Demand joint compatibility.</em></div>
+    <div class="pipe"><span class="n">05</span><strong>Recognize</strong><em>Ask whether the data could come from one object.</em></div>
+    <div class="pipe"><span class="n">06</span><strong>Reconstruct</strong><em>Recover a candidate world.</em></div>
+    <div class="pipe"><span class="n">07</span><strong>Gauge-fix</strong><em>Choose one representative of equivalent answers.</em></div>
+    <div class="pipe"><span class="n">08</span><strong>Refine</strong><em>Reduce global inconsistency.</em></div>
+  </div>
+</section>
+
+<section class="finale">
+  <div class="finale-inner fade-up">
+    <div class="eyebrow">Final thesis</div>
+    <h2>Reconstruction requires an account of identity across observations.</h2>
+    <p>A pile of appearances is data. Correspondence gives those appearances relations. Coherence asks whether the relations tell one story. Reconstruction is the recovery of the storyteller.</p>
+    <div class="endmark">Reconstruction: Seeing a World from Its Shadows</div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const C = {
+    ink:"#1b1b18", paper:"#f1ede3", muted:"#6d6a61",
+    blue:"#2e69a4", blueSoft:"#8fb4d8", red:"#c84b32", gold:"#a17a32", green:"#627b55"
+  };
+
+  function fit(canvas){
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(r.width*dpr));
+    const h = Math.max(1, Math.floor(r.height*dpr));
+    if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; }
+    const ctx=canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx,w:r.width,h:r.height,dpr};
+  }
+  function clear(ctx,w,h,alpha=1){
+    ctx.save();
+    ctx.globalAlpha=alpha; ctx.fillStyle=C.paper; ctx.fillRect(0,0,w,h); ctx.restore();
+  }
+  function line(ctx,a,b,color=C.ink,width=1,dash=[]){
+    ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+  }
+  function dot(ctx,p,r=4,color=C.ink,fill=true){
+    ctx.save();ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    fill?(ctx.fillStyle=color,ctx.fill()):(ctx.strokeStyle=color,ctx.stroke());ctx.restore();
+  }
+  function text(ctx,s,x,y,size=13,color=C.muted,align="left",font="Avenir Next, Gill Sans, sans-serif"){
+    ctx.save();ctx.fillStyle=color;ctx.font=`${size}px ${font}`;ctx.textAlign=align;ctx.textBaseline="middle";ctx.fillText(s,x,y);ctx.restore();
+  }
+  function poly(ctx,pts,stroke=C.ink,fill=null,width=1){
+    ctx.save();ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill()} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke()}ctx.restore();
+  }
+  function lerp(a,b,t){return a+(b-a)*t}
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+  function rnd(seed){ const x=Math.sin(seed*999.91)*43758.5453; return x-Math.floor(x); }
+
+  // Shared sculptural world: asymmetric 3D-ish point set.
+  const worldPts = Array.from({length:54},(_,i)=>{
+    const a=i/54*Math.PI*2;
+    const r=1 + .25*Math.sin(a*3) + .12*Math.cos(a*5);
+    return {
+      x:r*Math.cos(a),
+      y:.72*Math.sin(a)+.22*Math.sin(a*4),
+      z:.55*Math.sin(a*2)+.18*Math.cos(a*5)
+    };
+  });
+
+  function project3(p, angle, scale, cx, cy){
+    const ca=Math.cos(angle), sa=Math.sin(angle);
+    const x=p.x*ca-p.z*sa;
+    const z=p.x*sa+p.z*ca;
+    const persp=1/(2.9+z*.35);
+    return {x:cx+x*scale*persp*2.5,y:cy-p.y*scale*persp*2.5,z};
+  }
+  function drawWorld(ctx,w,h,angle=0,alpha=1,scale=125,center={x:w*.5,y:h*.48}){
+    ctx.save();ctx.globalAlpha=alpha;
+    const pts=worldPts.map(p=>project3(p,angle,scale,center.x,center.y)).sort((a,b)=>a.z-b.z);
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i], q=pts[(i+1)%pts.length];
+      line(ctx,p,q,"rgba(27,27,24,.28)",1);
+      dot(ctx,p,2.2,i%7===0?C.blue:C.ink);
+    }
+    ctx.restore();
+  }
+  function cameraGlyph(ctx,p,angle=0,color=C.ink,s=1){
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.strokeStyle=color;ctx.lineWidth=1.4;
+    ctx.strokeRect(-11*s,-7*s,20*s,14*s);
+    ctx.beginPath();ctx.moveTo(9*s,-5*s);ctx.lineTo(18*s,-11*s);ctx.lineTo(18*s,11*s);ctx.lineTo(9*s,5*s);ctx.stroke();
+    ctx.restore();
+  }
+
+  // Hero
+  const hero=document.getElementById("heroCanvas");
+  let heroMode="world", heroAngle=.2, heroDrag=false, heroLast=0;
+  hero.addEventListener("pointerdown",e=>{heroDrag=true;heroLast=e.clientX;hero.setPointerCapture(e.pointerId)});
+  hero.addEventListener("pointermove",e=>{if(heroDrag){heroAngle+=(e.clientX-heroLast)*.008;heroLast=e.clientX}});
+  hero.addEventListener("pointerup",()=>heroDrag=false);
+  document.querySelectorAll("[data-hero-mode]").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("[data-hero-mode]").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");heroMode=b.dataset.heroMode;
+  }));
+  function drawHero(){
+    const {ctx,w,h}=fit(hero);clear(ctx,w,h);
+    ctx.save();ctx.translate(0,0);
+    for(let i=0;i<7;i++){
+      const a=i/7*Math.PI*2+heroAngle*.18;
+      const p={x:w*.5+Math.cos(a)*w*.34,y:h*.52+Math.sin(a)*h*.22};
+      cameraGlyph(ctx,p,a+Math.PI, C.ink,.8);
+      if(heroMode==="world") line(ctx,p,{x:w*.5,y:h*.48},"rgba(46,105,164,.14)",1);
+    }
+    drawWorld(ctx,w,h,heroAngle,heroMode==="world"?1:.12,Math.min(w,h)*.21);
+    if(heroMode==="appearances"){
+      for(let i=0;i<5;i++){
+        const x=32+i*(w-64)/5;
+        const ww=(w-96)/5, y=h*.63+(i%2)*16;
+        ctx.fillStyle="rgba(255,255,255,.55)";ctx.fillRect(x,y,ww,h*.22);
+        ctx.strokeStyle="rgba(27,27,24,.18)";ctx.strokeRect(x,y,ww,h*.22);
+        ctx.save();ctx.beginPath();ctx.rect(x,y,ww,h*.22);ctx.clip();
+        drawWorld(ctx,ww,h*.22,heroAngle+i*.7,.88,Math.min(ww,h*.22)*.32,{x:x+ww*.5,y:y+h*.11});
+        ctx.restore();
+      }
+      text(ctx,"THE WORLD IS ABSENT. ONLY ITS APPEARANCES REMAIN.",w*.5,h*.20,12,C.red,"center");
+    }
+    ctx.restore();
+  }
+
+  // Projection demo
+  const proj=document.getElementById("projectionCanvas");
+  let projY=.53;
+  proj.addEventListener("pointermove",e=>{
+    if(e.buttons){
+      const r=proj.getBoundingClientRect();projY=clamp((e.clientY-r.top)/r.height,.25,.78);
+    }
+  });
+  function drawProjection(){
+    const {ctx,w,h}=fit(proj);clear(ctx,w,h);
+    const cam={x:w*.12,y:h*.56}, planeX=w*.36, img={x:planeX,y:h*projY};
+    cameraGlyph(ctx,cam,0,C.ink,1);
+    line(ctx,{x:planeX,y:h*.20},{x:planeX,y:h*.84},"rgba(27,27,24,.35)",2);
+    text(ctx,"IMAGE PLANE",planeX,h*.15,11,C.muted,"center");
+    const dx=img.x-cam.x,dy=img.y-cam.y;
+    const far={x:w*.92,y:cam.y+dy/dx*(w*.92-cam.x)};
+    line(ctx,cam,far,C.blue,2);
+    dot(ctx,img,6,C.red);
+    for(let t of [.35,.52,.70,.88]){
+      const p={x:lerp(cam.x,far.x,t),y:lerp(cam.y,far.y,t)};
+      dot(ctx,p,7,C.blue,false);
+      text(ctx,"possible X",p.x,p.y-20,11,C.blue,"center");
+    }
+    text(ctx,"ONE PIXEL",img.x+8,img.y-18,11,C.red);
+  }
+
+  // Triangulation
+  const tri=document.getElementById("triangulationCanvas"), baseline=document.getElementById("baselineSlider"), noise=document.getElementById("noiseSlider");
+  function drawTri(){
+    const {ctx,w,h}=fit(tri);clear(ctx,w,h);
+    const b=+baseline.value/100, n=+noise.value/100;
+    const target={x:w*.58,y:h*.34};
+    const c1={x:w*.23,y:h*.78};
+    const c2={x:w*(.23+.48*b),y:h*.78};
+    cameraGlyph(ctx,c1,-.75,C.ink,.9);cameraGlyph(ctx,c2,-2.4,C.ink,.9);
+    const jitter=(n*18);
+    line(ctx,c1,{x:target.x-jitter*.4,y:target.y+jitter*.25},C.blue,1.5);
+    line(ctx,c2,{x:target.x+jitter*.55,y:target.y-jitter*.15},C.blue,1.5);
+    dot(ctx,target,6,C.ink);
+    const instability=(1/(.15+b))*n*150;
+    ctx.save();ctx.translate(target.x,target.y);ctx.rotate(-.72);ctx.strokeStyle=C.red;ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(0,0,18+instability,8+n*10,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+    line(ctx,c1,c2,"rgba(27,27,24,.25)",1,[6,6]);
+    text(ctx,`baseline ${(b*100).toFixed(0)}%`,(c1.x+c2.x)/2,c1.y+28,11,C.muted,"center");
+    text(ctx,instability>70?"ill-conditioned":"stable enough",target.x,target.y-42,12,instability>70?C.red:C.green,"center");
+  }
+
+  // Correspondence
+  const corr=document.getElementById("correspondenceCanvas");
+  const featL=[{x:.16,y:.25},{x:.32,y:.47},{x:.21,y:.72},{x:.40,y:.32},{x:.43,y:.68},{x:.28,y:.18}];
+  const mapping=[3,0,5,1,4,2];
+  const featR=[{x:.67,y:.40},{x:.79,y:.24},{x:.72,y:.76},{x:.62,y:.22},{x:.84,y:.65},{x:.69,y:.57}];
+  let selectedL=null,matches=[];
+  corr.addEventListener("click",e=>{
+    const r=corr.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+    if(x<.5){
+      let best=-1,d=1;
+      featL.forEach((p,i)=>{const dd=Math.hypot(p.x-x,p.y-y);if(dd<d){d=dd;best=i}});
+      if(d<.07) selectedL=best;
+    } else if(selectedL!==null){
+      let best=-1,d=1;
+      featR.forEach((p,i)=>{const dd=Math.hypot(p.x-x,p.y-y);if(dd<d){d=dd;best=i}});
+      if(d<.07){matches.push({l:selectedL,r:best,good:mapping[selectedL]===best});selectedL=null}
+    }
+    updateMatchStatus();
+  });
+  document.getElementById("resetMatches").onclick=()=>{matches=[];selectedL=null;updateMatchStatus()};
+  function updateMatchStatus(){
+    const s=document.getElementById("matchStatus");
+    if(selectedL!==null) s.textContent="Now select its partner in the right image.";
+    else if(matches.length) s.textContent=`${matches.filter(m=>m.good).length} coherent · ${matches.filter(m=>!m.good).length} inconsistent`;
+    else s.textContent="Select a point in the left image.";
+  }
+  function drawCorr(){
+    const {ctx,w,h}=fit(corr);clear(ctx,w,h);
+    const margin=28, gap=24, panelW=(w-margin*2-gap)/2, panelH=h*.56, top=70;
+    function panel(x,y,title){
+      ctx.fillStyle="rgba(255,255,255,.42)";ctx.fillRect(x,y,panelW,panelH);
+      ctx.strokeStyle="rgba(27,27,24,.2)";ctx.strokeRect(x,y,panelW,panelH);
+      text(ctx,title,x+12,y-18,11,C.muted);
+      for(let k=0;k<8;k++){
+        const xx=x+rnd(k+3)*panelW, yy=y+rnd(k+33)*panelH;
+        ctx.fillStyle=`rgba(27,27,24,${.025+rnd(k+11)*.06})`;ctx.fillRect(xx,yy,20+rnd(k+9)*70,2);
+      }
+    }
+    const lx=margin,rx=margin+panelW+gap;
+    panel(lx,top,"VIEW A");panel(rx,top,"VIEW B");
+    featL.forEach((p,i)=>{const q={x:p.x*w,y:top+(p.y-.12)*panelH/.72};dot(ctx,q,selectedL===i?8:5,selectedL===i?C.gold:C.ink)});
+    featR.forEach((p,i)=>{const q={x:p.x*w,y:top+(p.y-.12)*panelH/.72};dot(ctx,q,5,C.ink)});
+    matches.forEach(m=>{
+      const a={x:featL[m.l].x*w,y:top+(featL[m.l].y-.12)*panelH/.72};
+      const b={x:featR[m.r].x*w,y:top+(featR[m.r].y-.12)*panelH/.72};
+      line(ctx,a,b,m.good?C.blue:C.red,m.good?2:1.5,m.good?[]:[6,5]);
+      const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      dot(ctx,mid,m.good?4:6,m.good?C.blue:C.red,false);
+    });
+    const good=matches.filter(m=>m.good).length;
+    const baseY=top+panelH+68;
+    text(ctx,good?`${good} identities now support a shared latent world`:"No shared geometry yet",w*.5,baseY,16,good?C.blue:C.muted,"center");
+    if(good){
+      const cx=w*.5,cy=baseY+100;
+      for(let i=0;i<good;i++){
+        const a=i/good*Math.PI*2;
+        dot(ctx,{x:cx+Math.cos(a)*70,y:cy+Math.sin(a)*38},4,C.blue);
+      }
+      text(ctx,"LATENT STRUCTURE",cx,cy+76,11,C.muted,"center");
+    }
+  }
+
+  // Coherence
+  const coh=document.getElementById("coherenceCanvas");
+  let loopRefine=0;
+  document.getElementById("refineLoop").onclick=()=>loopRefine=1;
+  function drawCoh(){
+    const {ctx,w,h}=fit(coh);clear(ctx,w,h);
+    loopRefine*=.96;
+    const t=1-loopRefine;
+    const A={x:w*.25,y:h*.66},B={x:w*.5,y:h*.24},C3={x:w*.75,y:h*.66};
+    [A,B,C3].forEach((p,i)=>{dot(ctx,p,18,C.ink,false);text(ctx,["A","B","C"][i],p.x,p.y,16,C.ink,"center")});
+    line(ctx,A,B,C.blue,2);line(ctx,B,C3,C.blue,2);
+    const offset=lerp(80,0,t);
+    const fakeEnd={x:A.x+offset,y:A.y-offset*.25};
+    line(ctx,C3,fakeEnd,C.red,2,[8,5]);
+    line(ctx,fakeEnd,A,C.red,1,[3,4]);
+    dot(ctx,fakeEnd,6,C.red);
+    text(ctx,offset>8?"cycle residual":"loop closed",A.x+offset*.55,A.y-offset*.35-18,12,offset>8?C.red:C.green,"center");
+    ctx.save();ctx.strokeStyle="rgba(27,27,24,.12)";ctx.beginPath();ctx.arc(w*.5,h*.53,w*.23,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
+
+  // Bundle
+  const bun=document.getElementById("bundleCanvas");
+  let bundleProgress=0,bundleAnimating=false;
+  document.getElementById("bundleButton").onclick=()=>{bundleAnimating=true;bundleProgress=0;document.getElementById("bundleStatus").textContent="Reducing global reprojection inconsistency…"};
+  const obs=Array.from({length:18},(_,i)=>({x:.18+rnd(i+1)*.64,y:.2+rnd(i+17)*.5,dx:(rnd(i+31)-.5)*34,dy:(rnd(i+61)-.5)*26}));
+  function drawBundle(){
+    const {ctx,w,h}=fit(bun);clear(ctx,w,h);
+    if(bundleAnimating){bundleProgress=Math.min(1,bundleProgress+.012);if(bundleProgress>=1){bundleAnimating=false;document.getElementById("bundleStatus").textContent="One coherent hypothesis fits the observations."}}
+    const ease=1-Math.pow(1-bundleProgress,3);
+    obs.forEach((o,i)=>{
+      const a={x:o.x*w,y:o.y*h};
+      const b={x:a.x+o.dx*(1-ease),y:a.y+o.dy*(1-ease)};
+      line(ctx,a,b,C.red,1.5);
+      dot(ctx,a,3,C.ink);dot(ctx,b,4,C.blue,false);
+    });
+    const cams=[{x:w*.12,y:h*.78},{x:w*.34,y:h*.86},{x:w*.67,y:h*.84},{x:w*.87,y:h*.72}];
+    cams.forEach((p,i)=>cameraGlyph(ctx,{x:p.x+(1-ease)*(i%2?14:-16),y:p.y+(1-ease)*(i-1)*5},-Math.PI/2,C.ink,.8));
+    drawWorld(ctx,w,h,.25+ease*.12,.68,Math.min(w,h)*.14,{x:w*.52,y:h*.47});
+    text(ctx,`${Math.round((1-ease)*100)}% residual energy`,w*.5,h*.12,14,ease>.95?C.green:C.red,"center");
+  }
+
+  // Gauge
+  const gauge=document.getElementById("gaugeCanvas"),gRot=document.getElementById("gaugeRotate"),gScale=document.getElementById("gaugeScale");
+  function drawGauge(){
+    const {ctx,w,h}=fit(gauge);clear(ctx,w,h);
+    const rot=+gRot.value/100*1.3, sc=+gScale.value/100;
+    ctx.save();ctx.translate(w*.5,h*.49);ctx.rotate(rot*.18);ctx.scale(sc,sc);ctx.translate(-w*.5,-h*.49);
+    drawWorld(ctx,w,h,rot,.95,Math.min(w,h)*.16,{x:w*.5,y:h*.48});
+    for(let i=0;i<5;i++){
+      const a=i/5*Math.PI*2+rot;
+      const p={x:w*.5+Math.cos(a)*w*.27,y:h*.52+Math.sin(a)*h*.19};
+      cameraGlyph(ctx,p,a+Math.PI,C.ink,.75);
+    }
+    ctx.restore();
+    const y=h*.84;
+    for(let i=0;i<5;i++){
+      const x=w*.18+i*w*.16;
+      ctx.strokeStyle="rgba(27,27,24,.18)";ctx.strokeRect(x-42,y-28,84,56);
+      drawWorld(ctx,84,56,i*.7,.35,18,{x:x,y:y});
+    }
+    text(ctx,"THE EVIDENCE DOES NOT CHANGE",w*.5,h*.94,11,C.gold,"center");
+  }
+
+  // Null space
+  const nul=document.getElementById("nullCanvas"),coverage=document.getElementById("coverageSlider"),deform=document.getElementById("deformSlider");
+  function drawNull(){
+    const {ctx,w,h}=fit(nul);clear(ctx,w,h);
+    const cov=+coverage.value, def=+deform.value/100;
+    const center={x:w*.5,y:h*.48};
+    // observed front
+    drawWorld(ctx,w,h,.25,.75,Math.min(w,h)*.15,center);
+    // hidden deformation blob
+    ctx.save();ctx.globalAlpha=.16+.25*(1-cov/8);ctx.fillStyle=C.gold;
+    ctx.beginPath();ctx.ellipse(center.x+62+def*70,center.y-10,48+def*40,76,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    for(let i=0;i<cov;i++){
+      const a=(-.65+i/Math.max(1,cov-1)*1.3);
+      const p={x:w*.5+Math.cos(a+Math.PI)*w*.34,y:h*.55+Math.sin(a+Math.PI)*h*.24};
+      cameraGlyph(ctx,p,a,C.ink,.74);
+      line(ctx,p,center,"rgba(46,105,164,.10)",1);
+    }
+    const amb=Math.max(0,1-cov/8);
+    text(ctx,amb>.3?"hidden geometry can still change":"coverage has constrained most ambiguity",w*.5,h*.12,13,amb>.3?C.gold:C.green,"center");
+  }
+
+  // Observatory
+  const instCanvas=document.getElementById("instrumentCanvas"),instCopy=document.getElementById("instrumentCopy");
+  let inst="inverse",instPhase=0;
+  const instData={
+    inverse:{title:"Inverse problems",tag:"Exact",cls:"exact",body:"The images are measurements produced by a forward model. Recovering scene and cameras from those measurements is literally an inverse problem."},
+    descent:{title:"Descent",tag:"Structurally strong",cls:"structural",body:"Overlapping partial views plus compatibility data resemble gluing. The analogy is powerful, but an image is not simply an open-set restriction of a 3D scene."},
+    yoneda:{title:"Yoneda",tag:"Strong intuition",cls:"structural",body:"Imagine every possible viewpoint as a probe and every image as a response profile. This is excellent intuition—yet a photograph is not literally a hom-set."},
+    tannaka:{title:"Tannaka",tag:"Deep analogy",cls:"structural",body:"A hidden structure is recovered from a coherent family of realizations. Cameras suggest the intuition, but ordinary image formation does not supply classical tensor-representation machinery."},
+    fourier:{title:"Fourier",tag:"Probe completeness",cls:"structural",body:"Missing viewpoints behave like missing modes: incomplete probing leaves unresolved directions and anisotropic uncertainty."},
+    gelfand:{title:"Gelfand",tag:"Illustrative",cls:"illustrative",body:"Replace the geometry by everything continuously measurable about it. Ordinary photogrammetry samples only a tiny part of that possible observable algebra."},
+    stone:{title:"Stone",tag:"Mostly illustrative",cls:"illustrative",body:"Binary visibility and truth-valued tests give a poetic bridge to complete logical viewpoints. The formal match is weak, but the observational perspective is memorable."}
+  };
+  function setInst(name){
+    inst=name;instPhase=0;
+    document.querySelectorAll("#instrumentTabs button").forEach(b=>b.classList.toggle("active",b.dataset.inst===name));
+    const d=instData[name];
+    instCopy.innerHTML=`<span class="pill ${d.cls}">${d.tag}</span><h3>${d.title}</h3><p>${d.body}</p>`;
+  }
+  document.querySelectorAll("#instrumentTabs button").forEach(b=>b.onclick=()=>setInst(b.dataset.inst));
+  setInst("inverse");
+  function drawInstrument(){
+    const {ctx,w,h}=fit(instCanvas);clear(ctx,w,h);instPhase+=.008;
+    const cx=w*.55,cy=h*.42;
+    drawWorld(ctx,w,h,instPhase*.4,.82,Math.min(w,h)*.14,{x:cx,y:cy});
+    if(inst==="inverse"){
+      for(let i=0;i<5;i++){const a=i/5*Math.PI*2;const p={x:cx+Math.cos(a)*w*.28,y:cy+Math.sin(a)*h*.22};cameraGlyph(ctx,p,a+Math.PI,C.ink,.75);line(ctx,p,{x:cx,y:cy},"rgba(46,105,164,.14)",1)}
+      text(ctx,"MEASUREMENTS → LATENT WORLD",cx,h*.12,12,C.blue,"center");
+    }else if(inst==="descent"){
+      for(let i=0;i<4;i++){
+        ctx.save();ctx.strokeStyle=i%2?C.blue:C.gold;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx+(i-1.5)*44,cy+(i%2?18:-10),84,Math.PI*.2,Math.PI*1.35);ctx.stroke();ctx.restore();
+      }
+      text(ctx,"OVERLAP + COMPATIBILITY",cx,h*.12,12,C.blue,"center");
+    }else if(inst==="yoneda"){
+      for(let i=0;i<18;i++){
+        const a=i/18*Math.PI*2;const p={x:cx+Math.cos(a)*w*.34,y:cy+Math.sin(a)*h*.28};
+        dot(ctx,p,3,C.blue);line(ctx,p,{x:cx,y:cy},"rgba(46,105,164,.13)",1);
+      }
+      text(ctx,"ALL PROBES",cx,h*.12,12,C.blue,"center");
+    }else if(inst==="tannaka"){
+      for(let i=0;i<6;i++){
+        const a=i/6*Math.PI*2;const p={x:cx+Math.cos(a)*w*.31,y:cy+Math.sin(a)*h*.24};
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(a);ctx.strokeStyle=C.blue;ctx.strokeRect(-38,-25,76,50);ctx.restore();
+        drawWorld(ctx,76,50,a,.28,14,{x:p.x,y:p.y});
+      }
+      text(ctx,"ONE STRUCTURE · MANY REALIZATIONS",cx,h*.12,12,C.blue,"center");
+    }else if(inst==="fourier"){
+      for(let i=1;i<=8;i++){
+        ctx.save();ctx.strokeStyle=`rgba(46,105,164,${.08+i*.035})`;ctx.beginPath();
+        for(let x=0;x<w;x+=4){const y=cy+Math.sin(x*.02*i+instPhase*4)*i*7; x?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();ctx.restore();
+      }
+      text(ctx,"RESPONSES TO MODES",cx,h*.12,12,C.blue,"center");
+    }else if(inst==="gelfand"){
+      for(let i=0;i<26;i++){
+        const a=i/26*Math.PI*2,rr=100+50*Math.sin(i*2.4);
+        const p={x:cx+Math.cos(a)*rr*1.8,y:cy+Math.sin(a)*rr*.9};
+        dot(ctx,p,3,i%3===0?C.gold:C.blue);line(ctx,p,{x:cx,y:cy},"rgba(27,27,24,.07)",1)
+      }
+      text(ctx,"THE SPACE OF OBSERVABLES",cx,h*.12,12,C.gold,"center");
+    }else{
+      for(let i=0;i<36;i++){
+        const a=i/36*Math.PI*2,rr=95+(i%3)*44;
+        const p={x:cx+Math.cos(a)*rr*1.6,y:cy+Math.sin(a)*rr};
+        const yes=(i%4<2);dot(ctx,p,yes?5:3,yes?C.blue:C.ink,yes);text(ctx,yes?"1":"0",p.x,p.y-12,9,C.muted,"center")
+      }
+      text(ctx,"CONSISTENT YES / NO VIEWPOINTS",cx,h*.12,12,C.blue,"center");
+    }
+  }
+
+  // Pipeline interaction
+  document.querySelectorAll(".pipe").forEach((p,i)=>p.addEventListener("mouseenter",()=>{
+    document.querySelectorAll(".pipe").forEach(x=>x.classList.remove("active"));p.classList.add("active");
+  }));
+
+  // Reveal
+  const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add("visible")}),{threshold:.12});
+  document.querySelectorAll(".fade-up").forEach(el=>io.observe(el));
+
+  function frame(){
+    drawHero();drawProjection();drawTri();drawCorr();drawCoh();drawBundle();drawGauge();drawNull();drawInstrument();
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>
