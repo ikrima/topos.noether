@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seeing a World from Its Shadows — Photogrammetry as a Reconstruction Machine</title>
+<style>
+  :root{
+    --paper:#f3efe5;
+    --paper-2:#ece6d8;
+    --ink:#171612;
+    --muted:#6f6b61;
+    --rule:#c9c1b1;
+    --red:#cf3f2f;
+    --blue:#1e6d8f;
+    --green:#487b57;
+    --gold:#b8862d;
+    --violet:#715d8f;
+    --shadow:rgba(28,24,18,.12);
+    --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    --sans:"Avenir Next","Gill Sans","Trebuchet MS",sans-serif;
+    --mono:"SFMono-Regular","Cascadia Code","Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,.75), transparent 28rem),
+      linear-gradient(180deg,var(--paper),var(--paper-2));
+    color:var(--ink);
+    font-family:var(--serif);
+    line-height:1.58;
+    overflow-x:hidden;
+  }
+  body:before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:999;
+    opacity:.08;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply;
+  }
+  a{color:inherit}
+  .wrap{width:min(1180px,calc(100% - 40px));margin:0 auto}
+  .narrow{width:min(760px,calc(100% - 40px));margin:0 auto}
+  .eyebrow{font-family:var(--sans);font-size:.78rem;letter-spacing:.15em;text-transform:uppercase;color:var(--red);font-weight:700}
+  h1,h2,h3{font-weight:500;letter-spacing:-.03em;line-height:1.05;margin:0}
+  h1{font-size:clamp(3.6rem,9vw,9rem);max-width:1100px}
+  h2{font-size:clamp(2.5rem,5.5vw,5.2rem)}
+  h3{font-size:clamp(1.45rem,2.3vw,2.2rem)}
+  p{font-size:clamp(1.05rem,1.65vw,1.28rem);margin:1.2em 0}
+  .lead{font-size:clamp(1.35rem,2.3vw,1.9rem);line-height:1.42;color:#2b2924}
+  .small{font-family:var(--sans);font-size:.86rem;line-height:1.45;color:var(--muted)}
+  .eq{font-family:var(--serif);font-style:italic;white-space:nowrap}
+  .hero{padding:50px 0 70px;min-height:100vh;display:grid;align-content:center}
+  .hero-head{position:relative;z-index:2}
+  .hero .subtitle{max-width:780px;margin-top:24px;font-size:clamp(1.25rem,2.3vw,1.9rem);color:#454139}
+  .hero-machine{margin-top:48px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:18px 0 26px}
+  .machine-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.7fr);gap:18px;align-items:stretch}
+  .canvas-shell{position:relative;min-height:560px;background:#12120f;border-radius:2px;overflow:hidden;box-shadow:0 24px 70px var(--shadow)}
+  #worldCanvas{width:100%;height:100%;display:block}
+  .canvas-caption{position:absolute;left:18px;bottom:15px;color:#ece7dc;font-family:var(--sans);font-size:.8rem;letter-spacing:.02em;background:rgba(20,20,16,.55);padding:8px 10px;backdrop-filter:blur(8px)}
+  .control-panel{background:rgba(255,255,255,.34);border:1px solid var(--rule);padding:20px;display:flex;flex-direction:column;gap:18px}
+  .control-panel h3{font-family:var(--sans);font-size:1rem;letter-spacing:.02em;font-weight:700}
+  .control{display:grid;gap:7px}
+  .control label{font-family:var(--sans);font-size:.82rem;color:#403d36;display:flex;justify-content:space-between;gap:14px}
+  input[type="range"]{width:100%;accent-color:var(--red)}
+  .checks{display:grid;gap:10px}
+  .check{display:flex;gap:9px;align-items:center;font-family:var(--sans);font-size:.83rem;color:#38352f}
+  .mini-views{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mini{border:1px solid var(--rule);background:#faf7ef;padding:7px}
+  .mini canvas{width:100%;height:130px;display:block;background:#f6f1e7}
+  .mini .tag{font-family:var(--mono);font-size:.69rem;color:var(--muted);padding-top:5px}
+  .scroll-cue{margin-top:26px;font-family:var(--sans);font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .scroll-cue:before{content:"";width:32px;height:1px;background:var(--muted)}
+
+  section{padding:110px 0;border-top:1px solid rgba(130,119,98,.25)}
+  .section-head{display:grid;grid-template-columns:.72fr 1.28fr;gap:40px;align-items:end;margin-bottom:58px}
+  .section-no{font-family:var(--mono);font-size:.8rem;color:var(--red)}
+  .section-intro{max-width:760px}
+  .section-intro p{margin-bottom:0}
+  .callout{border-left:4px solid var(--red);padding:4px 0 4px 22px;margin:48px auto;font-size:clamp(1.45rem,2.8vw,2.5rem);line-height:1.25;max-width:900px}
+
+  .forward-inverse{display:grid;grid-template-columns:1fr 80px 1fr;gap:18px;align-items:center;margin:60px 0}
+  .box{border:1px solid var(--rule);background:rgba(255,255,255,.34);padding:28px;min-height:220px;display:flex;flex-direction:column;justify-content:center}
+  .box .big{font-size:clamp(2rem,4vw,4rem);line-height:1.05}
+  .arrow{font-size:3rem;text-align:center;color:var(--red)}
+  .chipline{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .chip{font-family:var(--sans);font-size:.75rem;border:1px solid var(--rule);padding:6px 9px;background:#f8f3e8}
+
+  .corr-demo{display:grid;grid-template-columns:1.05fr .95fr;gap:30px;align-items:start}
+  .corr-stage{position:sticky;top:20px;border:1px solid var(--rule);background:#151511;padding:12px;min-height:560px}
+  #corrCanvas{width:100%;height:535px;display:block;background:#151511}
+  .corr-controls{padding:22px;background:rgba(255,255,255,.3);border:1px solid var(--rule)}
+  .step{padding:18px 0;border-top:1px solid var(--rule)}
+  .step:first-child{border-top:0}
+  .step b{font-family:var(--sans)}
+  .badge{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:50%;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:.75rem;margin-right:8px}
+
+  .coherence-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:42px 0}
+  .photo-card{background:#faf6ed;border:1px solid var(--rule);padding:10px;box-shadow:0 14px 30px var(--shadow);transform:rotate(var(--r,0deg));transition:.25s transform}
+  .photo-card:hover{transform:rotate(0deg) translateY(-4px)}
+  .photo-window{height:210px;background:linear-gradient(150deg,#c9d8dc,#f1d7b2 60%,#9d7f5c);position:relative;overflow:hidden}
+  .photo-window:after{content:"";position:absolute;width:96px;height:130px;background:#4d4b42;border-radius:50% 50% 42% 42%;left:50%;top:56%;transform:translate(-50%,-50%) rotate(var(--tilt,0deg));box-shadow:22px 5px 0 rgba(0,0,0,.12)}
+  .dot{position:absolute;width:13px;height:13px;border-radius:50%;background:var(--red);border:3px solid #fff;z-index:2;left:var(--x);top:var(--y)}
+  .photo-label{font-family:var(--mono);font-size:.72rem;padding:7px 2px 0;color:var(--muted)}
+  .coherence-eq{text-align:center;font-size:clamp(1.5rem,3vw,2.5rem);margin:40px 0}
+
+  .gauge-stage{display:grid;grid-template-columns:1.2fr .8fr;gap:26px;align-items:center}
+  #gaugeCanvas{width:100%;height:520px;background:#161611;border:1px solid #25251f;display:block}
+  .gauge-copy{font-size:1.12rem}
+  .gauge-buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}
+  button{font:700 .78rem var(--sans);letter-spacing:.02em;border:1px solid var(--ink);background:transparent;padding:10px 14px;cursor:pointer;transition:.2s}
+  button:hover,button.active{background:var(--ink);color:var(--paper)}
+
+  .spectrum{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:8px;margin-top:42px}
+  .theory{border-top:5px solid var(--c);background:rgba(255,255,255,.35);padding:18px 14px;min-height:290px;display:flex;flex-direction:column;gap:12px;transition:.25s transform,.25s background}
+  .theory:hover{transform:translateY(-5px);background:rgba(255,255,255,.65)}
+  .theory h3{font-family:var(--sans);font-size:1.02rem;letter-spacing:0;font-weight:800}
+  .strength{font:700 .68rem var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--c)}
+  .theory p{font-size:.93rem;line-height:1.45;margin:0}
+  .theory .map{font-family:var(--mono);font-size:.73rem;color:#4f4b43;margin-top:auto}
+
+  .failure-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:44px}
+  .failure{border:1px solid var(--rule);background:#f8f3e9;min-height:360px;padding:24px;position:relative;overflow:hidden}
+  .failure h3{font-family:var(--sans);font-weight:800;letter-spacing:0;font-size:1.2rem}
+  .failure .icon{height:170px;margin:14px 0 20px;position:relative}
+  .blind .icon:before,.blind .icon:after{content:"";position:absolute;width:130px;height:130px;border:2px solid var(--red);border-radius:50%;top:17px}
+  .blind .icon:before{left:21%;}.blind .icon:after{right:21%}
+  .blind .icon span{position:absolute;width:72px;height:72px;background:var(--red);opacity:.15;border-radius:50%;left:50%;top:46px;transform:translateX(-50%)}
+  .coverage .icon{background:conic-gradient(var(--blue) 0 62%,transparent 62%);border-radius:50%;width:150px;height:150px;margin:8px auto;border:1px solid var(--rule)}
+  .incoherence .icon svg,.instability .icon svg{width:100%;height:100%}
+  .failure .name{font-size:1.35rem;font-style:italic}
+
+  .pipeline{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:50px 0}
+  .pipe{min-height:160px;background:#171612;color:#eee9dd;padding:15px 12px;position:relative;display:flex;flex-direction:column;justify-content:space-between}
+  .pipe:nth-child(3){background:var(--red)}
+  .pipe .n{font:700 .67rem var(--mono);opacity:.65}
+  .pipe .t{font:700 .88rem var(--sans)}
+  .pipe:after{content:"→";position:absolute;right:-11px;top:50%;transform:translateY(-50%);z-index:3;color:var(--red);font-size:1.2rem}
+  .pipe:last-child:after{display:none}
+
+  .identity{font-size:clamp(2.4rem,6vw,6rem);line-height:1.03;text-align:center;padding:100px 0 40px}
+  .identity em{color:var(--red);font-weight:400}
+  .closing-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start}
+  .manifesto{background:#171612;color:#efe9dc;padding:36px}
+  .manifesto p{font-size:clamp(1.2rem,2vw,1.6rem);margin:0}
+  footer{padding:70px 0 90px;border-top:1px solid var(--rule);font-family:var(--sans);color:var(--muted)}
+
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.visible{opacity:1;transform:none}
+  @media (max-width:900px){
+    .machine-grid,.corr-demo,.gauge-stage,.closing-grid,.section-head{grid-template-columns:1fr}
+    .corr-stage{position:relative;top:auto}
+    .spectrum{grid-template-columns:repeat(2,1fr)}
+    .pipeline{grid-template-columns:repeat(4,1fr)}
+    .forward-inverse{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}
+  }
+  @media (max-width:600px){
+    .wrap,.narrow{width:min(100% - 24px,1180px)}
+    .hero{padding-top:26px}
+    .canvas-shell{min-height:430px}
+    .mini-views{grid-template-columns:1fr}
+    .coherence-grid,.failure-grid,.spectrum{grid-template-columns:1fr}
+    .pipeline{grid-template-columns:repeat(2,1fr)}
+    .pipe:nth-child(3){background:var(--red)}
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero" style="border-top:0">
+    <div class="wrap">
+      <div class="hero-head reveal">
+        <div class="eyebrow">A visual essay about reconstruction</div>
+        <h1>Seeing a World<br>from Its Shadows</h1>
+        <p class="subtitle">Photogrammetry is the place where abstract reconstruction becomes physical: finite views, missing evidence, unknown correspondences, gauge freedom, noise—and still, somehow, a world reappears.</p>
+      </div>
+
+      <div class="hero-machine reveal">
+        <div class="machine-grid">
+          <div class="canvas-shell">
+            <canvas id="worldCanvas"></canvas>
+            <div class="canvas-caption">Drag to orbit. The red cameras are not the world; they are ways of seeing it.</div>
+          </div>
+          <aside class="control-panel">
+            <div>
+              <h3>The appearance machine</h3>
+              <p class="small">Change the camera baseline, inject measurement noise, and watch a single 3D structure fracture into different 2D appearances.</p>
+            </div>
+            <div class="control">
+              <label><span>Camera baseline</span><span id="baselineOut">1.00</span></label>
+              <input id="baseline" type="range" min="0.15" max="2.4" step="0.01" value="1.0">
+            </div>
+            <div class="control">
+              <label><span>Image noise</span><span id="noiseOut">0.0 px</span></label>
+              <input id="noise" type="range" min="0" max="8" step="0.1" value="0">
+            </div>
+            <div class="checks">
+              <label class="check"><input id="showRays" type="checkbox" checked> show viewing rays</label>
+              <label class="check"><input id="showTracks" type="checkbox" checked> color matched features</label>
+              <label class="check"><input id="spinWorld" type="checkbox"> slowly rotate the world</label>
+            </div>
+            <div class="mini-views">
+              <div class="mini"><canvas id="viewA"></canvas><div class="tag">CAMERA A · projection</div></div>
+              <div class="mini"><canvas id="viewB"></canvas><div class="tag">CAMERA B · projection</div></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+      <div class="scroll-cue">Scroll to reverse the machine</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap reveal">
+      <div class="section-head">
+        <div><div class="section-no">01 / THE REVERSAL</div><h2>The easy direction is to make the shadows.</h2></div>
+        <div class="section-intro"><p class="lead">A scene, a camera, a lighting configuration: push them through image formation and a photograph falls out. Photogrammetry asks the impolite question—can we run that arrow backward?</p></div>
+      </div>
+      <div class="forward-inverse">
+        <div class="box">
+          <div class="big">World</div>
+          <div class="chipline"><span class="chip">geometry</span><span class="chip">camera</span><span class="chip">materials</span><span class="chip">lighting</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box">
+          <div class="big">Images</div>
+          <div class="small"><span class="eq">Iᵢ = R(S, Cᵢ, Lᵢ, M, …) + εᵢ</span></div>
+        </div>
+      </div>
+      <div class="callout">The forward process produces appearances. Reconstruction asks for the hidden generator that could have produced them all.</div>
+      <div class="forward-inverse">
+        <div class="box">
+          <div class="big">Images</div>
+          <div class="chipline"><span class="chip">partial</span><span class="chip">noisy</span><span class="chip">occluded</span><span class="chip">finite</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box">
+          <div class="big">A world,<br><em>up to what?</em></div>
+          <div class="small">The answer will turn out to involve correspondence, coherence, and gauge.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div><div class="section-no">02 / CORRESPONDENCE</div><h2>Before views can agree, we must decide what is the same.</h2></div>
+        <div class="section-intro"><p class="lead">Two photographs are not yet a reconstruction. First comes the quiet, treacherous problem of identity across appearances: which mark in one image is the same world-point as which mark in another?</p></div>
+      </div>
+      <div class="corr-demo reveal">
+        <div class="corr-stage"><canvas id="corrCanvas"></canvas></div>
+        <div class="corr-controls">
+          <div class="step"><span class="badge">1</span><b>Observe</b><p>Each camera receives a flattened appearance. Depth has disappeared.</p></div>
+          <div class="step"><span class="badge">2</span><b>Correspond</b><p>The red marks are proposed identities across views. Without this step, the images are merely a pile.</p></div>
+          <div class="step"><span class="badge">3</span><b>Triangulate</b><p>Each matched image point defines a ray in space. Their intersection proposes a hidden 3D point.</p></div>
+          <div class="control">
+            <label><span>Mismatch one feature</span><span id="mismatchOut">0%</span></label>
+            <input id="mismatch" type="range" min="0" max="100" step="1" value="0">
+          </div>
+          <p class="small">As the match drifts, the rays cease to tell a single geometric story. This is reconstruction failure before optimization even begins.</p>
+        </div>
+      </div>
+      <div class="callout reveal">Correspondence is the bridge between appearance and coherence.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap reveal">
+      <div class="section-head">
+        <div><div class="section-no">03 / COHERENCE</div><h2>The views must admit one common world.</h2></div>
+        <div class="section-intro"><p class="lead">A correct match is not just “visually plausible.” It must survive the harder test: can all the sightings be explained as projections of one latent object?</p></div>
+      </div>
+      <div class="coherence-grid">
+        <div class="photo-card" style="--r:-1.4deg"><div class="photo-window" style="--tilt:-5deg"><span class="dot" style="--x:42%;--y:35%"></span></div><div class="photo-label">VIEW A · appearance α</div></div>
+        <div class="photo-card" style="--r:1deg"><div class="photo-window" style="--tilt:2deg"><span class="dot" style="--x:53%;--y:37%"></span></div><div class="photo-label">VIEW B · appearance β</div></div>
+        <div class="photo-card" style="--r:-.5deg"><div class="photo-window" style="--tilt:7deg"><span class="dot" style="--x:61%;--y:43%"></span></div><div class="photo-label">VIEW C · appearance γ</div></div>
+      </div>
+      <div class="coherence-eq">α ↔ β ↔ γ &nbsp;&nbsp;must be the shadow of&nbsp;&nbsp; <b>one X</b></div>
+      <p class="narrow lead">This is why relations between appearances carry reconstructive information. The images alone do not say which fragments belong together; the compatibility structure does.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head reveal">
+        <div><div class="section-no">04 / GAUGE</div><h2>The same photographs can describe many coordinate worlds.</h2></div>
+        <div class="section-intro"><p class="lead">Reconstruction rarely returns “the object” in an absolute sense. It returns an equivalence class: a world modulo transformations that leave the observations unchanged.</p></div>
+      </div>
+      <div class="gauge-stage reveal">
+        <canvas id="gaugeCanvas"></canvas>
+        <div class="gauge-copy">
+          <p>Rotate the entire scene and all cameras together. Translate them together. Rescale a monocular reconstruction and compensate the camera translations.</p>
+          <p>The pixel evidence does not care.</p>
+          <div class="gauge-buttons">
+            <button data-gauge="rotate">rotate gauge</button>
+            <button data-gauge="translate">translate gauge</button>
+            <button data-gauge="scale">scale gauge</button>
+            <button data-gauge="reset" class="active">reset</button>
+          </div>
+          <div class="callout" style="margin:34px 0 0;font-size:1.7rem">What is reconstructed is often not <span class="eq">X</span>, but <span class="eq">[X] = X / gauge</span>.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap reveal">
+      <div class="section-head">
+        <div><div class="section-no">05 / THE ROSETTA STONE</div><h2>Seven theories walk around the same statue.</h2></div>
+        <div class="section-intro"><p class="lead">Photogrammetry is not literally Yoneda, Tannaka, or Gelfand duality. It is better: a concrete stage on which their common reconstruction pattern becomes visible—and where their differences become impossible to ignore.</p></div>
+      </div>
+      <div class="spectrum">
+        <article class="theory" style="--c:var(--red)"><div class="strength">Exact</div><h3>Inverse problems</h3><p>Images are measurements produced by a forward model. Recover the latent scene and cameras.</p><div class="map">effects → hidden cause</div></article>
+        <article class="theory" style="--c:var(--green)"><div class="strength">Very strong</div><h3>Descent</h3><p>Overlapping partial views plus compatibility data suggest one global object.</p><div class="map">local pieces → glue</div></article>
+        <article class="theory" style="--c:var(--blue)"><div class="strength">Strong intuition</div><h3>Yoneda</h3><p>Characterize an object by its full response profile to a family of probes.</p><div class="map">probe → response</div></article>
+        <article class="theory" style="--c:var(--violet)"><div class="strength">Deep analogy</div><h3>Tannaka</h3><p>Recover hidden structure from a coherent family of realizations.</p><div class="map">realizations → invariant</div></article>
+        <article class="theory" style="--c:var(--gold)"><div class="strength">Moderate</div><h3>Fourier</h3><p>Recover from responses to a sufficiently complete probe family; missing views echo missing modes.</p><div class="map">modes → signal</div></article>
+        <article class="theory" style="--c:#7d6754"><div class="strength">Illustrative</div><h3>Gelfand</h3><p>Imagine replacing geometry by the total algebra of measurable observables.</p><div class="map">observables → space</div></article>
+        <article class="theory" style="--c:#888"><div class="strength">Mostly poetic</div><h3>Stone</h3><p>Binary visibility tests hint at reconstruction from complete truth-valued viewpoints.</p><div class="map">truths → possibility space</div></article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap reveal">
+      <div class="section-head">
+        <div><div class="section-no">06 / FAILURE MODES</div><h2>Reconstruction fails in only a few fundamental ways.</h2></div>
+        <div class="section-intro"><p class="lead">Photogrammetry makes the abstract failure taxonomy visible: blindness, missing coverage, incoherence, and instability.</p></div>
+      </div>
+      <div class="failure-grid">
+        <article class="failure blind"><h3>Blindness</h3><div class="icon"><span></span></div><div class="name">Different worlds, same appearances.</div><p class="small">The probe family does not separate candidates. The forward map has a nontrivial null space.</p></article>
+        <article class="failure coverage"><h3>Incomplete coverage</h3><div class="icon"></div><div class="name">Some structure never enters the measurements.</div><p class="small">An unseen surface cannot be recovered from image evidence alone. Priors may fill the gap, but that is inference beyond observation.</p></article>
+        <article class="failure incoherence"><h3>Incoherence</h3><div class="icon"><svg viewBox="0 0 500 170"><path d="M60 120 L250 40 L440 120" fill="none" stroke="#171612" stroke-width="2"/><path d="M60 120 L255 128 L440 120" fill="none" stroke="#cf3f2f" stroke-width="5" stroke-dasharray="10 8"/><circle cx="60" cy="120" r="10" fill="#171612"/><circle cx="250" cy="40" r="10" fill="#171612"/><circle cx="440" cy="120" r="10" fill="#171612"/></svg></div><div class="name">The views refuse to tell one story.</div><p class="small">Wrong correspondences or incompatible transformations cannot be explained by one latent world.</p></article>
+        <article class="failure instability"><h3>Instability</h3><div class="icon"><svg viewBox="0 0 500 170"><path d="M35 90 C120 40 170 140 250 90 S390 40 465 90" fill="none" stroke="#171612" stroke-width="2"/><path d="M35 92 C120 37 170 148 250 70 S390 150 465 55" fill="none" stroke="#cf3f2f" stroke-width="4"/></svg></div><div class="name">Tiny image errors, huge world errors.</div><p class="small">Poor camera geometry or an ill-conditioned inverse amplifies noise during reconstruction.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap reveal">
+      <div class="section-head">
+        <div><div class="section-no">07 / THE MACHINE</div><h2>Photogrammetry adds a missing verb to the universal reconstruction pipeline.</h2></div>
+        <div class="section-intro"><p class="lead">We had “observe” and “cohere.” Photogrammetry inserts the difficult middle operation: establish identity across appearances.</p></div>
+      </div>
+      <div class="pipeline">
+        <div class="pipe"><div class="n">01</div><div class="t">PROBE</div></div>
+        <div class="pipe"><div class="n">02</div><div class="t">OBSERVE</div></div>
+        <div class="pipe"><div class="n">03</div><div class="t">CORRESPOND</div></div>
+        <div class="pipe"><div class="n">04</div><div class="t">CONSTRAIN</div></div>
+        <div class="pipe"><div class="n">05</div><div class="t">RECOGNIZE</div></div>
+        <div class="pipe"><div class="n">06</div><div class="t">RECONSTRUCT</div></div>
+        <div class="pipe"><div class="n">07</div><div class="t">GAUGE-FIX</div></div>
+        <div class="pipe"><div class="n">08</div><div class="t">REFINE</div></div>
+      </div>
+      <div class="callout">Before we can glue appearances, we must first discover what in one appearance is the same thing as what in another.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap reveal">
+      <div class="identity">Reconstruction requires an account of<br><em>identity across observations.</em></div>
+      <div class="closing-grid">
+        <div>
+          <p class="lead">That is the deepest thing photogrammetry contributes to the Rosetta Stone. It turns reconstruction from a clean theorem into an operational struggle with finite evidence.</p>
+          <p>Yoneda asks for all probes. Tannaka asks for coherent realizations. Gelfand asks for observables. Descent asks how local pieces glue. Inverse problems ask whether causes can be inferred from effects.</p>
+        </div>
+        <div class="manifesto"><p><b>Photogrammetry asks:</b><br><br>What happens when the probes are few, the appearances are noisy, the correspondences are unknown, the reconstruction is gauge-redundant, and the world still has to be recovered?</p></div>
+      </div>
+      <div class="callout" style="margin-top:70px">Photogrammetry is not the eighth theorem. It is the laboratory where reconstruction theory becomes real.</div>
+    </div>
+  </section>
+</main>
+<footer><div class="wrap">Seeing a World from Its Shadows · an interactive visual essay on photogrammetry and reconstruction</div></footer>
+
+<script>
+(function(){
+  const DPR=Math.min(devicePixelRatio||1,2);
+  function fitCanvas(c){const r=c.getBoundingClientRect(); const w=Math.max(1,Math.floor(r.width*DPR)),h=Math.max(1,Math.floor(r.height*DPR)); if(c.width!==w||c.height!==h){c.width=w;c.height=h} return {w,h}}
+  const V=(x,y,z)=>({x,y,z});
+  const add=(a,b)=>V(a.x+b.x,a.y+b.y,a.z+b.z), sub=(a,b)=>V(a.x-b.x,a.y-b.y,a.z-b.z), mul=(a,s)=>V(a.x*s,a.y*s,a.z*s);
+  const dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z;
+  const cross=(a,b)=>V(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x);
+  const len=a=>Math.hypot(a.x,a.y,a.z); const norm=a=>{const l=len(a)||1;return mul(a,1/l)};
+  const rotY=(p,a)=>V(Math.cos(a)*p.x+Math.sin(a)*p.z,p.y,-Math.sin(a)*p.x+Math.cos(a)*p.z);
+  const rotX=(p,a)=>V(p.x,Math.cos(a)*p.y-Math.sin(a)*p.z,Math.sin(a)*p.y+Math.cos(a)*p.z);
+  const COLORS=['#cf3f2f','#e5a23b','#62a66e','#4e8fb3','#826aa5','#d56f98','#8e765b','#d34c3f','#54a6a3','#d0b23c','#6b83b8','#8a9e5b'];
+
+  // deterministic sculptural point cloud
+  const points=[];
+  for(let i=0;i<180;i++){
+    const t=i/179*Math.PI*2;
+    const ring=0.72+0.18*Math.sin(3*t)+0.11*Math.sin(7*t);
+    const y=-0.9+1.8*((i%23)/22);
+    const twist=t+y*1.7;
+    points.push({p:V(Math.cos(twist)*ring*(1-.22*y*y),y,Math.sin(twist)*ring*(1-.22*y*y)),c:COLORS[i%COLORS.length]});
+  }
+  // add asymmetrical fins to kill ambiguity visually
+  for(let i=0;i<26;i++) points.push({p:V(-.2+i*.018,.1+i*.018,.72+i*.02),c:'#cf3f2f'});
+
+  function cameraBasis(pos,target=V(0,0,0)){
+    const f=norm(sub(target,pos)), r=norm(cross(f,V(0,1,0))), u=cross(r,f); return {f,r,u};
+  }
+  function project(p,cam,fov=1.15){
+    const q=sub(p,cam.pos), b=cameraBasis(cam.pos,cam.target||V(0,0,0));
+    const z=dot(q,b.f); if(z<=.05)return null;
+    return {x:dot(q,b.r)/(z*fov),y:dot(q,b.u)/(z*fov),z};
+  }
+  function drawCamera(ctx,cam,screen,color='#cf3f2f'){
+    const p=screen(cam.pos); if(!p)return; ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-cam.ang||0);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.4*DPR;
+    ctx.beginPath();ctx.rect(-8*DPR,-5*DPR,16*DPR,10*DPR);ctx.stroke();ctx.beginPath();ctx.moveTo(8*DPR,-4*DPR);ctx.lineTo(15*DPR,-9*DPR);ctx.lineTo(15*DPR,9*DPR);ctx.lineTo(8*DPR,4*DPR);ctx.closePath();ctx.stroke();ctx.restore();
+  }
+
+  // HERO WORLD
+  const wc=document.getElementById('worldCanvas'), wctx=wc.getContext('2d');
+  const aCanvas=document.getElementById('viewA'),bCanvas=document.getElementById('viewB');
+  const actx=aCanvas.getContext('2d'),bctx=bCanvas.getContext('2d');
+  const baseline=document.getElementById('baseline'), noise=document.getElementById('noise'), showRays=document.getElementById('showRays'), showTracks=document.getElementById('showTracks'), spinWorld=document.getElementById('spinWorld');
+  const baselineOut=document.getElementById('baselineOut'),noiseOut=document.getElementById('noiseOut');
+  let yaw=.7,pitch=-.18,drag=false,lastX=0,lastY=0,auto=0;
+  wc.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;wc.setPointerCapture(e.pointerId)});
+  wc.addEventListener('pointermove',e=>{if(!drag)return;yaw+=(e.clientX-lastX)*.008;pitch+=(e.clientY-lastY)*.006;pitch=Math.max(-1.1,Math.min(1.1,pitch));lastX=e.clientX;lastY=e.clientY});
+  wc.addEventListener('pointerup',()=>drag=false);
+  function noiseHash(i,k){return Math.sin(i*12.9898+k*78.233)*43758.5453%1}
+  function renderMini(c,ctx,cam,noisePx){
+    const {w,h}=fitCanvas(c);ctx.clearRect(0,0,w,h);ctx.fillStyle='#f6f1e7';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(30,30,25,.14)';ctx.beginPath();ctx.moveTo(0,h*.72);ctx.lineTo(w,h*.72);ctx.stroke();
+    points.forEach((pt,i)=>{const pr=project(rotY(pt.p,auto),cam);if(!pr)return;const nx=(noiseHash(i,1)-.5)*noisePx*DPR,ny=(noiseHash(i,2)-.5)*noisePx*DPR;const x=w*.5+pr.x*w*.42+nx,y=h*.5-pr.y*h*.42+ny;ctx.fillStyle=showTracks.checked?pt.c:'#34332f';ctx.beginPath();ctx.arc(x,y,2.2*DPR,0,Math.PI*2);ctx.fill()});
+  }
+  function renderWorld(){
+    const {w,h}=fitCanvas(wc);wctx.clearRect(0,0,w,h);wctx.fillStyle='#12120f';wctx.fillRect(0,0,w,h);
+    const base=parseFloat(baseline.value), n=parseFloat(noise.value);baselineOut.textContent=base.toFixed(2);noiseOut.textContent=n.toFixed(1)+' px';
+    if(spinWorld.checked)auto+=.003;
+    const camA={pos:V(-1.85*base,.25,3.5),target:V(0,0,0)},camB={pos:V(1.85*base,.15,3.5),target:V(0,0,0)};
+    const worldView={pos:V(Math.sin(yaw)*5.2,Math.sin(pitch)*4.2+1.2,Math.cos(yaw)*5.2),target:V(0,0,0)};
+    const screen=p=>{const pr=project(rotX(p,pitch*.12),worldView,.95);if(!pr)return null;return {x:w*.5+pr.x*w*.46,y:h*.53-pr.y*h*.46,z:pr.z}};
+    // floor grid
+    wctx.strokeStyle='rgba(255,255,255,.07)';wctx.lineWidth=1;
+    for(let i=-5;i<=5;i++){
+      let a=screen(V(i*.4,-1.15,-2)),b=screen(V(i*.4,-1.15,2));if(a&&b){wctx.beginPath();wctx.moveTo(a.x,a.y);wctx.lineTo(b.x,b.y);wctx.stroke()}
+      a=screen(V(-2,-1.15,i*.4));b=screen(V(2,-1.15,i*.4));if(a&&b){wctx.beginPath();wctx.moveTo(a.x,a.y);wctx.lineTo(b.x,b.y);wctx.stroke()}
+    }
+    if(showRays.checked){
+      [camA,camB].forEach((cam,ci)=>{const cp=screen(cam.pos);[18,71,133].forEach(idx=>{const sp=screen(rotY(points[idx].p,auto));if(cp&&sp){wctx.strokeStyle=ci===0?'rgba(207,63,47,.22)':'rgba(78,143,179,.22)';wctx.beginPath();wctx.moveTo(cp.x,cp.y);wctx.lineTo(sp.x,sp.y);wctx.stroke()}})});
+    }
+    const sorted=points.map((pt,i)=>({pt,i,s:screen(rotY(pt.p,auto))})).filter(x=>x.s).sort((a,b)=>b.s.z-a.s.z);
+    sorted.forEach(({pt,s})=>{const r=Math.max(1.4,5.5-s.z*.45)*DPR;wctx.fillStyle=pt.c;wctx.globalAlpha=.92;wctx.beginPath();wctx.arc(s.x,s.y,r,0,Math.PI*2);wctx.fill()});wctx.globalAlpha=1;
+    drawCamera(wctx,camA,screen,'#cf3f2f');drawCamera(wctx,camB,screen,'#4e8fb3');
+    renderMini(aCanvas,actx,camA,n);renderMini(bCanvas,bctx,camB,n);
+    requestAnimationFrame(renderWorld);
+  }
+  renderWorld();
+
+  // CORRESPONDENCE DEMO
+  const cc=document.getElementById('corrCanvas'),cctx=cc.getContext('2d'),mismatch=document.getElementById('mismatch'),mismatchOut=document.getElementById('mismatchOut');
+  function intersectLines(p1,d1,p2,d2){
+    // closest midpoint between 2D lines for visual triangulation in x-z plane
+    const a=d1.x*d1.x+d1.y*d1.y,b=d1.x*d2.x+d1.y*d2.y,c=d2.x*d2.x+d2.y*d2.y;
+    const w={x:p1.x-p2.x,y:p1.y-p2.y},d=d1.x*w.x+d1.y*w.y,e=d2.x*w.x+d2.y*w.y,den=a*c-b*b||1e-6;
+    const s=(b*e-c*d)/den,t=(a*e-b*d)/den;return {m:{x:(p1.x+d1.x*s+p2.x+d2.x*t)/2,y:(p1.y+d1.y*s+p2.y+d2.y*t)/2},gap:Math.hypot((p1.x+d1.x*s)-(p2.x+d2.x*t),(p1.y+d1.y*s)-(p2.y+d2.y*t))};
+  }
+  function renderCorr(){
+    const {w,h}=fitCanvas(cc);cctx.clearRect(0,0,w,h);cctx.fillStyle='#151511';cctx.fillRect(0,0,w,h);
+    const m=parseInt(mismatch.value)/100;mismatchOut.textContent=Math.round(m*100)+'%';
+    const yImg=h*.2, imgW=w*.28,imgH=h*.22, leftX=w*.05,rightX=w*.67;
+    function imgFrame(x,label,shift){cctx.fillStyle='#eee8db';cctx.fillRect(x,yImg,imgW,imgH);cctx.strokeStyle='#706b60';cctx.strokeRect(x,yImg,imgW,imgH);cctx.fillStyle='#5a574f';for(let i=0;i<22;i++){const xx=x+((i*47)%100)/100*imgW,yy=yImg+((i*29+shift)%100)/100*imgH;cctx.beginPath();cctx.arc(xx,yy,1.7*DPR,0,Math.PI*2);cctx.fill()}cctx.fillStyle='#d7d0c2';cctx.font=`${11*DPR}px monospace`;cctx.fillText(label,x+6*DPR,yImg+15*DPR)}
+    imgFrame(leftX,'VIEW A',0);imgFrame(rightX,'VIEW B',13);
+    const a={x:leftX+imgW*.64,y:yImg+imgH*.47};const b={x:rightX+imgW*(.40+.34*m),y:yImg+imgH*(.50-.18*m)};
+    [a,b].forEach((p,i)=>{cctx.fillStyle=i?'#4e8fb3':'#cf3f2f';cctx.beginPath();cctx.arc(p.x,p.y,7*DPR,0,Math.PI*2);cctx.fill();cctx.strokeStyle='#fff';cctx.lineWidth=2*DPR;cctx.stroke()});
+    const camA={x:w*.26,y:h*.83},camB={x:w*.74,y:h*.83};
+    function drawCam2(p,color){cctx.strokeStyle=color;cctx.lineWidth=2*DPR;cctx.strokeRect(p.x-14*DPR,p.y-8*DPR,28*DPR,16*DPR);cctx.beginPath();cctx.moveTo(p.x,p.y-8*DPR);cctx.lineTo(p.x,p.y-28*DPR);cctx.stroke()}
+    drawCam2(camA,'#cf3f2f');drawCam2(camB,'#4e8fb3');
+    const targetTrue={x:w*.5,y:h*.49};
+    const dirA={x:targetTrue.x-camA.x,y:targetTrue.y-camA.y};
+    const targetB={x:targetTrue.x+w*.23*m,y:targetTrue.y-h*.11*m};
+    const dirB={x:targetB.x-camB.x,y:targetB.y-camB.y};
+    const inter=intersectLines(camA,dirA,camB,dirB);
+    cctx.lineWidth=2*DPR;cctx.setLineDash([7*DPR,7*DPR]);cctx.strokeStyle='rgba(207,63,47,.72)';cctx.beginPath();cctx.moveTo(camA.x,camA.y);cctx.lineTo(camA.x+dirA.x*1.5,camA.y+dirA.y*1.5);cctx.stroke();cctx.strokeStyle='rgba(78,143,179,.72)';cctx.beginPath();cctx.moveTo(camB.x,camB.y);cctx.lineTo(camB.x+dirB.x*1.5,camB.y+dirB.y*1.5);cctx.stroke();cctx.setLineDash([]);
+    cctx.fillStyle=m<.18?'#62a66e':'#cf3f2f';cctx.beginPath();cctx.arc(inter.m.x,inter.m.y,9*DPR,0,Math.PI*2);cctx.fill();
+    cctx.fillStyle='#eee8db';cctx.font=`${13*DPR}px sans-serif`;cctx.fillText(m<.18?'ONE WORLD-POINT FITS BOTH VIEWS':'THE TWO RAYS DISAGREE',w*.32,h*.95);
+    requestAnimationFrame(renderCorr);
+  }
+  renderCorr();
+
+  // GAUGE
+  const gc=document.getElementById('gaugeCanvas'),gctx=gc.getContext('2d'); let gauge={mode:'reset',t:0};
+  document.querySelectorAll('[data-gauge]').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('[data-gauge]').forEach(b=>b.classList.remove('active'));btn.classList.add('active');gauge.mode=btn.dataset.gauge;gauge.t=0}));
+  function renderGauge(){
+    const {w,h}=fitCanvas(gc);gctx.clearRect(0,0,w,h);gctx.fillStyle='#161611';gctx.fillRect(0,0,w,h);gauge.t+=.015;
+    let ang=.55,scale=1,tx=0,ty=0;if(gauge.mode==='rotate')ang=.55+Math.sin(gauge.t)*.7;if(gauge.mode==='scale')scale=1+Math.sin(gauge.t)*.22;if(gauge.mode==='translate'){tx=Math.sin(gauge.t)*w*.12;ty=Math.cos(gauge.t*.8)*h*.05}
+    const origin={x:w*.5+tx,y:h*.52+ty};
+    const pts=[[0,-80],[-65,40],[70,48],[-20,10],[28,-18]].map(([x,y])=>{x*=scale;y*=scale;return {x:origin.x+x*Math.cos(ang)-y*Math.sin(ang),y:origin.y+x*Math.sin(ang)+y*Math.cos(ang)}});
+    gctx.strokeStyle='rgba(255,255,255,.08)';for(let i=0;i<10;i++){gctx.beginPath();gctx.moveTo(0,i*h/10);gctx.lineTo(w,i*h/10);gctx.stroke()}
+    gctx.strokeStyle='#ddd5c7';gctx.lineWidth=2*DPR;gctx.beginPath();pts.forEach((p,i)=>i?gctx.lineTo(p.x,p.y):gctx.moveTo(p.x,p.y));gctx.closePath();gctx.stroke();pts.forEach((p,i)=>{gctx.fillStyle=COLORS[i];gctx.beginPath();gctx.arc(p.x,p.y,7*DPR,0,Math.PI*2);gctx.fill()});
+    const cams=[[-170,110],[170,110]].map(([x,y],i)=>{x*=scale;y*=scale;return {x:origin.x+x*Math.cos(ang)-y*Math.sin(ang),y:origin.y+x*Math.sin(ang)+y*Math.cos(ang),c:i?'#4e8fb3':'#cf3f2f'}});
+    cams.forEach(c=>{gctx.strokeStyle=c.c;gctx.strokeRect(c.x-12*DPR,c.y-8*DPR,24*DPR,16*DPR);gctx.setLineDash([5*DPR,6*DPR]);gctx.globalAlpha=.35;gctx.beginPath();gctx.moveTo(c.x,c.y);gctx.lineTo(pts[3].x,pts[3].y);gctx.stroke();gctx.setLineDash([]);gctx.globalAlpha=1});
+    gctx.fillStyle='#bdb6aa';gctx.font=`${12*DPR}px monospace`;gctx.fillText('PIXEL EVIDENCE: UNCHANGED',18*DPR,26*DPR);
+    requestAnimationFrame(renderGauge);
+  }
+  renderGauge();
+
+  // reveal observer
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+})();
+</script>
+</body>
+</html>
