@@ -36,3 +36,29 @@
 - [restir-reservoirs-of-light-05](restir-reservoirs-of-light-05.html)
 - [restir-volumetric](restir-volumetric.html)
 - [square-root-sphere](square-root-sphere.html)
+
+## ReSTIR Lab
+
+### Basic Taichi CPU/GPU ReSTIR
+
+- Baseline Monte Carlo path tracer with NEE (100 spp):
+  ![baseline_reference](re-lab/taichi-reference_mc.jpg)
+- Basic RIS path tracer — 1 spp with 32-candidate reservoir sampling (1 spp, 32 candidates):
+  ![test_ris](re-lab/taichi-ris.jpg)
+- ReSTIR DI — 4-pass pipeline with Generalized Balance Heuristic (32 frames):
+  ![test_restir_st](re-lab/taichi-restir_di.jpg)
+- ReSTIR PT — Path Tracing with Multi-Bounce PSS, Random Replay & Diffuse Reconnection (32 frames):
+  ![test_restir_pt](re-lab/taichi-restir_pt.jpg)
+
+### Restir Lab
+
+- ReSTIR Lab video demo:
+  <video width="640" height="360" controls muted>
+  <source src="re-lab/restir-lab-demo.mp4" type="video/mp4" />
+  https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4
+  </video>
+
+- ReSTIR Screenshots:
+  ![](re-lab/restir-lab-screenshot-01.jpg)
+  ![](re-lab/restir-lab-screenshot-02.jpg)
+  ![](re-lab/restir-lab-screenshot-03.jpg)
