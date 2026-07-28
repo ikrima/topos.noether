@@ -1,5 +1,7 @@
 # ReSTIR Notes & Scratchpad
 
+## Table of Contents
+
 * TOC
 {:toc}
 
@@ -9,8 +11,12 @@
 
 - ReSTIR Lab video demo:
 
-  <video width="640" height="360" src="re-lab/restir-lab-demo.mp4" type="video/mp4" controls muted />
-  https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4
+  <video width="100%" controls>
+    <source src="/re-lab/restir-lab-demo.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+  ![link](https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4)
+  
 
 - ReSTIR Screenshots:
   ![restir-lab-screenshot-01](re-lab/restir-lab-screenshot-01.jpg)
