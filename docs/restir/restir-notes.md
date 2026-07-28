@@ -7,6 +7,9 @@
 
 ## ReSTIR Lab Workbench
 
+This was my initial reference implementation using Taichi and following several of the references and courses listed below such as this Siggraph Course "A Gentle Introduction to ReSTIR Path Reuse in Real-Time" featuring a lot of the authors such as Chris Wyman, Daqi Lin, Benedikt Betterli, Markus Kettermun.
+You can also find foundational code and explanations via the [ReSTIR PT GitHub Repository](https://github.com/DQLin/ReSTIR_PT)
+
 ### Demo
 
 - ReSTIR Lab video demo:
@@ -30,7 +33,8 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
 
 - EDN-IR compiler
 - Frostrbite FrameGraph Architecture
-- Imperative Shell > Functional Core > mutability between passes as long as referentially transparent |= decouples scheduling optimization plan (HOW/WHEN/WHERE) from algorithm (WHAT)
+- Imperative Shell > Functional Core > mutability between passes as long as referentially transparent
+- Decouples algorithm (_what_) from execution (_how) from scheduling (_when/where_) plans
 - Graphs as Passes/Resources by string-interned Paths like Houdini
 - Debuggability/Introspectability through Cooking/Baking Caches and Deterministic playback with counter based RNG streams
 
@@ -293,9 +297,6 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
 
 ### Basic Taichi CPU/GPU ReSTIR
 
-This was my initial reference implementation using Taichi and following several of the references and courses listed below such as this Siggraph Course "A Gentle Introduction to ReSTIR Path Reuse in Real-Time" featuring a lot of the authors such as Chris Wyman, Daqi Lin, Benedikt Betterli, Markus Kettermun.
-You can also find foundational code and explanations via the [ReSTIR PT GitHub Repository](https://github.com/DQLin/ReSTIR_PT)
-
 - Baseline Monte Carlo path tracer with NEE (100 spp):
   ![baseline_reference](re-lab/taichi-reference_mc.jpg)
 - Basic RIS path tracer — 1 spp with 32-candidate reservoir sampling (1 spp, 32 candidates):
@@ -304,50 +305,50 @@ You can also find foundational code and explanations via the [ReSTIR PT GitHub R
   ![test_restir_st](re-lab/taichi-restir_di.jpg)
 - ReSTIR PT — Path Tracing with Multi-Bounce PSS, Random Replay & Diffuse Reconnection (32 frames):
   ![test_restir_pt](re-lab/taichi-restir_pt.jpg)
-- Code
 
-  ```python
-  Coming soon!
-  ```
+
+### Code
+
+Coming soon to a github repo near you...
 
 ## Research Diary
 
 These are pretty printed and visualized of my research notes/stream of consciousness messy thoughts.
 These are still very much early drafts/WIP so don't let the interactive AI polish trip you.
 
-### Measure Theory ReSTIR
+### Measure Theory for ReSTIR
 
-- [index](measure-theory/index.html)
-- [essay-01-pushforward-pullback](measure-theory/essays/essay-01-pushforward-pullback.html)
-- [essay-02-residual-measure-transport](measure-theory/essays/essay-02-residual-measure-transport.html)
-- [essay-03-biomimetic-reservoir-intelligence](measure-theory/essays/essay-03-biomimetic-reservoir-intelligence.html)
-- [essay-04-shape-of-a-reservoir](measure-theory/essays/essay-04-shape-of-a-reservoir.html)
-- [essay-05-curvature-of-reuse](measure-theory/essays/essay-05-curvature-of-reuse.html)
-- [essay-06-pixel-is-not-a-point](measure-theory/essays/essay-06-pixel-is-not-a-point.html)
-- [essay-07-geometry-of-light-transport](measure-theory/essays/essay-07-geometry-of-light-transport.html)
-- [essay-08-curvature-guided-sampling](measure-theory/essays/essay-08-curvature-guided-sampling.html)
+- [Measure Theory for ReSTIR: Essay TLDR](measure-theory/index.html) - overview
+- [Measure Theory for ReSTIR: Essay 01](measure-theory/essays/essay-01-pushforward-pullback.html) - pushforward pullback
+- [Measure Theory for ReSTIR: Essay 02](measure-theory/essays/essay-02-residual-measure-transport.html) - residual measure transport
+- [Measure Theory for ReSTIR: Essay 03](measure-theory/essays/essay-03-biomimetic-reservoir-intelligence.html) - biomimetic reservoir intelligence
+- [Measure Theory for ReSTIR: Essay 04](measure-theory/essays/essay-04-shape-of-a-reservoir.html) - shape of a reservoir
+- [Measure Theory for ReSTIR: Essay 05](measure-theory/essays/essay-05-curvature-of-reuse.html) - curvature of reuse
+- [Measure Theory for ReSTIR: Essay 06](measure-theory/essays/essay-06-pixel-is-not-a-point.html) - pixel is not a point
+- [Measure Theory for ReSTIR: Essay 07](measure-theory/essays/essay-07-geometry-of-light-transport.html) - geometry of light transport
+- [Measure Theory for ReSTIR: Essay 08](measure-theory/essays/essay-08-curvature-guided-sampling.html) - curvature guided sampling
 
-### Measure Decomposition ReSTIR
+### Measure Decomposition and ReSTIR
 
-- [measure-decomposition/index](measure-decomposition/index.html)
-- [measure-decomposition/part1](measure-decomposition/part1.html)
-- [measure-decomposition/part2](measure-decomposition/part2.html)
-- [measure-decomposition/part3](measure-decomposition/part3.html)
-- [measure-decomposition/part4](measure-decomposition/part4.html)
-- [measure-decomposition/part5](measure-decomposition/part5.html)
-- [measure-decomposition/part6](measure-decomposition/part6.html)
-- [measure-decomposition/poc](measure-decomposition/poc.html)
+- [Measure Decomposition and ReSTIR: Essay TLDR](measure-decomposition/index.html)
+- [Measure Decomposition and ReSTIR: Essay 01](measure-decomposition/part1.html)
+- [Measure Decomposition and ReSTIR: Essay 02](measure-decomposition/part2.html)
+- [Measure Decomposition and ReSTIR: Essay 03](measure-decomposition/part3.html)
+- [Measure Decomposition and ReSTIR: Essay 04](measure-decomposition/part4.html)
+- [Measure Decomposition and ReSTIR: Essay 05](measure-decomposition/part5.html)
+- [Measure Decomposition and ReSTIR: Essay 06](measure-decomposition/part6.html)
+- [Measure Decomposition and ReSTIR: Essay Proof Of Concept](measure-decomposition/poc.html)
 
-### Various Explorations
+### Random Explorations or Sketches
 
-- [gris-foundations](gris-foundations.html)
-- [gris-math-analysis-01](gris-math-analysis-01.html)
-- [gris-math-analysis-02](gris-math-analysis-02.html)
-- [gris-math-analysis-03](gris-math-analysis-03.html)
-- [restir-reservoirs-of-light-01](restir-reservoirs-of-light-01.html)
-- [restir-reservoirs-of-light-02](restir-reservoirs-of-light-02.html)
-- [restir-reservoirs-of-light-03](restir-reservoirs-of-light-03.html)
-- [restir-reservoirs-of-light-04](restir-reservoirs-of-light-04.html)
-- [restir-reservoirs-of-light-05](restir-reservoirs-of-light-05.html)
-- [restir-volumetric](restir-volumetric.html)
-- [square-root-sphere](square-root-sphere.html)
+- [GRIS Foundations](gris-foundations.html)
+- [GRIS Math Analysis 1/3](gris-math-analysis-01.html)
+- [GRIS Math Analysis 2/3](gris-math-analysis-02.html)
+- [GRIS Math Analysis 3/3](gris-math-analysis-03.html)
+- [ReSTIR Reservoirs of Light 1/5](restir-reservoirs-of-light-01.html)
+- [ReSTIR Reservoirs of Light 2/5](restir-reservoirs-of-light-02.html)
+- [ReSTIR Reservoirs of Light 3/5](restir-reservoirs-of-light-03.html)
+- [ReSTIR Reservoirs of Light 4/5](restir-reservoirs-of-light-04.html)
+- [ReSTIR Reservoirs of Light 5/5](restir-reservoirs-of-light-05.html)
+- [ReSTIR Volumetric](restir-volumetric.html)
+- [Square Root Sphere](square-root-sphere.html)
