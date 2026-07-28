@@ -7,29 +7,28 @@
 
 ## ReSTIR Lab Workbench
 
-This was my initial reference implementation using Taichi and following several of the references and courses listed below such as this Siggraph Course "A Gentle Introduction to ReSTIR Path Reuse in Real-Time" featuring a lot of the authors such as Chris Wyman, Daqi Lin, Benedikt Betterli, Markus Kettermun.
-You can also find foundational code and explanations via the [ReSTIR PT GitHub Repository](https://github.com/DQLin/ReSTIR_PT)
+This was my initial reference implementation using Taichi and following several of the references and courses listed below.
+A great one is the Siggraph Course _**A Gentle Introduction to ReSTIR Path Reuse in Real-Time**_ featuring a lot of the authors such as Chris Wyman, Daqi Lin, Benedikt Betterli, Markus Kettermun.
+You can also reference Daqi's official implementation on github @ [DQLin/ReSTIR_PT](https://github.com/DQLin/ReSTIR_PT)
 
-### Demo
+### Video Demo & Screenshots
 
-- ReSTIR Lab video demo:
+- ReSTIR Lab video demo: <https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4>
 
-  <video width="800" height="450" controls>
+  <video width="800" height="450" controls autoplay>
     <source src="https://github.com/ikrima/topos.noether/raw/refs/heads/master/docs/restir/re-lab/restir-lab-demo.mp4" />
     Your browser does not support the video tag.
   </video>
-  <https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4>
-  
 
-- ReSTIR Screenshots:
+- ReSTIR Lab Screenshots:
   ![restir-lab-screenshot-01](re-lab/restir-lab-screenshot-01.jpg)
   ![restir-lab-screenshot-02](re-lab/restir-lab-screenshot-02.jpg)
   ![restir-lab-screenshot-03](re-lab/restir-lab-screenshot-03.jpg)
 
+### Features
+
 This is my ReSTIR lab workbench that I made to explore and play with the algorithm.
 I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle Intro To ReSTIR](https://intro-to-restir.cwyman.org/)
-
-**Features:**
 
 - EDN-IR compiler
 - Frostrbite FrameGraph Architecture
@@ -38,7 +37,7 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
 - Graphs as Passes/Resources by string-interned Paths like Houdini
 - Debuggability/Introspectability through Cooking/Baking Caches and Deterministic playback with counter based RNG streams
 
-### Highlevel Pseudocode Architecture
+### Highlevel Pseudocode
 
 - **Tier-0 EDN HIR:** symbolic 'why', high-level IR of cornell box, semantic intent
 
@@ -295,7 +294,7 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
       dependents: dict[int, tuple[PassIdx, ...]] = field(default_factory=dict)
   ```
 
-### Basic Taichi CPU/GPU ReSTIR
+### Taichi Toy Implementation
 
 - Baseline Monte Carlo path tracer with NEE (100 spp):
   ![baseline_reference](re-lab/taichi-reference_mc.jpg)
@@ -307,7 +306,7 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
   ![test_restir_pt](re-lab/taichi-restir_pt.jpg)
 
 
-### Code
+### Github Code
 
 Coming soon to a github repo near you...
 
