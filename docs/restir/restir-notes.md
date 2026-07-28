@@ -11,11 +11,11 @@
 
 - ReSTIR Lab video demo:
 
-  <video width="100%" controls>
-    <source src="/re-lab/restir-lab-demo.mp4" type="video/mp4">
+  <video width="800" height="450" controls>
+    <source src="https://github.com/ikrima/topos.noether/raw/refs/heads/master/docs/restir/re-lab/restir-lab-demo.mp4" />
     Your browser does not support the video tag.
   </video>
-  ![link](https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4)
+  <https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4>
   
 
 - ReSTIR Screenshots:
