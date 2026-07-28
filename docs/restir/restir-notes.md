@@ -1,14 +1,16 @@
 # ReSTIR Notes & Scratchpad
 
+* TOC
+{:toc}
+
 ## ReSTIR Lab Workbench
 
 ### Demo
 
-- ReSTIR Lab video demo: [https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4](https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4)
+- ReSTIR Lab video demo:
 
-  <video width="640" height="360" src="re-lab/restir-lab-demo.mp4" type="video/mp4" controls muted>
+  <video width="640" height="360" src="re-lab/restir-lab-demo.mp4" type="video/mp4" controls muted />
   https://ikrima.github.io/topos.noether/restir/re-lab/restir-lab-demo.mp4
-  </video>
 
 - ReSTIR Screenshots:
   ![restir-lab-screenshot-01](re-lab/restir-lab-screenshot-01.jpg)
@@ -26,14 +28,9 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
 - Graphs as Passes/Resources by string-interned Paths like Houdini
 - Debuggability/Introspectability through Cooking/Baking Caches and Deterministic playback with counter based RNG streams
 
-**Notes:**
-
-- **Two-phase execution**: a setup/compile phase that declares passes and their resource reads/writes, then an execute phase that runs them. Setup builds the dependency DAG; a compile step culls unused passes and computes resource lifetimes; execute actually runs the kernels Render Graphs -...do Loggini. This is exactly your "elaborate → lower → cook" split, and it's why the pass-graph refactor (build step 3) is the natural next move.
-- **Transient resources with memory aliasing** Because the graph knows the exact first-use and last-use of every buffer, resources whose lifetimes don't overlap can share the same backing memory Render Graphs -...do Loggini. This is the theoretical justification for your arena/ring-buffer request: if lifetimes are known at compile time, you don't need a general heap — you need linear allocation out of pre-sized arenas, and you reclaim by lifetime, not by individual free.
-
 ### Highlevel Pseudocode Architecture
 
-- **Tier-0 "EDN HIR": symbolic 'why', high-level IR of cornell box, intent denotation**
+- **Tier-0 EDN HIR:** symbolic 'why', high-level IR of cornell box, semantic intent
 
   ```clj
   ;; ==========================================================================
@@ -128,7 +125,7 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
    :meta {:integrator "DirectLighting" :n-prims 8 :n-lights 1}}
   ```
 
-- **Tier-1 "Structural / Semantic MIR": symbolic 'what', machine-lowerable, jit-executable**
+- **Tier-1 Structural MIR**: symbolic 'what', machine-lowerable, jit-executable
 
   ```python
   # ---------------------------------------------------------------------------
@@ -240,7 +237,7 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
       seed: int
       meta: dict = field(default_factory=dict)
   ```
-- **Tier-2 "Execution LIR": symbolic 'how', the compiled, memory-scheduled graph executable-ready.**
+- **Tier-2 Execution LIR**: symbolic 'how', the compiled, memory-scheduled graph executable-ready
 
   ```python
   BufferId = int          # index into CompiledGraph.buffers
@@ -288,7 +285,6 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
       dependents: dict[int, tuple[PassIdx, ...]] = field(default_factory=dict)
   ```
 
-  
 ### Basic Taichi CPU/GPU ReSTIR
 
 This was my initial reference implementation using Taichi and following several of the references and courses listed below such as this Siggraph Course "A Gentle Introduction to ReSTIR Path Reuse in Real-Time" featuring a lot of the authors such as Chris Wyman, Daqi Lin, Benedikt Betterli, Markus Kettermun.
@@ -312,7 +308,6 @@ You can also find foundational code and explanations via the [ReSTIR PT GitHub R
 
 These are pretty printed and visualized of my research notes/stream of consciousness messy thoughts.
 These are still very much early drafts/WIP so don't let the interactive AI polish trip you.
-
 
 ### Measure Theory ReSTIR
 
