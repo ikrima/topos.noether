@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pt/dsl/ — the front end · pt docs</title>
+<meta name="description" content="Read, macro-expand, analyze, elaborate, the IR, the writer, the error catalog.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html" aria-current="true"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1><code>pt/dsl/</code> — the front end</h1><p class="summary">Read, macro-expand, analyze, elaborate, the IR, the writer, the error catalog.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/01-dsl.md</code></span><span>information-oriented</span></div></div>
+<p>Text to <code>SemanticIR</code> in four transforms. ~2,020 lines, the largest single layer, and roughly the part a Lisp host would hand you free — see <a href="../explanation/porting.html">porting-to-racket.md</a>.</p>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>reader.py</code></td><td>283</td><td>text → spanned forms</td></tr><tr><td><code>macro.py</code></td><td>251</td><td>form → form</td></tr><tr><td><code>analyze.py</code></td><td>392</td><td>forms → <code>SceneAST</code>, shape checking</td></tr><tr><td><code>ast.py</code></td><td>131</td><td>the <code>SceneAST</code> dataclasses</td></tr><tr><td><code>elaborate.py</code></td><td>387</td><td><code>SceneAST</code> → <code>SemanticIR</code></td></tr><tr><td><code>ir.py</code></td><td>231</td><td><code>SemanticIR</code> + the enums</td></tr><tr><td><code>errors.py</code></td><td>107</td><td><code>ElabError</code>, <code>Diagnostics</code>, <code>ERROR_CATALOG</code></td></tr><tr><td><code>writer.py</code></td><td>176</td><td><code>SemanticIR</code> → canonical EDN</td></tr><tr><td><code>__init__.py</code></td><td>62</td><td><code>load_scene</code>, <code>load_scene_file</code>, <code>scene_path</code>, <code>analyze</code>, <code>elaborate</code></td></tr></tbody></table></div>
+<p><strong>Note:</strong> <code>pt/dsl/__init__.py</code> re-exports <code>analyze</code> and <code>elaborate</code> as <em>functions</em>, shadowing the submodules of the same name. <code>import pt.dsl.analyze</code> gives you the function, not the module.</p>
+<h2 id="read--readerpy">read — <code>reader.py</code><a class="anchor" href="#read--readerpy" aria-label="Link to this section">#</a></h2>
+<p>Hand-written, not a library. One <code>_TOKEN</code> regex (ws / comment / open / close / str / kw / num / sym) and a recursive-descent <code>_parse</code>.</p>
+<div class="codewrap"><pre class="lang-python"><code>read_all(source: str, src_name: str = <span class="tok-str">"&lt;string&gt;"</span>) -&gt; list
+read_one(source: str, src_name: str = <span class="tok-str">"&lt;string&gt;"</span>)</code></pre></div>
+<p>Form types, each carrying a <code>Span</code>:</p>
+<div class="tablewrap"><table><thead><tr><th>Form</th><th>Fields</th><th>Surface</th></tr></thead><tbody><tr><td><code>List</code></td><td><code>items, span</code></td><td><code>(...)</code> — a call or tag</td></tr><tr><td><code>Vec</code></td><td><code>items, span</code></td><td><code>[...]</code> — a tuple</td></tr><tr><td><code>Map</code></td><td><code>pairs, span</code></td><td><code>{...}</code> — a record</td></tr><tr><td><code>Sym</code></td><td><code>value, span</code></td><td>bare symbol</td></tr><tr><td><code>Kw</code></td><td><code>value, span</code></td><td><code>:keyword</code></td></tr><tr><td><code>Num</code></td><td><code>value, is_int, span</code></td><td>number</td></tr><tr><td><code>Str</code>, <code>Bool</code>, <code>Nil</code></td><td><code>value, span</code></td><td>literal</td></tr></tbody></table></div>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> Span:
+    src: str; start: int; end: int; line: int; col: int</code></pre></div>
+<p><code>Span</code> is a half-open <code>[start, end)</code> with a 1-based line and 0-based column, and <code>.merge()</code> / <code>.render()</code> — the latter prints the source line with a caret run.</p>
+<p><strong>Contract.</strong> Commas are whitespace. <code>;</code> starts a comment. Duplicate map keys and odd-length maps are read errors (<code>ReadError</code>).</p>
+<p><strong>Why it is hand-written.</strong> A stock EDN reader gives you no spans, and spans are the whole basis of the diagnostics below. This is the single sharpest argument for the Racket port: <code>syntax/parse</code> provides exactly this for free.</p>
+<h2 id="macro-expand--macropy">macro-expand — <code>macro.py</code><a class="anchor" href="#macro-expand--macropy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>expand_all(forms: list, source: str) -&gt; list</code></pre></div>
+<p>Collects <code>defmacro</code> forms, then expands every remaining top-level form to a <strong>fixpoint</strong>, applicative order, depth-capped at <code>MAX_EXPANSION_DEPTH = 64</code>.</p>
+<p>Builtins (<code>BUILTIN_MACROS</code>):</p>
+<div class="tablewrap"><table><thead><tr><th>Form</th><th>Expands to</th></tr></thead><tbody><tr><td><code>(cornell-walls)</code> / <code>(cornell-walls :white :red :green)</code></td><td>5 wall quad maps</td></tr><tr><td><code>(cornell-light)</code> / <code>(cornell-light :lamp)</code></td><td>the emissive ceiling quad</td></tr><tr><td><code>(cornell-box)</code></td><td>walls + light, as one geometry vector</td></tr><tr><td><code>(concat [a b] [c])</code></td><td><code>[a b c]</code> — lets macro output compose with literals</td></tr></tbody></table></div>
+<p>Box dimensions are module constants: <code>CORNELL_W = 556.0</code>, <code>CORNELL_H = 548.8</code>, <code>CORNELL_D = 559.2</code> (millimetres; the room spans x∈[0,556], y∈[0,548.8], z∈[0,559.2] and opens toward −z, where the camera sits).</p>
+<p>User macros: <code>(defmacro name [params] body)</code>.</p>
+<p><strong>Contract — span inheritance.</strong> Synthesized forms inherit the <strong>call site's</strong> span (the Clojure default); substituted arguments keep <strong>their own</strong>. This is what makes an error inside a macro expansion point at the user's code rather than at the macro body.</p>
+<h2 id="analyze--analyzepy">analyze — <code>analyze.py</code><a class="anchor" href="#analyze--analyzepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>analyze(forms: list, source: str, src_name: str = <span class="tok-str">"&lt;string&gt;"</span>) -&gt; SceneAST</code></pre></div>
+<p>Shape checking against <strong>closed key sets</strong>. An unknown key is a hard error (<code>UNKNOWN_KEY</code>), not a warning — with a <code>did_you_mean</code> suggestion.</p>
+<h3 id="schema">Schema<a class="anchor" href="#schema" aria-label="Link to this section">#</a></h3>
+<div class="tablewrap"><table><thead><tr><th>Section</th><th>Keys</th><th>Notes</th></tr></thead><tbody><tr><td><code>(scene {…})</code></td><td><code>:name :settings :integrator :camera :materials :geometry :lights</code></td><td>exactly one <code>scene</code> form per file; <code>:integrator :camera :materials :geometry</code> required</td></tr><tr><td><code>:settings</code></td><td><code>:seed :tonemap :exposure</code></td><td>tonemap ∈ <code>_TONEMAPS</code></td></tr><tr><td><code>:integrator</code></td><td><code>:type :light-sampling :spp :max-bounces :ris :restir</code></td><td>see the matrix in <a href="00-overview.html#the-estimator-matrix">00-overview</a></td></tr><tr><td><code>:ris</code></td><td><code>:M</code> (required, positive int) <code>:target</code> <code>:source</code></td><td></td></tr><tr><td><code>:restir</code></td><td><code>:temporal :spatial :spatial-count :spatial-radius :M-cap :bias :reproject</code></td><td>defaults <code>true true 3 30.0 20 "mis" false</code></td></tr><tr><td><code>:camera</code></td><td><code>:type :eye :look-at :up :fov :resolution :near :far</code></td><td><code>:up</code> defaults <code>[0 1 0]</code>, <code>:near</code> 0.1, <code>:far</code> 5000</td></tr><tr><td><code>:materials</code></td><td><code>{:name → {:bsdf :albedo :emission}}</code></td><td>a scalar spectrum broadcasts to RGB</td></tr><tr><td><code>:geometry</code></td><td><code>[{:id :prim :material :emitter …}]</code></td><td>plus prim-specific fields</td></tr><tr><td><code>:lights</code></td><td><code>[{:id :type :geometry :emission :two-sided}]</code></td><td><code>:geometry</code> binds to a geometry <code>:id</code></td></tr></tbody></table></div>
+<p>Closed vocabularies (<code>analyze.py:155-160</code>):</p>
+<div class="codewrap"><pre class="lang-python"><code>_TRANSPORTS = (<span class="tok-str">"direct-lighting"</span>, <span class="tok-str">"global-illumination"</span>)
+_STRATEGIES = (<span class="tok-str">"uniform"</span>, <span class="tok-str">"ris"</span>, <span class="tok-str">"restir-di"</span>, <span class="tok-str">"restir-gi"</span>)
+_TARGETS    = (<span class="tok-str">"unshadowed"</span>, <span class="tok-str">"unshadowed-cosine"</span>, <span class="tok-str">"full"</span>)
+_SOURCES    = (<span class="tok-str">"uniform-light-area"</span>, <span class="tok-str">"power"</span>)
+_BIASES     = (<span class="tok-str">"naive"</span>, <span class="tok-str">"mis"</span>, <span class="tok-str">"pairwise-mis"</span>)
+_TONEMAPS   = (<span class="tok-str">"reinhard"</span>, <span class="tok-str">"aces"</span>, <span class="tok-str">"linear"</span>)</code></pre></div>
+<p><code>_PRIM_FIELDS</code> gives the per-primitive required fields:</p>
+<div class="tablewrap"><table><thead><tr><th><code>:prim</code></th><th>Fields</th></tr></thead><tbody><tr><td><code>:plane</code></td><td><code>:point :normal</code></td></tr><tr><td><code>:sphere</code></td><td><code>:center :radius</code></td></tr><tr><td><code>:quad</code></td><td><code>:origin :u :v</code></td></tr></tbody></table></div>
+<p>Common to all: <code>:id :prim :material :emitter</code>.</p>
+<h2 id="elaborate--elaboratepy">elaborate — <code>elaborate.py</code><a class="anchor" href="#elaborate--elaboratepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>elaborate(ast: SceneAST, source: str = <span class="tok-kw">None</span>) -&gt; SemanticIR</code></pre></div>
+<p>Five named jobs:</p>
+<div class="tablewrap"><table><thead><tr><th>Job</th><th>What it does</th></tr></thead><tbody><tr><td><strong>RESOLVE</strong></td><td>Names → dense integer ids, <strong>in source order</strong></td></tr><tr><td><strong>DEFAULT</strong></td><td>Fill omitted keys</td></tr><tr><td><strong>NORMALIZE</strong></td><td><code>eye</code>/<code>look-at</code>/<code>up</code>/<code>fov</code> → an orthonormal basis + <code>tan_half_fov</code> + <code>aspect</code></td></tr><tr><td><strong>STITCH</strong></td><td>Light ↔ prim mutual back-references: <code>prims[gi].light_id = len(lights)</code></td></tr><tr><td><strong>EXPAND</strong></td><td><code>:light-sampling</code> → the <code>Strategy</code> enum</td></tr></tbody></table></div>
+<p><strong>Contract — source-ordered indices.</strong> <code>_build_symbol_tables</code> assigns ids in source order, and its docstring says the ordering is load-bearing: buffer layout and RNG stream assignment are a deterministic function of the source text. Reordering <code>:geometry</code> in a scene file changes the image. This is intended — it is what makes a render reproducible from the text alone — but it means index assignment is <em>not</em> an implementation detail.</p>
+<p><strong>Contract — camera basis.</strong> <code>right = normalize(cross(forward, up))</code>, then <code>up</code> is re-orthogonalized. <code>:up</code> parallel to the view direction is <code>DEGENERATE_CAMERA</code>.</p>
+<h2 id="diagnostics--errorspy">Diagnostics — <code>errors.py</code><a class="anchor" href="#diagnostics--errorspy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> ElabError:
+    code: str; message: str; path: tuple = (); span: object = <span class="tok-kw">None</span>; hint: str = <span class="tok-kw">None</span>
+    <span class="tok-kw">def</span> render(<span class="tok-kw">self</span>, source: str = <span class="tok-kw">None</span>) -&gt; str
+
+<span class="tok-kw">class</span> Diagnostics:
+    <span class="tok-kw">def</span> err(<span class="tok-kw">self</span>, code, message, path=(), span=<span class="tok-kw">None</span>, hint=<span class="tok-kw">None</span>) -&gt; <span class="tok-kw">None</span>
+    <span class="tok-kw">def</span> check(<span class="tok-kw">self</span>) -&gt; <span class="tok-kw">None</span>            <span class="tok-cm"># raises ElaborationFailed if any</span>
+    @property
+    <span class="tok-kw">def</span> codes(<span class="tok-kw">self</span>)
+
+did_you_mean(name: str, candidates) -&gt; str</code></pre></div>
+<p><strong>Contract — accumulate, then raise once.</strong> Errors collect in a <code>Diagnostics</code> and surface together as a single <code>ElaborationFailed</code>, every one rendered with a caret. A scene with four mistakes reports four, not the first.</p>
+<h3 id="error-catalog">Error catalog<a class="anchor" href="#error-catalog" aria-label="Link to this section">#</a></h3>
+<p>23 codes, grouped by elaboration phase (<code>errors.py::ERROR_CATALOG</code>):</p>
+<div class="tablewrap"><table><thead><tr><th>Phase</th><th>Codes</th></tr></thead><tbody><tr><td>0 — symbol tables</td><td><code>DUP_GEO_ID</code> <code>DUP_LIGHT_ID</code> <code>DUP_MATERIAL_ID</code></td></tr><tr><td>1 — leaf validation</td><td><code>ZERO_VECTOR</code> <code>DEGENERATE_QUAD</code> <code>NONPOS_RADIUS</code></td></tr><tr><td>2 — reference resolution</td><td><code>UNKNOWN_MATERIAL</code> <code>UNKNOWN_GEOMETRY</code></td></tr><tr><td>3/4 — geometry + lights</td><td><code>INFINITE_AREA_LIGHT</code> <code>NON_EMISSIVE_LIGHT_GEO</code> <code>EMITTER_WITHOUT_EMISSION</code> <code>LIGHT_GEO_REUSED</code></td></tr><tr><td>5 — integrator + camera</td><td><code>MISSING_RIS_CONFIG</code> <code>MISSING_RESTIR_CONFIG</code> <code>DI_BOUNCE_CONSTRAINT</code> <code>GI_BOUNCE_CONSTRAINT</code> <code>GI_STRATEGY_UNSUPPORTED</code> <code>GI_BOUNCE_EXACTLY_TWO</code> <code>BAD_RESOLUTION</code> <code>DEGENERATE_CAMERA</code></td></tr><tr><td>top level</td><td><code>NO_LIGHTS</code> <code>NO_GEOMETRY</code></td></tr></tbody></table></div>
+<p>Three carry real semantics worth knowing:</p>
+<ul><li><strong><code>INFINITE_AREA_LIGHT</code></strong> — an area light bound to a <code>:plane</code> has infinite area, so its pdf is zero everywhere. Caught at elaboration rather than producing NaNs.</li><li><strong><code>LIGHT_GEO_REUSED</code></strong> — two lights on one geometry would make the emitter you can <em>hit</em> with a camera ray disagree with the one you <em>sample</em> for NEE.</li><li><strong><code>GI_BOUNCE_EXACTLY_TWO</code></strong> — a path reservoir holds one reconnection vertex, and the GI candidate dimensions deliberately alias the path tracer's per-vertex draws so that <code>M=1</code> without reuse reproduces the uniform two-bounce estimator sample for sample. Deeper paths turn that alias into a silent correlation. See <a href="02-core.html#rng">02-core</a>.</li></ul>
+<h2 id="semanticir--irpy"><code>SemanticIR</code> — <code>ir.py</code><a class="anchor" href="#semanticir--irpy" aria-label="Link to this section">#</a></h2>
+<p>Frozen, resolved, SoA-friendly. Everything downstream consumes this and nothing else.</p>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> SemanticIR:
+    name: str; seed: int; tonemap: str; exposure: float
+    camera: CameraIR; integrator: IntegratorIR
+    materials: tuple; prims: tuple; lights: tuple
+    debug_material_names: tuple = (); debug_prim_names: tuple = (); debug_light_names: tuple = ()</code></pre></div>
+<div class="tablewrap"><table><thead><tr><th>Record</th><th>Fields</th></tr></thead><tbody><tr><td><code>MaterialIR</code></td><td><code>albedo, emission, is_emitter</code></td></tr><tr><td><code>PrimIR</code></td><td><code>kind, a, b, c, radius, normal, area, material_id, light_id</code> — a tagged union flattened into fixed slots so it uploads to SoA fields</td></tr><tr><td><code>AreaLightIR</code></td><td><code>prim_id, emission, two_sided, area, inv_area</code></td></tr><tr><td><code>CameraIR</code></td><td><code>eye, forward, right, up, tan_half_fov, aspect, width, height, near, far</code> + <code>.n_pixels</code></td></tr><tr><td><code>IntegratorIR</code></td><td><code>strategy, spp, max_bounces, ris_M, ris_target, ris_source, temporal, spatial, spatial_count, spatial_radius, m_cap, bias_mode, reproject</code></td></tr></tbody></table></div>
+<p>Enums, all <code>IntEnum</code> so they cross into Taichi as plain ints:</p>
+<div class="codewrap"><pre class="lang-python"><code>PrimKind:   PLANE=<span class="tok-num">0</span> SPHERE=<span class="tok-num">1</span> QUAD=<span class="tok-num">2</span>
+Strategy:   UNIFORM=<span class="tok-num">0</span> RIS=<span class="tok-num">1</span> RESTIR_DI=<span class="tok-num">2</span> RESTIR_GI=<span class="tok-num">3</span>
+TargetMode: UNSHADOWED=<span class="tok-num">0</span> UNSHADOWED_COSINE=<span class="tok-num">1</span> FULL=<span class="tok-num">2</span>
+SourcePdf:  UNIFORM_LIGHT_AREA=<span class="tok-num">0</span> POWER=<span class="tok-num">1</span>
+BiasMode:   NAIVE=<span class="tok-num">0</span> MIS=<span class="tok-num">1</span> PAIRWISE_MIS=<span class="tok-num">2</span></code></pre></div>
+<h3 id="immutable-edits">Immutable edits<a class="anchor" href="#immutable-edits" aria-label="Link to this section">#</a></h3>
+<p>The only supported way to vary a scene. Used by the CLI's <code>_load</code> funnel, the shell, and the whole validation harness:</p>
+<div class="codewrap"><pre class="lang-python"><code>with_camera(cam)   with_exposure(ev)  with_tonemap(name)  with_seed(seed)
+with_strategy(s)   with_ris(M, target)  with_bias(mode)   with_restir(**kw)
+with_resolution(w, h)  with_spp(spp)   with_max_bounces(n)</code></pre></div>
+<p><strong>Contract — which edits need a rebuild.</strong> <code>with_resolution</code>, <code>with_strategy</code>, <code>with_max_bounces</code> and toggling spatial reuse change the <em>graph</em>, so an <code>Engine</code> must be rebuilt. Seed, camera, exposure, AOV, bias mode and reproject reach the kernels as <em>arguments</em> and need only a setter. See <a href="05-runtime.html">05-runtime</a>.</p>
+<h2 id="writer--writerpy">writer — <code>writer.py</code><a class="anchor" href="#writer--writerpy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>to_edn(ir: SemanticIR) -&gt; str</code></pre></div>
+<p>The inverse of the front end, and its stated purpose is the property</p>
+<div class="codewrap"><pre><code>elaborate(read(to_edn(ir))) == ir</code></pre></div>
+<p>pinned by a parametrized round-trip test over every scene in <code>pt/scenes/</code>, with <code>ir_close</code> handling float ULP. <code>pt edn &lt;scene&gt;</code> prints it.</p><div class="prevnext"><a href="00-overview.html"><span class="k">Previous</span><span class="n">Overview: the lowering pipeline</span></a><a href="02-core.html" style="text-align:right"><span class="k">Next</span><span class="n"><code>pt/core/</code> — the pure reference</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#read--readerpy">read — <code>reader.py</code></a><a class="lv2" href="#macro-expand--macropy">macro-expand — <code>macro.py</code></a><a class="lv2" href="#analyze--analyzepy">analyze — <code>analyze.py</code></a><a class="lv3" href="#schema">Schema</a><a class="lv2" href="#elaborate--elaboratepy">elaborate — <code>elaborate.py</code></a><a class="lv2" href="#diagnostics--errorspy">Diagnostics — <code>errors.py</code></a><a class="lv3" href="#error-catalog">Error catalog</a><a class="lv2" href="#semanticir--irpy"><code>SemanticIR</code> — <code>ir.py</code></a><a class="lv3" href="#immutable-edits">Immutable edits</a><a class="lv2" href="#writer--writerpy">writer — <code>writer.py</code></a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

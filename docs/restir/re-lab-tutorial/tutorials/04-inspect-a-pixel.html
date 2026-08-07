@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" data-q="tutorials">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inspect a single pixel · pt docs</title>
+<meta name="description" content="Click a pixel in the GUI and read the exact path that produced it.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html" aria-current="true">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Tutorials</h4><a href="../tutorials/index.html">Overview</a><a href="../tutorials/01-first-render.html">Render your first image</a><a href="../tutorials/02-watch-a-scene-lower.html">Watch a scene lower</a><a href="../tutorials/03-catch-a-biased-estimator.html">Catch a biased estimator</a><a href="../tutorials/04-inspect-a-pixel.html" aria-current="true">Inspect a single pixel <span class="needs">(a display)</span></a><h4>Elsewhere</h4><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Tutorials</div><h1>Inspect a single pixel</h1><p class="summary">Click a pixel in the GUI and read the exact path that produced it.</p><div class="srcline"><span>Source: <code>docs/tutorials/04-inspect-a-pixel.md</code></span><span>Requires a display</span><span>learning-oriented</span></div></div>
+<p>Most renderers can tell you what colour a pixel came out. This one can tell you <em>why</em>: which light samples were considered, what each was worth, which one survived, and whether its shadow ray was blocked. In this tutorial we will click a pixel and read the estimator's actual working out.</p>
+<p><strong>You will need</strong> the venv, and a display — this is the one tutorial that needs a graphical session. Everything else in these guides runs headless. About fifteen minutes.</p>
+<hr>
+<h2 id="step-1--open-the-shell">Step 1 — Open the shell<a class="anchor" href="#step-1--open-the-shell" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt gui cornell_restir</code></pre></div>
+<p>Five windows appear: <strong>Render</strong>, <strong>Controls</strong>, <strong>Path Tree</strong>, <strong>Candidates</strong> and <strong>Debug 3D</strong>. The render starts accumulating immediately and gets cleaner as it goes; the status line in Controls tracks the sample count.</p>
+<p>Let it run for a few seconds until the image settles.</p>
+<h2 id="step-2--click-a-pixel">Step 2 — Click a pixel<a class="anchor" href="#step-2--click-a-pixel" aria-label="Link to this section">#</a></h2>
+<p>Click somewhere in the <strong>Render</strong> window — a spot on the floor in partial shadow is the most interesting, near the edge of a sphere's shadow.</p>
+<p><strong>Path Tree</strong> fills in. Instead of "Click a pixel in the Render view." you now have a tree: a primary ray, the surface it hit, and beneath it the light-sample candidates that were drawn for this pixel at the current sample index. Expand one of the candidate nodes and you get its details — which light it sampled, <code>cos_light</code>, its target value, its resampling weight <code>w</code>, its MIS weight <code>m</code>, and whether it was <code>occluded</code>.</p>
+<p><strong>Candidates</strong> shows the same thing as a table. The column to look at is <code>w / sum(w)</code>: that fraction <em>is</em> the probability that candidate had of being selected. One row is marked chosen — that is the sample this pixel actually used.</p>
+<p>Here is the part worth pausing on. This is not a re-roll. The renderer did not save a log of what it did and play it back; it <em>re-derived</em> the path from scratch using the same hash of <code>(pixel, sample, bounce, dimension, seed)</code> the kernel used. That is why the numbers you are reading are the ones that produced the pixel, and not a plausible-looking second sample from the same distribution.</p>
+<h2 id="step-3--watch-one-sample-at-a-time">Step 3 — Watch one sample at a time<a class="anchor" href="#step-3--watch-one-sample-at-a-time" aria-label="Link to this section">#</a></h2>
+<p>In <strong>Controls</strong>, find the <strong>spp cap</strong> slider and drag it slowly.</p>
+<p>The primary ray jitters around inside the pixel, and the light sample wanders across the surface of the lamp. You are watching the Monte Carlo process happen one draw at a time — the very thing that averages into a smooth image.</p>
+<p>Now look at the <strong>Debug 3D</strong> window while you do it. The same information is drawn in space: the render camera as a frustum you can fly around, the primary ray in blue, rejected candidates dim, the survivor bright green. Temporally reused samples are pink and spatially borrowed ones are orange, with an arrow pointing back to the pixel they were borrowed from.</p>
+<h2 id="step-4--find-the-number-the-whole-algorithm-is-about">Step 4 — Find the number the whole algorithm is about<a class="anchor" href="#step-4--find-the-number-the-whole-algorithm-is-about" aria-label="Link to this section">#</a></h2>
+<p>In the <strong>Candidates</strong> table, look at <code>M</code> — the effective sample count for this pixel.</p>
+<p>With reuse warmed up it will read in the hundreds, even though only a handful of rays were traced for this pixel this frame. That number is the entire ReSTIR argument, made concrete: temporal reuse carries samples forward from previous frames and spatial reuse borrows from neighbours, so each pixel ends up summarising far more candidates than it ever paid for.</p>
+<p>Click a pixel right at a shadow boundary and compare. <code>M</code> will be lower there — the geometric similarity gate rejects neighbours that are not similar enough to borrow from, which is what stops reuse from smearing across an edge.</p>
+<h2 id="step-5--change-the-estimator-while-it-runs">Step 5 — Change the estimator while it runs<a class="anchor" href="#step-5--change-the-estimator-while-it-runs" aria-label="Link to this section">#</a></h2>
+<p>Back in <strong>Controls</strong>:</p>
+<ul><li><strong>strategy</strong> switches between uniform, RIS, ReSTIR DI. Watch the noise change.</li><li><strong>ReSTIR combine</strong> switches the reuse weighting between <code>naive</code>, <code>mis</code> and <code>pairwise-mis</code>. On this scene you will see essentially no difference — remember that; it is the subject of the <a href="03-catch-a-biased-estimator.html">next tutorial</a>, and the reason it needs a purpose-built scene.</li><li><strong>AOV</strong> routes a cooked buffer straight to the display: normals, albedo, depth, reservoir weight.</li><li><strong>variance heatmap</strong> shows where the renderer is still uncertain, which is usually not where you would guess.</li><li><strong>temporal reprojection</strong> is the interesting one. Tick it, then drag the camera with the mouse. With it off, the image restarts from noise on every movement. With it on, the reuse follows the surfaces through the motion.</li></ul>
+<hr>
+<h2 id="what-we-did">What we did<a class="anchor" href="#what-we-did" aria-label="Link to this section">#</a></h2>
+<p>We read a single pixel's estimate as evidence rather than as a number: the candidates it drew, what each was worth, which survived, and how many samples it was effectively summarising.</p>
+<p><strong>Where next:</strong></p>
+<ul><li><a href="../how-to/debug-a-single-pixel.html">Debug a single pixel</a> is the same ground as a reference rather than a lesson — reach for it when you have a specific pixel misbehaving.</li><li><a href="../reference/05-runtime.html"><code>pt/shell/</code> in the reference</a> explains why click-to-inspect runs the pure Python core on the UI thread and never calls a kernel.</li></ul><div class="prevnext"><a href="03-catch-a-biased-estimator.html"><span class="k">Previous</span><span class="n">Catch a biased estimator</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#step-1--open-the-shell">Step 1 — Open the shell</a><a class="lv2" href="#step-2--click-a-pixel">Step 2 — Click a pixel</a><a class="lv2" href="#step-3--watch-one-sample-at-a-time">Step 3 — Watch one sample at a time</a><a class="lv2" href="#step-4--find-the-number-the-whole-algorithm-is-about">Step 4 — Find the number the whole algorithm is about</a><a class="lv2" href="#step-5--change-the-estimator-while-it-runs">Step 5 — Change the estimator while it runs</a><a class="lv2" href="#what-we-did">What we did</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

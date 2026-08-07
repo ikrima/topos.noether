@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>validation/ — the harness · pt docs</title>
+<meta name="description" content="The chain of trust and every statistic hanging off it.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html" aria-current="true"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1><code>validation/</code> — the harness</h1><p class="summary">The chain of trust and every statistic hanging off it.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/06-validation.md</code></span><span>information-oriented</span></div></div>
+<p>A top-level package alongside <code>pt</code>, not under it, because it is a peer of the renderer rather than part of it. ~2,204 lines.</p>
+<p><strong>The framing.</strong> Low variance is not correctness: a biased ReSTIR produces a clean, beautiful, wrong image. Changes to the estimator are argued with numbers, never with renders.</p>
+<h2 id="the-chain-of-trust">The chain of trust<a class="anchor" href="#the-chain-of-trust" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre><code>closed form  ──►  uniform MC (1 bounce)  ──►  RIS  ──►  ReSTIR DI
+    │                    │
+    │                    └──►  uniform MC (2 bounce)  ──►  ReSTIR GI
+    │                              ▲
+    └── quadrature, different parameterization ──┘</code></pre></div>
+<p>Each link is checked against the one to its left. <code>di_uniform</code> is the root because it is the simplest, most obviously unbiased estimator here, and it is validated against a closed form.</p>
+<p><strong>Why the per-sample twin diff is not enough.</strong> It is the strongest test in the project and it has a blind spot worth naming: the two implementations are <em>supposed</em> to compute the same thing, so a wrong pdf, a double-converted Jacobian or a doubled cosine makes them agree exactly as well as being right does. Closed form covers that gap for DI. One bounce further there is no closed form, so the indirect term is anchored against a deterministic <strong>quadrature in a different parameterization</strong>, which never forms a pdf at all and so cannot share the mistake. Measured: MC and quadrature agree to <strong>1.6% or better</strong> at three shading points, one on a sphere.</p>
+<h2 id="modules">Modules<a class="anchor" href="#modules" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>analytic.py</code></td><td>208</td><td>closed-form anchors — <strong>re-implements its own vector math</strong></td></tr><tr><td><code>anchor.py</code></td><td>164</td><td>applies the closed form to pixels</td></tr><tr><td><code>indirect.py</code></td><td>197</td><td>deterministic quadrature, the GI anchor</td></tr><tr><td><code>reference_cache.py</code></td><td>202</td><td>converged uniform-MC references, content-hash keyed</td></tr><tr><td><code>bias.py</code></td><td>179</td><td>the bias detector</td></tr><tr><td><code>convergence.py</code></td><td>242</td><td>convergence curves, equal-time, per-frame variance</td></tr><tr><td><code>temporal.py</code></td><td>303</td><td>camera-path harness for reprojection</td></tr><tr><td><code>gi.py</code></td><td>271</td><td>the differenced indirect term</td></tr><tr><td><code>flip.py</code></td><td>581</td><td>perceptual difference, anchored against NVlabs</td></tr></tbody></table></div>
+<p><code>analytic.py</code> deliberately duplicates <code>_sub/_add/_dot/_cross/_len/_norm/_scale</code> so it cannot share a bug with <code>pt.core.vecmath</code>. The same move, one level up, is what <code>flip.py</code>'s anchoring does.</p>
+<h2 id="references--reference_cachepy">References — <code>reference_cache.py</code><a class="anchor" href="#references--reference_cachepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>CACHE_VERSION = <span class="tok-num">1</span>
+cache_dir() -&gt; str                                  <span class="tok-cm"># $PT_REF_CACHE or .ref_cache</span>
+get_converged_reference(scene, spp=<span class="tok-num">4096</span>, seed=<span class="tok-kw">None</span>, force=<span class="tok-kw">False</span>, on_progress=<span class="tok-kw">None</span>)
+cached_reference(scene, seed=<span class="tok-num">0</span>)                     <span class="tok-cm"># never renders; for the UI thread</span>
+reference_noise_floor(scene, spp=<span class="tok-num">4096</span>, seed_a=<span class="tok-num">0</span>, seed_b=<span class="tok-num">99991</span>) -&gt; float
+estimator_noise(scene, spp, seed_a=<span class="tok-num">0</span>, seed_b=<span class="tok-num">99991</span>) -&gt; float    <span class="tok-cm"># == 2 * variance</span>
+clear_cache() -&gt; int;  cache_report()</code></pre></div>
+<p><strong>Contract — strategy is deliberately absent from the fingerprint.</strong> <code>_fingerprint</code> hashes the camera basis, prims, materials, lights, seed, spp, <code>max_bounces</code> and <code>"estimator": "uniform-mc-converged"</code>. Asking for "the reference for a ReSTIR scene" therefore <em>structurally</em> returns the uniform-MC image — <strong>you cannot validate an estimator against itself.</strong> <code>max_bounces</code> is present because a two-bounce scene's reference is two-bounce uniform MC.</p>
+<p><strong>Contract — the noise floor is not optional.</strong> <code>reference_noise_floor</code> is the MSE between two independent references. Without it a detector either cries wolf on the reference's own noise or compares against zero and flags everything. Bias below this is undetectable and must not be reported.</p>
+<h2 id="the-bias-detector--biaspy">The bias detector — <code>bias.py</code><a class="anchor" href="#the-bias-detector--biaspy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>bias_report(converged_img, reference, ref_noise_floor, estimator_noise=<span class="tok-num">0.0</span>,
+            alpha=<span class="tok-num">0.01</span>, margin=<span class="tok-num">2.0</span>, decorrelation_stride=<span class="tok-num">1</span>,
+            min_sign_samples=<span class="tok-num">30</span>) -&gt; BiasReport</code></pre></div>
+<p>Three tests, because each has a blind spot alone:</p>
+<div class="tablewrap"><table><thead><tr><th>Test</th><th>Statistic</th><th>Blind spot it covers / has</th></tr></thead><tbody><tr><td><strong>Excess over expected noise</strong></td><td><code>expected = (estimator_noise + ref_noise_floor)/2</code>; biased if <code>excess &gt; margin·expected</code></td><td>The only one that stays valid under correlation, since <code>E[MSE]</code> is an average</td></tr><tr><td><strong>Per-pixel sign test</strong></td><td>two-sided binomial on mean-luminance error, subsampled <code>[::stride]</code></td><td>Assumes independent pixels, which reuse violates</td></tr><tr><td><strong>Localization</strong></td><td><code>per_pixel_sq &gt; floor + 4·std</code> → hotspot mask</td><td>Diagnostic only; reuse bias concentrates at discontinuities</td></tr></tbody></table></div>
+<p><strong>Contract — <code>E[MSE(X, Y)] = vx + vy + bias²</code>.</strong> Comparing against the reference's noise floor <em>alone</em> charges the estimator's own variance to bias: uniform MC at 400 spp against a uniform reference at 4000 spp reports as badly biased, though it <em>is</em> the reference's estimator.</p>
+<p><strong>Contract — the sign test needs decorrelation and reports its own power.</strong> ReSTIR's neighbouring pixels literally share samples, so a per-pixel binomial test is wildly over-confident and flags every configuration including provably unbiased ones. Subsampling beyond the reuse radius fixes it, but too large a stride leaves no power — a 32px radius leaves <strong>9 usable pixels at 96×96</strong> — so <code>sign_test_n</code> and <code>sign_test_usable</code> are always reported, and the test is skipped below <code>MIN_SIGN_SAMPLES = 30</code>.</p>
+<p><code>BiasReport</code> is a <code>dict</code> with <code>.biased</code> and <code>.summary()</code>; 17 keys including <code>verdict</code>, <code>mse</code>, <code>expected_noise</code>, <code>excess_ratio</code>, <code>sign_test_{p,n,usable}</code>, <code>directional</code>, <code>biased_pixel_fraction</code>, <code>bias_hotspot_mask</code>.</p>
+<h2 id="efficiency--convergencepy">Efficiency — <code>convergence.py</code><a class="anchor" href="#efficiency--convergencepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>mse(a, b);  rmse(a, b)
+convergence_curve(scene, checkpoints, reference, engine=<span class="tok-kw">None</span>, on_progress=<span class="tok-kw">None</span>)
+estimate_slope(curve, drop_floor_ratio=<span class="tok-kw">None</span>)
+slope_verdict(curve, noise_floor=<span class="tok-num">0.0</span>, flat_threshold=-<span class="tok-num">0.3</span>, tail_fraction=<span class="tok-num">0.5</span>, floor_margin=<span class="tok-num">2.0</span>)
+equal_time_comparison(scenes: dict, reference, budget_seconds=<span class="tok-num">5.0</span>, warmup_samples=<span class="tok-num">1</span>)
+frame_variance(scene, warmup=<span class="tok-num">0</span>, trials=<span class="tok-num">8</span>, pct=<span class="tok-num">90.0</span>, engine=<span class="tok-kw">None</span>, ...) -&gt; float</code></pre></div>
+<p><strong>Contract — <code>slope_verdict</code> fits the tail, not the whole curve.</strong> An unbiased estimator keeps falling near <code>-1</code>; a biased one flattens onto its bias² plateau. It needs only the curve to have turned over, so it fires <strong>earlier</strong> than the excess test. Fitting the whole curve dilutes the evidence, because early checkpoints fall steeply either way.</p>
+<p><strong>Contract — variance is measured per frame, at the 90th percentile.</strong> Which statistic you choose decides whether you see the effect at all: the <em>mean</em> per-pixel variance is firefly-dominated and moves under 5% across estimators; the <em>median</em> samples pixels that were never noisy, where RIS genuinely loses. At <strong>p90</strong> — where perceptible noise lives — the ordering is clean: RIS 1.9× better than uniform, ReSTIR 1.5× better than RIS.</p>
+<h2 id="the-indirect-term">The indirect term — <code>gi.py</code><a class="anchor" href="#the-indirect-term" aria-label="Link to this section">#</a></h2>
+<p>The most consequential module in the harness, because whole-image comparison cannot see GI defects at all.</p>
+<div class="codewrap"><pre class="lang-python"><code>SHARED_DIRECT_TERM = (int(Strategy.UNIFORM), int(Strategy.RESTIR_GI))
+require_shared_direct_term(scene) -&gt; <span class="tok-kw">None</span>
+one_bounce_image(scene, spp, seed=<span class="tok-kw">None</span>) -&gt; np.ndarray
+render_indirect(scene, spp, seed=<span class="tok-kw">None</span>, engine=<span class="tok-kw">None</span>, warmup=<span class="tok-num">0</span>, on_progress=<span class="tok-kw">None</span>)
+converged_indirect_reference(scene, spp=<span class="tok-num">4096</span>, seed=<span class="tok-num">0</span>, on_progress=<span class="tok-kw">None</span>)
+indirect_noise_floor(scene, spp=<span class="tok-num">4096</span>, seed_a=<span class="tok-num">0</span>, seed_b=<span class="tok-num">99991</span>) -&gt; float
+indirect_estimator_noise(scene, spp, ...) -&gt; float
+indirect_verdict(scene, spp, reference, noise_floor, total_reference=<span class="tok-kw">None</span>, ...) -&gt; dict
+indirect_convergence_curve(scene, checkpoints, reference, seed=<span class="tok-kw">None</span>, engine=<span class="tok-kw">None</span>)
+indirect_fraction(scene, spp=<span class="tok-num">4096</span>, seed=<span class="tok-num">0</span>) -&gt; float
+energy_ratio(img, reference) -&gt; float</code></pre></div>
+<p><strong>Contract — differencing is exact, not statistical, and only for two strategies.</strong> <code>SHARED_DIRECT_TERM</code> is <code>(UNIFORM, RESTIR_GI)</code> — the only strategies whose vertex-0 draws are uniform MC's. For those, vertex 0 keeps its RNG stream, so subtracting the one-bounce image <strong>cancels</strong> the direct term rather than averaging it away. <code>require_shared_direct_term</code> refuses anything else, and also refuses <code>max_bounces &lt; 1</code>. Do not roll the subtraction by hand.</p>
+<p>Why it is needed: two bounces are only ~13% brighter than one on the Cornell box, so a <em>completely broken</em> indirect term still lands inside the 2%-of-pixels tolerance a whole-image comparison can afford.</p>
+<p><strong>Contract — warm-up is not optional for a reuse estimator.</strong> A ReSTIR run <em>becomes</em> the estimator under test over roughly <code>m_cap</code> frames, so an accumulation started at frame 0 averages in the path tracer it began as. Measured on <code>cornell_restir_gi</code> at 96px, warm-up 0/8/24/64/128/256 → <code>mis</code> 1.0037/0.9966/0.9919/0.9873/0.9872/0.9870. <strong>From cold it reads 1.004 — above truth, and indistinguishable from the uniform control at 1.0009 ± 0.0004.</strong> The reading settles by 64, which is the <code>--warmup</code> default. <code>render_indirect</code> implements the discard with <code>reset_accumulation()</code>, which clears the image while keeping reservoirs.</p>
+<p>The control that keeps the discard honest is the no-reuse row measured <em>with the same warm-up</em>: both passes off at <code>M=1</code> is the two-bounce path tracer sample for sample, and it must read 1.000 (measured 1.0004 ± 0.0027).</p>
+<p><strong>Contract — use the indirect noise floor, not the whole-image one.</strong> The direct term cancels stream-for-stream and takes its variance with it: <strong>1.4e-06 vs 5.8e-03</strong> on <code>cornell_restir_gi</code> at 48px. Scoring a differenced image against the whole-image floor would call every GI estimator clean.</p>
+<p><strong>Contract — energy resolves what MSE cannot.</strong> On the same runs, total energy reads 0.9803/0.9692 where the indirect term reads 0.8984/0.8386, and the MSE-excess verdict returns <em>"unbiased (within noise)"</em> on <strong>every</strong> row, because bias² on 11–18% of an image never clears both estimators' variance at a few hundred spp. <code>energy_ratio</code> is "the statistic that found the bugs", and it is a <strong>whole-frame mean</strong> — per-pixel probes are heavy-tailed enough to show a fake 20% deficit on a DI control.</p>
+<h2 id="temporal--temporalpy">Temporal — <code>temporal.py</code><a class="anchor" href="#temporal--temporalpy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>dollied_camera(cam, factor, pivot_distance);  focus_distance(scene)
+oscillating_path(cam_a, cam_b, frames)
+path_frames(engine, cameras, measure_stride=<span class="tok-num">2</span>, warmup=DEFAULT_WARMUP, ...)
+temporal_bias_report(scene, frames=<span class="tok-num">400</span>, magnify=DEFAULT_MAGNIFY, ...)</code></pre></div>
+<p><strong>Contract — a moving camera has no single reference, unless it comes back.</strong> Per-pose references would cost the harness multiplied by the frame count. Alternating two poses and measuring only pose-A frames gives one reference serving every measured frame, each of whose history came from pose B. Accumulating across the path is invalid — the mean of images from different viewpoints is not an image of anything — so frames are extracted by differencing the accumulator (<code>Engine.render_sample_radiance</code>).</p>
+<p><strong>Finding worth knowing:</strong> reprojection bias comes from <strong>magnification</strong>, not from reprojection error. A correctly reprojected static point lands back where it started. The residual is pixel quantization measured in the <em>previous</em> frame's footprint, so it is large only when the surface was <em>smaller</em> on screen then.</p>
+<h2 id="flip--flippy">FLIP — <code>flip.py</code><a class="anchor" href="#flip--flippy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>flip(reference, test, ppd=DEFAULT_PPD) -&gt; (H, W)
+hdr_flip(reference, test, ppd=DEFAULT_PPD, tone_mapper=<span class="tok-str">"aces"</span>, ...)
+ppd_from_viewing_conditions(distance_m=<span class="tok-num">0.7</span>, width_m=<span class="tok-num">0.7</span>, resolution_x=<span class="tok-num">3840</span>)
+flip_summary(error) -&gt; dict;  magma(error) -&gt; (H, W, <span class="tok-num">3</span>)</code></pre></div>
+<p>Pure numpy, no external dependency; the magma table is inlined from matplotlib at 32 stops specifically to avoid one.</p>
+<p><strong>Contract — FLIP ranks and localizes; it does not detect bias.</strong> A converged biased estimator is perceptually smooth and scores well. Reach for it when the question is "which of these looks closest" or "where do these differ", never instead of a verdict.</p>
+<p><strong>Contract — the anchoring caveat, carried verbatim.</strong> Implemented from the paper, it read <strong>7% high on every achromatic difference</strong>; running NVlabs' <code>flip-evaluator</code> once in a throwaway environment found it. The bug was <code>cmax</code>: the natural sRGB-gamut derivation (green→blue HyAB) gives <strong>308.12</strong>, the reference behaves as <strong>203.29</strong>, and the value is now <em>measured</em> rather than derived. The achromatic path is now <strong>exact</strong>; a structural chromatic residual remains, worth about +0.01 mean FLIP here with estimator ordering preserved. <code>tests/test_flip.py</code> pins the exact half to 1e-4 and the chromatic half to the measured gap, so either improving <em>or</em> worsening the agreement fails a test rather than silently changing what the column means.</p>
+<p><strong>These scores rank estimators here. They are not quotable against a published FLIP number.</strong></p><div class="prevnext"><a href="05-runtime.html"><span class="k">Previous</span><span class="n">Engine, shell and CLI</span></a><a href="07-invariants.html" style="text-align:right"><span class="k">Next</span><span class="n">Invariants</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#the-chain-of-trust">The chain of trust</a><a class="lv2" href="#modules">Modules</a><a class="lv2" href="#references--reference_cachepy">References — <code>reference_cache.py</code></a><a class="lv2" href="#the-bias-detector--biaspy">The bias detector — <code>bias.py</code></a><a class="lv2" href="#efficiency--convergencepy">Efficiency — <code>convergence.py</code></a><a class="lv2" href="#the-indirect-term">The indirect term — <code>gi.py</code></a><a class="lv2" href="#temporal--temporalpy">Temporal — <code>temporal.py</code></a><a class="lv2" href="#flip--flippy">FLIP — <code>flip.py</code></a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

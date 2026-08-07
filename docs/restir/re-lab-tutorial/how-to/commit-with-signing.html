@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-q="how-to">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commit with the signing agent · pt docs</title>
+<meta name="description" content="Two failures that look alike and have different fixes.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html" aria-current="true">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>How-to guides</h4><a href="../how-to/index.html">Overview</a><a href="../how-to/measure-a-change-for-bias.html">Measure a change for bias</a><a href="../how-to/compare-renders-perceptually.html">Compare two renders perceptually</a><a href="../how-to/dump-and-diff-an-intermediate.html">Dump and diff an intermediate</a><a href="../how-to/debug-a-single-pixel.html">Debug a single pixel</a><a href="../how-to/run-the-test-suites.html">Run the test suites</a><a href="../how-to/verify-the-racket-port.html">Verify the Racket port</a><a href="../how-to/add-to-the-renderer.html">Add a draw, a pass, a strategy, a scene</a><a href="../how-to/commit-with-signing.html" aria-current="true">Commit with the signing agent</a><a href="../how-to/build-the-docs.html">Build the documentation</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">How-to guides</div><h1>Commit with the signing agent</h1><p class="summary">Two failures that look alike and have different fixes.</p><div class="srcline"><span>Source: <code>docs/how-to/commit-with-signing.md</code></span><span>task-oriented</span></div></div>
+<p>Commits here are SSH-signed through the 1Password agent (<code>op-ssh-sign</code>). Two failures look alike and have different fixes. Your work stays staged either way, and <code>--no-gpg-sign</code> is never the answer.</p>
+<h2 id="could-not-connect-to-socket-is-the-agent-running"><code>Could not connect to socket. Is the agent running?</code><a class="anchor" href="#could-not-connect-to-socket-is-the-agent-running" aria-label="Link to this section">#</a></h2>
+<p>Usually the agent is running fine and <code>SSH_AUTH_SOCK</code> is simply pointing somewhere else — a GNOME keyring, say. Point it at the right socket for the one command:</p>
+<div class="codewrap"><pre class="lang-bash"><code>SSH_AUTH_SOCK=~/.1password/agent.sock git commit -m <span class="tok-str">"…"</span></code></pre></div>
+<p>Signing stays on.</p>
+<h2 id="failed-to-fill-whole-buffer"><code>failed to fill whole buffer</code><a class="anchor" href="#failed-to-fill-whole-buffer" aria-label="Link to this section">#</a></h2>
+<p>The agent is genuinely locked. Unlock it, then retry the commit. If you are driving this through an assistant, ask — there is nothing to work around.</p>
+<h2 id="git-log---formatg-prints-n-for-everything"><code>git log --format=%G?</code> prints <code>N</code> for everything<a class="anchor" href="#git-log---formatg-prints-n-for-everything" aria-label="Link to this section">#</a></h2>
+<p>That is not a signing failure, and it is true of old commits here too. There is no <code>gpg.ssh.allowedSignersFile</code> configured, so git cannot <em>verify</em> SSH signatures locally — it has no list of which keys to trust. Verification and signing are different operations.</p>
+<p>To confirm a signature actually attached, inspect the object rather than asking git to verify it:</p>
+<div class="codewrap"><pre class="lang-bash"><code><span class="tok-kw">git</span> cat-file commit HEAD | grep -c gpgsig</code></pre></div>
+<p><code>1</code> means the signature is there.</p>
+<h2 id="never-do-this">Never do this<a class="anchor" href="#never-do-this" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code><span class="tok-kw">git</span> commit --no-gpg-sign     <span class="tok-cm"># no</span></code></pre></div>
+<p>It produces a commit that looks fine locally and is unsigned in the history permanently. Both failures above are configuration problems with real fixes.</p><div class="prevnext"><a href="add-to-the-renderer.html"><span class="k">Previous</span><span class="n">Add a draw, a pass, a strategy, a scene</span></a><a href="build-the-docs.html" style="text-align:right"><span class="k">Next</span><span class="n">Build the documentation</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#could-not-connect-to-socket-is-the-agent-running"><code>Could not connect to socket. Is the agent running?</code></a><a class="lv2" href="#failed-to-fill-whole-buffer"><code>failed to fill whole buffer</code></a><a class="lv2" href="#git-log---formatg-prints-n-for-everything"><code>git log --format=%G?</code> prints <code>N</code> for everything</a><a class="lv2" href="#never-do-this">Never do this</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

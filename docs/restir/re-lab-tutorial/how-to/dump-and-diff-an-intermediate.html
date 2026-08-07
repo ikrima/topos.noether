@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" data-q="how-to">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dump and diff an intermediate · pt docs</title>
+<meta name="description" content="You changed the front end. Did the IR change the way you meant?">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html" aria-current="true">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>How-to guides</h4><a href="../how-to/index.html">Overview</a><a href="../how-to/measure-a-change-for-bias.html">Measure a change for bias</a><a href="../how-to/compare-renders-perceptually.html">Compare two renders perceptually</a><a href="../how-to/dump-and-diff-an-intermediate.html" aria-current="true">Dump and diff an intermediate</a><a href="../how-to/debug-a-single-pixel.html">Debug a single pixel</a><a href="../how-to/run-the-test-suites.html">Run the test suites</a><a href="../how-to/verify-the-racket-port.html">Verify the Racket port</a><a href="../how-to/add-to-the-renderer.html">Add a draw, a pass, a strategy, a scene</a><a href="../how-to/commit-with-signing.html">Commit with the signing agent</a><a href="../how-to/build-the-docs.html">Build the documentation</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">How-to guides</div><h1>Dump and diff an intermediate</h1><p class="summary">You changed the front end. Did the IR change the way you meant?</p><div class="srcline"><span>Source: <code>docs/how-to/dump-and-diff-an-intermediate.md</code></span><span>task-oriented</span></div></div>
+<p>Every level between the scene text and the kernels is a first-class artifact you can print and diff. Use that instead of guessing what a change did.</p>
+<h2 id="did-the-elaborated-scene-change">Did the elaborated scene change?<a class="anchor" href="#did-the-elaborated-scene-change" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt edn cornell &gt; /tmp/before.edn
+<span class="tok-cm"># … make your change …</span>
+.venv/bin/pt edn cornell &gt; /tmp/after.edn
+diff /tmp/before.edn /tmp/after.edn</code></pre></div>
+<p><code>pt edn</code> prints the <code>SemanticIR</code> — the scene after resolve, default, normalize, stitch and expand. It is the level everything downstream consumes, so if this file is unchanged, no front-end change you made can have reached the renderer.</p>
+<p>This also round-trips: <code>elaborate(read(to_edn(ir))) == ir</code> is asserted for every bundled scene, so anything <code>pt edn</code> prints is a scene you can feed back in.</p>
+<h2 id="did-the-schedule-change">Did the schedule change?<a class="anchor" href="#did-the-schedule-change" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>diff &lt;(.venv/bin/pt describe cornell        2&gt;/dev/null) \
+     &lt;(.venv/bin/pt describe cornell_restir 2&gt;/dev/null)</code></pre></div>
+<p><code>pt describe</code> prints the compiled <code>ExecutionPlan</code>: the pass order, each pass's declared reads and writes, its dirty domains, and every resource with its lifetime interval and physical slot.</p>
+<p><strong>This output is a stronger acceptance test than it looks.</strong> Because it prints slot numbers, requiring it character-for-character transitively pins declaration order, the topological tie-break, culling, the lifetime intervals and the greedy colouring's first-fit rule — five things with no numeric output of their own. The Racket port is held to it verbatim for exactly that reason.</p>
+<p>If you changed the graph and <code>describe</code> is byte-identical, you changed nothing the scheduler can see.</p>
+<h2 id="did-the-buffers-change">Did the buffers change?<a class="anchor" href="#did-the-buffers-change" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt dump cornell --res 64 64 --spp 8 --dir out/before
+<span class="tok-cm"># … make your change …</span>
+.venv/bin/pt dump cornell --res 64 64 --spp 8 --dir out/after</code></pre></div>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/python - &lt;&lt;'EOF'
+import numpy as np, glob, os
+for a in sorted(glob.glob(<span class="tok-str">"out/before/*.npy"</span>)):
+    name = os.path.basename(a)
+    x, y = np.load(a), np.load(<span class="tok-str">"out/after/"</span> + name)
+    if x.shape != y.shape:
+        print(f<span class="tok-str">"{name}: shape {x.shape} -&gt; {y.shape}"</span>)
+    elif not np.array_equal(x, y):
+        d = np.abs(x.astype(np.float64) - y)
+        print(f<span class="tok-str">"{name}: {(d &gt; 0).mean():.2%} of values differ, max {d.max():.4g}"</span>)
+EOF</code></pre></div>
+<p>Keep the resolution and sample count small and <em>identical</em> between the two runs. Because every draw is a hash of <code>(pixel, sample, bounce, dimension, seed)</code> rather than a stateful generator, two runs of unchanged code produce byte-identical buffers — so any difference at all is your change, not scheduling noise.</p>
+<p>That property is also the trap: if your change added a random draw without allocating a new dimension, the buffers will differ for a reason that has nothing to do with what you intended, and it will look like plausible noise. See <a href="add-to-the-renderer.html#add-a-random-draw">Add a random draw</a>.</p>
+<h2 id="the-two-levels-with-no-cli">The two levels with no CLI<a class="anchor" href="#the-two-levels-with-no-cli" aria-label="Link to this section">#</a></h2>
+<p><code>forms</code> and <code>SceneAST</code> have no <code>pt</code> subcommand. Dump them with:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/python docs/explainer/capture_levels.py</code></pre></div>
+<p>which writes every stage for <code>cornell.edn</code> into <code>docs/explainer/levels/</code> in one pass, shelling out to <code>pt describe</code> for the compiled plans so the output is the real CLI's rather than a reimplementation. Re-run it after changing the DSL front end or the graph builder, or the <a href="../explainer/index.html">explainer</a> goes stale.</p>
+<h2 id="see-also">See also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="../tutorials/02-watch-a-scene-lower.html">Watch a scene lower</a> — the same commands as a lesson, if you have not used them before.</li><li><a href="../reference/03-graph.html"><code>pt/graph/</code></a> — what the five compile stages do to produce that plan.</li></ul><div class="prevnext"><a href="compare-renders-perceptually.html"><span class="k">Previous</span><span class="n">Compare two renders perceptually</span></a><a href="debug-a-single-pixel.html" style="text-align:right"><span class="k">Next</span><span class="n">Debug a single pixel</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#did-the-elaborated-scene-change">Did the elaborated scene change?</a><a class="lv2" href="#did-the-schedule-change">Did the schedule change?</a><a class="lv2" href="#did-the-buffers-change">Did the buffers change?</a><a class="lv2" href="#the-two-levels-with-no-cli">The two levels with no CLI</a><a class="lv2" href="#see-also">See also</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

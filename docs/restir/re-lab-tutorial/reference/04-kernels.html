@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pt/kernels/ — the Taichi layer · pt docs</title>
+<meta name="description" content="The execute layer, the device structs, the constraints that fail unhelpfully.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html" aria-current="true"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1><code>pt/kernels/</code> — the Taichi layer</h1><p class="summary">The execute layer, the device structs, the constraints that fail unhelpfully.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/04-kernels.md</code></span><span>information-oriented</span></div></div>
+<p>The fast twin. Mutates fields freely; the contract lives at the pass boundary (<a href="03-graph.html">03-graph</a>). Held to agreeing with <code>pt/core/</code> <strong>per sample</strong>.</p>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>_common.py</code></td><td>620</td><td>every <code>@ti.func</code> leaf: RNG, intersection, ONB/Lambert, light sampling, targets, reconnection</td></tr><tr><td><code>restir.py</code></td><td>502</td><td><code>build_restir_temporal</code>, <code>build_restir_spatial</code>, <code>build_reservoir_copy</code>, <code>build_restir_resolve</code></td></tr><tr><td><code>restir_gi.py</code></td><td>507</td><td><code>build_restir_gi_temporal</code>, <code>build_restir_gi_spatial</code>, <code>build_restir_gi_resolve</code></td></tr><tr><td><code>runtime.py</code></td><td>197</td><td>Taichi init, thread guards, field allocation, the device structs</td></tr><tr><td><code>shade_di.py</code></td><td>127</td><td><code>build_shade_uniform</code>, <code>build_shade_ris</code></td></tr><tr><td><code>shade_gi.py</code></td><td>100</td><td><code>build_shade_gi_uniform</code></td></tr><tr><td><code>scene_device.py</code></td><td>108</td><td><code>SceneDevice</code> — upload <code>SemanticIR</code> into read-only fields</td></tr><tr><td><code>intersect.py</code> / <code>primary_rays.py</code> / <code>tonemap.py</code></td><td>203</td><td>the rest of the graph</td></tr></tbody></table></div>
+<h2 id="the-build_-thunk-protocol">The <code>build_*</code> thunk protocol<a class="anchor" href="#the-build_-thunk-protocol" aria-label="Link to this section">#</a></h2>
+<p>Every kernel module exports factories with one shape:</p>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">def</span> build_&lt;<span class="tok-kw">pass</span>&gt;(cctx: CompileContext) -&gt; Callable[[RenderContext], <span class="tok-kw">None</span>]</code></pre></div>
+<p>The factory captures the fields its pass declared, defines a <code>@ti.kernel</code>, and returns an <code>execute(ctx)</code> closure the plan calls each frame.</p>
+<p><strong>Contract — nothing shell-mutable may be a compile-time capture.</strong> Camera, sample index, seed, bias mode, spatial radius and the reproject flag are <strong>kernel arguments</strong>, never captured. Anything captured requires a full <code>Engine.rebuild()</code> to change; anything passed is free. This is exactly why <code>set_seed</code> costs nothing and <code>with_resolution</code> costs ~5s.</p>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">def</span> build_restir_temporal(cctx):
+    sd    = cctx.scene_device
+    hits  = cctx.field_by_name(<span class="tok-str">"hits"</span>)          <span class="tok-cm"># captured: declared resources</span>
+    M     = int(cctx.params.get(<span class="tok-str">"M"</span>, <span class="tok-num">8</span>))        <span class="tok-cm"># captured: compile-time params</span>
+    @ti.kernel
+    <span class="tok-kw">def</span> run(sample: ti.i32, seed: ti.i32, temporal_on: ti.i32, bias_mode: ti.i32,
+            reproject_on: ti.i32, p_eye: ti.math.vec3, ...):   <span class="tok-cm"># arguments: per frame</span>
+        ...</code></pre></div>
+<h2 id="device-structs--runtimepy">Device structs — <code>runtime.py</code><a class="anchor" href="#device-structs--runtimepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>Reservoir = ti.types.struct(
+    y_p=ti.math.vec3, y_light=ti.i32, valid=ti.i32,
+    w_sum=ti.f32, M=ti.f32, W=ti.f32)      <span class="tok-cm"># M is float so capping can be fractional</span>
+
+PathReservoir = ti.types.struct(
+    y_p=ti.math.vec3,   <span class="tok-cm"># x2, the reconnection vertex</span>
+    y_n=ti.math.vec3,   <span class="tok-cm"># normal at x2, for the geometry term after a shift</span>
+    y_L=ti.math.vec3,   <span class="tok-cm"># L(x2 -&gt; x1), emission at x2 excluded</span>
+    y_pdf=ti.f32,       <span class="tok-cm"># solid-angle pdf as drawn at x1</span>
+    y_prim=ti.i32, valid=ti.i32, w_sum=ti.f32, M=ti.f32, W=ti.f32)</code></pre></div>
+<p><strong>Contract — these mirror <code>core/types.py</code> field for field</strong>, so the two implementations can be diffed per field rather than only per pixel.</p>
+<p>Two structs rather than one payload union, deliberately: Taichi structs are fixed-layout, so a union would cost the DI path the space, and the "the Jacobian is 1 because we store a world-space point" comments scattered through the DI code would become only <em>conditionally</em> true. The reuse <strong>algebra</strong> is not duplicated — only the payload. See <code>core/reservoir.ReuseDomain</code>.</p>
+<h2 id="runtime-services">Runtime services<a class="anchor" href="#runtime-services" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>init_runtime(prefer_gpu=<span class="tok-kw">False</span>, debug=<span class="tok-kw">False</span>, force=<span class="tok-kw">False</span>)   <span class="tok-cm"># idempotent unless force</span>
+owner_thread()                     <span class="tok-cm"># the thread that called init_runtime</span>
+check_allocation_thread(what=<span class="tok-str">"field"</span>) -&gt; <span class="tok-kw">None</span>   <span class="tok-cm"># fail early and legibly</span>
+is_initialized() -&gt; bool;  current_arch()
+place(builder, field, shape)
+make_field(desc, builder=<span class="tok-kw">None</span>)     <span class="tok-cm"># ResourceDesc -&gt; field; the only allocator the graph calls</span></code></pre></div>
+<h2 id="taichi-constraints-worth-knowing">Taichi constraints worth knowing<a class="anchor" href="#taichi-constraints-worth-knowing" aria-label="Link to this section">#</a></h2>
+<p>Four threading rules and two syntax rules that fail unhelpfully. All are enforced or worked around in <code>runtime.py</code> and <code>engine.py</code>.</p>
+<div class="tablewrap"><table><thead><tr><th>Constraint</th><th>What a violation looks like</th></tr></thead><tbody><tr><td><code>ti.init()</code> binds the LLVM context to the calling thread; <strong>only that thread may allocate fields</strong>. Launching kernels and <code>to_numpy()</code> elsewhere is fine.</td><td><code>Assertion failure: std::this_thread::get_id() == main_thread_id_</code> from <code>llvm_context.cpp</code> — no mention of threads owning fields</td></tr><tr><td>Field materialization is <strong>deferred</strong> until first access, so allocating on the right thread is not enough — it must be <em>touched</em> there.</td><td>The same assertion, but at first render rather than construction, so building appears to have succeeded</td></tr><tr><td>The default root <code>FieldsBuilder</code> is finalized on first materialization; no field can be created afterwards.</td><td><code>TaichiRuntimeError: FieldsBuilder finalized</code> when a second engine is built</td></tr><tr><td>Writing to a field forces materialization, illegal while a caller-owned <code>FieldsBuilder</code> is open.</td><td><code>Field builder … is not finalized</code>, raised from inside an innocuous data upload</td></tr><tr><td><em>Any</em> kernel launch validates that no builder is open — <strong>including one launched by another thread</strong>.</td><td>A rebuild on the main thread kills the render worker mid-frame with a bare <code>TaichiRuntimeError</code></td></tr></tbody></table></div>
+<p>Two more, unrelated to threading and both liable to bite while editing:</p>
+<ul><li><strong><code>from __future__ import annotations</code> breaks Taichi.</strong> PEP 563 stringifies annotations, and Taichi reads <code>@ti.kernel</code> / <code>@ti.func</code> argument annotations as live type objects. <strong>No module under <code>pt/kernels/</code> may use it.</strong> Every one carries a note.</li><li><strong><code>ti.template()</code> does not thread a scalar through a <code>@ti.func</code>.</strong> It passes fields by reference, not local scalars, so a stateful RNG whose counter is "advanced" by a callee silently returns the same number every draw — and the output still looks like plausible noise. This is why the RNG is stateless and indexed.</li></ul>
+<h2 id="how-the-inlined-algebra-corresponds">How the inlined algebra corresponds<a class="anchor" href="#how-the-inlined-algebra-corresponds" aria-label="Link to this section">#</a></h2>
+<p>The kernels are <code>combine_streams</code> with N fully expanded. In <code>build_restir_temporal</code>, the two-stream merge evaluates <code>p̂</code> for <strong>both</strong> samples at <strong>both</strong> shading points (<code>ph_t_q</code>, <code>ph_c_q</code>, <code>ph_t_t</code>, <code>ph_c_t</code>), which is <code>mis_weights_at</code>'s <code>density(i)</code> loop unrolled:</p>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">if</span> bias_mode == _NAIVE:
+    w_prev = ph_t_q * pr.W * m_prev                 <span class="tok-cm"># unnormalized 1/M form</span>
+<span class="tok-kw">else</span>:
+    den_t = m_c * ph_t_q + m_prev * ph_t_t
+    w_prev = (m_prev * ph_t_t / den_t) * ph_t_q * pr.W
+    den_c = m_c * ph_c_q + m_prev * ph_c_t
+    out.w_sum = out.w_sum * ph_c_q / den_c          <span class="tok-cm"># canonical re-weighted too</span>
+    mis_merged = <span class="tok-num">1</span></code></pre></div>
+<p><strong>Contract — finalize is selected by an explicit flag, not inferred.</strong> <code>mis_merged</code> exists because "no history was found" and "history was found and weighted" are different states that can leave <code>M</code> looking the same:</p>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">if</span> mis_merged == <span class="tok-num">1</span>: out.W = out.w_sum / ph          <span class="tok-cm"># finalize_mis</span>
+<span class="tok-kw">else</span>:               out.W = out.w_sum / (out.M * ph)  <span class="tok-cm"># finalize_ris</span></code></pre></div>
+<p><strong>Contract — <code>pairwise-mis</code> is not a third branch in the temporal kernel.</strong> With exactly two streams it reduces to the balance heuristic term for term, so it shares the <code>mis</code> path. Measured bit-identical.</p>
+<p>The GI spatial kernel is the fullest mirror, factoring the MIS denominator into a <code>@ti.func</code> whose body is <code>mis_weights_at</code>'s <code>density</code> summed:</p>
+<div class="codewrap"><pre class="lang-python"><code>@ti.func
+<span class="tok-kw">def</span> mis_denominator(idx, sample, seed, y_p, y_n, y_L, y_hit, canon_M, rad) -&gt; ti.f32:
+    <span class="tok-str">"""`sum_j M_j * p_hat_j(y) * J(y's domain -&gt; j)`."""</span></code></pre></div>
+<p><strong>Contract — the two Jacobian directions are different calls.</strong> Inside the denominator, <code>J(y_hit → stream i)</code>; at the absorb site, <code>J(stream i → q)</code>. The DI kernels contain no Jacobian factor at all — the <code>× 1</code> is elided, which is the concrete meaning of <code>DI_DOMAIN.jacobian = unit_jacobian</code>.</p>
+<p><strong>Contract — <code>usable()</code> tests <code>M &gt; 0</code>, not <code>valid</code>.</strong> This is the kernel spelling of <code>combine_streams</code>'s empty-stream rule; <code>has_sample()</code> is a separate predicate consulted only at the absorb site. See <a href="07-invariants.html#empty-streams">07-invariants</a>.</p><div class="prevnext"><a href="03-graph.html"><span class="k">Previous</span><span class="n"><code>pt/graph/</code> — the render graph</span></a><a href="05-runtime.html" style="text-align:right"><span class="k">Next</span><span class="n">Engine, shell and CLI</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#the-build_-thunk-protocol">The <code>build_*</code> thunk protocol</a><a class="lv2" href="#device-structs--runtimepy">Device structs — <code>runtime.py</code></a><a class="lv2" href="#runtime-services">Runtime services</a><a class="lv2" href="#taichi-constraints-worth-knowing">Taichi constraints worth knowing</a><a class="lv2" href="#how-the-inlined-algebra-corresponds">How the inlined algebra corresponds</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

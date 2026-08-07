@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-q="how-to">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare two renders perceptually · pt docs</title>
+<meta name="description" content="Run FLIP, read the map, and know the three questions it cannot answer.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html" aria-current="true">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>How-to guides</h4><a href="../how-to/index.html">Overview</a><a href="../how-to/measure-a-change-for-bias.html">Measure a change for bias</a><a href="../how-to/compare-renders-perceptually.html" aria-current="true">Compare two renders perceptually</a><a href="../how-to/dump-and-diff-an-intermediate.html">Dump and diff an intermediate</a><a href="../how-to/debug-a-single-pixel.html">Debug a single pixel</a><a href="../how-to/run-the-test-suites.html">Run the test suites</a><a href="../how-to/verify-the-racket-port.html">Verify the Racket port</a><a href="../how-to/add-to-the-renderer.html">Add a draw, a pass, a strategy, a scene</a><a href="../how-to/commit-with-signing.html">Commit with the signing agent</a><a href="../how-to/build-the-docs.html">Build the documentation</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">How-to guides</div><h1>Compare two renders perceptually</h1><p class="summary">Run FLIP, read the map, and know the three questions it cannot answer.</p><div class="srcline"><span>Source: <code>docs/how-to/compare-renders-perceptually.md</code></span><span>task-oriented</span></div></div>
+<p>Every other statistic in this harness is a number about radiance. FLIP answers a different question: <em>would a person see the difference, and where.</em></p>
+<h2 id="compare-two-images">Compare two images<a class="anchor" href="#compare-two-images" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt flip out/reference_linear.npy out/restir_linear.npy -o out/flip.png</code></pre></div>
+<p>Both inputs are the <strong>linear</strong> <code>.npy</code> buffers, not the PNGs — <code>pt render</code> writes <code>&lt;name&gt;_linear.npy</code> beside every image for this reason. The output is a magma error map and a mean FLIP score on stdout.</p>
+<h2 id="get-a-map-per-estimator-during-validation">Get a map per estimator during validation<a class="anchor" href="#get-a-map-per-estimator-during-validation" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt validate cornell_restir_gi --flip-maps out/flipmaps</code></pre></div>
+<p><code>pt validate</code> reports mean FLIP per estimator in its own column and writes one map per estimator into the directory you name.</p>
+<p>In the GUI there is a <strong>FLIP vs reference</strong> view that lights up once a converged reference is in the cache.</p>
+<h2 id="read-the-map">Read the map<a class="anchor" href="#read-the-map" aria-label="Link to this section">#</a></h2>
+<p>Bright regions are where a viewer would notice a difference; dark regions are where they would not. FLIP is <em>bounded per pixel</em>, which is the property that makes it useful here: unlike MSE — which a single firefly has been measured to own at 25,000× the median — nothing can dominate it. A map that is uniformly dim with one bright patch is telling you the truth about where your change landed.</p>
+<h2 id="know-what-it-will-not-tell-you">Know what it will not tell you<a class="anchor" href="#know-what-it-will-not-tell-you" aria-label="Link to this section">#</a></h2>
+<p><strong>It is not a bias detector.</strong> A converged biased estimator is perceptually smooth and scores well. This is not a limitation to work around; it is the reason the energy and MSE sections of <code>pt validate</code> still carry the verdicts. If your question is "is this correct", go to <a href="measure-a-change-for-bias.html">Measure a change for bias</a> instead.</p>
+<p><strong>Do not quote the number against a published one.</strong> This implementation is independent and anchored against NVlabs' <code>flip-evaluator</code>. The achromatic path is <em>exact</em> — 0.031368 against 0.031369 on a one-pixel edge shift, through the spatial CSF filter, both feature detectors, CIELab, HyAB and the redistribution. A residual sits in the two chromatic channels and reads high: about +0.01 of mean FLIP on this renderer's images, with the ordering between estimators preserved. That is what a column ranking estimators needs and is not enough to cite.</p>
+<p><code>tests/test_flip.py</code> pins the exact half to <code>1e-4</code> and the chromatic half to the measured gap, so either improving <em>or</em> worsening the agreement fails a test rather than silently changing what the column means.</p>
+<h2 id="why-the-anchor-exists">Why the anchor exists<a class="anchor" href="#why-the-anchor-exists" aria-label="Link to this section">#</a></h2>
+<p>Implementing FLIP from the paper left it 7% high on <em>every</em> achromatic difference. What found that was not review — it was running NVlabs' evaluator once in a throwaway environment and diffing against it.</p>
+<p>The bug was in <code>cmax</code>, the distance the colour difference is normalized by. The natural derivation is the largest HyAB distance the sRGB gamut admits, green to blue, which comes to 308.12; the reference behaves as though it were 203.29. The value is now <em>measured</em> rather than derived.</p>
+<p>The general form is the same move <code>validation/analytic.py</code> makes one level down by re-implementing its own vector math: an anchor that shares code — or a derivation — with the thing it validates can be corrupted by the same mistake and agree anyway.</p>
+<h2 id="see-also">See also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="../explanation/findings.html#a-metric-worth-having-is-worth-anchoring-and-the-anchor-found-the-bug">A metric worth having is worth anchoring, and the anchor found the bug</a> — the measured table and the two constraints that pin the constant.</li><li><a href="../reference/06-validation.html#flip--flippy"><code>validation/</code></a> — where FLIP sits in the chain of trust.</li></ul><div class="prevnext"><a href="measure-a-change-for-bias.html"><span class="k">Previous</span><span class="n">Measure a change for bias</span></a><a href="dump-and-diff-an-intermediate.html" style="text-align:right"><span class="k">Next</span><span class="n">Dump and diff an intermediate</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#compare-two-images">Compare two images</a><a class="lv2" href="#get-a-map-per-estimator-during-validation">Get a map per estimator during validation</a><a class="lv2" href="#read-the-map">Read the map</a><a class="lv2" href="#know-what-it-will-not-tell-you">Know what it will not tell you</a><a class="lv2" href="#why-the-anchor-exists">Why the anchor exists</a><a class="lv2" href="#see-also">See also</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

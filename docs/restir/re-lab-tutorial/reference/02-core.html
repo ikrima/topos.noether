@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pt/core/ — the pure reference · pt docs</title>
+<meta name="description" content="Types, the RNG dimension layout, geometry, the reuse algebra, the integrators.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html" aria-current="true"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1><code>pt/core/</code> — the pure reference</h1><p class="summary">Types, the RNG dimension layout, geometry, the reuse algebra, the integrators.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/02-core.md</code></span><span>information-oriented</span></div></div>
+<p>Genuinely pure: no I/O, no globals, no mutation of inputs, <strong>f64 throughout</strong>. This is the denotational spec. The Taichi kernels are f32 and must agree with it per sample, so a disagreement points at <em>structure</em>, not float noise.</p>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>types.py</code></td><td>126</td><td>frozen value types, mirroring <code>kernels/runtime.py</code> field for field</td></tr><tr><td><code>vecmath.py</code></td><td>97</td><td>f64 vector helpers on plain tuples</td></tr><tr><td><code>rng.py</code></td><td>191</td><td>the counter-based RNG and its dimension contract</td></tr><tr><td><code>geometry.py</code></td><td>262</td><td>analytic intersection + the two epsilons</td></tr><tr><td><code>camera.py</code></td><td>144</td><td>ray generation, projection, reprojection</td></tr><tr><td><code>lights.py</code></td><td>123</td><td>area-light sampling; pdfs stay in <strong>area</strong> measure</td></tr><tr><td><code>bsdf.py</code></td><td>58</td><td>Lambertian only, behind a stable interface</td></tr><tr><td><code>shading.py</code></td><td>129</td><td>the direct-lighting estimator, stated once</td></tr><tr><td><code>reservoir.py</code></td><td>372</td><td><strong>the reuse algebra</strong> and <code>ReuseDomain</code></td></tr><tr><td><code>reconnect.py</code></td><td>282</td><td>the GI shift mapping and the only real Jacobian</td></tr><tr><td><code>integrators/</code></td><td>1,015</td><td>five integrators</td></tr><tr><td><code>render.py</code></td><td>246</td><td>the reference frame loop</td></tr><tr><td><code>pathtree.py</code> + <code>pathtree_types.py</code></td><td>263</td><td>on-demand per-pixel path reconstruction</td></tr></tbody></table></div>
+<p>For the mathematics rather than the API, read <a href="semantics.html">semantics.md</a>.</p>
+<h2 id="value-types--typespy">Value types — <code>types.py</code><a class="anchor" href="#value-types--typespy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>Ray(origin, dir, pixel=-<span class="tok-num">1</span>, sample=<span class="tok-num">0</span>)
+Hit(valid=<span class="tok-kw">False</span>, t=inf, p, n, wo, material_id=-<span class="tok-num">1</span>, prim_id=-<span class="tok-num">1</span>, light_id=-<span class="tok-num">1</span>, pixel=-<span class="tok-num">1</span>)
+LightSample(p, wi, dist, radiance, pdf_area, pdf_solid_angle, light_id, cos_light=<span class="tok-num">0.0</span>, valid=<span class="tok-kw">True</span>)
+PathSample(p, n, radiance, pdf_solid_angle, prim_id=-<span class="tok-num">1</span>, valid=<span class="tok-kw">True</span>)
+Projected(sx, sy, depth, visible)
+PathNode(kind, payload={}, children=())   <span class="tok-cm"># .walk() .find(kind) .with_children(…)</span></code></pre></div>
+<p>All frozen dataclasses. <code>LightSample</code> and <code>PathSample</code> are the two reservoir payloads, and the difference that matters is <strong>which measure their density is in</strong>: <code>pdf_area</code> for a light point, <code>pdf_solid_angle</code> for a path suffix. That single fact is why DI needs no Jacobian and GI does.</p>
+<h2 id="rng">RNG — <code>rng.py</code><a class="anchor" href="#rng" aria-label="Link to this section">#</a></h2>
+<p>Every stochastic decision is a pure hash. There is no stream state anywhere.</p>
+<div class="codewrap"><pre class="lang-python"><code>pcg(v: int) -&gt; int
+hash4(pixel, sample, bounce, dim, seed=<span class="tok-num">0</span>) -&gt; int    <span class="tok-cm"># argument order is part of the contract</span>
+uniform_from(h: int) -&gt; float                       <span class="tok-cm"># (h &gt;&gt; 8) * 2^-24</span>
+rand1(pixel, sample, bounce, dim, seed=<span class="tok-num">0</span>) -&gt; float
+rand2(pixel, sample, bounce, dim, seed=<span class="tok-num">0</span>) -&gt; (float, float)</code></pre></div>
+<p>Mixing constants (<code>_PCG_MUL</code>, <code>_PCG_INC</code>, <code>_PCG_XSH</code>, <code>_K_PIXEL</code>, <code>_K_SAMPLE</code>, <code>_K_BOUNCE</code>, <code>_K_SEED</code>, <code>_INV_2_24</code>) are duplicated <strong>verbatim</strong> in <code>kernels/_common.py</code>. <code>tests/test_kernels.py::TestRngParity</code> pins the pair bit for bit.</p>
+<h3 id="the-bounce-axis--one-stream-per-path-vertex">The bounce axis — one stream per path vertex<a class="anchor" href="#the-bounce-axis--one-stream-per-path-vertex" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre class="lang-python"><code>BOUNCE_CAMERA        = <span class="tok-num">0</span>   <span class="tok-cm"># primary-ray generation</span>
+BOUNCE_SHADE         = <span class="tok-num">1</span>   <span class="tok-cm"># direct lighting / initial RIS candidates, at the primary hit</span>
+BOUNCE_TEMPORAL      = <span class="tok-num">2</span>   <span class="tok-cm"># ReSTIR temporal reuse</span>
+BOUNCE_SPATIAL       = <span class="tok-num">3</span>   <span class="tok-cm"># ReSTIR spatial reuse</span>
+BOUNCE_BSDF          = <span class="tok-num">4</span>   <span class="tok-cm"># path extension, all vertices</span>
+BOUNCE_SHADE_INDIRECT = <span class="tok-num">5</span>  <span class="tok-cm"># NEE at path vertex 1; vertex k uses 5 + (k - 1)</span>
+
+shade_bounce(depth) -&gt; BOUNCE_SHADE <span class="tok-kw">if</span> depth == <span class="tok-num">0</span> <span class="tok-kw">else</span> BOUNCE_SHADE_INDIRECT + depth - <span class="tok-num">1</span></code></pre></div>
+<p><strong>Contract — vertex 0 keeps <code>BOUNCE_SHADE</code> at any depth.</strong> A two-bounce render draws <em>exactly</em> the numbers a one-bounce render draws at its first vertex. This is what makes <code>L(2 bounces) − L(1 bounce)</code> the indirect term <strong>per sample</strong>, exactly, rather than statistically — the basis of the entire GI validation path (<a href="06-validation.html#the-indirect-term">06-validation</a>).</p>
+<p>Deeper vertices get their own bounce <em>id</em> rather than an offset inside <code>BOUNCE_SHADE</code>, because the candidate block there is <code>M · CAND_STRIDE</code> wide with <code>M</code> a runtime parameter — any fixed offset would collide for some <code>M</code>, invisibly.</p>
+<h3 id="the-dim-axis">The dim axis<a class="anchor" href="#the-dim-axis" aria-label="Link to this section">#</a></h3>
+<div class="tablewrap"><table><thead><tr><th>Bounce</th><th>Stride</th><th>Slots</th><th>Accessor</th></tr></thead><tbody><tr><td>0 camera</td><td>—</td><td><code>DIM_JITTER = 0</code> (+1 for the second axis)</td><td>—</td></tr><tr><td>1 shade</td><td><code>CAND_STRIDE = 4</code></td><td><code>CAND_PICK=0 CAND_U=1 CAND_V=2 CAND_ACCEPT=3</code></td><td><code>cand_dim(i, which)</code></td></tr><tr><td>2 temporal</td><td>—</td><td><code>DIM_TEMPORAL_ACCEPT = 0</code></td><td>—</td></tr><tr><td>3 spatial</td><td><code>TAP_STRIDE = 4</code></td><td><code>TAP_ANGLE=0 TAP_RADIUS=1 TAP_ACCEPT=2</code></td><td><code>tap_dim(k, which)</code></td></tr><tr><td>4 bsdf</td><td><code>BSDF_STRIDE = 2</code></td><td><code>BSDF_U=0 BSDF_V=1</code></td><td><code>bsdf_dim(depth, which)</code></td></tr><tr><td>4 bsdf (GI ReSTIR)</td><td><code>GI_CAND_STRIDE = 3</code></td><td><code>GI_CAND_U=0 GI_CAND_V=1 GI_CAND_ACCEPT=2</code></td><td><code>gi_cand_dim(i, which)</code></td></tr></tbody></table></div>
+<p><strong>Contract — the GI alias.</strong> GI candidates share bounce 4 with path extension, aligned so candidate 0's <code>(u, v)</code> are dimensions 0 and 1 — exactly <code>bsdf_dim(0, ·)</code>. That is what lets <em>ReSTIR GI at M=1 with reuse off be compared to the two-bounce uniform path tracer <strong>per sample</strong></em> — they draw the same numbers. The outputs are not bit-identical: the bounce ray leaves from <code>x1 + eps * n</code>, so reuse re-derives a direction differing from the sampled one by about <code>eps / d</code>. See <code>core/integrators/gi_restir.py</code>. The price: candidate <code>i &gt; 0</code> overlaps vertex <code>i</code>'s BSDF dimensions, so a path reservoir cannot coexist with a &gt;2-bounce path. Enforced in <code>elaborate.py</code> as <code>GI_BOUNCE_EXACTLY_TWO</code>.</p>
+<p><strong>Trap.</strong> Adding a draw means allocating a dimension in <strong>both</strong> <code>core/rng.py</code> and <code>kernels/_common.py</code>, or two "independent" draws silently become the same number — which looks exactly like plausible noise. See <a href="../how-to/add-to-the-renderer.html#add-a-random-draw">08-extending</a>.</p>
+<h2 id="geometry-and-the-two-epsilons--geometrypy">Geometry and the two epsilons — <code>geometry.py</code><a class="anchor" href="#geometry-and-the-two-epsilons--geometrypy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>intersect_plane / intersect_sphere / intersect_quad / intersect_prim
+intersect_scene(scene, ray) -&gt; Hit               <span class="tok-cm"># closest hit, linear scan</span>
+intersect_scene_any(scene, o, d, max_dist) -&gt; bool   <span class="tok-cm"># any-hit in [EPS, max_dist)</span>
+prim_normal_at(prim, p)
+shadow_epsilon(dist) -&gt; float                    <span class="tok-cm"># SHADOW_EPS + dist * SHADOW_REL</span>
+scatter_epsilon(dist) -&gt; float                   <span class="tok-cm"># SCATTER_EPS + dist * SCATTER_REL</span></code></pre></div>
+<div class="codewrap"><pre class="lang-python"><code>EPS         = <span class="tok-num">1e-4</span>    <span class="tok-cm"># minimum accepted intersection distance</span>
+SHADOW_EPS  = <span class="tok-num">1e-3</span>    SHADOW_REL  = <span class="tok-num">1e-4</span>
+SCATTER_EPS = <span class="tok-num">1e-4</span>    SCATTER_REL = <span class="tok-num">1e-5</span></code></pre></div>
+<p><strong>Contract — the two epsilons must not share a scale, and neither may cancel.</strong></p>
+<p>Two findings live here, both in <code>ARCHITECTURE.md</code>:</p>
+<ul><li><em>"A shadow-ray epsilon that cancels itself"</em> — offsetting the origin forward by <code>eps</code> <strong>and</strong> shortening the far end by <code>eps</code> makes the two cancel, putting the light's own surface exactly on the <code>t &lt; limit</code> boundary, decided by rounding, which f64 and f32 resolve differently. It caused <strong>31% of pixels</strong> to disagree reference-vs-kernel; shortening by <em>twice</em> the offset took that to 0.2%.</li><li><em>"A bounce ray's epsilon and a shadow ray's solve different problems"</em> — a shadow ray's margin scales by its <strong>own</strong> length; a bounce ray has no far endpoint yet, so reusing the shadow formula scales it by the <strong>primary</strong> ray's length (~1300 units in the Cornell box), putting the origin 0.13 units off the surface. Worst-sample identity error: <strong>169%</strong>. <code>SCATTER_REL = 1e-5</code> was measured, not argued.</li></ul>
+<h2 id="lights-and-shading">Lights and shading<a class="anchor" href="#lights-and-shading" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-cm"># lights.py — pdfs stay in AREA measure, never converted</span>
+pick_light(scene, u) -&gt; (light_id, pdf_pick)
+light_pdf_area(scene, light_id) -&gt; float          <span class="tok-cm"># (1/n_lights) * (1/area)</span>
+sample_area_light(scene, light_id, x, u, v) -&gt; LightSample
+light_sample_at(scene, light_id, world_p, x) -&gt; LightSample   <span class="tok-cm"># rebuild for an existing point</span>
+cos_at_light(scene, light_id, p, wi) -&gt; float
+
+<span class="tok-cm"># shading.py — the direct-lighting estimator, stated once</span>
+eval_contribution(scene, hit, ls) -&gt; (rgb, cos_shade, cos_light, G)   <span class="tok-cm"># unshadowed f * Le * G</span>
+target_phat(scene, hit, ls, mode=UNSHADOWED_COSINE) -&gt; float
+occluded(scene, hit, ls) -&gt; bool
+shade_from_sample(scene, hit, ls, W)                                  <span class="tok-cm"># f * Le * G * W</span>
+emitted_radiance(scene, hit)</code></pre></div>
+<p><strong>Contract — <code>light_sample_at</code> is exact.</strong> Re-deriving <code>wi</code> and <code>dist</code> from a stored world-space point loses nothing, which is precisely why <code>DI_DOMAIN</code> pairs <code>phat_at</code> with a Jacobian that is identically 1.</p>
+<h3 id="target-modes">Target modes<a class="anchor" href="#target-modes" aria-label="Link to this section">#</a></h3>
+<div class="tablewrap"><table><thead><tr><th>Mode</th><th><code>p̂</code></th></tr></thead><tbody><tr><td><code>UNSHADOWED</code></td><td><code>Le · cos_light / d²</code> — no BRDF, no receiver cosine</td></tr><tr><td><code>UNSHADOWED_COSINE</code></td><td>full <code>f · Le · G</code>, unshadowed (<strong>the default</strong>)</td></tr><tr><td><code>FULL</code></td><td>includes visibility — one ray per candidate; reserved</td></tr></tbody></table></div>
+<p><code>p̂</code> is unshadowed by default because tracing a shadow ray per candidate would defeat the point of resampling. Resample against the cheap target, then trace exactly one shadow ray for the survivor.</p>
+<h2 id="the-reuse-algebra--reservoirpy">The reuse algebra — <code>reservoir.py</code><a class="anchor" href="#the-reuse-algebra--reservoirpy" aria-label="Link to this section">#</a></h2>
+<p>The module the project's subtlest bugs have all lived in. Full treatment in <a href="semantics.html">semantics.md</a>; this is the API.</p>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> Reservoir:
+    y: LightSample = <span class="tok-kw">None</span>   <span class="tok-cm"># the surviving sample; None when empty</span>
+    w_sum: float = <span class="tok-num">0.0</span>      <span class="tok-cm"># running sum of resampling weights</span>
+    M: float = <span class="tok-num">0.0</span>          <span class="tok-cm"># confidence — float, so capping can be fractional</span>
+    W: float = <span class="tok-num">0.0</span>          <span class="tok-cm"># contribution weight the shading pass multiplies by</span>
+    @property valid -&gt; bool  <span class="tok-cm"># y is not None and W &gt; 0</span>
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> Stream:
+    res: Reservoir; hit: Hit; kind: str = <span class="tok-str">"canonical"</span>; pixel: int = -<span class="tok-num">1</span>
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> ReuseDomain:
+    name: str
+    phat: Callable        <span class="tok-cm"># (scene, hit, y, target_mode) -&gt; float</span>
+    jacobian: Callable = unit_jacobian   <span class="tok-cm"># (scene, y, from_hit, to_hit) -&gt; |d(to)/d(from)|</span></code></pre></div>
+<div class="codewrap"><pre class="lang-python"><code>empty() -&gt; Reservoir
+update(r, cand, w, u) -&gt; Reservoir              <span class="tok-cm"># = absorb(r, cand, w, 1.0, u)</span>
+absorb(r, y, w, m_add, u) -&gt; Reservoir          <span class="tok-cm"># Chao's weighted reservoir sampling</span>
+finalize_ris(r, phat_y) -&gt; Reservoir            <span class="tok-cm"># W = w_sum / (M · p̂(y))</span>
+finalize_mis(r, phat_y) -&gt; Reservoir            <span class="tok-cm"># W = w_sum / p̂(y)</span>
+phat_at(scene, hit, y, mode) -&gt; float           <span class="tok-cm"># the DI target hook</span>
+unit_jacobian(scene, y, from_hit, to_hit) -&gt; float   <span class="tok-cm"># constantly 1.0</span>
+mis_weights_at(scene, streams, y, target_mode, bias_mode, domain=DI_DOMAIN, y_hit=<span class="tok-kw">None</span>)
+combine_streams(scene, hit_q, streams, accept_draws, target_mode=…, bias_mode=…,
+                capture=<span class="tok-kw">False</span>, domain=DI_DOMAIN) -&gt; (Reservoir, records)
+
+DI_DOMAIN = ReuseDomain(name=<span class="tok-str">"di"</span>, phat=phat_at, jacobian=unit_jacobian)</code></pre></div>
+<p><strong>Contract — <code>Stream</code> carries the hit, and must.</strong> An MIS weight asks "how likely was each contributing stream to produce this sample?", which cannot be answered without knowing the shading point each stream was defined at.</p>
+<p><strong>Contract — a stream that found nothing still has confidence <code>M</code>.</strong> <code>combine_streams</code> absorbs <code>(None, w=0, m_add=s.res.M)</code> for an empty stream. Two findings turn on this; see <a href="07-invariants.html#empty-streams">07-invariants</a>.</p>
+<p><strong>Contract — a domain is a value, not a subclass.</strong> Deliberate: a test injects a knowingly wrong Jacobian and asserts the answer moves (<code>tests/test_core.py::TestReuseDomain</code>).</p>
+<h2 id="the-shift-mapping--reconnectpy">The shift mapping — <code>reconnect.py</code><a class="anchor" href="#the-shift-mapping--reconnectpy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> Reconnection:
+    wi; dist; cos_shade; cos_vertex; g; valid
+
+reconnect(scene, y: PathSample, hit) -&gt; Reconnection
+reconnection_jacobian(scene, y, from_hit, to_hit) -&gt; float
+gi_contribution(scene, hit, y) -&gt; (rgb, Reconnection)
+gi_phat_at(scene, hit, y, mode=UNSHADOWED_COSINE) -&gt; float
+reconnection_occluded(scene, hit, y, rc=<span class="tok-kw">None</span>) -&gt; bool
+
+DIST_EPSILON = <span class="tok-num">1e-6</span>
+GI_DOMAIN = ReuseDomain(name=<span class="tok-str">"gi"</span>, phat=gi_phat_at, jacobian=reconnection_jacobian)</code></pre></div>
+<p><code>GI_DOMAIN</code> lives here rather than in <code>reservoir.py</code> to avoid an import cycle.</p>
+<p>The Jacobian, with <strong>both cosines at x2</strong>:</p>
+<div class="codewrap"><pre><code>J(r → q) = |dω_q / dω_r| = (cos_q / d_q²) · (d_r² / cos_r)</code></pre></div>
+<p>Three deliberate non-choices, each recorded as a finding:</p>
+<ul><li><strong>No clamp on J.</strong> Clamping silently rewrites the estimator. A grazing reconnection is a large finite number, which is the correct answer and a genuine firefly.</li><li><strong>No grazing-cosine threshold.</strong> <code>reconnect</code> decides <em>two</em> things — whether a shift exists, and whether the target is non-zero — and an epsilon for the first silently did the second, zeroing <code>p̂</code> for the <strong>canonical</strong> stream's own sample. A target that is zero where the contribution is not is biased, full stop. Found by the per-sample identity against the uniform path tracer <em>and by nothing else</em>.</li><li><strong>Measure choice is exclusive.</strong> <code>gi_contribution</code> returns <code>f · cos(θ₁) · L</code> in <em>solid angle</em>, not <code>f · G · L</code> in area, because <code>G</code> already contains the conversion the Jacobian applies.</li></ul>
+<p><strong>Precondition.</strong> Reconnection is legal at all only because every material is Lambertian, so <code>L(x2→x1)</code> is view-independent. This is the first thing that breaks with a glossy BSDF.</p>
+<h2 id="integrators--integrators">Integrators — <code>integrators/</code><a class="anchor" href="#integrators--integrators" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>integrator_for(integrator_ir)          <span class="tok-cm"># the strategy swap point</span>
+shade_dispatch(scene, hit, pixel, sample, *, prev=<span class="tok-kw">None</span>, neighbors=(), capture=<span class="tok-kw">False</span>)</code></pre></div>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Strategy</th><th>Shape</th></tr></thead><tbody><tr><td><code>di_uniform.py</code></td><td><code>UNIFORM</code></td><td>one light, one sample, one shadow ray. Validated against closed form.</td></tr><tr><td><code>di_ris.py</code></td><td><code>RIS</code></td><td>M candidates, resample one against <code>p̂</code></td></tr><tr><td><code>di_restir.py</code></td><td><code>RESTIR_DI</code></td><td>four passes, light payload</td></tr><tr><td><code>gi_uniform.py</code></td><td><code>UNIFORM</code>, <code>max_bounces &gt; 1</code></td><td>multi-bounce path tracing with NEE at every vertex</td></tr><tr><td><code>gi_restir.py</code></td><td><code>RESTIR_GI</code></td><td>four passes over a path-suffix payload</td></tr><tr><td><code>_shared.py</code></td><td>—</td><td><code>nee_sample</code>, <code>generate_candidates</code> — shared so identities hold by construction</td></tr></tbody></table></div>
+<p><code>di_restir</code> and <code>gi_restir</code> expose the <strong>same four signatures</strong>, one per render-graph pass, which is what lets validation diff reference-vs-kernel per pass:</p>
+<div class="codewrap"><pre class="lang-python"><code>initial_and_temporal(scene, hit, pixel, sample, prev=<span class="tok-kw">None</span>, *, M, target, temporal,
+                     m_cap, bias_mode, capture, prev_hit, prev_pixel)
+spatial_reuse(scene, hit, pixel, sample, curr, neighbors, *, target, spatial_count,
+              bias_mode, capture)
+resolve(scene, hit, res)          <span class="tok-cm"># -&gt; (radiance, occluded, sample | None)</span>
+shade(...)                        <span class="tok-cm"># -&gt; (radiance, Reservoir, PathNode | None)</span></code></pre></div>
+<p>Only three things differ between them: <code>generate_path_candidates</code> instead of <code>_shared.generate_candidates</code>, <code>domain=GI_DOMAIN</code> at both <code>combine_streams</code> call sites, and <code>resolve</code> going through <code>gi_contribution</code>. <code>gi_restir.shade</code> additionally adds a separate uniform NEE term at x1 — <strong>the reservoir carries the indirect term only</strong>.</p>
+<p>Geometric gates are <em>imported</em> from <code>di_restir</code> by <code>gi_restir</code>, because they ask whether two pixels are on the same surface, which is a question about shading points and not about the payload:</p>
+<div class="codewrap"><pre class="lang-python"><code>neighbor_offsets(pixel, sample, width, height, count, radius, seed=<span class="tok-num">0</span>) -&gt; list[int]
+accept_neighbor(hit_q, hit_n) -&gt; bool          <span class="tok-cm"># cos &gt;= 0.9 and |Δt| &lt; 0.1 · max(|t|)</span>
+reprojected_pixel(prev_cam, hit) -&gt; int        <span class="tok-cm"># -1 means no history, never a fallback</span>
+accept_reprojection(hit_q, hit_prev) -&gt; bool   <span class="tok-cm"># PLANE distance, not eye distance</span>
+
+NORMAL_THRESHOLD = <span class="tok-num">0.9</span>   DEPTH_THRESHOLD = <span class="tok-num">0.1</span>   PLANE_THRESHOLD = <span class="tok-num">0.02</span></code></pre></div>
+<p><strong>Contract — the temporal gate is not the spatial gate.</strong> <code>accept_neighbor</code> compares <code>hit.t</code>, distance from the eye: fair within one frame, invalid across a moving camera. Dolly 20% and a <em>perfectly</em> reprojected static point fails, discarding all reuse exactly when it would pay. <code>accept_reprojection</code> uses plane distance, <code>|dot(p_prev − p_q, n_q)| &lt; 0.02·t</code>, which tolerates the tangential slop a floored pixel index guarantees while still catching a disocclusion.</p>
+<p><strong>Contract — the spatial/temporal admission asymmetry.</strong> Spatial streams are admitted on <code>nres.M &gt; 0</code>; temporal streams on <code>prev.y is not None</code>. A spatial neighbour is a fresh reservoir over candidates drawn <em>this frame</em>, so its confidence belongs in the denominator regardless. An empty history carries an <code>M</code> already spent diluting earlier frames, and feeding it back is a feedback loop. Measured: treating them the same took the indirect term from 0.993 to <strong>0.939</strong>.</p>
+<h2 id="the-frame-loop--renderpy">The frame loop — <code>render.py</code><a class="anchor" href="#the-frame-loop--renderpy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>trace_hits(scene, sample, pixels=<span class="tok-kw">None</span>) -&gt; {pixel: Hit}
+render_reference(scene, spp=<span class="tok-kw">None</span>, on_progress=<span class="tok-kw">None</span>, cameras=<span class="tok-kw">None</span>) -&gt; (H,W,<span class="tok-num">3</span>) float64
+render_reference_frames(scene, cameras, on_progress=<span class="tok-kw">None</span>) -&gt; (F,H,W,<span class="tok-num">3</span>)
+estimate_pixels(scene, pixels, spp, strategy=<span class="tok-kw">None</span>) -&gt; {pixel: (r,g,b)}</code></pre></div>
+<p><code>_render_restir</code> carries <code>(res_prev, hits_prev, cam_prev)</code> across frames. Per frame: retrace all primary hits → <strong>pass 1 for every pixel</strong> → <strong>pass 2 for every pixel</strong> → pass 3 → rollover.</p>
+<p><strong>Contract — the pass split is a correctness requirement.</strong> Spatial reuse reads <em>this frame's</em> post-temporal reservoirs, so every pixel must finish pass 1 before any pixel starts pass 2. Otherwise each pixel samples an arbitrary mixture of updated and stale neighbours. The graph enforces the same thing by having spatial reuse read <code>reservoir_temporal</code> and write <code>reservoir_curr</code>.</p>
+<p><strong>Contract — the history rollover differs by payload.</strong></p>
+<div class="codewrap"><pre class="lang-python"><code>res_prev = res_temporal <span class="tok-kw">if</span> mod <span class="tok-kw">is</span> gi_restir <span class="tok-kw">else</span> res_curr
+hits_prev = hits</code></pre></div>
+<p>GI rolls the <strong>pre-spatial</strong> reservoir. Rolling the post-spatial one lets a sample travel between pixels and come back as a second stream offering the same draw to the same merge; the balance heuristic then counts one draw's probability <em>k</em> times. Measured: 31% distinct vertices, indirect term 0.955 at <code>m_cap</code> 20 falling to 0.939 at 60; rolling <code>reservoir_temporal</code> forces duplication to exactly 1.00 and the deficit flattens at ~0.990 with the <code>m_cap</code> scaling gone entirely. DI keeps the post-spatial roll because every DI number in <code>ARCHITECTURE.md</code> was measured under it.</p>
+<p><strong>Contract — reservoirs and hits roll together.</strong> <code>reservoir_prev[i]</code> was built at <code>hits_prev[i]</code>.</p>
+<p><code>Engine._make_advance</code> is the device twin of this and must not drift.</p>
+<h2 id="path-trees--pathtreepy-pathtree_typespy">Path trees — <code>pathtree.py</code>, <code>pathtree_types.py</code><a class="anchor" href="#path-trees--pathtreepy-pathtree_typespy" aria-label="Link to this section">#</a></h2>
+<p>Re-runs one pixel with <code>capture=True</code>. Because of the RNG contract this reproduces the path that was <em>actually traced</em> — evidence, not a re-roll. <code>pathtree_types.py</code> holds the node builders (<code>candidate_node</code>, <code>chosen_node</code>, <code>reuse_node</code>, <code>reconnection_node</code>, <code>shadow_node</code>, <code>bounce_node</code>, …) that are the schema contract with the debug UI.</p><div class="prevnext"><a href="01-dsl.html"><span class="k">Previous</span><span class="n"><code>pt/dsl/</code> — the front end</span></a><a href="03-graph.html" style="text-align:right"><span class="k">Next</span><span class="n"><code>pt/graph/</code> — the render graph</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#value-types--typespy">Value types — <code>types.py</code></a><a class="lv2" href="#rng">RNG — <code>rng.py</code></a><a class="lv3" href="#the-bounce-axis--one-stream-per-path-vertex">The bounce axis — one stream per path vertex</a><a class="lv3" href="#the-dim-axis">The dim axis</a><a class="lv2" href="#geometry-and-the-two-epsilons--geometrypy">Geometry and the two epsilons — <code>geometry.py</code></a><a class="lv2" href="#lights-and-shading">Lights and shading</a><a class="lv3" href="#target-modes">Target modes</a><a class="lv2" href="#the-reuse-algebra--reservoirpy">The reuse algebra — <code>reservoir.py</code></a><a class="lv2" href="#the-shift-mapping--reconnectpy">The shift mapping — <code>reconnect.py</code></a><a class="lv2" href="#integrators--integrators">Integrators — <code>integrators/</code></a><a class="lv2" href="#the-frame-loop--renderpy">The frame loop — <code>render.py</code></a><a class="lv2" href="#path-trees--pathtreepy-pathtree_typespy">Path trees — <code>pathtree.py</code>, <code>pathtree_types.py</code></a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

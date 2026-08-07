@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-q="how-to">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify the Racket port · pt docs</title>
+<meta name="description" content="Generate a fixture, check the port against it, then mutation-test the checker — the third step is not optional.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html" aria-current="true">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>How-to guides</h4><a href="../how-to/index.html">Overview</a><a href="../how-to/measure-a-change-for-bias.html">Measure a change for bias</a><a href="../how-to/compare-renders-perceptually.html">Compare two renders perceptually</a><a href="../how-to/dump-and-diff-an-intermediate.html">Dump and diff an intermediate</a><a href="../how-to/debug-a-single-pixel.html">Debug a single pixel</a><a href="../how-to/run-the-test-suites.html">Run the test suites</a><a href="../how-to/verify-the-racket-port.html" aria-current="true">Verify the Racket port</a><a href="../how-to/add-to-the-renderer.html">Add a draw, a pass, a strategy, a scene</a><a href="../how-to/commit-with-signing.html">Commit with the signing agent</a><a href="../how-to/build-the-docs.html">Build the documentation</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">How-to guides</div><h1>Verify the Racket port</h1><p class="summary">Generate a fixture, check the port against it, then mutation-test the checker — the third step is not optional.</p><div class="srcline"><span>Source: <code>docs/how-to/verify-the-racket-port.md</code></span><span>task-oriented</span></div></div>
+<p><code>port/racket/</code> reimplements the <em>thinking</em> layers — <code>pt/dsl/</code>, <code>pt/graph/</code>, <code>pt/core/</code> — as <code>#lang restir/estimator</code>. Kernels and the converged-reference oracle stay in Python. All eight steps are done.</p>
+<p>Verification has three parts, and the third is not optional.</p>
+<h2 id="1-generate-a-fixture-from-python">1. Generate a fixture from Python<a class="anchor" href="#1-generate-a-fixture-from-python" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code><span class="tok-kw">python</span> docs/architecture/conformance/gen_conformance.py            <span class="tok-cm"># step 1 — RNG</span>
+<span class="tok-kw">python</span> docs/architecture/conformance/gen_scene_conformance.py      <span class="tok-cm"># step 2</span>
+<span class="tok-kw">python</span> docs/architecture/conformance/gen_geometry_conformance.py   <span class="tok-cm"># step 3</span>
+<span class="tok-kw">python</span> docs/architecture/conformance/gen_reservoir_conformance.py  <span class="tok-cm"># step 4</span>
+<span class="tok-kw">python</span> docs/architecture/conformance/gen_reconnect_conformance.py  <span class="tok-cm"># step 5</span>
+<span class="tok-kw">python</span> docs/architecture/conformance/gen_graph_conformance.py      <span class="tok-cm"># step 6</span></code></pre></div>
+<p>Each writes a JSON of golden values into <code>docs/architecture/conformance/</code>. What each file pins is tabulated in <a href="../reference/conformance.html">Conformance vectors</a>.</p>
+<p><strong>Fixtures must be language-neutral JSON.</strong> Python's <code>json.dump</code> emits a bare <code>Infinity</code>, which is a Python extension that conforming readers reject. Encode non-finite values as strings and pass <code>allow_nan=False</code>.</p>
+<p>To check the <em>Python</em> against its own frozen vectors without regenerating anything:</p>
+<div class="codewrap"><pre class="lang-bash"><code><span class="tok-kw">python</span> docs/architecture/conformance/verify_conformance.py</code></pre></div>
+<h2 id="2-check-the-racket-against-it">2. Check the Racket against it<a class="anchor" href="#2-check-the-racket-against-it" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code><span class="tok-kw">raco</span> test port/racket</code></pre></div>
+<p>Two claims are asserted <strong>separately</strong>, and the split matters:</p>
+<ul><li>every compared value is within a <code>1e-12</code> relative tolerance, allowed for the three libm calls in the path (<code>tan</code> in the camera basis, <code>sqrt</code> in every length, <code>sin</code>/<code>cos</code> in the sphere light);</li><li>every compared value is <strong>exactly</strong> equal.</li></ul>
+<p>Measured, the tolerance has never been used: all 55,184 values agree bit for bit. It stays because a different platform libm is a real possibility and the alternative is a suite that fails for a reason it cannot explain. But only the exactness check catches a one-ulp defect — and there has been one. Reverting the compensated sum below is invisible to the tolerance and immediately visible to exactness.</p>
+<p>Keeping them separate also makes failure legible: if the exactness check is the only one failing, the port is fine and the platform's libm differs.</p>
+<h2 id="3-mutation-test-the-checker">3. Mutation-test the checker<a class="anchor" href="#3-mutation-test-the-checker" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>port/racket/test/mutations.sh     <span class="tok-cm"># ~3 min</span></code></pre></div>
+<p>Deliberately break the port and confirm the suite notices. <strong>A fixture generated from an implementation tests only the branches that implementation happens to take</strong>, and that set is consistently smaller than it looks.</p>
+<p>What this has actually caught:</p>
+<ul><li><strong>A broken harness.</strong> The script grepped for "failed" where <code>raco test</code> prints "failures", so eight real mutations read as passes.</li><li><strong><code>EPS</code> is unreachable through a render.</strong> Every ray a scene traces starts either at the camera or at a shading point already offset by <code>shadow_epsilon</code>, which is <code>1e-3</code> at minimum — an order of magnitude above <code>EPS = 1e-4</code>. Deleting the guard changes no pixel of any scene. It still has to be right, because bounce rays are what it exists for.</li><li><strong>Every quad in every bundled scene is a rectangle.</strong> <code>intersect_quad</code> solves against a 2×2 Gram matrix whose off-diagonal is <code>dot(u, v)</code>; with rectangles that is exactly zero, so the two terms carrying it vanish identically. Corrupting one is a no-op on all nine scenes.</li><li><strong>Two acceptance gates that agree trivially on near neighbours.</strong> Only distant partners on the same plane separate them.</li></ul>
+<p>Both of the first two are now covered by calling the intersection routines directly with hand-chosen rays, rather than by hoping a scene reaches them.</p>
+<h3 id="recording-a-mutation-that-is-not-caught">Recording a mutation that is not caught<a class="anchor" href="#recording-a-mutation-that-is-not-caught" aria-label="Link to this section">#</a></h3>
+<p>Some mutations <em>should</em> not be caught, and the reason is the useful artifact. Add it to the expected-uncaught list in <code>mutations.sh</code> with the reason written out — six are recorded there now. An unexplained entry is indistinguishable from a gap.</p>
+<h2 id="two-host-differences-that-will-bite-any-port">Two host differences that will bite any port<a class="anchor" href="#two-host-differences-that-will-bite-any-port" aria-label="Link to this section">#</a></h2>
+<p><strong>CPython's <code>sum()</code> over floats is Neumaier-compensated since 3.12</strong>, not a left fold: <code>sum([0.1]*10)</code> is exactly <code>1.0</code> where folding left gives <code>0.9999999999999999</code>. <code>core/reservoir.py</code> uses it in the balance heuristic's denominator and in <code>NAIVE</code>'s <code>Σ M_j</code>. The disagreement appears <strong>only with three or more live streams</strong>, because compensated and naive summation coincide for two — which means it is invisible in the temporal merge and shows up only under spatial reuse. The port implements Neumaier explicitly rather than inheriting it: <code>port/racket/vecmath.neumaier-sum</code>.</p>
+<p><strong>Python's negative list indexing has no equivalent in a conforming host.</strong> <code>materials[-1]</code> returns the last material and looks plausible; a port that raises is right, and the <em>fixture</em> is what has to change.</p>
+<h2 id="do-not-reorder-the-steps">Do not reorder the steps<a class="anchor" href="#do-not-reorder-the-steps" aria-label="Link to this section">#</a></h2>
+<p>Every step's acceptance is a <strong>per-sample diff</strong> against the Python, which is only possible because step 1 makes both draw the same numbers. Falling back to statistics is not an option: statistics on ~11% of an image will not see a defect losing a sixth of the indirect term.</p>
+<h2 id="see-also">See also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="../explanation/porting.html">Porting to Racket</a> — the plan, the essential-versus-incidental split, and the traps already hit at cost.</li><li><a href="../explanation/racket-port.html">What the Racket port showed</a> — status and the arguments the port settled by being written.</li><li><a href="run-the-test-suites.html">Run the test suites</a>.</li></ul><div class="prevnext"><a href="run-the-test-suites.html"><span class="k">Previous</span><span class="n">Run the test suites</span></a><a href="add-to-the-renderer.html" style="text-align:right"><span class="k">Next</span><span class="n">Add a draw, a pass, a strategy, a scene</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#1-generate-a-fixture-from-python">1. Generate a fixture from Python</a><a class="lv2" href="#2-check-the-racket-against-it">2. Check the Racket against it</a><a class="lv2" href="#3-mutation-test-the-checker">3. Mutation-test the checker</a><a class="lv3" href="#recording-a-mutation-that-is-not-caught">Recording a mutation that is not caught</a><a class="lv2" href="#two-host-differences-that-will-bite-any-port">Two host differences that will bite any port</a><a class="lv2" href="#do-not-reorder-the-steps">Do not reorder the steps</a><a class="lv2" href="#see-also">See also</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

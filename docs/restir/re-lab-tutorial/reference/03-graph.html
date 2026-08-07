@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pt/graph/ — the render graph · pt docs</title>
+<meta name="description" content="Resources, passes, the five compile stages, the execution plan.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html" aria-current="true"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1><code>pt/graph/</code> — the render graph</h1><p class="summary">Resources, passes, the five compile stages, the execution plan.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/03-graph.md</code></span><span>information-oriented</span></div></div>
+<p>Frostbite-style: <strong>declare → compile → execute</strong>, as three separate objects.</p>
+<div class="codewrap"><pre><code>assemble_di_graph(scene)  -&gt;  RawGraph        declare: no memory exists yet
+compile_graph(raw, ...)   -&gt;  ExecutionPlan   order · cull · lifetimes · alias · guard
+plan.run(ctx, only=...)                       execute: walk a schedule, no reasoning</code></pre></div>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>resource.py</code></td><td>74</td><td><code>ResKind</code>, <code>ResourceDesc</code>, <code>ResourceHandle</code> (SSA)</td></tr><tr><td><code>pass_.py</code></td><td>55</td><td><code>PassDecl</code> and <code>DIRTY_DOMAINS</code> — the whole pass model</td></tr><tr><td><code>builder.py</code></td><td>263</td><td><code>GraphBuilder</code>, <code>RawGraph</code>, <code>assemble_di_graph</code></td></tr><tr><td><code>compile.py</code></td><td>290</td><td><code>CompileContext</code>, <code>compile_graph</code>, the five stages</td></tr><tr><td><code>plan.py</code></td><td>155</td><td><code>ExecutionPlan</code>, <code>PlanStep</code>, <code>Lifetime</code>, dirty propagation</td></tr></tbody></table></div>
+<p>The whole layer is ~860 lines and has <strong>no Taichi import on the reasoning path</strong> — field allocation is injected, which is why <code>tests/test_graph.py</code> exercises ordering, culling, lifetimes, aliasing and the boundary contract with a <code>FakeField</code> stub and no GPU.</p>
+<h2 id="resources--resourcepy">Resources — <code>resource.py</code><a class="anchor" href="#resources--resourcepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">class</span> ResKind(Enum):
+    RAY_BUF, HIT_BUF, RADIANCE, MOMENT, RESERVOIR, PATH_RESERVOIR, AOV, FRAMEBUFFER
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> ResourceDesc:
+    kind: ResKind; shape: tuple; dtype: str = <span class="tok-str">"f32"</span>; transient: bool = <span class="tok-kw">True</span>
+    @property
+    <span class="tok-kw">def</span> key(<span class="tok-kw">self</span>):    <span class="tok-cm"># aliasing bucket — only exact matches may share memory</span>
+        <span class="tok-kw">return</span> (<span class="tok-kw">self</span>.kind, tuple(<span class="tok-kw">self</span>.shape), <span class="tok-kw">self</span>.dtype, <span class="tok-kw">self</span>.transient)
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> ResourceHandle:
+    id: int; name: str; desc: ResourceDesc; version: int = <span class="tok-num">0</span>
+    <span class="tok-kw">def</span> written(<span class="tok-kw">self</span>) -&gt; ResourceHandle:   <span class="tok-cm"># a write yields a NEW SSA version</span>
+        <span class="tok-kw">return</span> replace(<span class="tok-kw">self</span>, version=<span class="tok-kw">self</span>.version + <span class="tok-num">1</span>)</code></pre></div>
+<p><strong>Contract — the transient/persistent split is load-bearing.</strong> Persistent resources (<code>reservoir_prev</code>, <code>reservoir_temporal</code>, <code>reservoir_curr</code>, <code>hits_prev</code>, <code>radiance_accum</code>, <code>moment2</code>) survive across frames and are <strong>never aliased</strong>. The distinction recurs consistently in four places, and all four must agree:</p>
+<div class="tablewrap"><table><thead><tr><th>Where</th><th>Behaviour for persistent resources</th></tr></thead><tbody><tr><td><code>_resolve_producers</code></td><td>may be read at <code>version == 0</code> with no producer</td></tr><tr><td><code>_lifetimes</code></td><td><code>Lifetime(-1, n)</code> — live forever</td></tr><tr><td><code>_assign_slots</code></td><td>never share a slot</td></tr><tr><td><code>default_keep_alive</code></td><td>never culled</td></tr></tbody></table></div>
+<p>That first row is what makes ReSTIR temporal reuse <em>legal at all</em>: reading last frame's reservoir is an unproduced read, and the exemption is stated precisely enough that nothing else slips through it. <code>zero_persistent()</code> is the only way to clear them.</p>
+<p><strong>Note on aliasing.</strong> The <code>key</code> bucket requires an exact descriptor match, which is deliberately conservative — a smarter allocator would alias compatible-but-unequal descriptors. On the real scenes <strong>no aliasing actually fires</strong>: every transient is either an AOV or the framebuffer, both kept alive, and <code>hits</code> and <code>primary_rays</code> sit in different buckets. The mechanism is exercised only by <code>tests/test_graph.py::TestAliasing::test_aliasing_happens_when_lifetimes_are_disjoint</code>, which builds a synthetic 4-pass graph.</p>
+<h2 id="passes--pass_py">Passes — <code>pass_.py</code><a class="anchor" href="#passes--pass_py" aria-label="Link to this section">#</a></h2>
+<p>The entire pass model is 55 lines:</p>
+<div class="codewrap"><pre class="lang-python"><code>DIRTY_DOMAINS = frozenset({<span class="tok-str">"scene"</span>, <span class="tok-str">"camera"</span>, <span class="tok-str">"spp"</span>, <span class="tok-str">"exposure"</span>, <span class="tok-str">"aov"</span>})
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> PassDecl:
+    name: str
+    reads: tuple = ()
+    writes: tuple = ()
+    params: dict = field(default_factory=dict)
+    build: Callable = <span class="tok-kw">None</span>            <span class="tok-cm"># (CompileContext) -&gt; ExecuteFn</span>
+    invalidated_by: frozenset = frozenset()
+    cost_hint: float = <span class="tok-num">0.0</span>
+    <span class="tok-kw">def</span> __post_init__(<span class="tok-kw">self</span>):          <span class="tok-cm"># a typo'd dirty domain is a compile error</span>
+        unknown = set(<span class="tok-kw">self</span>.invalidated_by) - DIRTY_DOMAINS
+        <span class="tok-kw">if</span> unknown: <span class="tok-kw">raise</span> ValueError(...)</code></pre></div>
+<p><strong>Contract — the referential-transparency boundary.</strong> A pass may only touch resources it declared; its declared outputs are a deterministic function of its declared inputs, params and seed. The contract lives <em>here</em>, not inside the kernels, which mutate fields freely.</p>
+<h2 id="declaring--builderpy">Declaring — <code>builder.py</code><a class="anchor" href="#declaring--builderpy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">class</span> GraphBuilder:
+    <span class="tok-kw">def</span> create(<span class="tok-kw">self</span>, name, desc) -&gt; ResourceHandle          <span class="tok-cm"># id = len(self._resources)</span>
+    <span class="tok-kw">def</span> import_persistent(<span class="tok-kw">self</span>, name, desc) -&gt; ResourceHandle  <span class="tok-cm"># rejects transient descs</span>
+    <span class="tok-kw">def</span> add_pass(<span class="tok-kw">self</span>, decl) -&gt; PassDecl
+    <span class="tok-kw">def</span> build(<span class="tok-kw">self</span>) -&gt; RawGraph
+
+<span class="tok-kw">class</span> RawGraph:
+    resources; passes; scene
+    <span class="tok-kw">def</span> resource_by_id(rid); <span class="tok-kw">def</span> resource_by_name(name)
+
+assemble_di_graph(scene, kernels=<span class="tok-kw">None</span>) -&gt; RawGraph</code></pre></div>
+<p><code>assemble_di_graph</code> is <strong>the single place</strong> the Uniform → RIS → ReSTIR-DI → ReSTIR-GI progression is expressed. It validates depth/strategy pairings at declare time, creates resources, then branches only on the shade node. DI and GI share the ReSTIR branch verbatim, differing in three values:</p>
+<div class="codewrap"><pre class="lang-python"><code>gi     = strat == int(Strategy.RESTIR_GI)
+prefix = <span class="tok-str">"ReSTIR.GI."</span> <span class="tok-kw">if</span> gi <span class="tok-kw">else</span> <span class="tok-str">"ReSTIR."</span>
+resv_desc = ResourceDesc(ResKind.PATH_RESERVOIR <span class="tok-kw">if</span> gi <span class="tok-kw">else</span> ResKind.RESERVOIR,
+                         (N,), <span class="tok-str">"struct"</span>, transient=<span class="tok-kw">False</span>)</code></pre></div>
+<p>ReSTIR GI is <strong>not a fourth graph</strong>. <code>tests/test_graph.py::TestRestirGiGraph</code> asserts pass-by-pass that it <em>is</em> the DI graph with a different payload.</p>
+<p>The declared ReSTIR schedule:</p>
+<div class="tablewrap"><table><thead><tr><th>Pass</th><th>reads</th><th>writes</th><th><code>invalidated_by</code></th></tr></thead><tbody><tr><td><code>{prefix}InitialAndTemporal</code></td><td><code>hits, reservoir_prev, hits_prev</code></td><td><code>reservoir_temporal</code></td><td><code>camera, scene</code></td></tr><tr><td><code>{prefix}Spatial</code></td><td><code>hits, reservoir_temporal</code></td><td><code>reservoir_curr</code></td><td><code>camera, scene</code></td></tr><tr><td><code>{prefix}CopyToCurrent</code></td><td><code>reservoir_temporal</code></td><td><code>reservoir_curr</code></td><td>(when spatial is off)</td></tr><tr><td><code>{prefix}Resolve</code></td><td><code>hits, reservoir_curr</code></td><td><code>radiance_accum, moment2, aov_reservoir</code></td><td><code>camera, scene, spp</code></td></tr></tbody></table></div>
+<p><strong>Contract — spatial reuse reads one buffer and writes another.</strong> Read-modify-write on <code>reservoir_curr</code> is a race the moment the pass runs in parallel: each pixel would see an arbitrary mixture of updated and stale neighbours. One extra buffer removes the hazard rather than documenting it.</p>
+<p><strong>Note — the reuse passes omit <code>spp</code>.</strong> This is a true fact about the declaration and it is what <code>progressive_steps()</code> was designed around. It does <strong>not</strong> mean those passes are skipped when the sample index advances: dirtiness also flows along data edges, and <code>hits</code> is rewritten every sample by <code>Intersect</code>, so in practice <code>dirty_steps({"spp"})</code> marks every step of a ReSTIR graph. A declaration is a lower bound on what re-runs, not the last word.</p>
+<h2 id="compiling--compilepy">Compiling — <code>compile.py</code><a class="anchor" href="#compiling--compilepy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>compile_graph(raw, scene_device=<span class="tok-kw">None</span>, make_field=<span class="tok-kw">None</span>, keep_alive=<span class="tok-kw">None</span>) -&gt; ExecutionPlan</code></pre></div>
+<p>Five stages, in Frostbite's order:</p>
+<div class="tablewrap"><table><thead><tr><th>Stage</th><th>Function</th><th>Job</th></tr></thead><tbody><tr><td>A</td><td><code>_resolve_producers</code></td><td><code>(res_id, version) → producing pass</code>. Double write = error; unproduced read = error <strong>except</strong> <code>version == 0 and not desc.transient</code></td></tr><tr><td>B</td><td><code>_toposort</code></td><td>Kahn's algorithm, <strong>ties broken by declaration index</strong></td></tr><tr><td>C</td><td><code>_cull</code></td><td>backward reachability from <code>default_keep_alive</code> = <code>{"framebuffer"} ∪ AOVs ∪ persistents</code></td></tr><tr><td>D</td><td><code>_lifetimes</code> → <code>_assign_slots</code> → <code>_allocate_fields</code></td><td><code>[first_write, last_read]</code>, greedy interval colouring per <code>desc.key</code>, one physical field per slot</td></tr><tr><td>E</td><td>build loop</td><td>a <code>CompileContext</code> per pass → <code>decl.build(cctx)</code> → <code>PlanStep</code></td></tr></tbody></table></div>
+<p><strong>Contract — determinism of stage B.</strong> Ties broken by declaration index, not by hash order, because stable buffer assignment and RNG stream layout depend on it.</p>
+<p><strong>Contract — the injection seam.</strong> <code>make_field</code> and <code>kernels</code> are both injected. This is what makes the graph testable without a GPU and is the seam a port would reuse.</p>
+<h3 id="compilecontext"><code>CompileContext</code><a class="anchor" href="#compilecontext" aria-label="Link to this section">#</a></h3>
+<p>What a <code>build_*</code> closure sees — scoped to exactly one pass, so field capture and declaration checking happen at the same moment:</p>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">class</span> CompileContext:
+    <span class="tok-kw">def</span> __init__(<span class="tok-kw">self</span>, scene, scene_device, fields_by_name, allowed, params, pass_name)
+    <span class="tok-kw">def</span> field_by_name(<span class="tok-kw">self</span>, name):
+        <span class="tok-kw">if</span> name <span class="tok-kw">not</span> <span class="tok-kw">in</span> <span class="tok-kw">self</span>._allowed:
+            <span class="tok-kw">raise</span> GraphError(
+                f<span class="tok-str">"pass {self._pass_name!r} touched undeclared resource {name!r} — "</span>
+                f<span class="tok-str">"it declared {sorted(self._allowed)}. Add it to reads/writes, "</span>
+                f<span class="tok-str">"or the graph cannot reason about lifetimes and dirtiness."</span>)
+        <span class="tok-kw">return</span> <span class="tok-kw">self</span>._fields[name]
+    <span class="tok-kw">def</span> has(<span class="tok-kw">self</span>, name) -&gt; bool</code></pre></div>
+<p><code>allowed</code> is <code>{h.name for h in (decl.reads + decl.writes)}</code>. Guarded by <code>tests/test_graph.py::TestBoundaryContract</code>.</p>
+<h2 id="the-plan--planpy">The plan — <code>plan.py</code><a class="anchor" href="#the-plan--planpy" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> Lifetime:  first: int; last: int;  <span class="tok-kw">def</span> overlaps(other) -&gt; bool
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> PlanStep:  name; index; pass_index; exec_fn; invalidated_by; reads; writes; params
+
+@dataclass(frozen=<span class="tok-kw">True</span>)
+<span class="tok-kw">class</span> ExecutionPlan:
+    steps; fields_by_id; fields_by_name; physical; resources; lifetimes; slot_of; culled; scene</code></pre></div>
+<div class="codewrap"><pre class="lang-python"><code>field_by_name(name)      has_field(name)      resource_by_name(name)    step_by_name(name)
+data_edges()             <span class="tok-cm"># (producer_step, consumer_step) pairs, derived from resource ids</span>
+dirty_steps(changed)     <span class="tok-cm"># seeded from invalidated_by ∩ changed, then transitive closure</span>
+progressive_steps()      <span class="tok-cm"># == dirty_steps({"spp"})</span>
+run(ctx, only=<span class="tok-kw">None</span>)
+zero_persistent()
+describe()</code></pre></div>
+<p><strong>Three distinct meanings of "run less work"</strong>, easily confused:</p>
+<div class="tablewrap"><table><thead><tr><th>Mechanism</th><th>When</th><th>Scope</th></tr></thead><tbody><tr><td>stage-C culling</td><td>compile time</td><td>permanent — the pass is not in the plan</td></tr><tr><td><code>dirty_steps(changed)</code></td><td>per interaction</td><td>which steps a UI change forces</td></tr><tr><td><code>progressive_steps()</code></td><td>steady state</td><td>what a new sample needs</td></tr></tbody></table></div>
+<p><code>dirty_steps</code> is what the shell calls on an exposure or AOV change:</p>
+<div class="codewrap"><pre class="lang-python"><code>only = engine.plan.dirty_steps({<span class="tok-str">"exposure"</span>, <span class="tok-str">"aov"</span>})
+engine.plan.run(engine.ctx, only=only)</code></pre></div>
+<h3 id="describe-output"><code>describe()</code> output<a class="anchor" href="#describe-output" aria-label="Link to this section">#</a></h3>
+<p><code>pt describe cornell_restir_gi</code>:</p>
+<div class="codewrap"><pre><code>ExecutionPlan: 6 steps, 13 resources -&gt; 13 physical buffers
+  schedule:
+    0: GeneratePrimaryRays          reads[-] writes[primary_rays] dirty[camera,spp]
+    1: Intersect                    reads[primary_rays] writes[hits, aov_normal, aov_albedo, aov_depth] dirty[camera,scene,spp]
+    2: ReSTIR.GI.InitialAndTemporal reads[hits, reservoir_prev, hits_prev] writes[reservoir_temporal] dirty[camera,scene]
+    3: ReSTIR.GI.Spatial            reads[hits, reservoir_temporal] writes[reservoir_curr] dirty[camera,scene]
+    4: ReSTIR.GI.Resolve            reads[hits, reservoir_curr] writes[radiance_accum, moment2, aov_reservoir] dirty[camera,scene,spp]
+    5: ToneMap                      reads[radiance_accum, aov_normal, aov_albedo, aov_depth, aov_reservoir] writes[framebuffer] dirty[aov,camera,exposure,scene,spp]
+  resources:
+    slot  0  aov_normal    [1,5]      slot  7  moment2            persistent
+    slot  3  aov_reservoir [4,5]      slot  8  reservoir_prev     persistent
+    slot  4  framebuffer   [5,5]      slot  9  reservoir_temporal persistent
+    slot  5  hits_prev     persistent slot 10  reservoir_curr     persistent
+    slot  6  hits          [1,4]      slot 11  radiance_accum     persistent</code></pre></div>
+<p>Captured copies of this for all three scenes live in <code>docs/explainer/levels/</code>.</p><div class="prevnext"><a href="02-core.html"><span class="k">Previous</span><span class="n"><code>pt/core/</code> — the pure reference</span></a><a href="04-kernels.html" style="text-align:right"><span class="k">Next</span><span class="n"><code>pt/kernels/</code> — the Taichi layer</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#resources--resourcepy">Resources — <code>resource.py</code></a><a class="lv2" href="#passes--pass_py">Passes — <code>pass_.py</code></a><a class="lv2" href="#declaring--builderpy">Declaring — <code>builder.py</code></a><a class="lv2" href="#compiling--compilepy">Compiling — <code>compile.py</code></a><a class="lv3" href="#compilecontext"><code>CompileContext</code></a><a class="lv2" href="#the-plan--planpy">The plan — <code>plan.py</code></a><a class="lv3" href="#describe-output"><code>describe()</code> output</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

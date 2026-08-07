@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engine, shell and CLI · pt docs</title>
+<meta name="description" content="Lifecycle, threading, the command surface.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html" aria-current="true">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1>Engine, shell and CLI</h1><p class="summary">Lifecycle, threading, the command surface.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/05-runtime.md</code></span><span>information-oriented</span></div></div>
+<p>Everything that renders — CLI, validation harness, tests, the GUI worker — goes through <code>Engine</code>.</p>
+<h2 id="engine--ptenginepy-365-lines"><code>Engine</code> — <code>pt/engine.py</code> (365 lines)<a class="anchor" href="#engine--ptenginepy-365-lines" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-python"><code>@dataclass
+<span class="tok-kw">class</span> RenderContext:
+    <span class="tok-str">"""Per-frame state handed to every pass thunk."""</span>
+    scene: SemanticIR; scene_device: object
+    seed: int = <span class="tok-num">0</span>; frame: int = <span class="tok-num">0</span>; spp_index: int = <span class="tok-num">0</span>
+    exposure: float = <span class="tok-num">0.0</span>; aov: str = <span class="tok-str">"beauty"</span>
+    bias_mode: int = int(BiasMode.MIS)
+    spatial_radius: float = <span class="tok-num">30.0</span>; reproject: bool = <span class="tok-kw">False</span>
+    prev_camera: object = <span class="tok-kw">None</span>      <span class="tok-cm"># None == "no usable history"</span></code></pre></div>
+<h3 id="lifecycle">Lifecycle<a class="anchor" href="#lifecycle" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre class="lang-python"><code>Engine(scene, prefer_gpu=<span class="tok-kw">False</span>, init=<span class="tok-kw">True</span>)</code></pre></div>
+<p><code>_build()</code> is where the Taichi ownership discipline lives, and the order is forced:</p>
+<div class="codewrap"><pre class="lang-python"><code><span class="tok-kw">self</span>._fb = ti.FieldsBuilder()                      <span class="tok-cm"># per-engine builder, NOT the default root</span>
+<span class="tok-kw">self</span>.scene_device = SceneDevice(<span class="tok-kw">self</span>.scene, builder=<span class="tok-kw">self</span>._fb)
+<span class="tok-kw">self</span>.plan = compile_graph(assemble_di_graph(<span class="tok-kw">self</span>.scene), <span class="tok-kw">self</span>.scene_device,
+                          make_field=<span class="tok-kw">lambda</span> d: make_field(d, <span class="tok-kw">self</span>._fb))
+<span class="tok-kw">self</span>._snode_tree = <span class="tok-kw">self</span>._fb.finalize()
+<span class="tok-kw">self</span>.scene_device.upload()                         <span class="tok-cm"># only after finalize</span>
+<span class="tok-kw">self</span>._advance = <span class="tok-kw">self</span>._make_advance()
+<span class="tok-kw">self</span>._materialize()                                <span class="tok-cm"># touch every field on this thread</span>
+<span class="tok-kw">self</span>.reset()</code></pre></div>
+<p><strong>Contract — building an <code>Engine</code> costs ~5s.</strong> Taichi recompiles every kernel per engine, because each owns its own <code>FieldsBuilder</code>. <strong>Never construct engines in a loop</strong>; use the setters below. The validation harness threads an <code>engine=</code> parameter through for exactly this reason.</p>
+<p><strong>Contract — <code>close()</code> releases the SNode tree.</strong> Taichi has a finite number, so a GUI strategy switcher would exhaust them otherwise.</p>
+<div class="codewrap"><pre class="lang-python"><code>rebuild(scene=<span class="tok-kw">None</span>)    <span class="tok-cm"># close() + _build(); needed only for topology changes</span>
+close()</code></pre></div>
+<div class="tablewrap"><table><thead><tr><th>Change</th><th>Cost</th></tr></thead><tbody><tr><td>resolution, strategy, <code>max_bounces</code>, spatial on/off</td><td><code>rebuild()</code> — ~5s</td></tr><tr><td>seed, camera, exposure, AOV, bias mode, reproject</td><td>a setter — free</td></tr></tbody></table></div>
+<h3 id="setters--no-recompile-all-chainable">Setters — no recompile, all chainable<a class="anchor" href="#setters--no-recompile-all-chainable" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre class="lang-python"><code>set_camera(cam)    set_exposure(ev)    set_aov(name)
+set_seed(seed)     set_bias_mode(mode) set_reproject(on)</code></pre></div>
+<p><code>set_bias_mode</code> accepts <code>"naive" | "mis" | "pairwise-mis"</code> or a <code>BiasMode</code>. Each setter rewrites <code>self.scene</code> through the <code>with_*</code> IR edits <strong>and</strong> re-points <code>ctx.scene</code>, so the two never diverge.</p>
+<h3 id="the-history-roll--_make_advance">The history roll — <code>_make_advance</code><a class="anchor" href="#the-history-roll--_make_advance" aria-label="Link to this section">#</a></h3>
+<p>Returns a <code>@ti.kernel</code>, or <code>None</code> when the plan has no reservoirs. Python cannot swap field references because the pass closures captured them at build time, so the copy happens on device:</p>
+<div class="codewrap"><pre class="lang-python"><code>gi   = int(<span class="tok-kw">self</span>.scene.integrator.strategy) == int(Strategy.RESTIR_GI)
+src  = <span class="tok-str">"reservoir_temporal"</span> <span class="tok-kw">if</span> gi <span class="tok-kw">else</span> <span class="tok-str">"reservoir_curr"</span>   <span class="tok-cm"># ! GI rolls PRE-spatial</span>
+@ti.kernel
+<span class="tok-kw">def</span> advance():
+    <span class="tok-kw">for</span> i <span class="tok-kw">in</span> range(n):
+        prev[i]      = curr[i]
+        hits_prev[i] = hits[i]</code></pre></div>
+<p>This is the device twin of <code>core/render._render_restir</code>'s rollover and <strong>must not drift from it</strong>. The reasoning, and the numbers, are in <a href="02-core.html#the-frame-loop--renderpy">02-core</a>.</p>
+<h3 id="two-distinct-resets">Two distinct resets<a class="anchor" href="#two-distinct-resets" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre class="lang-python"><code>reset()                                  <span class="tok-cm"># zero_persistent(): accumulator AND reservoirs</span>
+reset_accumulation(restart_sequence=<span class="tok-kw">True</span>)  <span class="tok-cm"># only radiance_accum and moment2</span></code></pre></div>
+<p><strong>Contract — <code>reset_accumulation</code> is the methodological core.</strong> ReSTIR's claim is about a <em>single warm frame</em>, and consecutive frames are correlated through the reservoirs, so comparing accumulated means understates ReSTIR — it can even lose to plain RIS. Variance must be measured per frame.</p>
+<p><strong>Contract — clearing the accumulator must not rewind the RNG.</strong> <code>restart_sequence=False</code> exists for exactly one case: a reprojecting camera drag, where the image is cleared every frame. Rewinding the sample counter would hand every drag frame the same sub-pixel jitter and — because <code>sample_light_point(li, u, v)</code> is deterministic — literally the same M points on the same M lights, so the canonical stream stops contributing new information the instant the drag begins.</p>
+<p>Hence two counters that coincide everywhere except that path:</p>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Meaning</th></tr></thead><tbody><tr><td><code>Engine.spp</code></td><td>samples <strong>in the accumulator</strong></td></tr><tr><td><code>ctx.spp_index</code></td><td>the <strong>RNG</strong> sample counter</td></tr></tbody></table></div>
+<h3 id="cooking-and-outputs">Cooking and outputs<a class="anchor" href="#cooking-and-outputs" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre class="lang-python"><code>render_sample(only=<span class="tok-kw">None</span>)      <span class="tok-cm"># plan.run(ctx, only) -&gt; _advance() -&gt; record prev_camera -&gt; bump</span>
+render_sample_radiance()      <span class="tok-cm"># -&gt; (H,W,3) for THAT sample alone, by differencing</span>
+render(spp, on_progress=<span class="tok-kw">None</span>)
+framebuffer()  <span class="tok-cm"># (H,W,3) in [0,1], tonemapped</span>
+radiance()     <span class="tok-cm"># (H,W,3) linear mean radiance — what validation compares</span>
+variance()     <span class="tok-cm"># (H,W) variance OF THE MEAN, i.e. Var/N</span>
+aov_image(name);  reservoirs(which=<span class="tok-str">"curr"</span>);  describe()</code></pre></div>
+<p><code>ctx.prev_camera</code> records the camera the frame was <em>actually</em> rendered with, captured before the run.</p>
+<h2 id="the-shell--ptshell">The shell — <code>pt/shell/</code><a class="anchor" href="#the-shell--ptshell" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Module</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>app.py</code></td><td>459</td><td>DearPyGui application, layout, rebuild orchestration</td></tr><tr><td><code>render_worker.py</code></td><td>390</td><td>the render thread and its command queue</td></tr><tr><td><code>camera_controller.py</code></td><td>144</td><td>free-fly camera</td></tr><tr><td><code>capture.py</code></td><td>107</td><td><code>write_png</code>, <code>write_npy</code>, <code>write_image</code>, <code>read_image</code>, <code>dump_artifacts</code></td></tr><tr><td><code>viewports/</code></td><td>695</td><td><code>debug3d</code> (264), <code>pathtree_inspector</code> (173), <code>raster</code> (159), <code>ris_panel</code> (84)</td></tr></tbody></table></div>
+<p><strong>Contract — the thread split.</strong> The main thread owns <code>ti.init</code> and <strong>all field allocation</strong>. The worker only runs an already-compiled plan. <code>App._rebuild(scene)</code> constructs the new <code>Engine(scene, init=False)</code> on the main thread, hands it to the worker, and only then calls <code>old.close()</code>.</p>
+<p>Because an open <code>FieldsBuilder</code> invalidates kernel launches <em>anywhere</em>, a rebuild must <strong>park</strong> the worker — block until it confirms it is idle — before allocation begins. Asking it to freeze is not enough; the rebuild has to know it has stopped.</p>
+<p><code>Command</code> enum: <code>CAMERA ENGINE EXPOSURE AOV BIAS REPROJECT SPP_CAP RESTART FREEZE CAPTURE SNAPSHOT STOP</code>. Camera commands are coalesced.</p>
+<p>Camera moves branch on reprojection — <code>reset_accumulation(restart_sequence=False)</code> when <code>ctx.reproject</code>, else a full <code>reset()</code>.</p>
+<h2 id="the-cli--ptclipy-637-lines">The CLI — <code>pt/cli.py</code> (637 lines)<a class="anchor" href="#the-cli--ptclipy-637-lines" aria-label="Link to this section">#</a></h2>
+<p><code>argparse</code> with <code>set_defaults(func=cmd_*)</code>. A shared <code>common(p, spp_default=None)</code> installs the scene-override flags, and <strong>one funnel</strong> applies them:</p>
+<div class="codewrap"><pre class="lang-python"><code>_load(args)   <span class="tok-cm"># entirely through SemanticIR's immutable edits</span></code></pre></div>
+<p>so every subcommand has identical override semantics and nothing mutates a scene in place.</p>
+<div class="tablewrap"><table><thead><tr><th>Subcommand</th><th>Shape</th></tr></thead><tbody><tr><td><code>render</code></td><td><code>_load</code> → <code>Engine</code> → <code>render(spp)</code> → <code>write_image</code>; <code>-o</code> default <code>out/render.png</code></td></tr><tr><td><code>gui</code></td><td><code>App(...).start()</code>; <code>--frames N</code> renders N UI frames then exits (headless verification)</td></tr><tr><td><code>describe</code></td><td><code>print(Engine(_load(args)).describe())</code></td></tr><tr><td><code>edn</code></td><td><code>print(to_edn(_load(args)))</code> — round-trip and diff the lowering</td></tr><tr><td><code>dump</code></td><td>render, then <code>dump_artifacts(eng.plan, dir)</code> — works off the plan's resource table, no pass cooperation</td></tr><tr><td><code>flip</code></td><td>the only subcommand not using <code>common</code>; takes two image paths, auto-selects HDR/LDR</td></tr><tr><td><code>validate</code></td><td>~350 lines, six sections; defaults <code>many_lights</code>, <code>--spp 400</code>, <code>--ref-spp 2000</code></td></tr></tbody></table></div>
+<p>Common flags: <code>--res W H</code>, <code>--strategy</code>, <code>--M</code>, <code>--bounces</code>, <code>--bias</code>, <code>--seed</code>, <code>--gpu</code>, <code>--spp</code>.</p><div class="prevnext"><a href="04-kernels.html"><span class="k">Previous</span><span class="n"><code>pt/kernels/</code> — the Taichi layer</span></a><a href="06-validation.html" style="text-align:right"><span class="k">Next</span><span class="n"><code>validation/</code> — the harness</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#engine--ptenginepy-365-lines"><code>Engine</code> — <code>pt/engine.py</code> (365 lines)</a><a class="lv3" href="#lifecycle">Lifecycle</a><a class="lv3" href="#setters--no-recompile-all-chainable">Setters — no recompile, all chainable</a><a class="lv3" href="#the-history-roll--_make_advance">The history roll — <code>_make_advance</code></a><a class="lv3" href="#two-distinct-resets">Two distinct resets</a><a class="lv3" href="#cooking-and-outputs">Cooking and outputs</a><a class="lv2" href="#the-shell--ptshell">The shell — <code>pt/shell/</code></a><a class="lv2" href="#the-cli--ptclipy-637-lines">The CLI — <code>pt/cli.py</code> (637 lines)</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

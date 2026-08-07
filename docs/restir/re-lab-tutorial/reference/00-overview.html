@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview: the lowering pipeline · pt docs</title>
+<meta name="description" content="The pipeline, the layer map, the estimator matrix, where everything lives.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html" aria-current="true">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1>Overview: the lowering pipeline</h1><p class="summary">The pipeline, the layer map, the estimator matrix, where everything lives.</p><div class="srcline"><span>Source: <code>docs/architecture/reference/00-overview.md</code></span><span>information-oriented</span></div></div>
+<h2 id="the-pipeline">The pipeline<a class="anchor" href="#the-pipeline" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre><code>  cornell.edn                     text
+      │  read                     pt/dsl/reader.py      spans attached here
+      ▼
+  forms                           List/Vec/Map/Sym/Kw/Num/Str/Bool/Nil
+      │  macro-expand             pt/dsl/macro.py       applicative order, fixpoint
+      ▼
+  forms′
+      │  analyze                  pt/dsl/analyze.py     shape checking, closed key sets
+      ▼
+  SceneAST         level 2        pt/dsl/ast.py         near-verbatim surface, spans kept
+      │  elaborate                pt/dsl/elaborate.py   resolve·default·normalize·stitch·expand
+      ▼
+  SemanticIR       level 2.5      pt/dsl/ir.py          frozen, resolved, SoA-friendly
+      │  declare                  pt/graph/builder.py   passes state reads and writes
+      ▼
+  RawGraph         level 3        pt/graph/builder.py   no memory exists yet
+      │  compile                  pt/graph/compile.py   order·cull·lifetimes·alias·guard
+      ▼
+  ExecutionPlan    level 4        pt/graph/plan.py      a schedule; no reasoning left
+      │  execute                  pt/kernels/           build_* thunks, then run
+      ▼
+  artifacts                       radiance · AOVs · reservoirs · path trees</code></pre></div>
+<p>Every arrow is a pure transform. Every level is dumpable:</p>
+<div class="tablewrap"><table><thead><tr><th>Level</th><th>Command</th></tr></thead><tbody><tr><td>SemanticIR</td><td><code>pt edn cornell</code></td></tr><tr><td>ExecutionPlan</td><td><code>pt describe cornell</code></td></tr><tr><td>cooked buffers</td><td><code>pt dump cornell --dir out/artifacts</code></td></tr><tr><td>forms, SceneAST</td><td>no CLI — <code>docs/explainer/capture_levels.py</code></td></tr></tbody></table></div>
+<h2 id="layer-map">Layer map<a class="anchor" href="#layer-map" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Path</th><th>Lines</th><th>Role</th></tr></thead><tbody><tr><td><code>pt/dsl/</code></td><td>~2,020</td><td>The front end. Text to <code>SemanticIR</code>.</td></tr><tr><td><code>pt/core/</code></td><td>~2,284</td><td>Pure f64 reference. <strong>No Taichi, no I/O, no mutation.</strong> The spec.</td></tr><tr><td><code>pt/graph/</code></td><td>~862</td><td>Declare / compile / execute. Backend-injected, testable with no GPU.</td></tr><tr><td><code>pt/kernels/</code></td><td>~2,403</td><td>Taichi. Mutates fields freely; the contract lives at the pass boundary.</td></tr><tr><td><code>pt/shell/</code></td><td>~1,808</td><td>DearPyGui app, render worker thread, viewports.</td></tr><tr><td><code>pt/engine.py</code></td><td>365</td><td>The object everything headless goes through.</td></tr><tr><td><code>pt/cli.py</code></td><td>637</td><td><code>render · gui · describe · edn · dump · flip · validate</code></td></tr><tr><td><code>validation/</code></td><td>~2,204</td><td>The correctness harness. Ships as a top-level package.</td></tr><tr><td><code>tests/</code></td><td>~4,492</td><td>308 tests. Outweighs either implementation.</td></tr></tbody></table></div>
+<p>The mass distribution is deliberate: the <em>reference</em> implementation is nearly as large as the <em>fast</em> one, because they are diffed against each other.</p>
+<h2 id="the-two-load-bearing-ideas">The two load-bearing ideas<a class="anchor" href="#the-two-load-bearing-ideas" aria-label="Link to this section">#</a></h2>
+<p><strong>1. Functional core, imperative shell — with the boundary at the pass.</strong></p>
+<p><code>pt/core/</code> is genuinely pure. <code>pt/kernels/</code> mutates freely, because pretending otherwise would make it slow and awkward for no benefit. The contract sits at the <em>pass boundary</em> instead: a pass may only touch resources it declared, and its declared outputs are a deterministic function of its declared inputs, params and seed. <code>pt/graph/compile.py</code> enforces this by handing each pass a scoped <code>CompileContext</code> — reaching for an undeclared buffer raises when the graph is built, not on some later frame.</p>
+<p><strong>2. Counter-based RNG.</strong></p>
+<p>Every stochastic decision is <code>hash(pixel, sample, bounce, dim, seed)</code>. <code>ti.random()</code> is banned. Three consequences the design leans on:</p>
+<ul><li>the pure reference and the Taichi kernel draw the <strong>same numbers</strong>, so they can be diffed per sample rather than statistically;</li><li>clicking a pixel re-derives the path that was <em>actually</em> traced, so the inspector shows evidence rather than a plausible re-roll;</li><li>the worker can be interrupted and restarted and still produce identical images.</li></ul>
+<p>See <a href="02-core.html#rng">02-core</a> for the dimension layout, which is a documented contract between <code>pt/core/rng.py</code> and <code>pt/kernels/_common.py</code>.</p>
+<h2 id="the-estimator-matrix">The estimator matrix<a class="anchor" href="#the-estimator-matrix" aria-label="Link to this section">#</a></h2>
+<p>Two orthogonal axes — <em>what transport</em> and <em>how it is sampled</em>:</p>
+<div class="tablewrap"><table><thead><tr><th></th><th><code>:uniform</code></th><th><code>:ris</code></th><th><code>:restir-di</code></th><th><code>:restir-gi</code></th></tr></thead><tbody><tr><td><code>:direct-lighting</code> (1 bounce)</td><td><code>di_uniform</code></td><td><code>di_ris</code></td><td><code>di_restir</code></td><td>rejected</td></tr><tr><td><code>:global-illumination</code> (≥2)</td><td><code>gi_uniform</code></td><td>rejected</td><td>rejected</td><td><code>gi_restir</code> (exactly 2)</td></tr></tbody></table></div>
+<p>Rejections are elaboration errors with codes — <code>GI_STRATEGY_UNSUPPORTED</code>, <code>GI_BOUNCE_EXACTLY_TWO</code>, <code>DI_BOUNCE_CONSTRAINT</code>. See <a href="01-dsl.html#error-catalog">01-dsl</a>.</p>
+<p><code>integrator_for</code> treats bounce count as the second axis: <code>UNIFORM</code> with <code>max_bounces &gt; 1</code> selects <code>gi_uniform</code>, not a fifth strategy.</p>
+<h2 id="every-estimator-lives-twice">Every estimator lives twice<a class="anchor" href="#every-estimator-lives-twice" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Concern</th><th>Reference</th><th>Kernel</th></tr></thead><tbody><tr><td>reservoir algebra, MIS weights</td><td><code>core/reservoir.py</code></td><td>inlined in <code>kernels/restir*.py</code></td></tr><tr><td>ReSTIR DI passes</td><td><code>core/integrators/di_restir.py</code></td><td><code>kernels/restir.py</code></td></tr><tr><td>ReSTIR GI passes</td><td><code>core/integrators/gi_restir.py</code></td><td><code>kernels/restir_gi.py</code></td></tr><tr><td>frame loop, history rollover</td><td><code>core/render._render_restir</code></td><td><code>Engine._make_advance</code> + <code>graph/builder.py</code></td></tr></tbody></table></div>
+<p>Changing one without the other breaks <code>tests/test_kernels.py::TestRestirGiKernels::test_agrees_with_the_reference_per_pixel</code> and its DI siblings — which is the point of them.</p>
+<p>The algebra itself is <strong>not</strong> duplicated. <code>core/reservoir.py</code> holds one copy for both payloads, parameterized by a <code>ReuseDomain</code>. See <a href="semantics.html">semantics.md</a>.</p>
+<h2 id="where-to-start-reading">Where to start reading<a class="anchor" href="#where-to-start-reading" aria-label="Link to this section">#</a></h2>
+<ul><li>Changing the estimator → <a href="02-core.html">02-core</a>, then <a href="semantics.html">semantics.md</a>, then <code>ARCHITECTURE.md</code>'s findings.</li><li>Adding a pass or resource → <a href="03-graph.html">03-graph</a>, then <a href="../how-to/add-to-the-renderer.html">08-extending</a>.</li><li>Adding scene syntax → <a href="01-dsl.html">01-dsl</a>.</li><li>Trusting a number → <a href="06-validation.html">06-validation</a>.</li><li>Porting → <a href="../explanation/porting.html">porting-to-racket.md</a>.</li></ul><div class="prevnext"><a href="index.html"><span class="k">Up</span><span class="n">Section overview</span></a><a href="01-dsl.html" style="text-align:right"><span class="k">Next</span><span class="n"><code>pt/dsl/</code> — the front end</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#the-pipeline">The pipeline</a><a class="lv2" href="#layer-map">Layer map</a><a class="lv2" href="#the-two-load-bearing-ideas">The two load-bearing ideas</a><a class="lv2" href="#the-estimator-matrix">The estimator matrix</a><a class="lv2" href="#every-estimator-lives-twice">Every estimator lives twice</a><a class="lv2" href="#where-to-start-reading">Where to start reading</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

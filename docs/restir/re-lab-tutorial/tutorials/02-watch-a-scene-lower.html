@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en" data-q="tutorials">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watch a scene lower · pt docs</title>
+<meta name="description" content="Follow one scene through every level of the pipeline, as text you can diff. No GPU, no display, a few seconds.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html" aria-current="true">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Tutorials</h4><a href="../tutorials/index.html">Overview</a><a href="../tutorials/01-first-render.html">Render your first image</a><a href="../tutorials/02-watch-a-scene-lower.html" aria-current="true">Watch a scene lower</a><a href="../tutorials/03-catch-a-biased-estimator.html">Catch a biased estimator</a><a href="../tutorials/04-inspect-a-pixel.html">Inspect a single pixel <span class="needs">(a display)</span></a><h4>Elsewhere</h4><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Tutorials</div><h1>Watch a scene lower</h1><p class="summary">Follow one scene through every level of the pipeline, as text you can diff. No GPU, no display, a few seconds.</p><div class="srcline"><span>Source: <code>docs/tutorials/02-watch-a-scene-lower.md</code></span><span>learning-oriented</span></div></div>
+<p>A scene here is not a config file that a renderer reads. It is a program that gets <em>lowered</em> — transformed step by step into more concrete forms until it reaches executable kernels — and every one of those intermediate forms is something you can print, save and diff.</p>
+<p>In this tutorial we will look at one scene at three different levels, and then diff two scenes against each other to find the exact point where the estimator changes.</p>
+<p><strong>You will need</strong> the venv from <a href="01-first-render.html">the previous tutorial</a>, and about ten minutes. Nothing here renders an image, so there is no GPU and no waiting.</p>
+<hr>
+<h2 id="step-1--read-the-scene-as-its-author-wrote-it">Step 1 — Read the scene as its author wrote it<a class="anchor" href="#step-1--read-the-scene-as-its-author-wrote-it" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt edn cornell</code></pre></div>
+<p>This prints the scene as canonical EDN — the surface syntax, cleaned up. The first lines look like this:</p>
+<div class="codewrap"><pre class="lang-clojure"><code><span class="tok-p">(</span>scene
+  <span class="tok-p">{</span><span class="tok-kw">:name</span> <span class="tok-str">"cornell-di"</span>
+
+   <span class="tok-kw">:settings</span> <span class="tok-p">{</span><span class="tok-kw">:seed</span> <span class="tok-num">1234</span> <span class="tok-kw">:tonemap</span> <span class="tok-kw">:reinhard</span> <span class="tok-kw">:exposure</span> <span class="tok-num">0</span><span class="tok-p">}</span>
+
+   <span class="tok-kw">:integrator</span> <span class="tok-p">{</span><span class="tok-kw">:type</span> <span class="tok-kw">:direct-lighting</span>
+                 <span class="tok-kw">:light-sampling</span> <span class="tok-kw">:uniform</span>
+                 <span class="tok-kw">:spp</span> <span class="tok-num">256</span>
+                 <span class="tok-kw">:max-bounces</span> <span class="tok-num">1</span><span class="tok-p">}</span>
+
+   <span class="tok-kw">:camera</span> <span class="tok-p">{</span><span class="tok-kw">:type</span> <span class="tok-kw">:pinhole</span>
+             <span class="tok-kw">:eye</span> <span class="tok-p">[</span><span class="tok-num">278</span> <span class="tok-num">273</span> -<span class="tok-num">800</span><span class="tok-p">]</span>
+             <span class="tok-kw">:look-at</span> <span class="tok-p">[</span><span class="tok-num">278</span> <span class="tok-num">273</span> -<span class="tok-num">799</span><span class="tok-p">]</span>
+             <span class="tok-kw">:up</span> <span class="tok-p">[</span><span class="tok-num">0</span> <span class="tok-num">1</span> <span class="tok-num">0</span><span class="tok-p">]</span>
+             <span class="tok-kw">:fov</span> <span class="tok-num">39.3</span>
+             <span class="tok-kw">:resolution</span> <span class="tok-p">[</span><span class="tok-num">512</span> <span class="tok-num">512</span><span class="tok-p">]</span>
+             <span class="tok-kw">:near</span> <span class="tok-num">0.1</span> <span class="tok-kw">:far</span> <span class="tok-num">5000</span><span class="tok-p">}</span></code></pre></div>
+<p>Two things here will matter later.</p>
+<p><code>:type</code> says which <em>transport</em> we are simulating — one bounce of light, or many. <code>:light-sampling</code> says <em>how the light is sampled</em>. They are separate axes, and they are separate on purpose: you can hold one fixed and vary the other.</p>
+<p><code>:seed</code> is not decoration. Every random number this renderer draws is a pure hash of <code>(pixel, sample, bounce, dimension, seed)</code> — there is no random number <em>generator</em> with hidden state anywhere in the system. Change the seed and you get a different but equally valid image; keep it and you get the same image, every time, on any machine, no matter how the work was scheduled.</p>
+<p>But notice what you did <em>not</em> see. Compare the output above with the actual source in <code>pt/scenes/cornell.edn</code> and you will find the file is not the same text. The printed version has resolved names to indices, filled in defaults you never wrote, computed the camera basis from <code>look-at</code> and <code>up</code>, and connected each light to its geometry in both directions. What <code>pt edn</code> prints is the scene <em>after</em> five jobs have been done to it — resolve, default, normalize, stitch, expand — which is the level the rest of the system consumes.</p>
+<h2 id="step-2--read-the-schedule-that-will-run">Step 2 — Read the schedule that will run<a class="anchor" href="#step-2--read-the-schedule-that-will-run" aria-label="Link to this section">#</a></h2>
+<p>Two levels further down, the scene has become a <em>graph</em> of passes and then a flat schedule. Print it:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt describe cornell</code></pre></div>
+<div class="codewrap"><pre><code>ExecutionPlan: 4 steps, 8 resources -&gt; 8 physical buffers
+  schedule:
+    0: GeneratePrimaryRays          reads[-] writes[primary_rays] dirty[camera,spp]
+    1: Intersect                    reads[primary_rays] writes[hits, aov_normal, aov_albedo, aov_depth] dirty[camera,scene,spp]
+    2: ShadeDI[uniform]             reads[hits] writes[radiance_accum, moment2] dirty[camera,scene,spp]
+    3: ToneMap                      reads[radiance_accum, aov_normal, aov_albedo, aov_depth] writes[framebuffer] dirty[aov,camera,exposure,scene,spp]
+  resources:
+    slot  0  aov_normal             [1,3]
+    slot  1  aov_albedo             [1,3]
+    slot  2  aov_depth              [1,3]
+    slot  3  framebuffer            [3,3]
+    slot  4  hits                   [1,2]
+    slot  5  moment2                persistent
+    slot  6  radiance_accum         persistent
+    slot  7  primary_rays           [0,1]</code></pre></div>
+<p>Read it as four sentences. Shoot a ray through every pixel. Find what each ray hits. Shade the hits. Tone-map the result to a framebuffer.</p>
+<p>Each pass states what it <strong>reads</strong> and what it <strong>writes</strong>, and that declaration is enforced — a pass that reaches for a buffer it did not declare fails when the graph is built, not on some later frame. The <code>dirty[…]</code> list is what makes the interactive shell cheap: drag the exposure slider and only the passes that declared <code>exposure</code> re-run, so every accumulated sample survives.</p>
+<p>The numbers in brackets next to each resource are its <em>lifetime</em> — the first and last step that needs it. <code>hits</code> is <code>[1,2]</code>: written at step 1, last read at step 2, dead afterwards. <code>persistent</code> means the buffer outlives the frame.</p>
+<h2 id="step-3--diff-two-estimators">Step 3 — Diff two estimators<a class="anchor" href="#step-3--diff-two-estimators" aria-label="Link to this section">#</a></h2>
+<p>Here is where it pays off. Print the schedule for the ReSTIR version of the same room and compare:</p>
+<div class="codewrap"><pre class="lang-bash"><code>diff &lt;(.venv/bin/pt describe cornell     2&gt;/dev/null) \
+     &lt;(.venv/bin/pt describe cornell_restir 2&gt;/dev/null)</code></pre></div>
+<div class="codewrap"><pre><code>&lt;     2: ShadeDI[uniform]             reads[hits] writes[radiance_accum, moment2] …
+---
+&gt;     2: ReSTIR.InitialAndTemporal    reads[hits, reservoir_prev, hits_prev] writes[reservoir_temporal] …
+&gt;     3: ReSTIR.Spatial               reads[hits, reservoir_temporal] writes[reservoir_curr] …
+&gt;     4: ReSTIR.Resolve               reads[hits, reservoir_curr] writes[radiance_accum, moment2, aov_reservoir] …</code></pre></div>
+<p>Steps 0 and 1 are identical. Step 3's tone map is identical. <strong>One shading node has expanded into three passes and some persistent reservoirs, and nothing else in the renderer changed.</strong> That is the claim the architecture makes about how these estimators relate to one another, and here it is as a diff rather than as a paragraph.</p>
+<p>Look at the two reuse passes closely:</p>
+<div class="codewrap"><pre><code>ReSTIR.Spatial    reads[hits, reservoir_temporal]  writes[reservoir_curr]</code></pre></div>
+<p>It reads one buffer and writes a <em>different</em> one. That is not an accident and not a style choice. Spatial reuse means every pixel looks at its neighbours, so if the pass read and wrote the same buffer while running in parallel, each pixel would see an arbitrary mixture of already-updated and not-yet-updated neighbours. Two buffers cost memory and make the race impossible.</p>
+<h2 id="step-4--look-at-the-buffers-themselves">Step 4 — Look at the buffers themselves<a class="anchor" href="#step-4--look-at-the-buffers-themselves" aria-label="Link to this section">#</a></h2>
+<p>The last level is the data. Render a small image and write every cooked buffer to disk:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt dump cornell --res 64 64 --spp 8 --dir out/artifacts</code></pre></div>
+<div class="codewrap"><pre><code>wrote 17 arrays to out/artifacts
+  aov_albedo
+  aov_depth
+  aov_normal
+  framebuffer
+  hits.light_id
+  hits.material_id
+  hits.n
+  hits.p
+  …</code></pre></div>
+<p>These are plain <code>.npy</code> files. Load one and look at it:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/python -c <span class="tok-str">"
+import numpy as np
+n = np.load('out/artifacts/hits.n.npy')
+print(n.shape, n.dtype)
+print('surface normal at the centre pixel:', n[32, 32])
+"</span></code></pre></div>
+<p>Every intermediate the renderer produced is on disk, in a format anything can read. Nothing is hidden inside the engine.</p>
+<hr>
+<h2 id="what-we-did">What we did<a class="anchor" href="#what-we-did" aria-label="Link to this section">#</a></h2>
+<p>We looked at one scene at three levels — elaborated source, compiled schedule, cooked buffers — and used a diff between two of those levels to locate the single point where two estimators differ.</p>
+<p>The pipeline has more levels than the three we printed. In full it is:</p>
+<div class="codewrap"><pre><code>cornell.edn  →  forms  →  SceneAST  →  SemanticIR  →  RawGraph  →  ExecutionPlan  →  kernels
+       read      macro-expand  analyze    elaborate    declare      compile        execute</code></pre></div>
+<p><code>pt edn</code> printed the SemanticIR, <code>pt describe</code> printed the ExecutionPlan, and <code>pt dump</code> printed what the kernels produced. The two levels with no CLI of their own are dumped by <code>docs/explainer/capture_levels.py</code>, and the <a href="../explainer/index.html">interactive explainer</a> has a scrubber that steps through all seven.</p>
+<p><strong>Next:</strong> <a href="03-catch-a-biased-estimator.html">Catch a biased estimator</a> — we make a renderer produce a clean, beautiful, wrong image, and then prove it is wrong.</p><div class="prevnext"><a href="01-first-render.html"><span class="k">Previous</span><span class="n">Render your first image</span></a><a href="03-catch-a-biased-estimator.html" style="text-align:right"><span class="k">Next</span><span class="n">Catch a biased estimator</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#step-1--read-the-scene-as-its-author-wrote-it">Step 1 — Read the scene as its author wrote it</a><a class="lv2" href="#step-2--read-the-schedule-that-will-run">Step 2 — Read the schedule that will run</a><a class="lv2" href="#step-3--diff-two-estimators">Step 3 — Diff two estimators</a><a class="lv2" href="#step-4--look-at-the-buffers-themselves">Step 4 — Look at the buffers themselves</a><a class="lv2" href="#what-we-did">What we did</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

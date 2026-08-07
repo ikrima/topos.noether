@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-q="how-to">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debug a single pixel · pt docs</title>
+<meta name="description" content="Path tree, candidate table, AOVs and the variance heatmap.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html" aria-current="true">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>How-to guides</h4><a href="../how-to/index.html">Overview</a><a href="../how-to/measure-a-change-for-bias.html">Measure a change for bias</a><a href="../how-to/compare-renders-perceptually.html">Compare two renders perceptually</a><a href="../how-to/dump-and-diff-an-intermediate.html">Dump and diff an intermediate</a><a href="../how-to/debug-a-single-pixel.html" aria-current="true">Debug a single pixel</a><a href="../how-to/run-the-test-suites.html">Run the test suites</a><a href="../how-to/verify-the-racket-port.html">Verify the Racket port</a><a href="../how-to/add-to-the-renderer.html">Add a draw, a pass, a strategy, a scene</a><a href="../how-to/commit-with-signing.html">Commit with the signing agent</a><a href="../how-to/build-the-docs.html">Build the documentation</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">How-to guides</div><h1>Debug a single pixel</h1><p class="summary">Path tree, candidate table, AOVs and the variance heatmap.</p><div class="srcline"><span>Source: <code>docs/how-to/debug-a-single-pixel.md</code></span><span>task-oriented</span></div></div>
+<p>A pixel is too bright, too dark, or noisy where nothing else is. The shell can show you the estimator's actual working out for it.</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt gui cornell_restir</code></pre></div>
+<p>Needs a display. Everything else in these guides runs headless.</p>
+<h2 id="read-the-estimate-as-evidence">Read the estimate as evidence<a class="anchor" href="#read-the-estimate-as-evidence" aria-label="Link to this section">#</a></h2>
+<p>Click the pixel in the <strong>Render</strong> window.</p>
+<p><strong>Path Tree</strong> shows the primary ray, the surface it hit, and every light-sample candidate drawn for that pixel at the current sample index — each with the light it sampled, <code>cos_light</code>, its target value <code>p̂</code>, its resampling weight <code>w</code>, its MIS weight <code>m</code>, its Jacobian, and whether it was <code>occluded</code>.</p>
+<p><strong>Candidates</strong> shows the same as a table. <code>w / sum(w)</code> <em>is</em> the selection probability. <code>M</code> is the effective sample count.</p>
+<p>None of this is a replay. The path is <strong>re-derived</strong> from the same <code>hash(pixel, sample, bounce, dimension, seed)</code> the kernel used, so you are reading the sample that produced the pixel rather than a fresh draw from the same distribution. Click-to-inspect runs the pure Python core on the UI thread — no Taichi call ever happens there.</p>
+<h2 id="what-to-look-for">What to look for<a class="anchor" href="#what-to-look-for" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table><thead><tr><th>Symptom</th><th>Look at</th><th>Likely</th></tr></thead><tbody><tr><td>Pixel far too bright</td><td>the chosen candidate's <code>w</code> and <code>p̂</code></td><td>a target function evaluating non-zero where the contribution is zero, or a Jacobian blowing up at a grazing angle</td></tr><tr><td>Pixel too dark, neighbours fine</td><td><code>M</code>, and whether streams were admitted</td><td>a stream dropped instead of contributing its confidence — see <a href="../reference/07-invariants.html#empty-streams">empty streams</a></td></tr><tr><td>Noisy only near an edge</td><td><code>M</code> on both sides of the edge</td><td>the geometric gate rejecting neighbours, which is usually correct behaviour</td></tr><tr><td>Fine still, wrong when the camera moves</td><td>tick <strong>temporal reprojection</strong>, then drag</td><td>the reprojection lookup, not the estimator</td></tr></tbody></table></div>
+<h2 id="step-one-sample-at-a-time">Step one sample at a time<a class="anchor" href="#step-one-sample-at-a-time" aria-label="Link to this section">#</a></h2>
+<p>Drag <strong>spp cap</strong> in Controls. The primary ray jitters within the pixel and the light sample moves across the lamp — the Monte Carlo process, one draw at a time. If a pixel is wrong at one specific sample index and right at others, that index is the bug.</p>
+<h2 id="see-it-in-space">See it in space<a class="anchor" href="#see-it-in-space" aria-label="Link to this section">#</a></h2>
+<p><strong>Debug 3D</strong> draws the same data geometrically: the render camera as a frustum, primary rays blue, rejected candidates dim, the survivor bright green, temporally reused samples pink, spatially borrowed ones orange with an arrow back to the pixel they came from.</p>
+<p>For a suspected reuse problem this is the fastest view — a sample being borrowed from somewhere it should not be is obvious as a line in space and invisible in a table.</p>
+<h2 id="look-at-the-buffers-instead-of-the-image">Look at the buffers instead of the image<a class="anchor" href="#look-at-the-buffers-instead-of-the-image" aria-label="Link to this section">#</a></h2>
+<p>The <strong>AOV</strong> combo routes a cooked buffer straight to the display: normals, albedo, depth, reservoir weight. A pixel whose <em>normal</em> is wrong is a geometry bug, not an estimator bug, and this tells you which in one click.</p>
+<p><strong>variance heatmap</strong> shows where the renderer is still uncertain, which is often not where it looks noisiest.</p>
+<p><strong>Dump cooked artifacts</strong> writes everything to <code>.npy</code> for offline comparison — see <a href="dump-and-diff-an-intermediate.html">Dump and diff an intermediate</a>.</p>
+<h2 id="compare-estimators-live">Compare estimators live<a class="anchor" href="#compare-estimators-live" aria-label="Link to this section">#</a></h2>
+<p><strong>strategy</strong> switches between uniform, RIS and ReSTIR DI. <strong>ReSTIR combine</strong> switches the reuse weighting between <code>naive</code>, <code>mis</code> and <code>pairwise-mis</code>.</p>
+<p>If a pixel is wrong under all three weightings, the problem is not the weighting.</p>
+<h2 id="headless-alternative">Headless alternative<a class="anchor" href="#headless-alternative" aria-label="Link to this section">#</a></h2>
+<p>With no display, drive the pure reference directly — it is the same code the inspector runs:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/python -c <span class="tok-str">"
+from pt.dsl import load_scene_file, scene_path
+from pt.core.pathtree import regenerate_path
+ir = load_scene_file(scene_path('cornell_restir'))
+tree = regenerate_path(ir, (128, 200), sample=0)
+print(tree.kind, len(tree.children), 'children')
+for c in tree.children[:3]:
+    print(' ', c.kind, c.payload)
+"</span></code></pre></div>
+<div class="codewrap"><pre><code>primary 33 children
+  candidate {'candidate_id': 0, 'light': 0, 'p_light': (319.0006…, 548.7, 323.0381…), …}</code></pre></div>
+<p>With no live reservoir state this shows the <strong>initial RIS candidates only</strong> — temporal and spatial reuse are omitted, not approximated. The GUI says so in a note when it is in the same position. To inspect a pixel under warmed reuse you need a <code>ReservoirProvider</code> carrying real buffers, which is what the shell supplies from its render worker.</p>
+<h2 id="see-also">See also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="../tutorials/04-inspect-a-pixel.html">Inspect a single pixel</a> — the guided version.</li><li><a href="../reference/05-runtime.html">Engine, shell and CLI</a> — the threading rules that shape the shell.</li></ul><div class="prevnext"><a href="dump-and-diff-an-intermediate.html"><span class="k">Previous</span><span class="n">Dump and diff an intermediate</span></a><a href="run-the-test-suites.html" style="text-align:right"><span class="k">Next</span><span class="n">Run the test suites</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#read-the-estimate-as-evidence">Read the estimate as evidence</a><a class="lv2" href="#what-to-look-for">What to look for</a><a class="lv2" href="#step-one-sample-at-a-time">Step one sample at a time</a><a class="lv2" href="#see-it-in-space">See it in space</a><a class="lv2" href="#look-at-the-buffers-instead-of-the-image">Look at the buffers instead of the image</a><a class="lv2" href="#compare-estimators-live">Compare estimators live</a><a class="lv2" href="#headless-alternative">Headless alternative</a><a class="lv2" href="#see-also">See also</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

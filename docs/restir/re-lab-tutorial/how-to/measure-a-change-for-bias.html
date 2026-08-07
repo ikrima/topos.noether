@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-q="how-to">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measure a change for bias · pt docs</title>
+<meta name="description" content="The protocol that turns “the tests pass” into a correctness claim.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html" aria-current="true">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>How-to guides</h4><a href="../how-to/index.html">Overview</a><a href="../how-to/measure-a-change-for-bias.html" aria-current="true">Measure a change for bias</a><a href="../how-to/compare-renders-perceptually.html">Compare two renders perceptually</a><a href="../how-to/dump-and-diff-an-intermediate.html">Dump and diff an intermediate</a><a href="../how-to/debug-a-single-pixel.html">Debug a single pixel</a><a href="../how-to/run-the-test-suites.html">Run the test suites</a><a href="../how-to/verify-the-racket-port.html">Verify the Racket port</a><a href="../how-to/add-to-the-renderer.html">Add a draw, a pass, a strategy, a scene</a><a href="../how-to/commit-with-signing.html">Commit with the signing agent</a><a href="../how-to/build-the-docs.html">Build the documentation</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">How-to guides</div><h1>Measure a change for bias</h1><p class="summary">The protocol that turns “the tests pass” into a correctness claim.</p><div class="srcline"><span>Source: <code>docs/how-to/measure-a-change-for-bias.md</code></span><span>task-oriented</span></div></div>
+<p>You changed the estimator. Green tests are not a correctness claim and neither is a render that looks right — a biased ReSTIR produces a clean, beautiful, wrong image. This is the procedure that turns "it works" into a number.</p>
+<p>Work through it in order. The early steps are seconds and catch most mistakes; the later ones are minutes and catch the rest.</p>
+<h2 id="1-change-both-twins">1. Change both twins<a class="anchor" href="#1-change-both-twins" aria-label="Link to this section">#</a></h2>
+<p>Every estimator lives twice — a pure-f64 reference in <code>pt/core/</code> and a Taichi kernel in <code>pt/kernels/</code> — and they are held to agreeing <em>per sample</em>, not statistically.</p>
+<div class="tablewrap"><table><thead><tr><th>concern</th><th>reference</th><th>kernel</th></tr></thead><tbody><tr><td>reservoir algebra, MIS weights</td><td><code>core/reservoir.py</code></td><td>inlined in <code>kernels/restir*.py</code></td></tr><tr><td>ReSTIR DI passes</td><td><code>core/integrators/di_restir.py</code></td><td><code>kernels/restir.py</code></td></tr><tr><td>ReSTIR GI passes</td><td><code>core/integrators/gi_restir.py</code></td><td><code>kernels/restir_gi.py</code></td></tr><tr><td>frame loop, history rollover</td><td><code>core/render._render_restir</code></td><td><code>Engine._make_advance</code> + <code>graph/builder.py</code></td></tr></tbody></table></div>
+<p>If you added a random draw, you must also allocate a dimension in <strong>both</strong> <code>core/rng.py</code> and <code>kernels/_common.py</code>, or two "independent" draws silently become the same number — which looks exactly like plausible noise. See <a href="add-to-the-renderer.html#add-a-random-draw">Add a draw</a>.</p>
+<h2 id="2-run-the-twin-tests">2. Run the twin tests<a class="anchor" href="#2-run-the-twin-tests" aria-label="Link to this section">#</a></h2>
+<p>The fastest useful signal in the repository:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/python -m pytest tests/test_kernels.py::TestRestirGiKernels -q
+.venv/bin/python -m pytest tests/test_core.py -k reconnection -q</code></pre></div>
+<p>They compare the reference and the kernel per pixel under all three weightings — including <code>naive</code>, precisely because it is the <em>wrong</em> estimator. The two implementations must agree about what the wrong answer is, or a later bias measurement would be measuring a kernel bug.</p>
+<p><strong>Know this test's blind spot.</strong> The two implementations are <em>supposed</em> to compute the same thing, so a wrong pdf, a double-converted Jacobian or a doubled cosine satisfies the diff exactly as well as being right does. It proves transcription, not measure. That is what steps 3 and 4 are for.</p>
+<h2 id="3-get-a-verdict">3. Get a verdict<a class="anchor" href="#3-get-a-verdict" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt validate &lt;scene&gt; --spp 400</code></pre></div>
+<p>Read three sections:</p>
+<ul><li><strong><code>[bias]</code></strong> — excess error over <em>both</em> estimators' noise. <code>E[MSE] = var(est) + var(ref) + bias²</code>, so comparing against the reference's noise floor alone charges the estimator's own variance to bias and reports honest estimators as broken.</li><li><strong><code>[convergence]</code></strong> — an unbiased curve keeps falling near <code>-1</code>; a biased one flattens onto its bias-squared plateau. This fires earlier than the excess test, because it needs only the curve to have turned over.</li><li><strong><code>[variance]</code></strong> — measured <strong>per frame</strong>, never accumulated. Consecutive ReSTIR frames are correlated through the reservoirs, so averaging N of them is worth far fewer than N independent samples, and comparing accumulated means makes ReSTIR look <em>worse</em> than plain RIS.</li></ul>
+<p>Converged references are cached by scene fingerprint in <code>.ref_cache/</code>, so a repeat run is cheap — see <code>validation/reference_cache.py</code>.</p>
+<h2 id="4-if-the-change-touches-gi-measure-the-indirect-term">4. If the change touches GI, measure the indirect term<a class="anchor" href="#4-if-the-change-touches-gi-measure-the-indirect-term" aria-label="Link to this section">#</a></h2>
+<p><strong>Whole-image statistics cannot see a GI estimator.</strong> The indirect term is about 11% of a Cornell box, so a defect in the only quantity ReSTIR GI is responsible for arrives at a whole-image test divided by nine. A 25% spatial-reuse bias, once measured, read <code>0.9953</code> on total energy.</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt validate cornell_restir_gi --res 96 96 --spp 200 --ref-spp 1200
+.venv/bin/pt validate gi_bias_demo      --res 128 128</code></pre></div>
+<p>Four rules govern this measurement. Violating any of them produces a confident wrong answer.</p>
+<p><strong>Difference against a one-bounce render.</strong> Use <code>validation/gi.render_indirect</code> and <code>indirect_verdict</code> rather than rolling the subtraction by hand. Vertex 0 keeps its RNG stream, so the direct term <em>cancels</em> exactly rather than averaging away. It is valid only for <code>:uniform</code> and <code>:restir-gi</code>, which share vertex 0's draws; <code>require_shared_direct_term</code> refuses the rest rather than returning a number nobody can interpret.</p>
+<p><strong>Discard 64 warm-up frames.</strong> A ReSTIR run <em>becomes</em> the estimator under test over roughly <code>m_cap</code> frames, so an accumulation started at frame 0 averages in the path tracer it began as. Measured, that dilution turns <code>0.987</code> into <code>1.004</code> and hides the deficit completely. The reading settles by 64 frames and does not move through 256.</p>
+<p><strong>Warm the no-reuse control identically.</strong> Both passes off at <code>M = 1</code> is the two-bounce path tracer sample for sample; it must read <code>1.000</code>. That is what keeps the discard honest — otherwise the discard itself is a suspect.</p>
+<p><strong>Read energy before MSE.</strong> On a term this small, <code>bias²</code> never clears both estimators' variances, so the MSE-excess verdict stays inside its margin for an estimator losing a sixth of the indirect term. The energy ratio over the whole frame resolves the same defect at tens of sigma. <code>pt validate</code> prints energy in the first column and the MSE verdict beside it for exactly this reason.</p>
+<h2 id="5-do-not-reach-for-these">5. Do not reach for these<a class="anchor" href="#5-do-not-reach-for-these" aria-label="Link to this section">#</a></h2>
+<p><strong>Per-pixel probes.</strong> A single pixel's estimate is heavy-tailed enough to show fake bias on a direct-lighting control. Aggregate over the frame.</p>
+<p><strong>FLIP.</strong> <code>validation/flip.py</code> ranks and localizes; it does not detect bias. A converged biased estimator is perceptually smooth and scores well. Use it for "which of these looks closest" and "where do they differ" — see <a href="compare-renders-perceptually.html">Compare two renders perceptually</a>.</p>
+<p><strong>A render.</strong> Tone-mapped, the correct and the 40%-dark images of <code>bias_demo</code> are hard to tell apart, and the biased one is 15× less noisy.</p>
+<h2 id="6-write-down-what-you-measured">6. Write down what you measured<a class="anchor" href="#6-write-down-what-you-measured" aria-label="Link to this section">#</a></h2>
+<p>When a measurement settles something, add it to <code>ARCHITECTURE.md</code>'s <a href="../explanation/findings.html">Findings worth keeping</a> and reference it from the code that depends on it.</p>
+<p><strong>Record the hypotheses you eliminated.</strong> They are worth as much as the answer — one finding there records three eliminations and a non-finding, and every one of them is a test somebody else now does not have to repeat.</p>
+<h2 id="see-also">See also<a class="anchor" href="#see-also" aria-label="Link to this section">#</a></h2>
+<ul><li><a href="../reference/07-invariants.html">Invariants</a> — the full checklist, with which test guards each contract.</li><li><a href="../reference/06-validation.html"><code>validation/</code></a> — the chain of trust and every statistic hanging off it.</li><li><a href="../tutorials/03-catch-a-biased-estimator.html">Catch a biased estimator</a> — this procedure as a worked example, if you have not seen the harness fire.</li></ul><div class="prevnext"><a href="index.html"><span class="k">Up</span><span class="n">Section overview</span></a><a href="compare-renders-perceptually.html" style="text-align:right"><span class="k">Next</span><span class="n">Compare two renders perceptually</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#1-change-both-twins">1. Change both twins</a><a class="lv2" href="#2-run-the-twin-tests">2. Run the twin tests</a><a class="lv2" href="#3-get-a-verdict">3. Get a verdict</a><a class="lv2" href="#4-if-the-change-touches-gi-measure-the-indirect-term">4. If the change touches GI, measure the indirect term</a><a class="lv2" href="#5-do-not-reach-for-these">5. Do not reach for these</a><a class="lv2" href="#6-write-down-what-you-measured">6. Write down what you measured</a><a class="lv2" href="#see-also">See also</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

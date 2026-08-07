@@ -294,6 +294,13 @@ I meant it to be a "Gentle Restir Intro For Engineers" to Chris Wyman's [Gentle 
       dependents: dict[int, tuple[PassIdx, ...]] = field(default_factory=dict)
   ```
 
+
+### Architecture Documentation
+
+- [ReSTIR Lab Atlas](re-lab-atlas/index.html): The Architecture Atlas
+- [ReSTIR Lab Architecture](re-lab-arch/index.html): Documentation Wiki
+- [ReSTIR Lab Tutorial](re-lab-tutorial/index.html): ReSTIR Tutorial
+
 ### Taichi Toy Implementation
 
 - Baseline Monte Carlo path tracer with NEE (100 spp):

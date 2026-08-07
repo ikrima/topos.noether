@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" data-q="tutorials">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catch a biased estimator · pt docs</title>
+<meta name="description" content="Render the same scene two ways, fail to tell them apart by eye, then measure the one that is wrong.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html" aria-current="true">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Tutorials</h4><a href="../tutorials/index.html">Overview</a><a href="../tutorials/01-first-render.html">Render your first image</a><a href="../tutorials/02-watch-a-scene-lower.html">Watch a scene lower</a><a href="../tutorials/03-catch-a-biased-estimator.html" aria-current="true">Catch a biased estimator</a><a href="../tutorials/04-inspect-a-pixel.html">Inspect a single pixel <span class="needs">(a display)</span></a><h4>Elsewhere</h4><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html">Reference</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Tutorials</div><h1>Catch a biased estimator</h1><p class="summary">Render the same scene two ways, fail to tell them apart by eye, then measure the one that is wrong.</p><div class="srcline"><span>Source: <code>docs/tutorials/03-catch-a-biased-estimator.md</code></span><span>learning-oriented</span></div></div>
+<p>Noise and bias are different failures. Noise you fix with more samples; bias you fix with mathematics. The trouble is that a biased renderer does not look broken — it looks <em>good</em>, often better than the correct one, because whatever it is doing wrong is usually also smoothing.</p>
+<p>In this tutorial we will render the same scene two ways, fail to tell them apart by eye, and then catch the wrong one three separate ways with measurements.</p>
+<p><strong>You will need</strong> the venv, and about ten minutes — one command in this tutorial runs for roughly two of them. No display needed.</p>
+<hr>
+<h2 id="step-1--render-the-same-scene-twice">Step 1 — Render the same scene twice<a class="anchor" href="#step-1--render-the-same-scene-twice" aria-label="Link to this section">#</a></h2>
+<p><code>bias_demo</code> is a scene built for this purpose. Render it under two different reuse weightings:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt render bias_demo --bias naive --spp 300 -o out/bias_naive.png
+.venv/bin/pt render bias_demo --bias mis   --spp 300 -o out/bias_mis.png</code></pre></div>
+<p>Each takes a few seconds. <code>--bias</code> chooses how ReSTIR combines samples borrowed from neighbouring pixels: <code>naive</code> weights each contributing stream by <code>M_i / ΣM_j</code>, and <code>mis</code> uses the generalized balance heuristic.</p>
+<p>Open the two PNGs and put them side by side.</p>
+<p>They are hard to tell apart. Look closely at the pools of light on the floor and you may notice that <code>naive</code> has narrower, brighter cores where <code>mis</code> has broader, softer ones — but if you did not already know which was which, you would not be able to say which one was wrong. You might well prefer the wrong one; it is visibly less noisy.</p>
+<h2 id="step-2--ask-the-harness">Step 2 — Ask the harness<a class="anchor" href="#step-2--ask-the-harness" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt validate bias_demo --res 128 128 --spp 400 --ref-spp 1500 --no-flip</code></pre></div>
+<p>This runs for about two minutes. It builds a converged reference by brute force, then measures every estimator against it. Let us read the report a section at a time.</p>
+<h3 id="the-verdict">The verdict<a class="anchor" href="#the-verdict" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre><code>[bias] each estimator at 400 spp vs the reference (resampling M=8, sign-test stride 38px)
+  uniform               unbiased (within noise)  mse=1.321e+00 expected_noise=3.273e+00 excess=-0.60x …
+  RIS M=8               unbiased (within noise)  mse=1.030e+00 expected_noise=1.328e+00 excess=-0.22x …
+  ReSTIR mis            unbiased (within noise)  mse=1.287e+00 expected_noise=9.958e-01 excess=+0.29x …
+  ReSTIR pairwise       unbiased (within noise)  mse=1.292e+00 expected_noise=9.705e-01 excess=+0.33x …
+  ReSTIR naive                           BIASED  mse=2.901e+00 expected_noise=6.242e-01 excess=+3.65x …
+
+  1/M vs MIS: naive is 0.569x the energy of mis, excess +3.65x vs +0.29x
+  -&gt; the MIS weighting is doing necessary work here</code></pre></div>
+<p><code>excess</code> is the part of the error that both estimators' noise cannot account for. <code>E[MSE] = var(estimator) + var(reference) + bias²</code>, so subtracting the two variances leaves the bias squared — which is why the report needs to know how noisy the <em>reference</em> is, not just the estimator.</p>
+<p><code>naive</code> is missing <strong>43% of the scene's energy</strong> (<code>0.569x</code>). That is not a subtle defect. And you could not see it.</p>
+<h3 id="the-convergence-curves">The convergence curves<a class="anchor" href="#the-convergence-curves" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre><code>[convergence] MSE vs spp. A curve that FLATTENS has hit its bias<span class="tok-cm">^</span>2 floor;
+              one still falling at ~ -1 is converging to the truth.
+  uniform            slope=-0.74 tail=-0.57 plateau=  1.1x floor  ok      8:2.46e+01  32:7.94e+00  128:2.62e+00  512:1.19e+00
+  ReSTIR mis         slope=-0.80 tail=-0.39 plateau=  1.0x floor  ok      8:2.74e+01  32:7.73e+00  128:1.85e+00  512:1.08e+00
+  ReSTIR naive       slope=-0.22 tail=+0.01 plateau=  2.6x floor  BIASED  8:7.66e+00  32:3.24e+00  128:2.81e+00  512:2.84e+00</code></pre></div>
+<p>Read the four numbers on the right of the <code>naive</code> row: <code>7.66, 3.24, 2.81, 2.84</code>. The error falls, and then it <em>stops falling</em> — at 512 samples it is no better than at 128. It has hit a floor, and the floor is the bias squared. The correct estimators keep descending toward the reference's own noise (<code>plateau = 1.0x floor</code>); <code>naive</code> flattens 2.6× above it.</p>
+<p>This is a second, independent detection. It does not need the run to converge, only for the curve to have turned over.</p>
+<h3 id="the-joke-at-the-end">The joke at the end<a class="anchor" href="#the-joke-at-the-end" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre><code>[variance] per-pixel variance of a SINGLE frame, 6 seeds, 90th percentile.
+  uniform            var(p90)=7.583e+00   (the baseline)
+  RIS M=8            var(p90)=6.862e+00    1.11x better than uniform
+  ReSTIR mis         var(p90)=3.925e+00    1.93x better than uniform
+  ReSTIR pairwise    var(p90)=2.913e+00    2.60x better than uniform
+  ReSTIR naive       var(p90)=4.819e-01   15.74x better than uniform</code></pre></div>
+<p>The wrong estimator is <strong>the cleanest image in the report</strong> — sixteen times less noisy than uniform sampling, four times less noisy than the correct weighting.</p>
+<p>That is the entire lesson. If you were choosing an estimator by looking at renders, or by measuring noise, you would choose <code>naive</code> without hesitating. It throws away 43% of the light and it is beautiful.</p>
+<h2 id="step-3--notice-the-row-that-does-not-fit">Step 3 — Notice the row that does not fit<a class="anchor" href="#step-3--notice-the-row-that-does-not-fit" aria-label="Link to this section">#</a></h2>
+<p>You will also have seen this in the convergence section:</p>
+<div class="codewrap"><pre><code>  RIS M=8            slope=+0.13 tail=+1.16 plateau=  7.7x floor  BIASED</code></pre></div>
+<p>RIS is <em>not</em> biased — it is flagged here because its error on this scene is heavy-tailed: a handful of very bright pixels dominate the mean squared error, so one realization can land far above its own expectation and the fitted slope goes the wrong way. The <code>[bias]</code> section, which compares against both variances, correctly reports it as unbiased on the same run.</p>
+<p>This is worth seeing rather than hiding. MSE is the <em>fragile</em> statistic in this harness, and the way it fails is by producing a confident wrong answer in either direction. The project has a recorded case where the same effect made the detector report "unbiased" for an estimator losing a tenth of the scene's light — see <a href="../explanation/findings.html#a-scene-can-be-pathological-in-a-way-that-breaks-the-statistics">A scene can be pathological in a way that breaks the statistics</a> in the evidence log, along with the fix, which was to change the <em>scene</em> rather than the statistic.</p>
+<h2 id="step-4--understand-what-makes-this-scene-special">Step 4 — Understand what makes this scene special<a class="anchor" href="#step-4--understand-what-makes-this-scene-special" aria-label="Link to this section">#</a></h2>
+<p>Try the same measurement on the ordinary Cornell box:</p>
+<div class="codewrap"><pre class="lang-bash"><code>.venv/bin/pt validate cornell_restir --res 96 96 --spp 200 --ref-spp 600 --no-flip</code></pre></div>
+<p><code>naive</code> and <code>mis</code> come out indistinguishable. The bias is not there.</p>
+<p>Spatial reuse borrows samples from neighbouring pixels, so the intuitive place to look for its failure is a geometry discontinuity — an edge, a corner, a shadow boundary. That is the wrong place: the geometric similarity gate already <em>rejects</em> those neighbours, so it is doing, crudely, the job the MIS weighting does properly.</p>
+<p>The bias needs neighbours that <strong>pass</strong> the gate — same surface, same normal, same depth — and yet disagree about which samples are <em>possible at all</em>. <code>bias_demo</code> gets that with lights standing perpendicular to a flat floor: <code>cos_light</code> flips sign along a razor-sharp line across the plane, so two adjacent pixels are geometrically identical while one assigns zero probability to samples the other can produce.</p>
+<p>Building that scene was harder than writing the detector.</p>
+<hr>
+<h2 id="what-we-did">What we did<a class="anchor" href="#what-we-did" aria-label="Link to this section">#</a></h2>
+<p>We produced a clean, beautiful, wrong image, and then established that it was wrong three independent ways: excess error over the combined noise floors, a convergence curve that flattened above the reference's noise instead of at it, and a stable energy deficit that did not shrink with more samples.</p>
+<p><strong>Two things to carry forward.</strong></p>
+<p><em>Low variance is not correctness.</em> It is the reason this project has a statistical harness at all. Every other kind of bug here can be found by looking at a render; this one cannot.</p>
+<p><em>Which statistic you measure decides whether you can see the effect.</em> MSE found the defect on this scene. One bounce further out — on the indirect term, which is about 11% of a Cornell box — it does not: the MSE verdict reads "unbiased (within noise)" for estimators that the energy ratio resolves as broken at tens of sigma.</p>
+<p><strong>Where next:</strong></p>
+<ul><li><a href="../how-to/measure-a-change-for-bias.html">Measure a change for bias</a> is this tutorial turned into a working procedure, including the extra steps a GI change needs.</li><li>The <a href="../explanation/findings.html">evidence log</a> records every measurement this project has made, including the hypotheses that were eliminated.</li><li><a href="04-inspect-a-pixel.html">Inspect a single pixel</a> if you have a display, to see what the estimator is doing rather than what it produced.</li></ul><div class="prevnext"><a href="02-watch-a-scene-lower.html"><span class="k">Previous</span><span class="n">Watch a scene lower</span></a><a href="04-inspect-a-pixel.html" style="text-align:right"><span class="k">Next</span><span class="n">Inspect a single pixel</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#step-1--render-the-same-scene-twice">Step 1 — Render the same scene twice</a><a class="lv2" href="#step-2--ask-the-harness">Step 2 — Ask the harness</a><a class="lv3" href="#the-verdict">The verdict</a><a class="lv3" href="#the-convergence-curves">The convergence curves</a><a class="lv3" href="#the-joke-at-the-end">The joke at the end</a><a class="lv2" href="#step-3--notice-the-row-that-does-not-fit">Step 3 — Notice the row that does not fit</a><a class="lv2" href="#step-4--understand-what-makes-this-scene-special">Step 4 — Understand what makes this scene special</a><a class="lv2" href="#what-we-did">What we did</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>

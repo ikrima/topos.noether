@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en" data-q="reference">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semantics of the estimator · pt docs</title>
+<meta name="description" content="What the estimator *is*, stated precisely enough for a reimplementation to satisfy.">
+<link rel="stylesheet" href="../assets/theme.css">
+</head>
+<body>
+<header class="top">
+<a class="brand" href="../index.html"><span class="mark">pt</span>
+<span>Documentation</span><span class="sub">ReSTIR DI / GI path tracer</span></a>
+<nav class="qlinks"><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../reference/index.html" aria-current="true">Reference</a><a href="../explanation/index.html">Explanation</a></nav>
+<span class="spacer"></span>
+<button class="iconbtn" id="navToggle" type="button">Contents</button>
+<button class="iconbtn" data-open-search type="button" aria-label="Search">Search <kbd>/</kbd></button>
+<button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle light or dark theme">Theme</button>
+</header>
+<div class="shell"><aside class="side collapsed"><h4>Reference</h4><a href="../reference/index.html">Overview</a><a href="../reference/00-overview.html">Overview: the lowering pipeline</a><a href="../reference/01-dsl.html"><code>pt/dsl/</code> — the front end</a><a href="../reference/02-core.html"><code>pt/core/</code> — the pure reference</a><a href="../reference/03-graph.html"><code>pt/graph/</code> — the render graph</a><a href="../reference/04-kernels.html"><code>pt/kernels/</code> — the Taichi layer</a><a href="../reference/05-runtime.html">Engine, shell and CLI</a><a href="../reference/06-validation.html"><code>validation/</code> — the harness</a><a href="../reference/07-invariants.html">Invariants</a><a href="../reference/semantics.html" aria-current="true">Semantics of the estimator</a><a href="../reference/conformance.html">Conformance vectors</a><a href="../reference/cli.html">Command reference</a><a href="../reference/scenes.html">Scene catalogue</a><h4>Elsewhere</h4><a href="../tutorials/index.html">Tutorials</a><a href="../how-to/index.html">How-to guides</a><a href="../explanation/index.html">Explanation</a><a href="../explainer/index.html">The explainer &rarr;</a></aside><main><div class="pagehead"><div class="eyebrow">Reference</div><h1>Semantics of the estimator</h1><p class="summary">What the estimator <em>is</em>, stated precisely enough for a reimplementation to satisfy.</p><div class="srcline"><span>Source: <code>docs/architecture/semantics.md</code></span><span>information-oriented</span></div></div>
+<p>What the estimator <em>is</em>, stated precisely enough to check. This is the document a reimplementation must satisfy; <a href="index.html">reference/</a> says where each piece lives and <a href="../explanation/porting.html">porting-to-racket.md</a> says what to do with it.</p>
+<p>Notation: <code>p̂</code> is the target function, <code>M</code> a confidence, <code>W</code> a contribution weight, <code>mᵢ</code> an MIS weight, <code>J</code> a Jacobian. Scene and target mode are suppressed where constant.</p>
+<h2 id="1-the-compositional-structure">1. The compositional structure<a class="anchor" href="#1-the-compositional-structure" aria-label="Link to this section">#</a></h2>
+<p>Eight layers, each defined in terms of the one above.</p>
+<div class="tablewrap"><table><thead><tr><th>#</th><th>Object</th><th>Definition</th></tr></thead><tbody><tr><td>1</td><td><strong>Payload</strong> <code>y</code></td><td><code>LightSample</code> (a point on a light) or <code>PathSample</code> (a path suffix through one reconnection vertex)</td></tr><tr><td>2</td><td><strong>Reservoir</strong></td><td><code>(y, w_sum, M, W) ∈ (Payload ∪ {⊥}) × ℝ≥0 × ℝ≥0 × ℝ≥0</code></td></tr><tr><td>3</td><td><strong>Stream</strong></td><td><code>(Reservoir, Hit)</code> — a reservoir <em>plus the shading point that defines its target</em></td></tr><tr><td>4</td><td><strong>ReuseDomain</strong></td><td><code>(p̂, J)</code> — the only payload-dependent data in the algebra</td></tr><tr><td>5</td><td><strong>Combination</strong></td><td><code>combine : Hit × [Stream] × [u] × Rule × ReuseDomain → Reservoir</code></td></tr><tr><td>6</td><td><strong>Passes</strong></td><td><code>initial+temporal</code>, <code>spatial</code>, <code>resolve</code> — the same signatures for both payloads</td></tr><tr><td>7</td><td><strong>Frame loop</strong></td><td>carried state <code>(reservoir_prev, hits_prev, cam_prev)</code></td></tr><tr><td>8</td><td><strong>Determinism</strong></td><td><code>rand : (pixel, sample, bounce, dim, seed) → [0,1)</code>, a pure hash</td></tr></tbody></table></div>
+<p>Layer 4 is the whole trick. Exactly <strong>two</strong> inhabitants exist, and everything else is written once.</p>
+<h2 id="2-payloads-and-measure">2. Payloads and measure<a class="anchor" href="#2-payloads-and-measure" aria-label="Link to this section">#</a></h2>
+<p>Both payloads store a <strong>world-space point</strong>. They differ in <em>which measure their density lives in</em>, and that difference — not the storage — is what decides whether reuse needs a Jacobian.</p>
+<div class="tablewrap"><table><thead><tr><th></th><th><code>LightSample</code></th><th><code>PathSample</code></th></tr></thead><tbody><tr><td>Stores</td><td><code>p, wi, dist, radiance, pdf_area, pdf_solid_angle, light_id, cos_light</code></td><td><code>p (=x₂), n (=n₂), radiance (=L(x₂→x₁)), pdf_solid_angle, prim_id</code></td></tr><tr><td>Density in</td><td><strong>area</strong> at the sampled point</td><td><strong>solid angle</strong> at the vertex it was traced from (x₁)</td></tr><tr><td>View-dependent?</td><td>no</td><td>yes</td></tr><tr><td>⇒ Jacobian</td><td><code>≡ 1</code></td><td>the reconnection Jacobian</td></tr></tbody></table></div>
+<blockquote><p><code>DI_DOMAIN.jacobian ≡ 1</code> <strong>not</strong> because the payload is a world-space point — the GI payload is one too — but because a light sample's pdf is stored in area measure, which is view-independent.</p></blockquote>
+<p>Re-deriving <code>wi</code> and <code>dist</code> from a stored point is exact (<code>light_sample_at</code>), which is what makes that identity hold rather than approximately hold.</p>
+<h2 id="3-streaming-ris">3. Streaming RIS<a class="anchor" href="#3-streaming-ris" aria-label="Link to this section">#</a></h2>
+<p>A reservoir summarizes an arbitrarily long candidate stream in O(1).</p>
+<p><strong>Absorb</strong> (Chao's weighted reservoir sampling), with an explicit confidence increment:</p>
+<div class="codewrap"><pre><code>absorb((y, s, M, W), y', w, m, u) =
+    (y,  s,      M + m, W)                     if w ≤ 0 or w = NaN
+    (y', s + w,  M + m, W)                     if u &lt; w / (s + w)
+    (y,  s + w,  M + m, W)                     otherwise</code></pre></div>
+<p><code>update(r, y, w, u) = absorb(r, y, w, 1, u)</code> — a fresh candidate carries confidence 1.</p>
+<p><strong>Property (survivor law).</strong> After streaming candidates with weights <code>wᵢ</code>, the held sample is <code>yᵢ</code> with probability <code>wᵢ / Σⱼ wⱼ</code>. With <code>wᵢ = p̂(yᵢ)/p(yᵢ)</code> the survivor is distributed ∝ <code>p̂</code>.</p>
+<p><strong>Finalize</strong> — two forms, and <em>which one is correct depends on whether the <code>mᵢ</code> have already been paid</em>:</p>
+<div class="codewrap"><pre><code>finalize_ris(r, p̂(y)) :  W = w_sum / (M · p̂(y))       candidates i.i.d. from one stream
+finalize_mis(r, p̂(y)) :  W = w_sum / p̂(y)             streams already carry mᵢ</code></pre></div>
+<p><strong>Property.</strong> <code>finalize_ris</code> at <code>M = 1</code> collapses to <code>1 / p_source</code>, so RIS is a strict generalization of plain importance sampling. Worth asserting before trusting larger <code>M</code>.</p>
+<p><strong>Trap.</strong> No <code>1/M</code> in <code>finalize_mis</code>: the <code>mᵢ</code> already sum to one over the contributing streams, so dividing by <code>M</code> as well double-normalizes and darkens the result. In the kernels the choice is carried by an explicit <code>mis_merged</code> flag rather than inferred from <code>M</code>, because "no history was found" and "history was found and weighted" are different states that can leave <code>M</code> looking the same.</p>
+<h2 id="4-the-reuse-domain">4. The reuse domain<a class="anchor" href="#4-the-reuse-domain" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre><code>ReuseDomain = (p̂, J)
+  p̂ : Scene × Hit × Payload × TargetMode → ℝ≥0
+  J : Scene × Payload × Hit_from × Hit_to → ℝ≥0        as |d(to) / d(from)|</code></pre></div>
+<p><strong>Transformation law.</strong> A <em>density</em> transforms with the inverse Jacobian; a <em>contribution weight</em>, being a reciprocal density, with the forward one. Hence the two directions appear in different places and are not interchangeable:</p>
+<div class="tablewrap"><table><thead><tr><th>Site</th><th>Call</th><th>Why</th></tr></thead><tbody><tr><td>MIS denominator</td><td><code>J(y, y_hit → stream i)</code></td><td>carry <code>y</code>'s density <strong>into stream i's</strong> domain, so the balance heuristic compares like with like</td></tr><tr><td>Absorb</td><td><code>J(y, stream i → q)</code></td><td>carry stream i's <code>W</code> <strong>into the merge target's</strong> domain</td></tr></tbody></table></div>
+<p><strong>The two inhabitants:</strong></p>
+<div class="codewrap"><pre><code>DI_DOMAIN = (phat_at,    λ_.1.0)
+GI_DOMAIN = (gi_phat_at, reconnection_jacobian)</code></pre></div>
+<h3 id="target-modes">Target modes<a class="anchor" href="#target-modes" aria-label="Link to this section">#</a></h3>
+<div class="tablewrap"><table><thead><tr><th>Mode</th><th><code>p̂</code></th></tr></thead><tbody><tr><td><code>UNSHADOWED</code></td><td><code>Le · cos_light / d²</code></td></tr><tr><td><code>UNSHADOWED_COSINE</code></td><td><code>f · Le · G</code>, unshadowed — the default</td></tr><tr><td><code>FULL</code></td><td>with visibility; one ray per candidate</td></tr></tbody></table></div>
+<p><strong>Property.</strong> <code>p̂</code> must be <strong>non-zero wherever the contribution is non-zero</strong>. A target that is zero where the integrand is not is biased, full stop. This is the whole content of the grazing-epsilon finding: an epsilon added to decide <em>whether a shift exists</em> also zeroed <code>p̂</code> for the canonical stream's own sample.</p>
+<h2 id="5-reconnection--the-only-non-trivial-shift">5. Reconnection — the only non-trivial shift<a class="anchor" href="#5-reconnection--the-only-non-trivial-shift" aria-label="Link to this section">#</a></h2>
+<p>The shift mapping is the <strong>identity on the sample</strong> and non-trivial only <strong>on the measure</strong>. Both payloads store world-space points; nothing is re-traced.</p>
+<p>For a stored vertex <code>x₂</code> seen from shading points <code>r</code> and <code>q</code>:</p>
+<div class="codewrap"><pre><code>dω = cos(θ₂) · dA(x₂) / d²                     (area ↔ solid angle)
+
+J(r → q) = |dω_q / dω_r| = (cos_q / d_q²) · (d_r² / cos_r)</code></pre></div>
+<p>with <strong>both cosines at x₂, never at x₁</strong> — the measure conversion foreshortens the <em>area element</em>.</p>
+<p><strong>Measure choice is exclusive.</strong> Two equivalent formulations; mixing them double-counts:</p>
+<div class="tablewrap"><table><thead><tr><th>Parameterization</th><th>Integrand</th><th>pdf in</th><th>J</th></tr></thead><tbody><tr><td>area at x₂</td><td><code>f · G · L</code></td><td>area</td><td>1</td></tr><tr><td>solid angle</td><td><code>f · cos θ₁ · L</code></td><td>solid angle</td><td>the ratio above</td></tr></tbody></table></div>
+<p>This implementation uses the <strong>solid-angle</strong> form. <code>G</code> already contains the conversion the Jacobian applies, so <code>gi_contribution</code> returns <code>f · cos(θ₁) · L</code>, not <code>f · G · L</code>.</p>
+<p><strong>Three deliberate non-choices</strong>, each of which would be a plausible mistake:</p>
+<ul><li><strong>No clamp on <code>J</code>.</strong> A grazing reconnection is a large finite number — the correct answer, and a genuine firefly. Clamping silently rewrites the estimator.</li><li><strong>No grazing threshold in <code>p̂</code>.</strong> Refusing a <em>shift</em> on a threshold is unbiased (the stream leaves the MIS denominator as well as the sum, exactly as a geometric-gate rejection does). Zeroing <code>p̂</code> is not.</li><li><strong>Strict sidedness, no epsilon.</strong> Only <code>DIST_EPSILON = 1e-6</code> survives, guarding arithmetic with no answer.</li></ul>
+<p><strong>Precondition.</strong> Reconnection is legal only because every BSDF here is Lambertian, so <code>L(x₂→x₁)</code> is view-independent. This is the first thing that breaks with a glossy material.</p>
+<h2 id="6-mis-weights">6. MIS weights<a class="anchor" href="#6-mis-weights" aria-label="Link to this section">#</a></h2>
+<p>For a fixed sample <code>y</code>, define each stream's unnormalized density <strong>expressed in y's domain</strong>:</p>
+<div class="codewrap"><pre><code>densityᵢ(y) = Mᵢ · p̂ᵢ(y) · J(y, y_hit → hitᵢ)</code></pre></div>
+<p>Three rules:</p>
+<div class="tablewrap"><table><thead><tr><th>Rule</th><th><code>mᵢ(y)</code></th><th>Cost</th><th>Depends on <code>y</code>?</th></tr></thead><tbody><tr><td><code>NAIVE</code></td><td><code>Mᵢ / Σⱼ Mⱼ</code></td><td>O(1)</td><td><strong>no</strong></td></tr><tr><td><code>MIS</code> (generalized balance, Talbot)</td><td><code>densityᵢ(y) / Σⱼ densityⱼ(y)</code></td><td>O(N) evals per <code>y</code>, O(N²) per merge</td><td>yes</td></tr><tr><td><code>PAIRWISE_MIS</code></td><td>each non-canonical weighted against the canonical only: <code>mᵢ = (1/K)·a/(a+b)</code>, <code>m_c = (1/K)·Σ b/(a+b)</code></td><td>O(N)</td><td>yes</td></tr></tbody></table></div>
+<h3 id="the-proof-obligation">The proof obligation<a class="anchor" href="#the-proof-obligation" aria-label="Link to this section">#</a></h3>
+<div class="codewrap"><pre><code>∀ y in the combined support :   Σᵢ mᵢ(y) = 1</code></pre></div>
+<p>All three rules satisfy it. <strong><code>NAIVE</code> satisfies it too</strong> — which is exactly why the partition of unity is necessary but not sufficient. <code>NAIVE</code>'s bias comes from <code>mᵢ</code> ignoring <code>y</code> entirely: a sample that some stream could never have produced still pays that stream's full share.</p>
+<p><strong>Quantifier trap.</strong> The estimator uses <code>mᵢ(yᵢ)</code> — each stream weighted at <em>its own</em> sample — and <strong>those do not sum to one, nor need they</strong>. The obligation is over a <em>fixed</em> <code>y</code>. <code>mis_weights_at</code> computes the former; <code>_mis_weights</code> the latter. Any formalization must keep these apart; this is the distinction a judgment form makes unambiguous and a docstring does not.</p>
+<h3 id="two-collapses-worth-knowing">Two collapses worth knowing<a class="anchor" href="#two-collapses-worth-knowing" aria-label="Link to this section">#</a></h3>
+<ul><li><strong>Same shading point ⇒ balance ≡ naive, exactly.</strong> If all streams share a hit then <code>p̂ᵢ(y) = p̂(y)</code> for all <code>i</code> and <code>J = 1</code>, so <code>densityᵢ(y) = Mᵢ · p̂(y)</code> and the ratio is <code>Mᵢ/ΣMⱼ</code>. Consequence: <strong>temporal reuse without reprojection is unbiased under every rule</strong>, and the <code>:bias</code> toggle is provably inert on that pass. Measured: the three weightings agree to f32 rounding. Bias in reuse comes from combining <em>different domains</em>.</li><li><strong>Two streams ⇒ pairwise ≡ balance, term for term.</strong> <code>1/K' = 1</code>. Measured bit-identical, which is why the temporal kernel has no third branch.</li></ul>
+<h2 id="7-combination">7. Combination<a class="anchor" href="#7-combination" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre><code>combine(q, streams, us, rule, dom) =
+  let m = mis_weights(streams, rule, dom)
+      r = fold over (sᵢ, mᵢ, uᵢ):
+            if sᵢ.y = ⊥ :  absorb(r, ⊥, 0, sᵢ.M, 0)          -- confidence still counts
+            else         :  absorb(r, sᵢ.y, wᵢ, sᵢ.M, uᵢ)
+              where wᵢ = p̂(q, sᵢ.y) · sᵢ.W · J(sᵢ.y, sᵢ.hit → q) · (mᵢ if rule ≠ NAIVE else sᵢ.M)
+  in finalize(r, p̂(q, r.y), ris if rule = NAIVE else mis)</code></pre></div>
+<p>Three properties this must preserve:</p>
+<ol><li><strong>Empty streams still carry confidence.</strong> <code>absorb(r, ⊥, 0, sᵢ.M, 0)</code> — and the <em>caller</em> must not filter them out either. Both halves are required; see <a href="07-invariants.html#empty-streams">07-invariants</a>.</li><li><strong>The Jacobian is not an MIS weight and does not cancel against one.</strong> <code>NAIVE</code> still pays it. Leaving it out is a second, independent bias.</li><li><strong><code>E[w_sum]</code> is preserved by a reuse pass.</strong> This is the estimator's own internal quantity and the decisive diagnostic — it was <code>E[w_sum]</code>, read straight out of the reservoir buffers, that identified the empty-stream defect when the image could not.</li></ol>
+<h2 id="8-determinism">8. Determinism<a class="anchor" href="#8-determinism" aria-label="Link to this section">#</a></h2>
+<div class="codewrap"><pre><code>rand : (pixel, sample, bounce, dim, seed) → [0, 1)</code></pre></div>
+<p>A pure hash. No stream state anywhere; <code>ti.random()</code> is banned. The dimension layout is a contract between <code>core/rng.py</code> and <code>kernels/_common.py</code> (<a href="02-core.html#rng">02-core</a>).</p>
+<p>Two laws the layout must satisfy:</p>
+<ul><li><strong>Injectivity.</strong> No two distinct draws share <code>(bounce, dim)</code> for the same <code>(pixel, sample)</code>. Blocks whose width is runtime-scaled (<code>M · CAND_STRIDE</code>) make a fixed offset collide for <em>some</em> <code>M</code>, invisibly.</li><li><strong>Vertex-0 stability.</strong> Vertex 0 keeps <code>BOUNCE_SHADE</code> at any path depth, so <code>L(k bounces) − L(1 bounce)</code> is the indirect term <strong>exactly</strong>, per sample. Every GI correctness claim rests on this.</li></ul>
+<p>One alias is deliberate and documented: GI candidate 0's <code>(u, v)</code> <em>are</em> <code>bsdf_dim(0, ·)</code>, which makes ReSTIR GI at <code>M=1</code> with reuse off draw the same numbers as the two-bounce uniform path tracer, so the two can be compared <strong>per sample</strong>. Their outputs differ by about <code>eps / d</code>, the bounce ray's origin offset. The price is <code>GI_BOUNCE_EXACTLY_TWO</code>.</p>
+<h2 id="9-frame-semantics">9. Frame semantics<a class="anchor" href="#9-frame-semantics" aria-label="Link to this section">#</a></h2>
+<p>Carried state: <code>(reservoir_prev, hits_prev, cam_prev)</code>.</p>
+<div class="codewrap"><pre><code>frame(s):
+  hits        ← trace primary rays for sample s
+  res_temporal ← for every pixel: initial+temporal(hits, reservoir_prev, hits_prev)
+  res_curr     ← for every pixel: spatial(hits, res_temporal)
+  L            ← for every pixel: resolve(hits, res_curr) + emitted + (NEE at x₁ if GI)
+  reservoir_prev ← (res_temporal if GI else res_curr)
+  hits_prev      ← hits</code></pre></div>
+<p>Four ordering laws:</p>
+<ol><li><strong>Phase separation.</strong> Every pixel completes the temporal pass before any pixel starts the spatial pass. Otherwise each pixel samples an arbitrary mixture of updated and stale neighbours. The graph enforces this structurally by having spatial read <code>reservoir_temporal</code> and write <code>reservoir_curr</code>.</li><li><strong>History pairing.</strong> <code>reservoir_prev[i]</code> was built at <code>hits_prev[i]</code>; they roll together.</li><li><strong>Roll policy is payload-dependent.</strong> GI rolls the <strong>pre-spatial</strong> reservoir. Rolling the post-spatial one lets a sample travel to a neighbour and return as a second stream offering the same draw to the same merge; the balance heuristic adds one denominator term per <em>stream</em>, so a draw held by <code>k</code> streams has its probability counted <code>k</code> times, every <code>mᵢ</code> comes out too small, and the estimator loses energy. Measured: 31% distinct vertices, 3.2 copies per sample, energy 0.955 at <code>m_cap</code> 20 → 0.990 with duplication forced to exactly 1.00 and the <code>m_cap</code> scaling gone.</li><li><strong>No history is <code>-1</code>, never a fallback.</strong> <code>reprojected_pixel</code> returning <code>-1</code> means the stream is absent, not clamped to a neighbour.</li></ol>
+<p><strong>Warm-up is part of the semantics, not the measurement.</strong> A ReSTIR run <em>begins</em> as something close to a path tracer and <em>becomes</em> the estimator under test over roughly <code>m_cap</code> frames. The steady-state estimator is what any claim is about.</p>
+<h2 id="10-what-is-still-open">10. What is still open<a class="anchor" href="#10-what-is-still-open" aria-label="Link to this section">#</a></h2>
+<p>With the duplicated-sample fix in place and warm-up discarded, path reuse is still short of the converged indirect term, and the amount is a property of <strong>how far reuse reaches</strong> rather than of the weighting. On <code>gi_bias_demo</code> @128px, indirect energy across uniform / no reuse / temporal only / spatial only / both:</p>
+<div class="tablewrap"><table class="headless"><tbody><tr><td><code>mis</code></td><td>0.9996</td><td>1.0000</td><td>0.9740</td><td>0.9200</td><td>0.8960</td></tr><tr><td><code>naive</code></td><td>—</td><td>1.0000</td><td>0.9740</td><td>0.8521</td><td>0.8463</td></tr></tbody></table></div>
+<p>Pinned down: exact without reuse on both scenes, so it enters through a reuse pass; temporal-only is weighting-insensitive (agreeing to four decimals, as §6's collapse says it must) and still 2.6% short, so it is <strong>not</strong> the <code>1/M</code> defect; MIS recovers 0.06 of the 0.16 that <code>1/M</code> loses spatially and leaves 0.08; the deficit scales with the spatial radius (r = 4/8/16/32 → 0.9529/0.9287/0.9002/0.8960).</p>
+<p>Eliminated: a resolution artifact (64/128/256px → 0.898/0.896/0.910 at fixed radius), and the measurement itself (uniform control 1.0006 ± 0.0002; no-reuse identity 1.0000).</p>
+<p><strong>The lead.</strong> At radius 4 the ordering <em>inverts</em> — <code>naive</code> 0.985 against <code>mis</code> 0.953. A weighting meant to add energy back leaving <em>less</em> of it than the biased one is the shape of an <strong>over-large MIS denominator</strong>: the same family as the two defects already found, where a stream was counted that could not have produced the sample, and where a sample was counted twice. That is a lead, not a conclusion.</p>
+<p>Any reimplementation will reproduce this deficit. It is a property of the estimator as specified here, not of the Python.</p><div class="prevnext"><a href="07-invariants.html"><span class="k">Previous</span><span class="n">Invariants</span></a><a href="conformance.html" style="text-align:right"><span class="k">Next</span><span class="n">Conformance vectors</span></a></div></main><nav class="toc"><h4>On this page</h4><a class="lv2" href="#1-the-compositional-structure">1. The compositional structure</a><a class="lv2" href="#2-payloads-and-measure">2. Payloads and measure</a><a class="lv2" href="#3-streaming-ris">3. Streaming RIS</a><a class="lv2" href="#4-the-reuse-domain">4. The reuse domain</a><a class="lv3" href="#target-modes">Target modes</a><a class="lv2" href="#5-reconnection--the-only-non-trivial-shift">5. Reconnection — the only non-trivial shift</a><a class="lv2" href="#6-mis-weights">6. MIS weights</a><a class="lv3" href="#the-proof-obligation">The proof obligation</a><a class="lv3" href="#two-collapses-worth-knowing">Two collapses worth knowing</a><a class="lv2" href="#7-combination">7. Combination</a><a class="lv2" href="#8-determinism">8. Determinism</a><a class="lv2" href="#9-frame-semantics">9. Frame semantics</a><a class="lv2" href="#10-what-is-still-open">10. What is still open</a></nav></div>
+<div class="searchwrap" id="search">
+<div class="veil"></div>
+<div class="searchbox" role="dialog" aria-label="Search the documentation">
+<input id="searchInput" type="search" placeholder="Search the documentation…"
+       autocomplete="off" spellcheck="false">
+<div class="results" id="searchResults"></div>
+</div></div>
+<footer class="foot">
+Built from the repository by <code>docs/site/build.py</code>. Organised with
+<a href="https://diataxis.fr/" rel="noreferrer">Diátaxis</a>. Every page is a view over a
+Markdown file in the repo — edit the source, not the HTML.
+</footer>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>
