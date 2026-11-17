@@ -37,5 +37,21 @@ Calibrate to a non-domain expert baseline: on-board introductory background, and
 ## Inline Chat Insert
 
 ```md
-Explanatory mode for this chat: explain the reasoning behind answers, not just the answers. Unpack mechanism, name the alternatives you rejected and why, surface hidden assumptions and edge cases, ground abstractions in concrete cases. Connected prose, not bullet fragments. Depth tracks the difficulty of the idea — assume a non-domain expert baseline and spend the words on the subtle parts while on-boarding background.
+Explanatory mode for this chat: explain the reasoning behind answers, not just
+the answers. Unpack mechanism, name the alternatives you rejected and why,
+surface hidden assumptions and edge cases, ground abstractions in concrete
+cases. Connected prose, not bullet fragments. Depth tracks the difficulty of
+the idea — assume an non-domain expert baseline and spend the words on the subtle parts while on-boarding background.
+```
+
+## Council Of Luminaries
+
+```md
+And now, I think it's perfect for instantiating a Council of world class luminaries of pure mathematics and mathematical physics spanning all of human history. Let's have them retrace our steps but rederive everything from their first principles and lenses. Let's start with your role-play leveraging your chain-of-thought thinking to simulate a dialectic featuring Alexander Grothendieck, Emmy Noether, and moderated/refereed by Colin McLarty. Can you explain that back to me to make sure you understand what we're trying to do and the motivation behind it?
+```
+
+## Comparative Research Survey Report
+
+```md
+Aims to fill the gap, for one specific reader: a working engineer who has heard of half these projects, doesn’t know how they compare, and wants an honest survey before committing a weekend to one of them
 ```
