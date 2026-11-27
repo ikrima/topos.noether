@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Disconnected String Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: a full-bleed black stage; the reading sits bottom-left, the instrument rail on the right. */
+  --void:#000;
+  --ink:#e6f1ef;
+  --dim:#82928f;
+  --rule:#1b2a2a;
+  --panel:rgba(5,11,12,.84);
+  --thread:#35dbe6;
+  --c0:#19d3e6; --c1:#2fd44b; --c2:#ffd61f; --c3:#ff8f1f; --c4:#ff3030;
+  --display:'Instrument Serif','Iowan Old Style',Georgia,serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --rail:304px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--void);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45;overflow:hidden}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#stage:active{cursor:grabbing}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#labels span{position:absolute;left:0;top:0;font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;will-change:transform}
+#labels span.hot{color:var(--ink)}
+
+header{position:absolute;left:24px;top:18px;right:calc(var(--rail) + 40px);pointer-events:none}
+header h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:4px 0 0;font-family:var(--mono);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+#caption{position:absolute;left:24px;bottom:22px;width:min(31rem,calc(100% - var(--rail) - 64px));pointer-events:none}
+#caption .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--thread)}
+#caption h2{font-family:var(--display);font-weight:400;font-size:30px;line-height:1.1;margin:4px 0 8px;text-wrap:balance}
+#caption p{margin:0;color:#c3d0ce;max-width:65ch}
+#caption i{font-family:var(--display);font-size:1.12em}
+
+#rail{position:absolute;top:0;right:0;bottom:0;width:var(--rail);background:var(--panel);border-left:1px solid var(--rule);
+  overflow-y:auto;padding:16px 16px 22px;display:flex;flex-direction:column;gap:16px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+#rail section{display:flex;flex-direction:column;gap:9px}
+#rail h3{margin:0;font-family:var(--mono);font-weight:500;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+#rail section + section{border-top:1px solid var(--rule);padding-top:14px}
+.stations{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{font:inherit;color:var(--ink);background:#0b1617;border:1px solid #223536;border-radius:6px;padding:7px 9px;cursor:pointer;text-align:left;line-height:1.2}
+button:hover{border-color:#3a5a5c;background:#0f1d1e}
+button:focus-visible,input:focus-visible{outline:2px solid var(--thread);outline-offset:2px}
+button.on{border-color:var(--thread);background:#0c2326;color:#fff}
+button small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:2px}
+button.on small{color:#9fd9de}
+.pair{display:flex;gap:6px}
+.pair button{flex:1;text-align:center}
+.field{display:flex;flex-direction:column;gap:4px}
+.field .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.field label,.field .lab{font-size:13px}
+.field output,.field .val{font-family:var(--mono);font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.stops{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;text-align:center;font-family:var(--mono);padding:6px 0}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:30px;text-align:center;padding:5px 0;font-family:var(--mono)}
+.stepper .val{flex:1;text-align:center;color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:#2a4041}
+input[type=range]::-moz-range-track{height:2px;background:#2a4041}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--thread);border:0;margin-top:-6px}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--thread);border:0}
+#cmpText{margin:0;font-size:12.5px;color:#b5c4c2;min-height:3.1em}
+#sheetToggle{display:none}
+#fail{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--ink)}
+#fail p{max-width:34rem}
+
+@media (max-width:760px){
+  :root{--rail:0px}
+  header{left:16px;right:16px;top:12px}
+  header h1{font-size:21px}
+  #caption{left:16px;right:16px;width:auto;bottom:auto;top:70px}
+  #caption h2{font-size:22px;margin:2px 0 4px}
+  #caption p{font-size:12.5px}
+  #rail{top:auto;left:0;width:auto;max-height:46%;border-left:0;border-top:1px solid var(--rule);padding:10px 16px 16px;gap:12px}
+  #rail.shut section:not(:first-child){display:none}
+  #sheetToggle{display:block;text-align:center;font-family:var(--mono);font-size:11px;padding:5px}
+  .stations{grid-template-columns:repeat(3,1fr)}
+  .stations button small{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<canvas id="stage" aria-label="Animated string threading a p-adic set of points"></canvas>
+<div id="labels" aria-hidden="true"></div>
+
+<header>
+  <h1>Disconnected String Time</h1>
+  <p id="readout">ℤ₅ · depth 1 · 5 ticks</p>
+</header>
+
+<div id="caption" aria-live="polite">
+  <div class="kicker" id="capKicker">Film</div>
+  <h2 id="capTitle">Five points, one string</h2>
+  <p id="capBody">Five points with no path between them. A string finds them in an order the plane did not show, then pulls taut.</p>
+</div>
+
+<aside id="rail" class="shut" aria-label="Instrument controls">
+  <section>
+    <h3>Stations</h3>
+    <div class="stations" id="stations">
+      <button type="button" data-st="dust">Dust<small>ℤ<sub>p</sub>, disconnected</small></button>
+      <button type="button" data-st="thread">Thread<small>compactified time</small></button>
+      <button type="button" data-st="unrolled">Unrolled<small>one string, two shadows</small></button>
+      <button type="button" data-st="taut">Taut<small>archimedean order</small></button>
+      <button type="button" data-st="tree">Tree<small>scale as a string</small></button>
+      <button type="button" data-st="film">Film<small>replay the motion</small></button>
+    </div>
+    <div class="pair">
+      <button type="button" id="tour">Play tour</button>
+      <button type="button" id="sheetToggle">More controls</button>
+    </div>
+  </section>
+
+  <section>
+    <h3>Space</h3>
+    <div class="field">
+      <div class="top"><span class="lab">Prime <i>p</i></span></div>
+      <div class="seg" id="primes" role="group" aria-label="Prime">
+        <button type="button" data-p="2">2</button><button type="button" data-p="3">3</button>
+        <button type="button" data-p="5">5</button><button type="button" data-p="7">7</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="top"><span class="lab">Depth <i>k</i></span><span class="val" id="depthHint">residues mod 5²</span></div>
+      <div class="stepper"><button type="button" id="depthDown" aria-label="Shallower">−</button><span class="val" id="depthVal">2</span><button type="button" id="depthUp" aria-label="Deeper">+</button></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>String</h3>
+    <div class="field">
+      <div class="top"><label for="time">Time elapsed</label><output id="timeOut" for="time">t = 0</output></div>
+      <input type="range" id="time" min="0" max="1000" value="0">
+    </div>
+    <div class="field">
+      <div class="top"><label for="pull">Pull</label><output id="pullOut" for="pull">wound</output></div>
+      <input type="range" id="pull" min="0" max="2000" value="0">
+      <div class="stops"><span>wound</span><span>unrolled</span><span>taut</span></div>
+    </div>
+    <div class="field">
+      <div class="top"><label for="lift">Lift by scale</label><output id="liftOut" for="lift">discs</output></div>
+      <input type="range" id="lift" min="0" max="1000" value="0">
+      <div class="stops"><span>nested discs</span><span>tree</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Reading</h3>
+    <div class="field">
+      <div class="top"><span class="lab">Colour by digit</span></div>
+      <div class="stepper"><button type="button" id="digDown" aria-label="Previous digit">−</button><span class="val" id="digVal">a₀</span><button type="button" id="digUp" aria-label="Next digit">+</button></div>
+    </div>
+    <div class="field">
+      <div class="top"><span class="lab">Compare tick 0 with</span></div>
+      <div class="stepper"><button type="button" id="cmpDown" aria-label="Smaller step">−</button><span class="val" id="cmpVal">off</span><button type="button" id="cmpUp" aria-label="Larger step">+</button></div>
+    </div>
+    <p id="cmpText">Pick a step to see how far apart two ticks are along the string and inside ℤ<sub>p</sub>.</p>
+  </section>
+
+  <section>
+    <h3>View</h3>
+    <div class="pair">
+      <button type="button" id="viewAlong">Along time</button>
+      <button type="button" id="viewAcross">Across time</button>
+    </div>
+    <div class="pair"><button type="button" id="viewReset">Reset view</button></div>
+    <p style="margin:0;font-size:12px;color:var(--dim)">Drag to turn. Scroll or pinch to zoom. Shift-drag to pan.</p>
+  </section>
+</aside>
+
+<div id="fail"><p id="failText"></p></div>
+
+<script type="module">
+// ─────────────────────────────────────────────────────────────────────────────
+//  Disconnected String Time
+//  One string, one Cantor dust. The dust is Z/p^k inside Z_p; the string is the
+//  orbit of t -> t+1 suspended into continuous time (a finite stage of the
+//  p-adic solenoid). A second family of strings, the Berkovich tree, connects
+//  the same dust through scale instead of through time.
+// ─────────────────────────────────────────────────────────────────────────────
+let THREE, LineSegments2, LineSegmentsGeometry, LineMaterial, EffectComposer, RenderPass, UnrealBloomPass, OutputPass;
+try{
+  const m = await Promise.all([
+    import('three'),
+    import('three/addons/lines/LineSegments2.js'),
+    import('three/addons/lines/LineSegmentsGeometry.js'),
+    import('three/addons/lines/LineMaterial.js'),
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/UnrealBloomPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+  ]);
+  THREE = m[0];
+  ({LineSegments2} = m[1]); ({LineSegmentsGeometry} = m[2]); ({LineMaterial} = m[3]);
+  ({EffectComposer} = m[4]); ({RenderPass} = m[5]); ({UnrealBloomPass} = m[6]); ({OutputPass} = m[7]);
+}catch(err){
+  fail('Three.js did not load from the CDN, so the stage cannot draw. Check the network connection and reload.');
+  throw err;
+}
+function fail(msg){
+  document.getElementById('fail').style.display = 'flex';
+  document.getElementById('failText').textContent = msg;
+}
+
+const TAU = Math.PI*2;
+const clamp = (x,a,b)=>Math.min(b,Math.max(a,x));
+const lerp  = (a,b,t)=>a+(b-a)*t;
+const ease  = t=>t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;   // cubic in-out
+const smooth= t=>t*t*(3-2*t);
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ── renderer, camera, bloom ──────────────────────────────────────────────────
+const canvas = document.getElementById('stage');
+let renderer;
+try{
+  renderer = new THREE.WebGLRenderer({canvas, antialias:false, powerPreference:'high-performance'});
+}catch(err){
+  fail('This browser could not start WebGL, which the stage needs.');
+  throw err;
+}
+renderer.setClearColor(0x000000, 1);
+const scene  = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1,1,1,-1,0.1,4000);
+// Multisampled HDR target: the lines antialias through alpha-to-coverage, and bloom gets values above 1.
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType, samples:4}));
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(4,4), 0.5, 0.3, 0.12);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+let W=4, H=4, DPR=1;
+
+// ── colour ───────────────────────────────────────────────────────────────────
+// Five spectral anchors; a prime p samples p colours along the same ramp.
+const ANCH = ['#19d3e6','#2fd44b','#ffd61f','#ff8f1f','#ff3030'].map(h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255));
+function palette(p){
+  const out=[];
+  for(let a=0;a<p;a++){
+    const x = p===1 ? 0 : a/(p-1)*4, i=Math.min(3,Math.floor(x)), f=x-i;
+    const c = new THREE.Color().setRGB(lerp(ANCH[i][0],ANCH[i+1][0],f), lerp(ANCH[i][1],ANCH[i+1][1],f), lerp(ANCH[i][2],ANCH[i+1][2],f), THREE.SRGBColorSpace);
+    out.push([c.r,c.g,c.b]);
+  }
+  return out;
+}
+const THREADC = (()=>{const c=new THREE.Color('#35dbe6'); return [c.r,c.g,c.b];})();
+const PALE    = (()=>{const c=new THREE.Color('#9fc7c9'); return [c.r,c.g,c.b];})();
+
+// ── fat line segments with max-blending ──────────────────────────────────────
+// Max blending keeps overlapping strokes from adding up, so a dense winding stays a clean line.
+class FatSegs{
+  constructor(max, widthPx, order){
+    this.max=max; this.n=0; this.widthPx=widthPx;
+    this.geo = new LineSegmentsGeometry();
+    this.geo.setPositions(new Float32Array(max*6));
+    this.geo.setColors(new Float32Array(max*6));
+    this.posBuf = this.geo.attributes.instanceStart.data;
+    this.colBuf = this.geo.attributes.instanceColorStart.data;
+    this.posBuf.setUsage(THREE.DynamicDrawUsage); this.colBuf.setUsage(THREE.DynamicDrawUsage);
+    this.p = this.posBuf.array; this.c = this.colBuf.array;
+    this.mat = new LineMaterial({vertexColors:true, linewidth:widthPx, transparent:true, depthTest:false, depthWrite:false,
+      blending:THREE.CustomBlending, blendEquation:THREE.MaxEquation, blendSrc:THREE.OneFactor, blendDst:THREE.OneFactor, alphaToCoverage:true});
+    this.mesh = new LineSegments2(this.geo, this.mat);
+    this.mesh.frustumCulled=false; this.mesh.renderOrder=order;
+    scene.add(this.mesh);
+    this.hasPrev=false;
+  }
+  begin(){ this.n=0; this.hasPrev=false; }
+  seg(x0,y0,z0,x1,y1,z1,r0,g0,b0,r1,g1,b1){
+    if(this.n>=this.max) return;
+    const i=this.n*6, p=this.p, c=this.c;
+    p[i]=x0;p[i+1]=y0;p[i+2]=z0;p[i+3]=x1;p[i+4]=y1;p[i+5]=z1;
+    c[i]=r0;c[i+1]=g0;c[i+2]=b0;c[i+3]=r1;c[i+4]=g1;c[i+5]=b1;
+    this.n++;
+  }
+  // polyline helper: each call extends the stroke from the previous point
+  pt(x,y,z,r,g,b){
+    if(this.hasPrev) this.seg(this.px,this.py,this.pz,x,y,z,this.pr,this.pg,this.pb,r,g,b);
+    this.px=x;this.py=y;this.pz=z;this.pr=r;this.pg=g;this.pb=b;this.hasPrev=true;
+  }
+  cut(){ this.hasPrev=false; }
+  end(){ this.geo.instanceCount=this.n; this.posBuf.needsUpdate=true; this.colBuf.needsUpdate=true; this.mesh.visible=this.n>0; }
+  setWidth(px){ this.mat.linewidth = px*DPR; }
+}
+
+// ── beads: screen-space capsules, so a bead can stretch along its string ─────
+class Beads{
+  constructor(max){
+    this.max=max; this.n=0;
+    const g = new THREE.InstancedBufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([-1,-1,0, 1,-1,0, 1,1,0, -1,1,0],3));
+    g.setIndex([0,1,2,0,2,3]);
+    const mk=(n)=>{const a=new THREE.InstancedBufferAttribute(new Float32Array(max*n),n); a.setUsage(THREE.DynamicDrawUsage); return a;};
+    this.aC=mk(3); this.aD=mk(3); this.aK=mk(4); this.aS=mk(2);
+    g.setAttribute('iCenter',this.aC); g.setAttribute('iDir',this.aD); g.setAttribute('iColor',this.aK); g.setAttribute('iSize',this.aS);
+    this.geo=g;
+    this.mat = new THREE.ShaderMaterial({
+      uniforms:{uRes:{value:new THREE.Vector2(4,4)}},
+      transparent:true, depthTest:false, depthWrite:false, premultipliedAlpha:true,
+      vertexShader:`
+        attribute vec3 iCenter; attribute vec3 iDir; attribute vec4 iColor; attribute vec2 iSize;
+        uniform vec2 uRes;
+        varying vec2 vP; varying float vHalf; varying float vR; varying vec4 vCol;
+        void main(){
+          vec4 c = projectionMatrix*modelViewMatrix*vec4(iCenter,1.0);
+          vec4 d = projectionMatrix*modelViewMatrix*vec4(iCenter+iDir*0.05,1.0);
+          vec2 dir = (d.xy/d.w - c.xy/c.w)*uRes;          // stretch direction on screen
+          float l = length(dir);
+          dir = l>1e-4 ? dir/l : vec2(1.0,0.0);
+          vec2 nrm = vec2(-dir.y,dir.x);
+          float r = iSize.x, hl = r*iSize.y, pad = 2.0;
+          vec2 local = vec2(position.x*(hl+r+pad), position.y*(r+pad));
+          gl_Position = c;
+          gl_Position.xy += (dir*local.x + nrm*local.y)/uRes*2.0*c.w;
+          vP=local; vHalf=hl; vR=r; vCol=iColor;
+        }`,
+      fragmentShader:`
+        varying vec2 vP; varying float vHalf; varying float vR; varying vec4 vCol;
+        void main(){
+          float dx = max(abs(vP.x)-vHalf,0.0);
+          float d  = length(vec2(dx,vP.y));                // distance to the capsule's spine
+          float a  = (1.0-smoothstep(vR-1.2,vR+0.3,d))*vCol.a;
+          float core = 1.0-smoothstep(0.0,vR,d);
+          gl_FragColor = vec4(vCol.rgb*(0.85+0.45*core)*a, a);
+        }`
+    });
+    this.mesh=new THREE.Mesh(g,this.mat); this.mesh.frustumCulled=false; this.mesh.renderOrder=20; scene.add(this.mesh);
+  }
+  begin(){ this.n=0; }
+  add(x,y,z,r,g,b,a,rad,stretch=0,dx=1,dy=0,dz=0){
+    if(this.n>=this.max) return;
+    const i=this.n;
+    this.aC.array.set([x,y,z],i*3); this.aD.array.set([dx,dy,dz],i*3);
+    this.aK.array.set([r,g,b,a],i*4); this.aS.array.set([rad*DPR,stretch],i*2);
+    this.n++;
+  }
+  end(){ this.geo.instanceCount=this.n; this.aC.needsUpdate=this.aD.needsUpdate=this.aK.needsUpdate=this.aS.needsUpdate=true; this.mesh.visible=this.n>0; }
+}
+
+const thread = new FatSegs(37000, 3.2, 5);    // the string through time
+const hi     = new FatSegs(21000, 5.0, 6);    // highlighted stretch / tree path
+const rings  = new FatSegs(15000, 1.6, 3);    // discs of Z_p
+const tree   = new FatSegs(12500, 1.8, 4);    // branches of the Berkovich tree
+const beads  = new Beads(2400);
+
+// ── model ────────────────────────────────────────────────────────────────────
+const R0=1, PHI0=Math.PI/2, A=3.2;            // level-0 radius, rotation of the section, solenoid radius
+const MAXK={2:9,3:6,5:4,7:3};
+const rho = p=>{const s=Math.sin(Math.PI/p); return .85*s/(1+s);};   // contraction that keeps sibling discs apart
+
+const S = {p:5, k:1, grow:[1],                // grow[i] in [0,1]: how far level i has fractured open
+  pull:0,                                     // 0 wound on the solenoid, 1 unrolled along time, 2 taut
+  draw:0, thr:0, rng:1, lift:0, digit:0, cmp:-1};
+let dirty=true, station='film';
+
+const bounds = {min:new THREE.Vector3(), max:new THREE.Vector3()};
+function bReset(){ bounds.min.set(1e9,1e9,1e9); bounds.max.set(-1e9,-1e9,-1e9); }
+function bAdd(x,y,z){ const a=bounds.min,b=bounds.max; if(x<a.x)a.x=x; if(y<a.y)a.y=y; if(z<a.z)a.z=z; if(x>b.x)b.x=x; if(y>b.y)b.y=y; if(z>b.z)b.z=z; }
+
+// labels pinned to world points
+const labelBox=document.getElementById('labels'); const labelPool=[]; let labels=[];
+function addLabel(text,x,y,z,dx,dy,hot){ labels.push({text,x,y,z,dx,dy,hot}); }
+
+let E = {x:0,y:0,z:0};
+function drawInstrument(){
+  const p=S.p, k=S.k, N=Math.round(Math.pow(p,k)), pal=palette(p), rh=rho(p);
+  const lam = 1-clamp(S.pull,0,1);            // 1 wound, 0 unrolled
+  const mu  = 1-clamp(S.pull-1,0,1);          // transverse p-adic offset; 0 when taut
+  const amp=[]; let keff=0;
+  for(let i=0;i<k;i++){ amp[i]=S.grow[i]*R0*Math.pow(rh,i); keff+=S.grow[i]; }
+  const Neff=Math.pow(p,keff);
+  const ellU = 16*Math.pow(Math.max(1,Neff/p),0.4)/Math.max(Neff,p);   // length of one tick when unrolled
+  const ell  = ellU + (TAU*A-ellU)*lam*lam;                            // wound: one lap per tick
+
+  // Place a point of the string: time tau along a bent axis, section offset (qx,qy) across it.
+  const embed=(tau,qx,qy)=>{
+    const s=ell*tau;
+    if(lam<1e-4){ E.x=mu*qx; E.y=mu*qy; E.z=-s; }
+    else{ const rc=A/lam, th=s/rc, r=rc+mu*qx; E.x=-rc+r*Math.cos(th); E.y=mu*qy; E.z=-r*Math.sin(th); }
+  };
+  // The section offset at real time tau: sum of rotations, level i turning once every p^(i+1) ticks.
+  const pw=[]; for(let i=0;i<=k;i++) pw[i]=Math.pow(p,i);
+  let QX=0,QY=0;
+  const q=(tau)=>{ QX=0;QY=0; for(let i=0;i<k;i++){ const a=TAU*tau/pw[i+1]+PHI0; QX+=amp[i]*Math.cos(a); QY+=amp[i]*Math.sin(a);} };
+
+  // Centres of the discs at every level: L[j][a] is the disc of residues a mod p^j.
+  const L=[new Float64Array(2)];
+  for(let j=0;j<k;j++){
+    const n=pw[j+1], prev=L[j], cur=new Float64Array(2*n);
+    for(let b=0;b<n;b++){ const a=b%pw[j], ang=TAU*b/n+PHI0; cur[2*b]=prev[2*a]+amp[j]*Math.cos(ang); cur[2*b+1]=prev[2*a+1]+amp[j]*Math.sin(ang); }
+    L.push(cur);
+  }
+  const Hh=Math.min(0.95,4.4/k);
+  const zOf=j=>{ let s=0; for(let i=j;i<k;i++) s+=S.grow[i]; return S.lift*Hh*s; };
+
+  bReset(); labels=[];
+  const tv = S.thr*(1-S.lift);                                  // thread visibility
+  const rb = clamp(10*Math.pow(5/Neff,0.3),2.3,10);            // bead radius, px
+  const nS = clamp(Math.round(3200/N),48,160);                 // samples per tick
+
+  // ── the string ──
+  thread.begin(); hi.begin();
+  if(tv>0.01){
+    thread.setWidth(clamp(3.2*Math.pow(5/Neff,0.28),1.0,3.2));
+    const total=N*nS, M=Math.floor(S.draw*total), b0=tv*clamp(Math.pow(5/Neff,0.3),0.3,1);
+    const head = S.draw<0.999 ? Math.max(6,nS*0.1) : 0;
+    const dgT=Math.min(S.digit,k-1);
+    for(let i=0;i<=M;i++){
+      const tau=i/nS; q(tau); embed(tau,QX,QY);
+      const w = head ? clamp(1-(M-i)/head,0,1) : 0;
+      // tint: blend from the colour of the tick just left to the colour of the next one
+      const tk=Math.floor(tau), f=smooth(tau-tk), ca=pal[Math.floor((tk%N)/pw[dgT])%p], cb=pal[Math.floor(((tk+1)%N)/pw[dgT])%p];
+      const r=lerp(THREADC[0],lerp(ca[0],cb[0],f),0.6)*b0, g=lerp(THREADC[1],lerp(ca[1],cb[1],f),0.6)*b0, b=lerp(THREADC[2],lerp(ca[2],cb[2],f),0.6)*b0;
+      thread.pt(E.x,E.y,E.z, lerp(r,1.4*tv,w), lerp(g,1.4*tv,w), lerp(b,1.4*tv,w));
+    }
+    const step=Math.max(1,Math.floor(nS/12));                  // frame the whole string, drawn or not
+    for(let i=0;i<=total;i+=step){ const tau=i/nS; q(tau); embed(tau,QX,QY); bAdd(E.x,E.y,E.z); }
+    if(S.cmp>=0 && S.cmp<k){
+      hi.setWidth(clamp(4.6*Math.pow(5/Neff,0.2),2,4.6));
+      const Mh=Math.min(M,pw[S.cmp]*nS);
+      for(let i=0;i<=Mh;i++){ const tau=i/nS; q(tau); embed(tau,QX,QY); hi.pt(E.x,E.y,E.z,1.15*tv,1.15*tv,1.15*tv); }
+      hi.cut();
+    }
+  }
+  thread.end();
+
+  // ── discs ──
+  rings.begin();
+  const rv=S.rng*mu;
+  if(rv>0.01){
+    for(let j=0;j<k;j++){
+      if(S.grow[j]<0.01) continue;
+      let ext=0; for(let i=j;i<k;i++) ext+=amp[i];
+      const rad=(ext+0.22*amp[j])*mu, z=zOf(j), n=pw[j], segs= j===0?80:Math.max(14,Math.round(72*Math.pow(rh,j*0.55)));
+      const bright=rv*S.grow[j]*(j===0?0.5:0.72);
+      for(let a=0;a<n;a++){
+        const cx=L[j][2*a]*mu, cy=L[j][2*a+1]*mu;
+        const col = j===0 ? PALE : pal[Math.floor(a/pw[j-1])%p];
+        rings.cut();
+        for(let s=0;s<=segs;s++){ const t=TAU*s/segs; rings.pt(cx+rad*Math.cos(t),cy+rad*Math.sin(t),z,col[0]*bright,col[1]*bright,col[2]*bright); }
+      }
+      if(j===0){ bAdd(-rad,-rad,0); bAdd(rad,rad,z); }
+    }
+  }
+  rings.end();
+
+  // ── tree: discs become points, radius becomes a continuous coordinate ──
+  tree.begin(); beads.begin();
+  const lf=S.lift;
+  const branch=(buf,x0,y0,z0,x1,y1,z1,r,g,b,n)=>{
+    buf.cut();
+    for(let s=0;s<=n;s++){ const f=s/n, e=smooth(f); buf.pt(lerp(x0,x1,e),lerp(y0,y1,e),lerp(z0,z1,f),r,g,b); }
+  };
+  if(lf>0.01){
+    for(let j=0;j<k;j++){
+      if(S.grow[j]<0.01) continue;
+      const n=pw[j+1], z0=zOf(j), z1=zOf(j+1), nb=n>300?6:10;
+      for(let b=0;b<n;b++){
+        const a=b%pw[j], col=pal[Math.floor(b/pw[j])%p], br=0.5*lf;
+        branch(tree,L[j][2*a],L[j][2*a+1],z0,L[j+1][2*b],L[j+1][2*b+1],z1,col[0]*br,col[1]*br,col[2]*br,nb);
+      }
+      // the disc itself, as a point on the tree
+      for(let a=0;a<pw[j];a++){
+        const col = j===0 ? [1,1,1] : pal[Math.floor(a/pw[j-1])%p];
+        beads.add(L[j][2*a],L[j][2*a+1],z0,col[0],col[1],col[2],lf*S.grow[j],Math.max(2,rb*0.62));
+      }
+    }
+    bAdd(0,0,zOf(0));
+    if(lf>0.6){
+      addLabel('Gauss point',0,0,zOf(0),12,-14,true);
+      for(let j=1;j<k && j<=4;j++) addLabel('x mod '+p+(j>1?sup(j):''),L[j][0],L[j][1],zOf(j),12,-6,false);
+    }
+    if(S.cmp>=0 && S.cmp<k){
+      // unique path from tick 0 up to the smallest disc holding both ticks, then down to tick p^j
+      hi.setWidth(2.6); const j0=S.cmp, d=pw[j0], w=1.1*lf;
+      for(let j=k-1;j>=j0;j--) branch(hi,L[j+1][0],L[j+1][1],zOf(j+1),L[j][0],L[j][1],zOf(j),w,w,w,10);
+      for(let j=j0;j<k;j++){ const a=d%pw[j], b=d%pw[j+1]; branch(hi,L[j][2*a],L[j][2*a+1],zOf(j),L[j+1][2*b],L[j+1][2*b+1],zOf(j+1),w,w,w,10); }
+    }
+  }
+  tree.end(); hi.end();
+
+  // ── ticks ──
+  const cmpTick = (S.cmp>=0 && S.cmp<k) ? pw[S.cmp] : -1, dg=Math.min(S.digit,k-1);
+  const showTicks = N<=27 && (W>=700 || N<=9) && tv>0.5 && lam<0.15;   // number the ticks only where they have room
+  for(let t=0;t<N;t++){
+    const qx=L[k][2*t], qy=L[k][2*t+1]; embed(t,qx,qy); bAdd(E.x,E.y,E.z);
+    const lit = lerp(1, clamp((S.draw*N-t)*4+1,0,1), tv);
+    const col = pal[Math.floor(t/pw[dg])%p], br=0.3+0.85*lit;
+    if(t===0&&cmpTick>0 || t===cmpTick) beads.add(E.x,E.y,E.z,1.4,1.4,1.4,1,rb*(0.62+0.38*lit)+2.5);
+    beads.add(E.x,E.y,E.z,col[0]*br,col[1]*br,col[2]*br,1,rb*(0.62+0.38*lit));
+    if(showTicks) addLabel(String(t),E.x,E.y,E.z,-3,18,false);
+  }
+  beads.end();
+}
+const SUP='⁰¹²³⁴⁵⁶⁷⁸⁹';
+function sup(n){ return String(n).split('').map(c=>SUP[+c]).join(''); }
+
+// ── the film: the original motion, on hand-placed points ─────────────────────
+// A spiral through five scattered beads, pulled taut by scaling its curvature to zero
+// (the string keeps its length; only its embedding changes), then a wave and a collapse.
+const FB=[[-0.50,-0.39],[-0.80,0.38],[1.55,0.32],[-1.38,0.55],[0.03,0.20]];
+const FCTRL=[[-0.25,0.02],[-0.72,0.08],FB[0],[0.10,-0.20],[0.95,0.30],[1.05,0.85],[0.60,1.05],[-0.10,0.80],FB[1],
+  [-1.22,-0.05],[-1.15,-0.60],[-0.55,-0.92],[0.40,-0.85],[1.15,-0.40],FB[2],[1.40,1.05],[0.70,1.36],[-0.40,1.20],FB[3],
+  [-1.62,0.05],[-1.45,-0.75],[-0.70,-1.25],[0.30,-1.18],[0.85,-0.60],[0.55,-0.10],FB[4],[-0.12,0.30]];
+const FBIDX=[2,8,14,18,25];
+const FILM=(()=>{
+  const C=FCTRL, n=C.length, m=18, raw=[];
+  const P=i=> i<0 ? [2*C[0][0]-C[1][0],2*C[0][1]-C[1][1]] : i>=n ? [2*C[n-1][0]-C[n-2][0],2*C[n-1][1]-C[n-2][1]] : C[i];
+  const d=(a,b)=>Math.sqrt(Math.hypot(a[0]-b[0],a[1]-b[1]));       // centripetal knot spacing
+  for(let i=0;i<n-1;i++){
+    const p0=P(i-1),p1=P(i),p2=P(i+1),p3=P(i+2), t1=d(p0,p1), t2=t1+d(p1,p2), t3=t2+d(p2,p3);
+    for(let s=0;s<m;s++){
+      const t=t1+(t2-t1)*s/m, pt=[0,0];
+      for(let c=0;c<2;c++){
+        const A1=(t1-t)/t1*p0[c]+t/t1*p1[c], A2=(t2-t)/(t2-t1)*p1[c]+(t-t1)/(t2-t1)*p2[c], A3=(t3-t)/(t3-t2)*p2[c]+(t-t2)/(t3-t2)*p3[c];
+        const B1=(t2-t)/t2*A1+t/t2*A2, B2=(t3-t)/(t3-t1)*A2+(t-t1)/(t3-t1)*A3;
+        pt[c]=(t2-t)/(t2-t1)*B1+(t-t1)/(t2-t1)*B2;
+      }
+      raw.push(pt);
+    }
+  }
+  raw.push(C[n-1]);
+  const cum=[0]; for(let i=1;i<raw.length;i++) cum[i]=cum[i-1]+Math.hypot(raw[i][0]-raw[i-1][0],raw[i][1]-raw[i-1][1]);
+  const len=cum[cum.length-1], NF=520, pts=new Float64Array(NF*2);
+  let j=0;
+  for(let i=0;i<NF;i++){                                           // resample at constant arclength
+    const s=len*i/(NF-1); while(j<cum.length-2 && cum[j+1]<s) j++;
+    const f=(s-cum[j])/Math.max(1e-9,cum[j+1]-cum[j]);
+    pts[2*i]=lerp(raw[j][0],raw[j+1][0],f); pts[2*i+1]=lerp(raw[j][1],raw[j+1][1],f);
+  }
+  const ang=new Float64Array(NF-1); let prev=0;
+  for(let i=0;i<NF-1;i++){                                         // unwrapped tangent angle
+    let a=Math.atan2(pts[2*i+3]-pts[2*i+1],pts[2*i+2]-pts[2*i]);
+    if(i>0){ while(a-prev>Math.PI)a-=TAU; while(a-prev<-Math.PI)a+=TAU; }
+    ang[i]=a; prev=a;
+  }
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(let i=0;i<NF;i++){ x0=Math.min(x0,pts[2*i]);x1=Math.max(x1,pts[2*i]);y0=Math.min(y0,pts[2*i+1]);y1=Math.max(y1,pts[2*i+1]); }
+  return {NF,pts,ang,len,ds:len/(NF-1),bc:[(x0+x1)/2,(y0+y1)/2],uSp:FBIDX.map(ci=>cum[ci*m]/len),uTaut:[.12,.31,.5,.69,.88]};
+})();
+const FT={draw0:.35,draw1:2.25,pull1:3.0,hold:3.15,wave1:3.9,settle1:4.25,ring1:5.35};
+const LINE=10.4, TH0=0.05, FC0=[0,0.05];
+const film={on:false,t:0};
+const FP=new Float64Array(FILM.NF*2);
+function drawFilm(t){
+  const F=FILM, NF=F.NF, pal=palette(5);
+  const frac=clamp((t-FT.draw0)/(FT.draw1-FT.draw0),0,1);
+  const lam=1-ease(clamp((t-FT.draw1)/(FT.pull1-FT.draw1),0,1));
+  const w=clamp((t-FT.hold)/(FT.wave1-FT.hold),0,1);
+  const st=clamp((t-FT.wave1)/(FT.settle1-FT.wave1),0,1);
+  const rg=ease(clamp((t-FT.settle1)/(FT.ring1-FT.settle1),0,1));
+  const cT=Math.cos(TH0), sT=Math.sin(TH0);
+
+  if(w<=0){
+    // curvature scaled by lam: the spiral opens like a spring
+    let x=F.pts[0], y=F.pts[1], bx0=x,bx1=x,by0=y,by1=y; FP[0]=x; FP[1]=y;
+    for(let i=0;i<NF-1;i++){
+      const a=TH0+lam*(F.ang[i]-TH0); x+=F.ds*Math.cos(a); y+=F.ds*Math.sin(a);
+      FP[2*i+2]=x; FP[2*i+3]=y; if(x<bx0)bx0=x; if(x>bx1)bx1=x; if(y<by0)by0=y; if(y>by1)by1=y;
+    }
+    const sc=lerp(LINE/F.len,1,lam), cx=lerp(FC0[0],F.bc[0],lam), cy=lerp(FC0[1],F.bc[1],lam), mx=(bx0+bx1)/2, my=(by0+by1)/2;
+    for(let i=0;i<NF;i++){ FP[2*i]=cx+sc*(FP[2*i]-mx); FP[2*i+1]=cy+sc*(FP[2*i+1]-my); }
+  }else{
+    // the taut line takes a wave and folds up along its own length
+    const Lw=LINE*(1-0.9*ease(w)), am=0.85*Math.sin(Math.PI*clamp(w*1.12,0,1)), ph=5.5*w;
+    for(let i=0;i<NF;i++){
+      const u=i/(NF-1), lx=(u-.5)*Lw, ly=am*Math.sin(TAU*1.3*u-ph)*Math.sin(Math.PI*u);
+      FP[2*i]=FC0[0]+cT*lx-sT*ly; FP[2*i+1]=FC0[1]+sT*lx+cT*ly;
+    }
+  }
+  const at=(u,o)=>{ const x=clamp(u,0,1)*(NF-1), i=Math.min(NF-2,Math.floor(x)), f=x-i;
+    o.x=lerp(FP[2*i],FP[2*i+2],f); o.y=lerp(FP[2*i+1],FP[2*i+3],f); o.tx=FP[2*i+2]-FP[2*i]; o.ty=FP[2*i+3]-FP[2*i+1];
+    const l=Math.hypot(o.tx,o.ty)||1; o.tx/=l; o.ty/=l; };
+
+  // string
+  thread.begin(); thread.setWidth(3.4);
+  const tb=(1-st);
+  if(frac>0 && tb>0.01){
+    const M=frac*(NF-1), headOn = frac<1 ? 1 : clamp(1-(t-FT.draw1)/0.3,0,1);
+    for(let i=0;i<=Math.floor(M);i++){
+      const wv=headOn*clamp(1-(M-i)/14,0,1);
+      thread.pt(FP[2*i],FP[2*i+1],0,lerp(THREADC[0]*tb,1.5,wv),lerp(THREADC[1]*tb,1.5,wv),lerp(THREADC[2]*tb,1.5,wv));
+    }
+    if(frac<1){ const o={}; at(frac,o); thread.pt(o.x,o.y,0,1.5,1.5,1.5); }
+  }
+  thread.end();
+
+  // beads
+  beads.begin(); const o={};
+  for(let i=0;i<5;i++){
+    const lit=clamp((frac*F.len-F.uSp[i]*F.len)/0.3,0,1);
+    const u=lerp(F.uTaut[i],F.uSp[i],Math.pow(lam,1.5)); at(u,o);
+    let x=o.x,y=o.y, dx=lerp(o.tx,0,smooth(w)), dy=lerp(o.ty,1,smooth(w));
+    const stretch=(1-st)*lerp(2.4*(1-lam),1.5,w);
+    if(rg>0){ const a=TAU*i/5+PHI0; x=lerp(x,R0*Math.cos(a),rg); y=lerp(y,R0*Math.sin(a),rg); }
+    const br=0.3+0.85*lit, c=pal[i];
+    beads.add(x,y,0,c[0]*br,c[1]*br,c[2]*br,1,10*(0.62+0.38*lit),stretch,dx,dy,0);
+  }
+  beads.end();
+
+  // one disc opens around all five
+  rings.begin();
+  if(rg>0){
+    const rad=1.22*R0*rg, b=0.5*rg, cx=FC0[0]*(1-rg), cy=FC0[1]*(1-rg);
+    for(let s=0;s<=80;s++){ const a=TAU*s/80; rings.pt(cx+rad*Math.cos(a),cy+rad*Math.sin(a),0,PALE[0]*b,PALE[1]*b,PALE[2]*b); }
+  }
+  rings.end(); tree.begin(); tree.end(); hi.begin(); hi.end(); labels=[];
+  bounds.min.set(-5.5,-2.2,0); bounds.max.set(5.5,2.2,0);
+  if(t>=FT.ring1) endFilm();
+}
+function startFilm(){
+  stopTour(); tweens.clear(); film.on=true; film.t=0; station='film';
+  Object.assign(S,{p:5,k:1,grow:[1],pull:0,draw:0,thr:0,rng:1,lift:0,digit:0,cmp:-1});
+  setView('front',0.6); zoomMul=1; panX=panY=0; setCaption(); markButtons();
+}
+function endFilm(){
+  film.on=false; station='dust'; dirty=true;
+  setDepth(2);                       // each bead fractures into five
+  setCaption(); markButtons(); setHash();
+}
+
+// ── tweens ───────────────────────────────────────────────────────────────────
+const tweens=new Map();
+const getK=k=>k[0]==='g'&&k.length>1&&!isNaN(k.slice(1)) ? S.grow[+k.slice(1)] : S[k];
+const setK=(k,v)=>{ if(k[0]==='g'&&k.length>1&&!isNaN(k.slice(1))) S.grow[+k.slice(1)]=v; else S[k]=v; dirty=true; };
+function tween(key,to,dur=1.5,{delay=0,ez=ease,done=null}={}){
+  if(REDUCED||dur<=0){ tweens.delete(key); setK(key,to); if(done)done(); return; }
+  tweens.set(key,{from:null,to,t0:performance.now()/1000+delay,dur,ez,done});
+}
+function stepTweens(now){
+  for(const [key,tw] of tweens){
+    if(now<tw.t0) continue;
+    if(tw.from===null) tw.from=getK(key);
+    const f=clamp((now-tw.t0)/tw.dur,0,1);
+    setK(key,lerp(tw.from,tw.to,tw.ez(f)));
+    if(f>=1){ tweens.delete(key); if(tw.done) tw.done(); }
+  }
+}
+function finishGrow(){
+  for(const [key,tw] of [...tweens]) if(key[0]==='g'&&!isNaN(key.slice(1))){ tweens.delete(key); setK(key,tw.to); if(tw.done) tw.done(); }
+}
+function clampSel(){ S.digit=Math.min(S.digit,S.k-1); if(S.cmp>S.k-1) S.cmp=S.k-1; }
+function setDepth(k2){
+  finishGrow(); k2=clamp(k2,1,MAXK[S.p]);
+  if(k2>S.k){
+    for(let i=S.k;i<k2;i++){ S.grow[i]=0; tween('g'+i,1,0.9,{delay:(i-S.k)*0.3}); }
+    S.k=k2;
+  }else if(k2<S.k){
+    const old=S.k;
+    for(let i=old-1;i>=k2;i--) tween('g'+i,0,0.55,{delay:(old-1-i)*0.2, done: i===k2 ? ()=>{ S.k=k2; S.grow.length=k2; clampSel(); dirty=true; } : null});
+  }
+  dirty=true;
+}
+function setPrime(p){
+  finishGrow(); S.p=p; S.k=Math.min(S.k,MAXK[p]); S.grow=new Array(S.k).fill(0); clampSel();
+  for(let i=0;i<S.k;i++) tween('g'+i,1,0.8,{delay:i*0.3});     // refracture from a single point
+  dirty=true;
+}
+
+// ── camera: orthographic, free trackball, framed to the content ──────────────
+const VIEWS={ front:[[0,0,1],[0,1,0]], side:[[1,0,0],[0,1,0]], wound:[[0.30,0.80,0.52],[0,1,0]],
+  helix:[[0.72,0.30,0.62],[0,1,0]], tree:[[0.30,-0.85,0.43],[0,0,1]] };
+function viewQuat(name){
+  const [d,u]=VIEWS[name], z=new THREE.Vector3(...d).normalize(), x=new THREE.Vector3(...u).cross(z).normalize(), y=z.clone().cross(x);
+  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));
+}
+const camQ=viewQuat('front'), camT=new THREE.Vector3(), fitT=new THREE.Vector3();
+let camV=3, fitV=3, zoomMul=1, panX=0, panY=0, viewTw=null, camSnap=true, lastView='front';
+function setView(name,dur=1.5){
+  lastView=name;
+  if(REDUCED||dur<=0){ camQ.copy(viewQuat(name)); viewTw=null; return; }
+  viewTw={from:camQ.clone(),to:viewQuat(name),t0:performance.now()/1000,dur};
+}
+const vx=new THREE.Vector3(), vy=new THREE.Vector3(), vz=new THREE.Vector3(), tmp=new THREE.Vector3();
+function updateCamera(dt,now){
+  if(viewTw){ const f=clamp((now-viewTw.t0)/viewTw.dur,0,1); camQ.slerpQuaternions(viewTw.from,viewTw.to,ease(f)); if(f>=1) viewTw=null; }
+  vx.set(1,0,0).applyQuaternion(camQ); vy.set(0,1,0).applyQuaternion(camQ); vz.set(0,0,1).applyQuaternion(camQ);
+  // project the content's box onto the screen axes
+  let ax=1e9,bx=-1e9,ay=1e9,by=-1e9,az=1e9,bz=-1e9;
+  for(let i=0;i<8;i++){
+    tmp.set(i&1?bounds.max.x:bounds.min.x, i&2?bounds.max.y:bounds.min.y, i&4?bounds.max.z:bounds.min.z);
+    const px=tmp.dot(vx), py=tmp.dot(vy), pz=tmp.dot(vz);
+    ax=Math.min(ax,px);bx=Math.max(bx,px);ay=Math.min(ay,py);by=Math.max(by,py);az=Math.min(az,pz);bz=Math.max(bz,pz);
+  }
+  // the part of the canvas not covered by the rail, the title or the caption
+  const railR=rail.getBoundingClientRect(), capR=caption.getBoundingClientRect(), narrow=innerWidth<=760;
+  const fL=28, fR=narrow?W-28:railR.left-28, fT=narrow?capR.bottom+18:76, fB=narrow?railR.top-18:capR.top-22;
+  const fw=Math.max(60,fR-fL), fh=Math.max(60,fB-fT), hx=Math.max(.2,(bx-ax)/2), hy=Math.max(.2,(by-ay)/2);
+  fitV=Math.max(hx*H/fw, hy*H/fh)*1.06;
+  const V=fitV*zoomMul, upp=2*V/H;                       // world units per pixel
+  const ox=(fL+fR)/2-W/2, oy=H/2-(fT+fB)/2;
+  fitT.set(0,0,0).addScaledVector(vx,(ax+bx)/2-ox*upp+panX).addScaledVector(vy,(ay+by)/2-oy*upp+panY).addScaledVector(vz,(az+bz)/2);
+  const kf = camSnap||REDUCED ? 1 : 1-Math.exp(-dt*4.2);
+  camV=lerp(camV,V,kf); camT.lerp(fitT,kf); camSnap=false;
+  camera.quaternion.copy(camQ); camera.position.copy(camT).addScaledVector(vz,1500);
+  const asp=W/H; camera.left=-camV*asp; camera.right=camV*asp; camera.top=camV; camera.bottom=-camV;
+  camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+}
+function placeLabels(){
+  for(let i=0;i<labels.length;i++){
+    let el=labelPool[i]; if(!el){ el=document.createElement('span'); labelBox.appendChild(el); labelPool[i]=el; }
+    const l=labels[i]; if(el.textContent!==l.text) el.textContent=l.text;
+    tmp.set(l.x,l.y,l.z).project(camera);
+    el.style.transform=`translate(${((tmp.x*.5+.5)*W+l.dx).toFixed(1)}px,${((-tmp.y*.5+.5)*H+l.dy).toFixed(1)}px)`;
+    el.className=l.hot?'hot':''; el.style.display='';
+  }
+  for(let i=labels.length;i<labelPool.length;i++) labelPool[i].style.display='none';
+}
+
+// pointer: drag turns, shift/right/two-finger pans, wheel/pinch zooms
+const ptrs=new Map(); let pinch0=0;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{ canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.shiftKey||e.button===2}); pinch0=0; stopTour(); });
+canvas.addEventListener('pointermove',e=>{
+  const p=ptrs.get(e.pointerId); if(!p) return;
+  const dx=e.clientX-p.x, dy=e.clientY-p.y; p.x=e.clientX; p.y=e.clientY;
+  if(film.on) return;
+  if(ptrs.size===1){
+    if(p.pan){ const upp=2*camV/H; panX-=dx*upp; panY+=dy*upp; }
+    else{ viewTw=null;
+      camQ.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-dx*0.006))
+          .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-dy*0.006)).normalize(); }
+  }else if(ptrs.size===2){
+    const [a,b]=[...ptrs.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
+    if(pinch0>0) zoomMul=clamp(zoomMul*pinch0/d,0.04,6);
+    pinch0=d; const upp=2*camV/H; panX-=dx*upp/2; panY+=dy*upp/2;
+  }
+});
+const drop=e=>{ ptrs.delete(e.pointerId); pinch0=0; };
+canvas.addEventListener('pointerup',drop); canvas.addEventListener('pointercancel',drop);
+canvas.addEventListener('wheel',e=>{ e.preventDefault(); if(!film.on) zoomMul=clamp(zoomMul*Math.exp(e.deltaY*0.0012),0.04,6); },{passive:false});
+
+// ── stations ─────────────────────────────────────────────────────────────────
+const ST={
+  dust:    {pull:0,draw:0,thr:0,rng:1,  lift:0,view:'front'},
+  thread:  {pull:0,draw:1,thr:1,rng:.55,lift:0,view:'wound'},
+  unrolled:{pull:1,draw:1,thr:1,rng:.55,lift:0,view:'helix'},
+  taut:    {pull:2,draw:1,thr:1,rng:0,  lift:0,view:'side'},
+  tree:    {pull:0,draw:0,thr:0,rng:1,  lift:1,view:'tree'},
+};
+function goStation(name,instant=false){
+  if(name==='film'){ startFilm(); setHash(); return; }
+  const s=ST[name]; if(!s) return;
+  if(film.on){ film.on=false; Object.assign(S,{p:5,k:1,grow:[1]}); setDepth(2); }
+  station=name; zoomMul=1; panX=panY=0;
+  const d=instant?0:1.6;
+  if(s.thr>0 && S.thr<0.05 && !instant){
+    // the string enters the way it does in the film: drawn on from tick 0
+    S.draw=0; tween('thr',1,0.25); tween('draw',1,2.6,{delay:0.5,ez:t=>t}); tween('pull',s.pull,d);
+  }else{ tween('thr',s.thr,d*0.6); tween('draw',s.draw,d); tween('pull',s.pull,d); }
+  tween('rng',s.rng,d); tween('lift',s.lift,d);
+  if(name==='tree' && S.cmp<0 && S.k>1) S.cmp=1;
+  setView(s.view,instant?0:d); if(instant) camSnap=true;
+  setCaption(); markButtons(); setHash(); dirty=true;
+}
+function setHash(){ try{ history.replaceState(null,'','#'+station); }catch(e){} }
+let tourTimer=0, tourOn=false;
+function stopTour(){ if(tourOn){ tourOn=false; clearTimeout(tourTimer); tourBtn.textContent='Play tour'; tourBtn.classList.remove('on'); } }
+function playTour(){
+  if(tourOn){ stopTour(); return; }
+  tourOn=true; tourBtn.textContent='Stop tour'; tourBtn.classList.add('on');
+  const seq=['dust','thread','unrolled','taut','tree'], dwell=[4200,6800,6200,6200,7000]; let i=0;
+  const next=()=>{ if(!tourOn) return; if(i>=seq.length){ stopTour(); return; } goStation(seq[i]); tourTimer=setTimeout(next,dwell[i]); i++; };
+  next();
+}
+
+// ── words ────────────────────────────────────────────────────────────────────
+const SUB='₀₁₂₃₄₅₆₇₈₉';
+const sub=n=>String(n).split('').map(c=>SUB[+c]).join('');
+const CAP={
+  film:()=>['Film','Five points, one string','Five points with no path between them. A string finds them in an order the plane did not show, then pulls taut.'],
+  dust:(p,k,N)=>['Dust',`ℤ${sub(p)} to depth ${k}`,`${N} residues mod ${p}${k>1?sup(k):''}. Two of them are close when their difference is divisible by a high power of ${p}. Any two discs are nested or apart, never overlapping, and no path joins two points.`],
+  thread:(p,k,N)=>['Thread','Compactified time',`One closed string winding ${N} times around. Each lap is one tick, <i>t</i> → <i>t</i> + 1, and the string crosses this face once at every residue. As the depth grows it approaches the ${p}-adic solenoid, where the string is a copy of ℝ that never closes.`],
+  unrolled:()=>['Unrolled','One string, two shadows','The same string, unrolled along time. Seen across, it is a line of ticks in their usual order. Seen along, it is the dust again. Use the two view buttons to switch shadows.'],
+  taut:(p)=>['Taut','Archimedean order',`Pulled taut, only the order of the ticks is left. Colour is one digit of <i>t</i>, so it repeats: a function that is locally constant on ℤ${sub(p)} is a periodic function of time.`],
+  tree:(p)=>['Tree','Scale as a string',`Berkovich's repair. Each disc becomes a point and the radius runs continuously between them. The tower <i>x</i> mod ${p}, <i>x</i> mod ${p}², … is a row of beads on one branch from the Gauss point down to <i>x</i>. The branch splits only at the beads.`],
+};
+const $=id=>document.getElementById(id);
+const rail=$('rail'), caption=$('caption'), tourBtn=$('tour');
+function setCaption(){
+  const N=Math.round(Math.pow(S.p,S.k)), c=CAP[station](S.p,S.k,N);
+  $('capKicker').textContent=c[0]; $('capTitle').textContent=c[1]; $('capBody').innerHTML=c[2];
+}
+function markButtons(){
+  for(const b of $('stations').children) b.classList.toggle('on',b.dataset.st===station);
+  for(const b of $('primes').children) b.classList.toggle('on',+b.dataset.p===S.p);
+}
+let uiKey='';
+function syncUI(){
+  const N=Math.round(Math.pow(S.p,S.k)), key=[S.p,S.k,S.draw.toFixed(3),S.pull.toFixed(3),S.lift.toFixed(3),S.digit,S.cmp,station].join('|');
+  if(key===uiKey) return; uiKey=key;
+  $('readout').textContent=`ℤ${sub(S.p)} · depth ${S.k} · ${N} ticks`;
+  $('depthVal').textContent=S.k; $('depthHint').textContent=`residues mod ${S.p}${S.k>1?sup(S.k):''}`;
+  const act=document.activeElement;
+  if(act!==$('time')) $('time').value=Math.round(S.draw*1000);
+  if(act!==$('pull')) $('pull').value=Math.round(S.pull*1000);
+  if(act!==$('lift')) $('lift').value=Math.round(S.lift*1000);
+  $('timeOut').textContent=`t = ${Math.min(N,Math.floor(S.draw*N+1e-6))} of ${N}`;
+  $('pullOut').textContent=S.pull<0.05?'wound':S.pull<0.95?'unrolling':S.pull<1.05?'unrolled':S.pull<1.95?'tightening':'taut';
+  $('liftOut').textContent=S.lift<0.05?'discs':S.lift>0.95?'tree':'lifting';
+  $('digVal').textContent=`a${sub(Math.min(S.digit,S.k-1))} · period ${Math.pow(S.p,Math.min(S.digit,S.k-1)+1)}`;
+  if(S.cmp<0){ $('cmpVal').textContent='off'; $('cmpText').innerHTML='Pick a step to see how far apart two ticks are along the string and inside ℤ<sub>'+S.p+'</sub>.'; }
+  else{
+    const j=S.cmp, d=Math.pow(S.p,j);
+    $('cmpVal').textContent=`tick ${d}`;
+    $('cmpText').innerHTML=`Ticks 0 and ${d} are ${d} ${d===1?'lap':'laps'} apart along the string and at distance ${j===0?'1':S.p+'<sup>−'+j+'</sup>'} in ℤ<sub>${S.p}</sub>. `+
+      (j===0?'Consecutive moments are as far apart as two points can be: their tree path runs through the Gauss point.':`In the tree they meet at the disc of radius ${S.p}<sup>−${j}</sup>.`);
+  }
+  setCaption(); markButtons();
+}
+
+// ── controls ─────────────────────────────────────────────────────────────────
+const custom=()=>{ stopTour(); if(film.on){ film.on=false; Object.assign(S,{p:5,k:1,grow:[1]}); station='dust'; setDepth(2); } };
+$('stations').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; stopTour(); goStation(b.dataset.st); });
+tourBtn.addEventListener('click',playTour);
+$('sheetToggle').addEventListener('click',()=>{ const shut=rail.classList.toggle('shut'); $('sheetToggle').textContent=shut?'More controls':'Fewer controls'; });
+$('primes').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; custom(); setPrime(+b.dataset.p); });
+$('depthUp').addEventListener('click',()=>{ custom(); setDepth(S.k+1); });
+$('depthDown').addEventListener('click',()=>{ custom(); setDepth(S.k-1); });
+$('time').addEventListener('input',e=>{ custom(); tweens.delete('draw'); S.draw=e.target.value/1000; if(S.thr<1) tween('thr',1,0.3); if(S.lift>0) tween('lift',0,0.5); dirty=true; });
+$('pull').addEventListener('input',e=>{ custom(); tweens.delete('pull'); S.pull=e.target.value/1000; if(S.thr<1) tween('thr',1,0.3); if(S.draw<0.05) tween('draw',1,0.8); if(S.lift>0) tween('lift',0,0.5); dirty=true; });
+$('lift').addEventListener('input',e=>{ custom(); tweens.delete('lift'); S.lift=e.target.value/1000; if(S.rng<1) tween('rng',1,0.4); if(S.pull>0) tween('pull',0,0.8); dirty=true; });
+$('digUp').addEventListener('click',()=>{ custom(); S.digit=Math.min(S.k-1,S.digit+1); dirty=true; });
+$('digDown').addEventListener('click',()=>{ custom(); S.digit=Math.max(0,S.digit-1); dirty=true; });
+$('cmpUp').addEventListener('click',()=>{ custom(); S.cmp=Math.min(S.k-1,S.cmp+1); dirty=true; });
+$('cmpDown').addEventListener('click',()=>{ custom(); S.cmp=Math.max(-1,S.cmp-1); dirty=true; });
+$('viewAlong').addEventListener('click',()=>{ stopTour(); if(!film.on) setView('front',1.2); });
+$('viewAcross').addEventListener('click',()=>{ stopTour(); if(!film.on) setView('side',1.2); });
+$('viewReset').addEventListener('click',()=>{ stopTour(); zoomMul=1; panX=panY=0; if(!film.on) setView(ST[station]?ST[station].view:'front',1.0); });
+addEventListener('hashchange',()=>{ const h=location.hash.slice(1); if((ST[h]||h==='film') && h!==station) goStation(h); });
+
+// ── frame loop ───────────────────────────────────────────────────────────────
+function resize(){
+  W=canvas.clientWidth||innerWidth; H=canvas.clientHeight||innerHeight; DPR=Math.min(devicePixelRatio||1,2);
+  renderer.setPixelRatio(DPR); renderer.setSize(W,H,false); composer.setPixelRatio(DPR); composer.setSize(W,H);
+  for(const f of [thread,hi,rings,tree]){ f.mat.resolution.set(W*DPR,H*DPR); f.setWidth(f.widthPx); }
+  beads.mat.uniforms.uRes.value.set(W*DPR,H*DPR);
+  dirty=true; camSnap=true;
+}
+addEventListener('resize',resize);
+let last=performance.now(), idle=0, prevV=0; const prevT=new THREE.Vector3(), prevQ=new THREE.Quaternion();
+function frame(nowMs){
+  const now=nowMs/1000, dt=Math.min(0.05,Math.max(0,(nowMs-last)/1000)); last=nowMs;
+  let busy = dirty || film.on || tweens.size>0 || !!viewTw || ptrs.size>0;
+  stepTweens(now);
+  if(film.on){ film.t+=dt; drawFilm(film.t); }
+  if(!film.on && dirty){ drawInstrument(); dirty=false; }
+  updateCamera(dt,now);
+  if(Math.abs(camV-prevV)>1e-6 || camT.distanceToSquared(prevT)>1e-12 || Math.abs(camQ.dot(prevQ))<0.9999999) busy=true;
+  prevV=camV; prevT.copy(camT); prevQ.copy(camQ);
+  idle = busy ? 0 : idle+1;
+  if(idle<30){ placeLabels(); composer.render(); }      // rest once the picture has settled
+  syncUI();
+  requestAnimationFrame(frame);
+}
+
+// start: a named station if the link asks for one, otherwise the film
+resize();
+const h0=location.hash.slice(1);
+if(ST[h0]){ S.k=2; S.grow=[1,1]; goStation(h0,true); }
+else if(REDUCED){ S.k=2; S.grow=[1,1]; goStation('dust',true); }
+else startFilm();
+window.__dst={S,goStation,setDepth,setPrime,film,get station(){return station;}};
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
